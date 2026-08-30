@@ -26,11 +26,22 @@ COPY switchlib ./switchlib
 
 ENV SWITCH_ROOT=/library \
     SWITCH_WEB_PORT=8787 \
+    ROMULE_KEYS=/keys/prod.keys \
     PYTHONUNBUFFERED=1
 
-# /library      : la ludotheque (jeux, _import, _corbeille, _saves...)
-# /root/.switch : prod.keys (lecture seule suffit)
-VOLUME ["/library", "/root/.switch"]
+# Un service expose au reseau n'a aucune raison d'etre root. L'identifiant 1000
+# est celui du premier compte cree sur la plupart des distributions : les
+# fichiers deposes dans la ludotheque appartiendront donc a l'utilisateur, et
+# non a root sur son propre NAS.
+RUN useradd --uid 1000 --create-home --shell /usr/sbin/nologin romule \
+ && mkdir -p /library /keys \
+ && chown -R romule:romule /library /keys /app
+
+# /library : la ludotheque (jeux, _import, _corbeille, _saves...)
+# /keys    : prod.keys (lecture seule suffit)
+VOLUME ["/library", "/keys"]
+
+USER romule
 
 EXPOSE 8787
 

@@ -86,6 +86,19 @@ TELEVERSEMENT_MAX = int(os.environ.get("ROMULE_UPLOAD_MAX", 64 * 2 ** 30))
 # On refuse aussi d'ecrire si le disque tomberait sous ce seuil.
 DISQUE_MARGE = int(os.environ.get("ROMULE_DISK_MARGIN", 2 * 2 ** 30))
 
+# Jetons d'exemple : les laisser en place revient a n'avoir aucun jeton, et
+# c'est le defaut que prend quiconque copie le fichier compose sans le lire.
+# Emplacement de prod.keys. Il etait fige a ~/.switch/prod.keys, ce qui ne
+# survit ni a un conteneur tournant sous un autre utilisateur, ni a quelqu'un
+# qui range ses cles ailleurs.
+CLES = Path(os.environ.get("ROMULE_KEYS")
+            or os.environ.get("SWITCH_KEYS")
+            or (Path.home() / ".switch" / "prod.keys")).expanduser()
+
+# fuite:ok cette liste EST le garde-fou contre ces valeurs : elle doit les citer
+JETONS_INTERDITS = {"change-moi", "changeme", "change-me", "secret", "token",
+                    "colle-le-ici", "a-changer", "tondejeton"}
+
 PROXYS_CONFIANCE = {a.strip() for a in
                     (os.environ.get("ROMULE_TRUSTED_PROXIES")
                      or os.environ.get("SWITCH_TRUSTED_PROXIES", "")).split(",")
