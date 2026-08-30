@@ -1,0 +1,18 @@
+# On ne copie que le code dans l'image : les jeux arrivent par un volume.
+library/
+keys/
+_import/
+_corbeille/
+_covers/
+_saves/
+_cache_versions.txt
+_integrity.json
+_switch-config.json
+_switch-lib.log
+_a_installer_dans_NAND.txt
+**/__pycache__/
+*.pyc
+.DS_Store
+.git/
+switch-lib.sh
+switch-web.py

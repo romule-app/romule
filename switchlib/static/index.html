@@ -1,0 +1,907 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ma ludothèque</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0d1016">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="icon" href="/icon-192.png">
+<link rel="stylesheet" href="/app.css">
+<script>
+/* Le theme est pose AVANT le premier rendu. Le lire depuis app.js, charge en
+   fin de page, ferait apparaitre l'interface en sombre puis basculer en clair
+   sous les yeux de l'utilisateur a chaque ouverture.
+   Ces trois reglages restent locaux a l'appareil : le meme utilisateur veut
+   souvent du clair sur la tablette et du sombre sur la console. */
+(function () {
+  var d = document.documentElement, mag = null;
+  try { mag = localStorage; } catch (e) { mag = null; }   /* navigation privee */
+  function lu(cle, defaut, permis) {
+    var v = mag && mag.getItem(cle);
+    return permis.indexOf(v) >= 0 ? v : defaut;
+  }
+  d.dataset.theme = lu('theme', 'sombre', ['sombre', 'clair', 'auto']);
+  d.dataset.carte = lu('carte', '1', ['aucune', '0', '1', '2', '3', '4', '5']);
+  d.dataset.mvt   = lu('mvt', 'complet', ['complet', 'reduit', 'aucun']);
+})();
+</script>
+</head><body>
+<header>
+  <div class="head-in">
+    <div class="brand">Ma <span>ludothèque</span></div>
+    <nav class="tabs" id="tabs">
+      <button data-tab="jeux" class="active" data-i18n="tab.jeux">Jeux</button>
+      <button data-tab="settings" data-i18n="tab.settings">Réglages</button>
+    </nav>
+    <!-- Etat de la console : une seule fois, dans l'en-tete. Le bandeau separe
+         repetait le meme fait deux lignes plus bas. -->
+    <div class="status">
+      <span id="hostchip" class="hostchip" style="display:none"></span>
+      <div id="conn" class="conn"></div>
+      <!-- Ouvrir l'interface sur l'ecran de la console : un geste qu'on fait
+           depuis n'importe quel ecran, pas un reglage. -->
+      <button class="ghost surconsole" id="installwrap" style="display:none"
+              onclick="app.openOnConsole()" title="" aria-label="Ouvrir sur la console">
+        <span class="hicon">📱</span>
+      </button>
+      <span id="installlead" hidden></span>
+      <span id="installurl" hidden></span>
+      <span id="installhelp" hidden></span>
+    </div>
+  </div>
+</header>
+
+<div class="onboard" id="onboard"></div>
+
+<!-- Voile de demarrage : masque l'interface tant que l'inventaire n'est pas
+     revenu, pour ne jamais afficher de compteurs a zero ni de console absente. -->
+<div class="chargeur" id="chargeur">
+  <div class="chargeur-in">
+    <div class="chargeur-anneau"></div>
+    <b>Lecture de ta ludothèque…</b>
+    <span class="tid" id="chargeurtxt">inventaire des fichiers</span>
+  </div>
+</div>
+
+<main>
+  <div id="a2hs" class="a2hs" style="display:none"></div>
+
+  <!-- ============================================ JEUX -->
+  <div class="panel active" id="panel-jeux">
+
+    <div class="libbar">
+      <select id="sysel" onchange="app.setSystem(this.value)" title="Console / système"></select>
+      <input type="text" id="filter" class="search" placeholder="Rechercher un jeu..." data-i18n-ph="lib.search" oninput="app.renderLib()">
+      <span style="flex:1"></span>
+      <button class="go" id="bulkconv" style="display:none" onclick="app.convertAll()"></button>
+      <button class="ghost" onclick="app.actualiser()"
+              title="Relire le Mac et la console">Actualiser</button>
+      <button class="ghost" onclick="app.actualiserFiches()"
+              title="Chercher les titres, résumés et jaquettes manquants, toutes plateformes">Fiches manquantes</button>
+    </div>
+
+    <div class="filters" id="filters">
+      <button class="chip on" data-f="all"><b id="c-all">0</b> Tous</button>
+      <button class="chip" data-f="envoyer"><b id="c-envoyer">0</b> Pas sur la console</button>
+      <button class="chip" data-f="activer"><b id="c-activer">0</b> MAJ à activer</button>
+      <button class="chip" data-f="importer"><b id="c-importer">0</b> Pas sur le Mac</button>
+      <button class="chip" data-f="convert"><b id="c-convert">0</b> À convertir</button>
+      <button class="chip" data-f="probleme"><b id="c-probleme">0</b> Problème</button>
+    </div>
+
+    <div class="toolbar" id="toolbar">
+      <label class="tlbl">Trier par <select id="tri" onchange="app.setTri(this.value)"></select></label>
+      <button class="szbtn sensbtn" id="sens" onclick="app.setSens()" title="Inverser l'ordre">↑</button>
+
+      <div class="favwrap">
+        <button class="ghost" id="favbtn" onclick="app.toggleFavPop(event)">Plus de filtres</button>
+        <div class="favpop" id="favpop">
+          <div class="favhead">Affiner la liste
+            <button class="ghost" onclick="app.clearFav()">Tout enlever</button></div>
+          <div id="favlist"></div>
+        </div>
+      </div>
+
+      <span style="flex:1"></span>
+      <!-- Densite d'affichage : icones de grille, convention partagee par les
+           gestionnaires de fichiers et les bibliothèques de jeux. -->
+      <label class="tlbl">Afficher <select id="parpage" onchange="app.setParPage(this.value)"></select></label>
+      <div class="sizes" id="tailles" role="group" aria-label="Taille des vignettes">
+        <button class="szbtn" data-sz="compact" onclick="app.setTaille('compact')"
+                title="Affichage dense" aria-label="Affichage dense">
+          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+            <g fill="currentColor"><rect x="1" y="1" width="3.4" height="3.4" rx=".7"/><rect x="6.3" y="1" width="3.4" height="3.4" rx=".7"/><rect x="11.6" y="1" width="3.4" height="3.4" rx=".7"/><rect x="1" y="6.3" width="3.4" height="3.4" rx=".7"/><rect x="6.3" y="6.3" width="3.4" height="3.4" rx=".7"/><rect x="11.6" y="6.3" width="3.4" height="3.4" rx=".7"/><rect x="1" y="11.6" width="3.4" height="3.4" rx=".7"/><rect x="6.3" y="11.6" width="3.4" height="3.4" rx=".7"/><rect x="11.6" y="11.6" width="3.4" height="3.4" rx=".7"/></g>
+          </svg></button>
+        <button class="szbtn on" data-sz="moyen" onclick="app.setTaille('moyen')"
+                title="Affichage moyen" aria-label="Affichage moyen">
+          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+            <g fill="currentColor"><rect x="1" y="1" width="6.2" height="6.2" rx="1"/><rect x="8.8" y="1" width="6.2" height="6.2" rx="1"/><rect x="1" y="8.8" width="6.2" height="6.2" rx="1"/><rect x="8.8" y="8.8" width="6.2" height="6.2" rx="1"/></g>
+          </svg></button>
+        <button class="szbtn" data-sz="grand" onclick="app.setTaille('grand')"
+                title="Grandes vignettes" aria-label="Grandes vignettes">
+          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+            <rect x="1" y="1" width="14" height="14" rx="1.6" fill="currentColor"/>
+          </svg></button>
+      </div>
+      <!-- « Tout cocher / Tout décocher » ont rejoint la barre d'actions :
+           ils n'ont de sens qu'une fois une selection commencee, et occupaient
+           ici la place en permanence. Un clic sur n'importe quelle carte
+           ouvre la barre. -->
+    </div>
+
+    <!-- L'index alphabetique borde la grille, comme dans une mediatheque : il
+         n'apparait que lorsque le tri par nom lui donne un sens. -->
+    <section class="libzone">
+      <nav class="alphabet" id="alphabet" hidden aria-label="Aller à une lettre"></nav>
+      <div id="lib"></div>
+<!-- Pendant la lecture de la ludotheque, la silhouette de ce qui arrive vaut
+     mieux qu'un ecran vide : on voit que ca travaille, et la page ne saute
+     pas quand les vraies cartes se posent. Conteneur separe de #lib, qui est
+     reconcilie par cle : y melanger des cartes factices brouillerait le
+     rapprochement. -->
+<div id="libsquelette" class="games" aria-hidden="true"></div>
+    </section>
+    <div class="pager" id="pager"></div>
+    <div id="manifest"></div>
+
+    <!-- barre d'actions : n'apparait qu'avec une selection -->
+    <div class="actionbar" id="actionbar">
+      <span class="grow" id="deploysum"></span>
+      <span class="acts" id="actions"></span>
+      <button class="ghost" id="touscocher" onclick="app.deployPick(1)">Tout cocher</button>
+      <button class="ghost" onclick="app.deployPick(0)">Tout décocher</button>
+    </div>
+
+    <!-- Ajout de jeux : toujours a portee, jamais dans le chemin. Le bouton
+         sert aussi de temoin d'activite — anneau de progression tout autour,
+         et il s'allonge pour dire ce qui tourne et pour combien de temps. -->
+    <button class="fab" id="fab" onclick="app.actionFab()"
+            title="Ajouter des jeux" aria-label="Ajouter des jeux">
+      <svg class="fabring" id="fabring" aria-hidden="true" focusable="false">
+        <rect class="fabpiste" id="fabpiste" pathLength="100"></rect>
+        <rect class="fabjauge" id="fabjauge" pathLength="100"></rect>
+      </svg>
+      <span class="fabmark">+</span>
+      <!-- Temps restant, au centre du bouton. -->
+      <span class="fabeta" id="fabeta" aria-hidden="true"></span>
+      <!-- Le libellé complet ne tient pas dans 54 px, mais il doit rester
+           annoncé : cette zone n'est pas affichée et sert de compte rendu
+           vocal. Elle porte aussi le détail lu par les tests. -->
+      <span class="fabinfo" id="fabinfo" role="status" aria-live="polite">
+        <b id="fabtitre"></b>
+        <span class="fabreste" id="fabreste"></span>
+      </span>
+    </button>
+    <!-- Ce qui tourne, attache au bouton « + ». Une bulle flottante separee
+         disait la meme chose que le bouton, a un autre endroit de l'ecran. Le
+         journal garde son role : l'historique de ce qui S'EST passe. -->
+    <div class="tachewrap" id="tachewrap" role="status" aria-live="polite">
+      <div class="drophead"><b>En cours</b>
+        <button class="ghost" onclick="app.basculerTaches(false)">Fermer</button></div>
+      <div class="tache" id="tache">
+        <div class="tache-tete">
+          <span class="tache-nom" id="tachelbl">Tâche en cours</span>
+        </div>
+        <div class="tache-barre"><i id="bar"></i></div>
+        <div class="tache-pied">
+          <span id="tacheavance">—</span>
+          <span style="flex:1"></span>
+          <span id="tachereste"></span>
+        </div>
+        <div class="tache-detail" id="tachedetail"></div>
+        <div class="bar" style="margin-top:12px">
+          <button class="ghost" id="pausebtn" onclick="app.togglePause()">Pause</button>
+          <button class="ghost" id="cancelbtn" onclick="app.cancelJob()">Arrêter</button>
+          <span style="flex:1"></span>
+          <button class="ghost" onclick="app.toggleJournal()">Voir le journal</button>
+        </div>
+      </div>
+      <div class="tache-vide" id="tachevide">
+        <p class="lead" style="margin:0">Rien en cours.</p>
+      </div>
+      <div class="bar" style="margin-top:12px">
+        <button class="go" onclick="app.basculerTaches(false);app.toggleDrop(true)">Ajouter des jeux</button>
+      </div>
+    </div>
+
+    <div class="dropwrap" id="dropwrap">
+      <div class="drophead"><b>Dépôt</b>
+        <button class="ghost" onclick="app.toggleDrop(false)">Fermer</button></div>
+      <!-- Le rectangle en pointilles faisait doublon : toute la fenetre accepte
+           deja les fichiers. Il ne reste que ce qu'il apportait vraiment — un
+           bouton pour ceux qui preferent choisir dans le Finder. -->
+      <!-- Sans balisage a l'interieur : une emphase <b> decoupe la phrase en
+           trois noeuds de texte, et la traduction ne peut plus la reconnaitre. -->
+      <p class="lead" style="margin:0 0 10px">Dépose tes fichiers n'importe où sur la page, ou choisis-les :</p>
+      <div class="bar" style="margin-bottom:10px">
+        <button class="ghost" onclick="app.choisirFichiers()">Choisir des fichiers…</button>
+        <button class="ghost" id="btnclasser" hidden onclick="app.classerImports()">À classer</button>
+      </div>
+      <div class="drop" id="drop"></div>
+      <div class="bar" style="margin-top:12px">
+        <button class="go" id="importbtn" onclick="app.doImport()">Importer</button>
+        <span class="tid" id="importinfo"></span>
+        <span style="flex:1"></span>
+        <button class="ghost" onclick="app.reloadImport()">Relire le dépôt</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================ REGLAGES -->
+  <div class="panel" id="panel-settings">
+    <div class="setwrap">
+      <h2 data-i18n="settings.title">Réglages</h2>
+      <p class="lead">Tout est enregistré au fur et à mesure : aucun bouton « valider ».</p>
+
+      <!-- La page fait plus de 4 000 px : sans sommaire, on cherche. Les
+           cinq entrees repondent a « qu'est-ce que je suis en train de
+           regler ? », pas a la structure interne du code. -->
+      <nav class="setnav" id="setnav" aria-label="Sections des réglages"><a href="#sec-console">Ta console</a><a href="#sec-biblio">Ta bibliothèque</a><a href="#sec-entretien">Entretien</a><a href="#sec-acces">Accès</a><a href="#sec-interface">Interface</a><span class="setnav-etat" id="savehint" role="status" aria-live="polite"></span></nav>
+
+      <section class="setsection" id="sec-console">
+        <h3 class="sectitre">Ta console</h3>
+        <p class="sectxt">Comment l'outil la rejoint, et où elle range ses jeux.</p>
+
+      <div class="setgroup">
+        <div class="setgt">Ma console</div>
+        <p class="lead" style="margin:0 0 10px">À régler une fois : comment l'outil rejoint
+          ta console, et où elle range ses jeux.</p>
+
+        <div id="device"><div class="empty">Branche ta console en USB (débogage activé), puis clique « Détecter ».</div></div>
+        <div class="bar" id="barreconsole" style="margin-top:12px"></div>
+
+        <div id="pairwrap" class="pairbox" style="display:none">
+          <div class="wizhead">
+            <h3>Connecter la console sans câble</h3>
+            <button class="ghost" onclick="app.togglePair()">Fermer</button>
+          </div>
+          <p class="lead">Le Wi-Fi évite le câble, mais reste 2 à 5× plus lent pour
+            les gros transferts. À faire une seule fois : ensuite la console est
+            reconnue toute seule.</p>
+          <div class="wizprog"><i id="wizbar"></i></div>
+
+          <!-- etape 1 : sur la console -->
+          <div class="wstep on" id="wstep1">
+            <div class="wnum">1</div>
+            <div class="wbody">
+              <div class="wtitle"><span class="ou ou-console">Sur la console</span>
+                Activer le débogage sans fil</div>
+              <p>Ouvre <b>Paramètres</b> (l'app Android, pas Eden), puis&nbsp;:</p>
+              <div class="wpath">Paramètres → Système → Options pour les développeurs
+                → <b>Débogage sans fil</b> <span class="tid">(à activer)</span></div>
+              <details class="wtip"><summary>Je ne vois pas « Options pour les développeurs »</summary>
+                <p>Elles sont masquées par défaut. Va dans <b>Paramètres → À propos du téléphone</b>
+                  et tape <b>7 fois</b> sur <b>Numéro de build</b>. Le menu apparaît alors
+                  dans <b>Système</b>.</p>
+              </details>
+              <button class="go" onclick="app.wizStep(2)">C'est activé</button>
+            </div>
+          </div>
+
+          <!-- etape 2 : sur la console, la fenetre d'appairage -->
+          <div class="wstep" id="wstep2">
+            <div class="wnum">2</div>
+            <div class="wbody">
+              <div class="wtitle"><span class="ou ou-console">Sur la console</span>
+                Ouvrir la fenêtre d'appairage</div>
+              <p>Dans l'écran <b>Débogage sans fil</b>, touche
+                <b>« Associer l'appareil avec un code d'association »</b>.</p>
+              <div class="wpath">Une fenêtre s'ouvre et affiche <b>deux</b> informations :
+                un <b>code à 6 chiffres</b> et une ligne
+                <b>« Adresse IP et port »</b> du type <code>192.168.1.42:37105</code>.</div>
+              <p class="lead">Laisse cette fenêtre ouverte : le code expire si tu la fermes.</p>
+              <div class="bar">
+                <button class="ghost" onclick="app.wizStep(1)">Retour</button>
+                <button class="go" onclick="app.wizStep(3)">La fenêtre est ouverte</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- etape 3 : sur le mac -->
+          <div class="wstep" id="wstep3">
+            <div class="wnum">3</div>
+            <div class="wbody">
+              <div class="wtitle"><span class="ou ou-mac">Ici, sur le Mac</span>
+                Recopier ce qui s'affiche</div>
+              <label class="wfield">
+                <span>Adresse IP et port <em>(fenêtre d'appairage de la console)</em></span>
+                <input type="text" id="pair-addr" placeholder="192.168.1.42:37105"
+                       autocomplete="off" oninput="app.wizCheck()">
+              </label>
+              <label class="wfield">
+                <span>Code à 6 chiffres</span>
+                <input type="text" id="pair-code" placeholder="123456" maxlength="6"
+                       inputmode="numeric" autocomplete="off" oninput="app.wizCheck()">
+              </label>
+              <div class="wmsg" id="wizmsg"></div>
+              <div class="bar">
+                <button class="ghost" onclick="app.wizStep(2)">Retour</button>
+                <button class="go" id="pairgo" onclick="app.wifiPair()" disabled>Associer la console</button>
+              </div>
+              <div class="wsep">ou</div>
+              <button class="ghost" onclick="app.wifiDiscover()">Chercher les consoles du réseau</button>
+              <div id="pairfound"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="setrow" style="margin-top:14px">
+          <div class="setlab"><b>Dossier des ROMs</b>
+            <span>Le dossier parent de <b>toutes</b> tes plateformes sur la console
+              (chacune y a son sous-dossier : GBA, SNES, PS2…).
+              Laisse vide pour le déduire du dossier Switch.</span></div>
+          <div class="setctl"><input type="text" id="s-romsroot"
+                 placeholder="/storage/…/emulation/ROMs"></div>
+        </div>
+
+        <!-- Ce que l'outil trouve REELLEMENT sur la console : l'utilisateur n'a
+             plus a deviner quels dossiers existent ni lesquels sont vides. -->
+        <div class="bar" style="margin-top:10px">
+          <button class="go" onclick="app.analyseGlobale()">Analyser la console</button>
+          <button class="ghost" onclick="app.ajouterPlateforme()">Ajouter une plateforme…</button>
+        </div>
+        <div class="plateformes" id="plateformes"></div>
+        <div id="tree" class="tree" hidden></div>
+      <div id="organizewrap" hidden></div>
+      <div id="browserwrap" style="display:none">
+          <p class="lead" style="margin-top:12px"><b id="browsecible">Choisir un dossier</b> —
+            navigue jusqu'au dossier voulu, puis valide.</p>
+          <div class="bar">
+            <button class="go" onclick="app.useDir()">Utiliser ce dossier</button>
+            <button class="ghost" onclick="app.browse()">Rafraîchir</button>
+          </div>
+          <div id="crumb" class="crumb"></div>
+          <div id="browser"></div>
+        </div>
+      </div>
+
+      <div class="setgroup" id="groupe-console">
+        <div class="setgt">Console et émulateur</div>
+        <p class="lead" style="margin:0 0 12px">Choisis une plateforme&nbsp;: seuls
+          ses réglages s'affichent en dessous.</p>
+
+        <div class="setrow">
+          <div class="setlab"><b>Plateforme</b>
+            <span id="d-plateforme">Ses réglages et son dossier sur la console.</span></div>
+          <div class="setctl"><select id="s-plateforme"></select></div>
+        </div>
+
+        <!-- Ce que TOUTE plateforme possede : ou elle range ses jeux. -->
+        <div id="pf-commun"></div>
+      </div>
+
+      <div id="pf-specifique">
+      <div class="setgroup groupe-plateforme" data-plateforme="switch">
+        <div class="setgt">Nintendo Switch <span class="beta">spécifique</span></div>
+
+        <!-- Le dossier se regle une seule fois, dans « Dossier sur la console »
+             juste au-dessus : il valait pour toutes les plateformes, la Switch
+             comprise. Le garder ici en doublon, c'etait deux champs pour une
+             seule valeur. -->
+        <div class="setrow">
+          <div class="setlab"><b>Organisation du transfert</b>
+            <span id="d-layout">Comment ranger les fichiers envoyés.</span></div>
+          <div class="setctl"><select id="s-layout">
+            <option value="type">Par type — GAMES / UPDATE / DLC</option>
+            <option value="game">Par jeu (miroir du Mac)</option>
+            <option value="flat">À plat, sans sous-dossier</option>
+          </select></div>
+        </div>
+
+        <div class="setrow">
+          <div class="setlab"><b>Activer les MAJ et DLC automatiquement</b>
+            <span>Dès qu'une mise à jour ou un DLC est importé, l'installer dans Eden
+              sans rien demander (si la console est connectée). Sinon, ça se fait
+              quand tu cliques « Envoyer vers la console ».</span></div>
+          <div class="setctl"><label class="sw"><input type="checkbox" id="s-autonand"><span></span></label></div>
+        </div>
+
+        
+
+        
+
+        <div class="setrow">
+          <div class="setlab"><b>Dossier des sauvegardes</b>
+            <span>Sauvegardes de jeu sur la console. Vide = recherche automatique.</span></div>
+          <div class="setctl"><input type="text" id="s-savesdir" placeholder="recherche automatique"></div>
+        </div>
+
+        
+      </div>
+      <div class="setgroup groupe-plateforme" data-plateforme="switch">
+        <div class="setgt">Réglages communautaires <span class="beta">Switch · bêta</span></div>
+
+        <div class="setrow">
+          <div class="setlab"><b>Utiliser EmuReady</b>
+            <span>Récupère sur <a href="https://www.emuready.com" target="_blank" rel="noopener">emuready.com</a>
+              les réglages testés par la communauté, et indique si chaque jeu tourne bien
+              sur ta console. Lecture seule, rien n'est publié.</span></div>
+          <div class="setctl"><label class="sw"><input type="checkbox" id="s-emuready"><span></span></label></div>
+        </div>
+
+        <div class="setrow" id="row-erdev">
+          <div class="setlab"><b>Ta console</b>
+            <span id="erdev-help">Facultatif : précise ton modèle pour des notes fiables.
+              Sans lui, les notes viennent d'autres appareils.</span></div>
+          <div class="setctl">
+            <input type="text" id="s-erdevice" list="erdevices" autocomplete="off"
+                   placeholder="Tape « Thor », « Odin »…">
+            <datalist id="erdevices"></datalist>
+          </div>
+        </div>
+
+        <div class="setrow">
+          <div class="setlab"><b>Compatibilité des jeux</b>
+            <span id="ersync-info">Analyse ta ludothèque et affiche un badge sur chaque jeu.</span></div>
+          <div class="setctl"><button onclick="app.erSync()">Actualiser</button></div>
+        </div>
+      </div>
+      <div class="setgroup groupe-plateforme" data-plateforme="switch">
+        <div class="setgt">Sauvegardes de jeu <span class="beta">Switch</span></div>
+        <p class="lead" style="margin:0 0 10px">Tes progressions sont irremplaçables :
+          un jeu se re-télécharge, pas 200 h de partie. Chaque sauvegarde est datée,
+          rien n'est jamais écrasé.</p>
+        <div class="bar">
+          <button class="go" onclick="app.backupSaves()">Sauvegarder maintenant</button>
+          <button class="ghost" onclick="app.loadSaves()">Voir les sauvegardes</button>
+        </div>
+        <div id="saves"></div>
+      </div>
+      <details class="setgroup groupe-plateforme" data-plateforme="switch" id="edengroup">
+        <summary class="setgt">Émulateur Eden <span class="beta">Switch</span></summary>
+        <p class="lead" style="margin:10px 0">Réglages de l'émulateur pour <b>tous</b> les jeux.
+          Pour un jeu précis, ouvre sa fiche depuis la liste : c'est là que vivent
+          ses réglages et ceux recommandés par la communauté.</p>
+        <div class="bar">
+          <select id="ec-scope" onchange="app.ecLoad()"></select>
+          <button class="ghost" onclick="app.ecLoad()">Relire</button>
+          <span class="tid" id="ec-info"></span>
+        </div>
+        <div id="ec-table"></div>
+        <div class="bar" style="margin-top:10px">
+          <button class="go" onclick="app.ecApply()">Appliquer les modifications</button>
+          <button onclick="app.ecSaveProfile()">Enregistrer comme profil</button>
+        </div>
+        <div id="ec-profiles"></div>
+      </details>
+      </div>
+
+      </section>
+
+      <section class="setsection" id="sec-biblio">
+        <h3 class="sectitre">Ta bibliothèque</h3>
+        <p class="sectxt">Ce qui part vers la console, comment c'est rangé, et d'où viennent les jaquettes.</p>
+
+      <div class="setgroup">
+        <div class="setgt">Transferts <span class="tid">toutes plateformes</span></div>
+<div class="setrow">
+          <div class="setlab"><b>Transfert incrémentiel</b>
+            <span>Ne pas renvoyer ce qui est déjà sur la console à l'identique.</span></div>
+          <div class="setctl"><label class="sw"><input type="checkbox" id="s-incr"><span></span></label></div>
+        </div>
+<div class="setrow">
+          <div class="setlab"><b>Vérification après transfert</b>
+            <span id="d-verify">Contrôle de l'intégrité de chaque fichier envoyé.</span></div>
+          <div class="setctl"><select id="s-verify">
+            <option value="size">Taille — rapide</option>
+            <option value="hash">Empreinte SHA-1 — sûr mais lent</option>
+            <option value="none">Aucune</option>
+          </select></div>
+        </div>
+      </div>
+
+      <div class="setgroup">
+        <div class="setgt">Bibliothèque <span class="tid">toutes plateformes</span></div>
+
+        <div class="setrow">
+          <div class="setlab"><b>Rangement local</b>
+            <span id="d-local">Comment organiser tes fichiers sur le Mac.</span></div>
+          <div class="setctl"><select id="s-local">
+            <option value="type">Par type — GAMES / UPDATE / DLC</option>
+            <option value="game">Par jeu</option>
+          </select></div>
+        </div>
+
+        <div class="setrow">
+          <div class="setlab"><b>Réorganiser maintenant</b>
+            <span>Applique ce rangement à toute la bibliothèque existante.</span></div>
+          <div class="setctl"><button onclick="app.reorganizeLocal()">Réorganiser</button></div>
+        </div>
+
+        <div class="setrow">
+          <div class="setlab"><b>Conversions en parallèle</b>
+            <span>Nombre de fichiers décompressés en même temps.</span></div>
+          <div class="setctl"><input type="number" id="s-jobs" min="1" max="16"></div>
+        </div>
+      </div>
+
+      <div class="setgroup">
+        <div class="setgt">Jaquettes et fiches</div>
+
+        <div class="setrow">
+          <div class="setlab"><b>Source des jaquettes</b>
+            <span id="d-cover">Images affichées dans la bibliothèque.</span></div>
+          <div class="setctl"><select id="s-coverprov">
+            <option value="nlib">Icônes Switch — sans configuration</option>
+            <option value="steamgriddb">SteamGridDB — clé API requise</option>
+            <option value="custom">URL personnalisée</option>
+          </select></div>
+        </div>
+
+        <div class="setrow" id="row-sgkey">
+          <div class="setlab"><b>Clé API SteamGridDB</b>
+            <span>steamgriddb.com → profil → preferences → api</span></div>
+          <div class="setctl"><input type="text" id="s-sgkey" placeholder="colle ta clé ici"></div>
+        </div>
+
+        <div class="setrow" id="row-coverurl">
+          <div class="setlab"><b>Modèle d'URL</b>
+            <span><code>{tid}</code> est remplacé par le title ID.</span></div>
+          <div class="setctl"><input type="text" id="s-cover" placeholder="https://exemple.com/{tid}.jpg"></div>
+        </div>
+
+        <div class="setrow">
+          <div class="setlab"><b>Langue des fiches</b>
+            <span>Langue des descriptions de jeux.</span></div>
+          <div class="setctl"><select id="s-lang">
+            <option value="fr">Français</option>
+            <option value="en">English</option>
+          </select></div>
+        </div>
+
+        <div class="setrow">
+          <div class="setlab"><b>Fiches des jeux — toutes plateformes</b>
+            <span id="meta-info">Titre officiel, résumé et année. Switch via nlib,
+              autres plateformes via IGDB ; le résumé en français vient de Wikipédia
+              quand l'article existe. « Tout retélécharger » oublie les fiches
+              actuelles et les reprend de zéro.</span></div>
+          <div class="setctl pile">
+            <button class="go" onclick="app.actualiserFiches()">Compléter les fiches manquantes</button>
+            <button class="ghost" onclick="app.forcerFiches()">Tout retélécharger</button>
+          </div>
+        </div>
+
+        <div class="setrow">
+          <div class="setlab"><b>Cache des images</b>
+            <span>Vide le cache si les jaquettes te semblent fausses.</span></div>
+          <div class="setctl"><button onclick="app.clearCovers()">Vider le cache</button></div>
+        </div>
+      <div class="setrow" id="row-igdb">
+        <div class="setlab"><b>Descriptions des jeux hors Switch</b>
+          <span>nlib ne connaît que la Switch. IGDB couvre toutes les
+            plateformes et fournit un résumé. L'accès est gratuit&nbsp;:
+            crée une application sur
+            <a href="https://dev.twitch.tv/console/apps" target="_blank"
+               rel="noopener">dev.twitch.tv</a> et colle les deux identifiants.
+            Vide&nbsp;: aucune description hors Switch, et aucun appel réseau.</span></div>
+        <div class="setctl pile">
+          <input type="text" id="s-igdbid" placeholder="Client ID" autocomplete="off">
+          <input type="password" id="s-igdbsecret" placeholder="Client Secret"
+                 autocomplete="new-password">
+          <button class="ghost" onclick="app.testerIgdb()">Tester les identifiants</button>
+          <div id="igdbtest"></div>
+        </div>
+      </div>
+      </div>
+
+      </section>
+
+      <section class="setsection" id="sec-entretien">
+        <h3 class="sectitre">Entretien</h3>
+        <p class="sectxt">Ce qu'on regarde de temps en temps.</p>
+
+      <div class="setgroup">
+        <div class="setgt">Corbeille</div>
+        <p class="lead" style="margin:0 0 10px">Rien n'est jamais supprimé par l'outil :
+          tout passe ici et reste restaurable.</p>
+        <div class="trashsum" id="trashsum"></div>
+
+        <div class="setrow">
+          <div class="setlab"><b>Vider automatiquement</b>
+            <span id="d-trash">Supprimer définitivement les lots au-delà d'un certain âge.</span></div>
+          <div class="setctl"><select id="s-trashdays">
+            <option value="0">Jamais — je décide moi-même</option>
+            <option value="7">Après 7 jours</option>
+            <option value="30">Après 30 jours</option>
+            <option value="90">Après 90 jours</option>
+          </select></div>
+        </div>
+
+        <div class="bar">
+          <button class="warn" onclick="app.purgeTrash()">Vider maintenant</button>
+          <button class="ghost" onclick="app.loadTrash()">Rafraîchir</button>
+          <a href="#" onclick="app.toggleTrashList(event)" id="trashmore">voir le détail</a>
+        </div>
+        <div id="trash" style="display:none"></div>
+      </div>
+
+      <div class="setgroup">
+        <div class="setgt">Entretien de la ludothèque</div>
+        <p class="lead" style="margin:0 0 12px">Ce qu'on regarde de temps en
+          temps&nbsp;: ce qui fait doublon, ce qui pourrait s'être abîmé, et
+          qui s'est connecté.</p>
+
+        <div class="entretien">
+          <button class="ghost" onclick="app.voirEntretien('doublons')">Doublons</button>
+          <button class="ghost" onclick="app.voirEntretien('integrite')">Intégrité</button>
+          <button class="ghost" onclick="app.voirEntretien('sauvegardes')">Sauvegardes</button>
+          <button class="ghost" onclick="app.voirEntretien('acces')">Connexions</button>
+          <button class="ghost" onclick="app.voirEntretien('transfert')">Transfert interrompu</button>
+        </div>
+        <div id="entretien"></div>
+      </div>
+
+      <div class="setgroup">
+        <div class="setgt">Audit de sécurité</div>
+        <p class="lead" style="margin:0 0 10px">Passé automatiquement à chaque
+          démarrage&nbsp;: ce qui cloche part dans le journal. Relance-le ici
+          après avoir changé un réglage.</p>
+        <div class="bar">
+          <button class="go" onclick="app.auditer()">Lancer l'audit</button>
+          <button class="ghost" onclick="app.auditer(true)">Sans réseau</button>
+        </div>
+        <div id="auditres"></div>
+      </div>
+
+      </section>
+
+      <section class="setsection" id="sec-acces">
+        <h3 class="sectitre">Accès</h3>
+        <p class="sectxt">Qui peut ouvrir la ludothèque, et depuis où.</p>
+
+      <div class="setgroup">
+        <div class="setgt">Authentification</div>
+        <p class="lead" style="margin:0 0 10px">Indispensable dès que la ludothèque
+          est jointe depuis l'extérieur. Le SSO délègue la connexion à ton
+          fournisseur : aucun mot de passe n'est stocké ici.</p>
+
+        <div class="setrow">
+          <div class="setlab"><b>Mode</b>
+            <span id="d-auth">Sans authentification, seul l'accès local est ouvert.</span></div>
+          <div class="setctl"><select id="s-authmode">
+            <option value="aucun">Aucune — accès local uniquement</option>
+            <option value="interne">Comptes email + mot de passe</option>
+            <option value="oidc">SSO OpenID Connect</option>
+          </select></div>
+        </div>
+
+        <!-- ------------------------------------------ comptes internes -->
+        <div id="blocinterne" hidden>
+          <div id="moncompte"></div>
+
+          <div class="setrow" style="align-items:flex-start">
+            <div class="setlab"><b>Personnes autorisées</b>
+              <span>Chacune se connecte avec son adresse et son mot de passe.
+                Il n'y a pas de rôles&nbsp;: tout le monde voit la même
+                ludothèque.</span></div>
+            <div class="setctl"><div id="listecomptes"></div>
+              <button class="ghost" style="margin-top:8px"
+                      onclick="app.ajouterCompte()">Ajouter une personne</button></div>
+          </div>
+        </div>
+
+        <div id="blocoidc">
+          <div class="setrow">
+            <div class="setlab"><b>Adresse du fournisseur</b>
+              <span>L'<i>issuer</i> OpenID. Authentik&nbsp;:
+                <code>https://auth.exemple.fr/application/o/&lt;slug&gt;/</code></span></div>
+            <div class="setctl"><input type="text" id="s-oidcissuer"
+                   placeholder="https://auth.exemple.fr/application/o/ludotheque/"></div>
+          </div>
+          <div class="setrow">
+            <div class="setlab"><b>Client ID</b>
+              <span>Donné par le fournisseur à la création de l'application.</span></div>
+            <div class="setctl"><input type="text" id="s-oidcclient" autocomplete="off"></div>
+          </div>
+          <div class="setrow">
+            <div class="setlab"><b>Client secret</b>
+              <span>Laisse vide pour un client public (PKCE seul).</span></div>
+            <div class="setctl"><input type="password" id="s-oidcsecret" autocomplete="new-password"></div>
+          </div>
+          <div class="setrow">
+            <div class="setlab"><b>Comptes autorisés</b>
+              <span>Adresses e-mail ou groupes, séparés par des virgules.
+                Vide = <b>toute personne</b> que ton fournisseur authentifie.</span></div>
+            <div class="setctl pile">
+              <input type="text" id="s-oidcemails" placeholder="moi@exemple.fr">
+              <input type="text" id="s-oidcgroupes" placeholder="groupe-ludotheque">
+            </div>
+          </div>
+          <div class="setrow">
+            <div class="setlab"><b>Adresse publique</b>
+              <span>Uniquement derrière un proxy. Vide = déduite de la requête.</span></div>
+            <div class="setctl"><input type="text" id="s-oidcredirect" placeholder="https://ludo.exemple.fr"></div>
+          </div>
+          <div class="bar">
+            <button class="go" onclick="app.testerAuth()">Tester la connexion au fournisseur</button>
+            <button class="ghost" onclick="app.copierRetour()">Copier l'adresse de retour</button>
+          </div>
+          <div id="authtest"></div>
+        </div>
+      </div>
+
+      <div class="setgroup">
+        <div class="setgt">Réseau et notifications</div>
+
+        <div class="setrow">
+          <div class="setlab"><b>Accès depuis le téléphone</b>
+            <span>Ouvre l'interface aux appareils de ton réseau. <b>Sans mot de passe</b> :
+              tout appareil du wifi pourra piloter l'outil. Prise en compte immédiate.</span></div>
+          <div class="setctl"><label class="sw"><input type="checkbox" id="s-lan"><span></span></label></div>
+        </div>
+
+        <div class="setrow">
+          <div class="setlab"><b>Notifications</b>
+            <span>Prévenir quand une conversion ou un transfert se termine.</span></div>
+          <div class="setctl"><label class="sw"><input type="checkbox" id="s-notify"><span></span></label></div>
+        </div>
+      </div>
+
+      </section>
+
+      <section class="setsection" id="sec-interface">
+        <h3 class="sectitre">Interface</h3>
+        <p class="sectxt">L'affichage, et les réglages qu'on touche rarement.</p>
+
+      <div class="setgroup">
+        <div class="setgt">Apparence</div>
+
+        <div class="setrow">
+          <div class="setlab"><b data-i18n="settings.theme">Thème</b>
+            <span data-i18n="settings.theme.help">« Automatique » suit le réglage clair ou sombre de l'appareil.</span></div>
+          <div class="setctl">
+            <div class="segment" id="s-theme" role="group" aria-label="Thème">
+              <button data-val="sombre" onclick="app.setTheme('sombre')" data-i18n="theme.sombre">Sombre</button>
+              <button data-val="clair" onclick="app.setTheme('clair')" data-i18n="theme.clair">Clair</button>
+              <button data-val="auto" onclick="app.setTheme('auto')" data-i18n="theme.auto">Automatique</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="setrow col">
+          <div class="setlab"><b data-i18n="settings.anim">Animation des jaquettes</b>
+            <span data-i18n="settings.anim.help">Survolez une vignette pour voir l'effet avant de le choisir.</span></div>
+          <div class="setctl pile"><div class="animchoix" id="s-carte"></div></div>
+        </div>
+
+        <div class="setrow">
+          <div class="setlab"><b data-i18n="settings.mvt">Mouvement de l'interface</b>
+            <span data-i18n="settings.mvt.help">Vaut pour tout le reste : arrivée des listes, ouverture des fenêtres, journal.</span></div>
+          <div class="setctl">
+            <div class="segment" id="s-mvt" role="group" aria-label="Mouvement">
+              <button data-val="complet" onclick="app.setMouvement('complet')" data-i18n="mvt.complet">Complet</button>
+              <button data-val="reduit" onclick="app.setMouvement('reduit')" data-i18n="mvt.reduit">Réduit</button>
+              <button data-val="aucun" onclick="app.setMouvement('aucun')" data-i18n="mvt.aucun">Aucun</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="setrow">
+          <div class="setlab"><b data-i18n="settings.language">Langue de l'interface</b>
+            <span data-i18n="settings.language.help">Les traductions sont des fichiers dans switchlib/locales/.</span></div>
+          <div class="setctl"><select id="s-uilang"></select></div>
+        </div>
+      </div>
+
+      <details class="setgroup setadv">
+        <summary class="setgt">Avancé</summary>
+
+        <div class="setrow">
+          <div class="setlab"><b>Diagnostic</b>
+            <span>Vérifie outils, clés, ludothèque et console.</span></div>
+          <div class="setctl"><button onclick="app.showOnboard()">Voir l'état</button></div>
+        </div>
+
+        <div class="setrow col">
+          <div class="setlab"><b>Miroirs titledb</b>
+            <span>Sources de la base de versions, essayées dans l'ordre (une par ligne).</span></div>
+          <div class="setctl"><textarea id="s-mirrors" rows="2"></textarea></div>
+        </div>
+      </details>
+
+      </section>
+
+
+      <!-- ---------------------------------------------------- branchement -->
+
+      <!-- ------------------------------------------ console / emulateur -->
+      <!-- Une seule porte d'entree pour tout ce qui depend de la plateforme :
+           on la choisit ici, et seuls SES reglages restent a l'ecran. Avant,
+           les blocs Switch etaient disperses entre des reglages generaux et
+           repousses par une regle de CSS — on ne savait plus ce qui
+           s'appliquait a quoi. -->
+
+      <!-- Reglages propres a la plateforme choisie. Chaque bloc porte son
+           `data-plateforme` ; le reste est masque. -->
+
+      <!-- ---------------------------------------------------- transferts -->
+
+      <!-- ---------------------------------------------------- bibliotheque -->
+
+      <!-- ---------------------------------------------------- apparence -->
+
+      <!-- ---------------------------------------------------- langue -->
+      <!-- ------------------------------------------ descriptions IGDB -->
+
+
+
+      <!-- ---------------------------------------------------- emuready -->
+
+      <!-- ---------------------------------------------------- sauvegardes -->
+
+      <!-- ---------------------------------------------------- corbeille -->
+
+      <!-- ---------------------------------------------------- eden -->
+
+      <!-- ---------------------------------------------------- acces -->
+
+      <!-- ------------------------------------------------ maintenance -->
+      <!-- Cinq verifications qui repondent chacune a une question precise.
+           Regroupees : ce sont les memes gestes, faits de temps en temps. -->
+
+      <!-- ----------------------------------------------------- audit -->
+
+      <!-- ---------------------------------------------------- reseau -->
+
+      <!-- ---------------------------------------------------- avance -->
+
+    </div>
+  </div>
+</main>
+
+<!-- Tache en cours : carte compacte en haut a droite. Elle n'occupe aucune
+     bande d'ecran, reste lisible en paysage sur la console, et renvoie au
+     journal d'un clic pour le detail complet. -->
+
+<!-- Journal : bouton flottant a droite, panneau lateral. Il ne recouvre plus
+     ni le bouton d'ajout ni la barre d'actions. -->
+<!-- Depot : la fenetre entiere accepte les fichiers. Le voile n'apparait que
+     lorsqu'un glisser transporte reellement des fichiers. -->
+<div class="dropzone" id="dropzone" aria-hidden="true">
+  <div class="dropzone-in">
+    <span class="dropzone-ic">↓</span>
+    <b>Lâche tes jeux ici</b>
+    <span class="tid" id="dropexts">.nsz .xcz .nsp .xci · .zip .7z .rar</span>
+  </div>
+</div>
+
+<button class="jfab" id="journalbtn" onclick="app.toggleJournal()"
+        aria-label="Ouvrir le journal" title="Journal">
+  <span class="jfab-ic">☰</span><span class="jfab-lbl">Journal</span>
+</button>
+<div class="jvoile" id="jvoile" onclick="app.toggleJournal()"></div>
+<aside class="jdrawer" id="jdrawer" aria-label="Journal">
+  <div class="jhead">
+    <b>Journal</b>
+    <span class="tid" id="jetat"></span>
+    <span style="flex:1"></span>
+    <button class="ghost" onclick="app.toggleJournal()">Fermer</button>
+  </div>
+  <div id="journal">
+    <div class="jbar">
+      <div class="filters" id="jfilters">
+        <button class="chip on" data-jl="all">Tout</button>
+        <button class="chip" data-jl="error">Erreurs <b id="j-nerr">0</b></button>
+        <button class="chip" data-jl="warn">Alertes <b id="j-nwarn">0</b></button>
+        <button class="chip" data-jl="info">Infos</button>
+      </div>
+      <input type="text" id="jsearch" class="search" placeholder="Filtrer…" oninput="app.renderJournal()">
+      <div class="bar">
+        <button class="ghost on" id="jsuivi" onclick="app.basculerSuivi()">Suivi auto</button>
+        <button class="ghost" onclick="app.journalCopy()">Copier</button>
+        <button class="ghost" onclick="app.journalClear()">Effacer</button>
+      </div>
+    </div>
+    <div id="log"></div>
+  </div>
+</aside>
+
+<div class="toasts" id="toasts"></div>
+<div class="modal" id="modal" onclick="app.closeGame(event)"></div>
+<div class="modal" id="dialog" onclick="app.closeDialog(event)"></div>
+<script src="/reactive.js"></script>
+<script src="/app.js"></script>
+</body></html>
