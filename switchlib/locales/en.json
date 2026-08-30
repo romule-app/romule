@@ -555,5 +555,9 @@
   "Hongrois": "Hungarian",
   "Turc": "Turkish",
   "Grec": "Greek",
-  "Catalan": "Catalan"
+  "Catalan": "Catalan",
+  "Active EmuReady pour analyser ta ludothèque.": "Turn on EmuReady to analyse your library.",
+  "Rien à signaler.": "Nothing to report.",
+  "Icône officielle par title ID, sans configuration.": "Official artwork by title ID, no setup needed.",
+  "Aucun doublon repéré.": "No duplicates found."
 }
