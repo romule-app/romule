@@ -1,0 +1,21 @@
+{
+  "cle": "citron",
+  "nom": "Citron",
+  "ordre": 4,
+  "paquets": [
+    "org.citron.citron_emu"
+  ],
+  "donnees": "/storage/emulated/0/Android/data/{paquet}/files",
+  "jeux_defaut": "/storage/emulated/0/Switch",
+  "config": {
+    "format": "ini-qt",
+    "dossier": "config",
+    "global": "config.ini",
+    "par_jeu": "custom"
+  },
+  "sauvegardes": [
+    "nand/user/save"
+  ],
+  "verifie": false,
+  "note": "Fork de Yuzu. Non verifie sur materiel."
+}

@@ -114,7 +114,11 @@ VERSIONS_URLS = [
 ]
 
 DEFAULTS = {
-    "device_dir": "/storage/emulated/0/Switch",  # dossier ou Eden lit ses jeux
+    # Emulateur cible. Ce qui etait fige sur Eden — nom de paquet, chemins,
+    # format des reglages — vient desormais de romule/profils/*.json.
+    "emulateur": "eden",
+    "emulateur_paquet": "",     # rempli par la detection sur la console
+    "device_dir": "/storage/emulated/0/Switch",  # ou l'emulateur lit ses jeux
     "jobs": 3,                                    # conversions en parallele
     "push_layout": "type",                        # type | game | flat (voir device.py)
     "verify_mode": "size",                        # none | size | hash (apres push)

@@ -11,16 +11,38 @@ from datetime import datetime
 
 from . import config, device
 
-# Emplacements connus des donnees d'emulateurs Switch sous Android.
-CANDIDATES = [
-    "/storage/emulated/0/Android/data/dev.eden_emu.eden/files/nand/user/save",
-    "/storage/emulated/0/Android/data/dev.eden_emu.eden/files",
-    "/storage/emulated/0/Android/data/org.yuzu.yuzu_emu/files/nand/user/save",
-    "/storage/emulated/0/Android/data/org.citron.citron_emu/files/nand/user/save",
-    "/storage/emulated/0/Android/data/org.sudachi.sudachi_emu/files/nand/user/save",
-    "/storage/emulated/0/eden/nand/user/save",
-    "/storage/emulated/0/yuzu/nand/user/save",
-]
+def candidats():
+    """Ou chercher les sauvegardes, du plus precis au plus general.
+
+    Cette liste etait ecrite en dur, et elle nommait Eden sous un paquet
+    (`dev.eden_emu.eden`) que `nand.py` orthographiait autrement
+    (`dev.eden.eden_emulator`) : l'un des deux etait forcement faux. On part
+    desormais du profil actif, puis de tous les autres — un utilisateur qui
+    change d'emulateur veut retrouver ses anciennes sauvegardes.
+    """
+    from . import profils
+    out = []
+    base = profils.dossier_donnees()
+    if base:
+        for rel in (profils.actif().get("sauvegardes") or []):
+            out.append(base + "/" + rel.lstrip("/"))
+        out.append(base)
+    gabarit = "/storage/emulated/0/Android/data/%s/files"
+    for prof in profils.tous():
+        for paquet in (prof.get("paquets") or []):
+            racine = gabarit % paquet
+            for rel in (prof.get("sauvegardes") or ["nand/user/save"]):
+                out.append(racine + "/" + rel.lstrip("/"))
+    # Anciennes installations, avant que les emulateurs ne passent au dossier
+    # applicatif d'Android.
+    out += ["/storage/emulated/0/eden/nand/user/save",
+            "/storage/emulated/0/yuzu/nand/user/save"]
+    vus, uniques = set(), []
+    for c in out:
+        if c not in vus:
+            vus.add(c)
+            uniques.append(c)
+    return uniques
 
 SAVES = config.ROOT / "_saves"
 
@@ -35,7 +57,7 @@ def find_dirs(cfg=None):
         return []
     found = []
     manual = ((cfg or {}).get("saves_dir") or "").strip().rstrip("/")
-    for c in ([manual] if manual else []) + CANDIDATES:
+    for c in ([manual] if manual else []) + candidats():
         if c and _exists(c) and c not in found:
             found.append(c)
     if found:

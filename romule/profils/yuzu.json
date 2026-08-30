@@ -1,0 +1,21 @@
+{
+  "cle": "yuzu",
+  "nom": "Yuzu",
+  "ordre": 2,
+  "paquets": [
+    "org.yuzu.yuzu_emu"
+  ],
+  "donnees": "/storage/emulated/0/Android/data/{paquet}/files",
+  "jeux_defaut": "/storage/emulated/0/Switch",
+  "config": {
+    "format": "ini-qt",
+    "dossier": "config",
+    "global": "config.ini",
+    "par_jeu": "custom"
+  },
+  "sauvegardes": [
+    "nand/user/save"
+  ],
+  "verifie": false,
+  "note": "Eden en descend : meme arborescence, meme format de configuration. Non verifie sur materiel."
+}

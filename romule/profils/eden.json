@@ -1,0 +1,22 @@
+{
+  "cle": "eden",
+  "nom": "Eden",
+  "ordre": 1,
+  "paquets": [
+    "dev.eden.eden_emulator",
+    "dev.eden_emu.eden"
+  ],
+  "donnees": "/storage/emulated/0/Android/data/{paquet}/files",
+  "jeux_defaut": "/storage/emulated/0/Switch",
+  "config": {
+    "format": "ini-qt",
+    "dossier": "config",
+    "global": "config.ini",
+    "par_jeu": "custom"
+  },
+  "sauvegardes": [
+    "nand/user/save"
+  ],
+  "verifie": true,
+  "note": "Profil de reference : c'est celui sur lequel l'outil a ete developpe."
+}
