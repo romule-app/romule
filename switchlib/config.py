@@ -79,6 +79,13 @@ TOKEN = os.environ.get("SWITCH_TOKEN", "").strip()
 # n'importe qui peut l'ecrire. Avec elle, et seulement depuis ces adresses,
 # l'application accepte de lire la vraie adresse du client.
 #     ROMULE_TRUSTED_PROXIES=127.0.0.1,172.18.0.1
+# Plafond d'un fichier depose par le navigateur. Genereux : une image Switch
+# depasse couramment 15 Gio. Mais un plafond genereux reste un plafond — sans
+# lui, tout appareil autorise pouvait remplir le disque de l'hote.
+TELEVERSEMENT_MAX = int(os.environ.get("ROMULE_UPLOAD_MAX", 64 * 2 ** 30))
+# On refuse aussi d'ecrire si le disque tomberait sous ce seuil.
+DISQUE_MARGE = int(os.environ.get("ROMULE_DISK_MARGIN", 2 * 2 ** 30))
+
 PROXYS_CONFIANCE = {a.strip() for a in
                     (os.environ.get("ROMULE_TRUSTED_PROXIES")
                      or os.environ.get("SWITCH_TRUSTED_PROXIES", "")).split(",")

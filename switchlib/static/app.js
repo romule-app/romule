@@ -324,6 +324,9 @@ async function chargerLangue(code) {
 // Position de lecture de chaque onglet, pour y revenir tel qu'on l'a laisse.
 const DEFILEMENT = {};
 
+// Plafond d'un fichier depose, annonce par /api/health. 0 = pas encore connu.
+let TELEVERSEMENT_MAX = 0;
+
 let JLOG = [];              // evenements recus du serveur
 let JFILTRE = 'all';        // all | error | warn | info
 // Ce qui etait affiche au rendu precedent, pour n'animer que les lignes
@@ -3930,6 +3933,9 @@ const app = {
   // ---- premier lancement
   async checkHealth(force) {
     HEALTH = await api('/api/health', {});
+    // Le plafond d'envoi vient du serveur : le figer dans le navigateur
+    // signifierait mentir des que l'hebergeur le change.
+    TELEVERSEMENT_MAX = ((HEALTH || {}).checks || {}).televersement_max || 0;
     const vu = localStorage.getItem('onboard-vu') === '1';
     if (force || (HEALTH.first_run && !vu)) renderOnboard();
     return HEALTH;
@@ -5028,13 +5034,29 @@ function extensionAcceptee(nom) {
 // L'avancement est calcule sur le VOLUME total, pas sur le nombre de fichiers :
 // deposer un jeu de 12 Go et un patch de 30 Mo ne fait pas « 50 % » a mi-chemin.
 function uploadFiles(files) {
-  const list = [...files].filter(f => extensionAcceptee(f.name));
+  let list = [...files].filter(f => extensionAcceptee(f.name));
   const rejetes = [...files].length - list.length;
   if (!list.length) {
     return toast('Aucun fichier reconnu. ' + EXTS_ACCEPTEES.length
                  + ' formats acceptés — voir « Ajouter des jeux ».', 'warn');
   }
   if (rejetes) journal(rejetes + ' fichier(s) ignoré(s) : type non géré.', 'warn');
+
+  // Le plafond est verifie ICI, avant d'ouvrir la moindre connexion. Le
+  // serveur le fait aussi — c'est lui qui fait autorite — mais il ne peut
+  // repondre qu'apres coup : il coupe alors la connexion en pleine reception,
+  // et le navigateur n'affiche qu'une « erreur reseau » qui n'explique rien.
+  const plafond = TELEVERSEMENT_MAX;
+  if (plafond) {
+    const trop = list.filter(f => f.size > plafond);
+    if (trop.length) {
+      trop.forEach(f => journal('Trop volumineux : ' + f.name + ' (' + fmt(f.size)
+                                + ', maximum ' + fmt(plafond) + ')', 'error'));
+      toast(trop.length + ' fichier(s) dépassent ' + fmt(plafond) + '.', 'warn');
+      list = list.filter(f => f.size <= plafond);
+      if (!list.length) return;
+    }
+  }
 
   const octets = list.reduce((n, f) => n + f.size, 0);
   const debut = Date.now();

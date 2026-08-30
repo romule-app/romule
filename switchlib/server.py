@@ -125,6 +125,14 @@ def _lib_response():
     }
 
 
+def _taille(n):
+    """Taille lisible : les octets bruts ne disent rien dans un message."""
+    for unite in ("o", "Kio", "Mio", "Gio", "Tio"):
+        if n < 1024 or unite == "Tio":
+            return "%.1f %s" % (n, unite) if unite != "o" else "%d o" % n
+        n /= 1024.0
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *a):
         pass
@@ -621,6 +629,23 @@ class Handler(BaseHTTPRequestHandler):
         config.IMPORT.mkdir(exist_ok=True)
         dest = config.IMPORT / name
         left = int(self.headers.get("Content-Length", 0))
+        # Deux refus AVANT d'ouvrir le fichier : un depot sans plafond laissait
+        # n'importe quel appareil autorise saturer le disque de l'hote, et un
+        # disque plein ne casse pas que l'import — il casse la ludotheque.
+        if left > config.TELEVERSEMENT_MAX:
+            return self._json(
+                {"error": "Fichier trop volumineux : %s pour un maximum de %s."
+                          % (_taille(left), _taille(config.TELEVERSEMENT_MAX))}, 413)
+        try:
+            libre = shutil.disk_usage(config.IMPORT).free
+        except OSError:
+            libre = None
+        if libre is not None and left + config.DISQUE_MARGE > libre:
+            return self._json(
+                {"error": "Espace insuffisant : %s disponibles, %s demandes "
+                          "(marge de securite de %s)."
+                          % (_taille(libre), _taille(left),
+                             _taille(config.DISQUE_MARGE))}, 507)
         try:
             with dest.open("wb") as fh:
                 while left > 0:
@@ -1347,6 +1372,9 @@ def _health():
             "device_dir": CFG.get("device_dir", ""),
             "lan": bool(CFG.get("lan_access")),
             "token": bool(config.TOKEN),
+            # Le navigateur en a besoin AVANT d'envoyer : refuser en cours de
+            # transfert coupe la connexion, et le message n'arrive jamais.
+            "televersement_max": config.TELEVERSEMENT_MAX,
             "container": _in_container(),
         },
     }
