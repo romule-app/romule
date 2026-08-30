@@ -11,7 +11,7 @@ ce que ces applications supposent par defaut.
 Deux precautions que l'algorithme seul ne donne pas :
 
   * **tolerance d'une fenetre** en arriere et en avant, parce que l'horloge du
-    telephone et celle du Mac ne sont jamais exactement synchrones ;
+    telephone et celle du serveur ne sont jamais exactement synchrones ;
   * **refus de rejouer un code deja utilise** : sans cela, un code intercepte
     reste valable jusqu'a 90 secondes.
 """

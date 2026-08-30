@@ -490,7 +490,7 @@ def sync_meta(lib, cfg, job):
                 "plateformes gardent le nom de leur fichier.", "warn")
         return
     # Les jeux des autres plateformes vivent souvent UNIQUEMENT sur la console :
-    # ne regarder que le Mac laissait leur titre introuvable.
+    # ne regarder que le serveur laissait leur titre introuvable.
     noms = []
     for sys in systems.tout(cfg):
         noms += [f["file"] for f in sys["games"]]
@@ -651,7 +651,8 @@ def _auto_nand(lib, cfg, job, chemins):
     restants = [c for c in cibles if etats.get(c, {}).get("etat") in ("absent", "partiel")]
     if not restants:
         return
-    job.log("Activation automatique de %d mise(s) a jour / DLC dans Eden." % len(restants))
+    job.log("Activation automatique de %d mise(s) a jour / DLC dans l'emulateur."
+            % len(restants))
     nand.install(restants, job)
 
 
@@ -677,7 +678,7 @@ def deploy_games(lib, cfg, job, a_envoyer, a_activer, configs=None):
         return
 
     if a_activer:
-        job.log("Etape 2/%d — activation de %d mise(s) a jour / DLC dans Eden."
+        job.log("Etape 2/%d — activation de %d mise(s) a jour / DLC dans l'emulateur."
                 % (etapes, len(a_activer)))
         nand.install(a_activer, job)
     else:

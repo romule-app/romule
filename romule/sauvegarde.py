@@ -7,7 +7,7 @@ donc on garde un historique plutot qu'une seule copie ecrasee a chaque fois —
 une sauvegarde unique corrompue ne vaut rien.
 
 Rien de tout cela ne touche aux jeux : ils sont trop gros et deja presents en
-deux exemplaires (Mac et console).
+deux exemplaires (serveur et console).
 """
 
 import json
