@@ -134,12 +134,22 @@ t("photo servie", c == 200 and b == png, c)
 c, b, _ = appel("/photo/../_switch-comptes.json")
 t("traversee de chemin bloquee", c == 404, c)
 
-print("   -- 10. suppression --")
+print("   -- 10. suppression et roles --")
 c, b, _ = appel("/api/compte-supprimer", {"id": uid})
 t("dernier compte non supprimable", c == 400, js(b))
-appel("/api/compte-creer", {"email": "deux@exemple.fr", "mdp": "encore un mot long"})
+c, b, _ = appel("/api/compte-creer", {"email": "deux@exemple.fr", "mdp": "encore un mot long"})
+second = js(b).get("compte", {})
+t("le premier compte est administrateur, le second non",
+  not second.get("admin"), second)
+# Le compte connecte est le premier, donc l'administrateur : supprimer le
+# SECOND est permis.
+c, b, _ = appel("/api/compte-supprimer", {"id": second.get("id")})
+t("un administrateur supprime un autre compte", c == 200, js(b))
+# Mais se supprimer lui-meme ne doit pas laisser la ludotheque sans personne
+# pour l'administrer.
+appel("/api/compte-creer", {"email": "trois@exemple.fr", "mdp": "un troisieme mot long"})
 c, b, _ = appel("/api/compte-supprimer", {"id": uid})
-t("suppression possible a deux", c == 200, js(b))
+t("le dernier administrateur n'est pas supprimable", c == 400, js(b))
 
 print("   -- 11. le fichier des comptes ne contient aucun mot de passe --")
 brut = pathlib.Path(RACINE, "_switch-comptes.json").read_text()

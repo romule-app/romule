@@ -103,6 +103,7 @@ def _public(u):
     return {"id": u["id"], "email": u["email"], "nom": u.get("nom") or u["email"],
             "photo": bool(u.get("photo")), "cree": u.get("cree", 0),
             "derniere": u.get("derniere", 0),
+            "admin": bool(u.get("admin")),
             "double_facteur": bool((u.get("totp") or {}).get("actif"))}
 
 
@@ -116,6 +117,42 @@ def par_id(uid):
         if u["id"] == uid:
             return u
     return None
+
+
+def est_admin(uid):
+    u = par_id(uid)
+    return bool(u and u.get("admin"))
+
+
+def promouvoir(uid, admin=True):
+    """Donne ou retire le role d'administrateur."""
+    with _LOCK:
+        d = _lire()
+        for u in d["comptes"]:
+            if u["id"] == uid:
+                if not admin and not any(
+                        v.get("admin") for v in d["comptes"] if v["id"] != uid):
+                    raise ValueError("Il doit rester au moins un administrateur.")
+                u["admin"] = bool(admin)
+                _ecrire(d)
+                return _public(u)
+    raise ValueError("Compte introuvable.")
+
+
+def reprendre_roles():
+    """Les comptes crees avant l'existence des roles n'en ont aucun.
+
+    Sans reprise, une installation existante se retrouverait sans le moindre
+    administrateur apres la mise a jour : plus personne ne pourrait toucher aux
+    reglages. Le plus ancien compte, celui de l'installateur, le devient.
+    """
+    with _LOCK:
+        d = _lire()
+        if not d["comptes"] or any(u.get("admin") for u in d["comptes"]):
+            return
+        plus_ancien = min(d["comptes"], key=lambda u: u.get("cree", 0))
+        plus_ancien["admin"] = True
+        _ecrire(d)
 
 
 def _index_email(d, email):
@@ -244,11 +281,16 @@ def creer(email, mdp, nom="", cfg=None):
         d = _lire()
         if _index_email(d, email) >= 0:
             raise ValueError("Un compte existe deja avec cette adresse.")
+        # Le PREMIER compte est administrateur. C'est la convention des outils
+        # auto-heberges (Jellyfin, Immich, Paperless) : celui qui installe
+        # gouverne. Sans role du tout, n'importe quel utilisateur pouvait
+        # supprimer les autres ou eteindre l'authentification.
+        premier = not d["comptes"]
         u = {"id": secrets.token_urlsafe(9), "email": email,
              "nom": (nom or "").strip()[:80] or email.split("@")[0],
              "hash": hacher(mdp), "cree": int(time.time()),
              "maj_mdp": int(time.time()), "echecs": 0, "bloque": 0,
-             "photo": "", "derniere": 0}
+             "photo": "", "derniere": 0, "admin": premier}
         d["comptes"].append(u)
         _ecrire(d)
     return _public(u)
@@ -448,6 +490,12 @@ def supprimer(uid):
         reste = [u for u in d["comptes"] if u["id"] != uid]
         if len(reste) == len(d["comptes"]):
             raise ValueError("Compte introuvable.")
+        # « Il doit rester quelqu'un » ne suffit pas : il doit rester quelqu'un
+        # QUI PEUT ADMINISTRER. Sinon les reglages deviennent inaccessibles
+        # sans toucher au fichier des comptes a la main.
+        if not any(u.get("admin") for u in reste):
+            raise ValueError("C'est le dernier administrateur : promeus "
+                             "quelqu'un d'autre avant de le supprimer.")
         d["comptes"] = reste
         _ecrire(d)
     for ext in (".png", ".jpg", ".gif", ".webp"):
