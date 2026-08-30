@@ -141,6 +141,15 @@ def _verifier_racine():
     """
     souci = config.racine_douteuse()
     if not souci:
+        # La racine par defaut n'existe pas a la premiere ouverture, et son
+        # parent non plus : sans cette creation, tout nouvel utilisateur
+        # tombait sur un FileNotFoundError des le lancement.
+        try:
+            config.ROOT.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            print("Impossible de creer la ludotheque : %s" % exc)
+            print("    %s" % config.ROOT)
+            sys.exit(1)
         return
     print("La ludotheque designe %s :" % souci)
     print("    %s" % config.ROOT)
