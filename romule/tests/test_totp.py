@@ -45,7 +45,7 @@ def appel(c, corps=None, forme=False):
 for _ in range(60):
     try: appel("/api/job"); break
     except Exception: time.sleep(0.5)
-from switchlib import totp
+from romule import totp
 ok = fail = 0
 def t(n, c, d=""):
     global ok, fail

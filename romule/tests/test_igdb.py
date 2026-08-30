@@ -41,7 +41,7 @@ def main():
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(1.2)
     try:
-        from switchlib import igdb
+        from romule import igdb
         vide = {"igdb_client_id": "", "igdb_client_secret": ""}
         t("inactif sans identifiants", igdb.configure(vide) is False)
         t("aucun appel sans identifiants", igdb.chercher("Chrono Trigger", vide) is None)

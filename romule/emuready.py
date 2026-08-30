@@ -47,7 +47,7 @@ def call(route, payload=None, timeout=25):
     url = "%s/%s" % (BASE, route)
     if payload is not None:
         url += "?input=" + urllib.parse.quote(json.dumps({"json": payload}))
-    req = urllib.request.Request(url, headers={"User-Agent": "switchlib/emuready"})
+    req = urllib.request.Request(url, headers={"User-Agent": "romule/emuready"})
     with urllib.request.urlopen(req, timeout=timeout) as r:
         d = json.loads(r.read())
     if "error" in d:

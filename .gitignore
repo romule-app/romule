@@ -11,7 +11,7 @@
 # --- etat de l'application (tout ce que l'outil ecrit commence par « _ »)
 _*
 # … sauf les fichiers de paquet Python, qui commencent eux aussi par « _ ».
-# Sans cette exception, `switchlib/__init__.py` n'est pas suivi et le paquet
+# Sans cette exception, `romule/__init__.py` n'est pas suivi et le paquet
 # n'existe plus pour quiconque clone le depot.
 !**/__init__.py
 
@@ -56,8 +56,8 @@ GAMES/
 UPDATE/
 DLC/
 
-# --- artefacts de test (regeneres par switchlib/tests/navigateur/)
-switchlib/tests/navigateur/*.png
+# --- artefacts de test (regeneres par romule/tests/navigateur/)
+romule/tests/navigateur/*.png
 
 # --- Python
 __pycache__/

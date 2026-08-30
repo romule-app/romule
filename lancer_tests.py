@@ -28,7 +28,7 @@ import urllib.request
 from pathlib import Path
 
 RACINE = Path(__file__).resolve().parent
-TESTS = RACINE / "switchlib" / "tests"
+TESTS = RACINE / "romule" / "tests"
 PORT_NAV = int(os.environ.get("LUDO_PORT_TESTS", "8798"))
 
 VERT, ROUGE, GRIS, RAZ = "\033[32m", "\033[31m", "\033[90m", "\033[0m"
@@ -41,7 +41,7 @@ def titre(t):
 
 
 def unitaires():
-    """Tests unitaires deja presents dans switchlib/tests/.
+    """Tests unitaires deja presents dans romule/tests/.
 
     Ce sont de simples fonctions `test_*` executees par le module lui-meme,
     pas des `unittest.TestCase` : la decouverte automatique de `unittest` ne
@@ -49,9 +49,9 @@ def unitaires():
     """
     titre("unitaires")
     ok = True
-    for mod in ("switchlib.tests.test_titleid", "switchlib.tests.test_device",
-                "switchlib.tests.test_import_roms",
-                "switchlib.tests.test_totp_unite"):
+    for mod in ("romule.tests.test_titleid", "romule.tests.test_device",
+                "romule.tests.test_import_roms",
+                "romule.tests.test_totp_unite"):
         r = subprocess.run([sys.executable, "-m", mod], cwd=str(RACINE))
         print("   %-34s %s" % (mod, "OK" if r.returncode == 0 else "ECHEC"), flush=True)
         ok = (r.returncode == 0) and ok
@@ -93,11 +93,11 @@ def serveur():
 def syntaxe():
     titre("syntaxe")
     ok = subprocess.run([sys.executable, "-m", "compileall", "-q",
-                         "switchlib", "switch.py"], cwd=str(RACINE)).returncode == 0
+                         "romule", "switch.py"], cwd=str(RACINE)).returncode == 0
     print("   Python : %s" % ("OK" if ok else "ECHEC"))
     if _node_present():
         for f in ("app.js", "reactive.js"):
-            r = subprocess.run(["node", "--check", "switchlib/static/" + f],
+            r = subprocess.run(["node", "--check", "romule/static/" + f],
                                cwd=str(RACINE))
             ok = (r.returncode == 0) and ok
         print("   JavaScript : %s" % ("OK" if ok else "ECHEC"))
@@ -106,7 +106,7 @@ def syntaxe():
 
 def audit_securite():
     titre("audit de securite")
-    r = subprocess.run([sys.executable, "-m", "switchlib.audit", "--hors-ligne"],
+    r = subprocess.run([sys.executable, "-m", "romule.audit", "--hors-ligne"],
                        cwd=str(RACINE), capture_output=True, text=True)
     print(r.stdout.strip().splitlines()[-1] if r.stdout.strip() else "(vide)")
     # 2 = probleme grave. On ne fait pas echouer la batterie sur un choix

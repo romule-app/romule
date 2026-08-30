@@ -4,7 +4,7 @@ const fs = require('fs'), vm = require('vm'), path = require('path');
 // Les chemins des fichiers statiques sont relatifs a la racine du projet.
 process.chdir(path.resolve(__dirname, '..', '..', '..'));
 
-const html = fs.readFileSync('switchlib/static/index.html', 'utf8');
+const html = fs.readFileSync('romule/static/index.html', 'utf8');
 const ids = new Map();
 function faux(tag) {
   const el = {
@@ -119,11 +119,11 @@ const ctx = {
 };
 ctx.window.R = null; ctx.globalThis = ctx; ctx.self = ctx;
 vm.createContext(ctx);
-vm.runInContext(fs.readFileSync('switchlib/static/reactive.js', 'utf8'), ctx);
+vm.runInContext(fs.readFileSync('romule/static/reactive.js', 'utf8'), ctx);
 ctx.R = ctx.window.R;
 // `const app = ...` reste dans la portee du script : on l'expose pour le test.
 const SUFFIXE = "\n;globalThis.__t = {app, majBlocAuth, renderTache, uploadFiles, majFab, config: c => { DATA.config = c; }};";
-vm.runInContext(fs.readFileSync('switchlib/static/app.js', 'utf8') + SUFFIXE, ctx);
+vm.runInContext(fs.readFileSync('romule/static/app.js', 'utf8') + SUFFIXE, ctx);
 
 
 let ok = 0, ko = 0;

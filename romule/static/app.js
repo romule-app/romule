@@ -178,7 +178,7 @@ async function api(path, body, discret) {
   return j;
 }
 // ------------------------------------------------------------ traductions
-// Les libelles vivent dans switchlib/locales/<code>.json, jamais dans le code.
+// Les libelles vivent dans romule/locales/<code>.json, jamais dans le code.
 // Le texte FRANCAIS est la cle de traduction (principe gettext). Deux raisons :
 // on n'invente pas 570 identifiants, et une traduction manquante retombe sur
 // une phrase lisible plutot que sur « lib.filter.all ».

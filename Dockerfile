@@ -22,7 +22,7 @@ RUN pip install --no-cache-dir nsz
 
 WORKDIR /app
 COPY switch.py ./
-COPY switchlib ./switchlib
+COPY romule ./romule
 
 ENV SWITCH_ROOT=/library \
     SWITCH_WEB_PORT=8787 \

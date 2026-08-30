@@ -32,7 +32,7 @@ def libre():
 
 
 print("   -- ce qui vient de la configuration --")
-from switchlib import systems, edenconf
+from romule import systems, edenconf
 
 for mauvais in ("../../evasion", "/etc", "a/b", "..", ""):
     t("dossier refuse : %r" % mauvais,
