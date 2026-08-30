@@ -62,7 +62,9 @@ SECRETS = [
 IP_PRIVEE = re.compile(r"\b(?:10\.\d{1,3}|192\.168|172\.(?:1[6-9]|2\d|3[01]))"
                        r"\.\d{1,3}\.\d{1,3}\b")
 # Adresses citees en exemple dans la documentation et les tests.
-IP_TOLEREES = {"192.168.1.42", "192.168.1.50", "192.168.0.1"}
+# Adresses citees en exemple : la passerelle par defaut d'un reseau Docker
+# et quelques adresses de documentation.
+IP_TOLEREES = {"192.168.1.42", "192.168.1.50", "192.168.0.1", "172.18.0.1"}
 
 BINAIRES = re.compile(r"\.(png|jpg|jpeg|gif|webp|ico|woff2?|zip|gz)$", re.I)
 
