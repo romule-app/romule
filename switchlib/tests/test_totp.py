@@ -88,13 +88,32 @@ try:
     c, b = appel("/auth/connexion", {"email": "d@e.fr", "mdp": MDP, "code": code}, forme=True)
     t("le MEME code ne peut pas etre rejoue", c == 401, c)
 
-    # Tolerance d'une fenetre : l'horloge du telephone n'est jamais exactement
-    # celle du serveur. La fenetre precedente n'a pas encore servi.
+    # La TOLERANCE d'horloge (plus ou moins une fenetre) se verifie dans
+    # test_totp_unite.py, ou l'instant est fourni. Ici, le test ne peut pas
+    # savoir si la fenetre precedente a deja servi : quand une frontiere de
+    # fenetre tombait entre la connexion ci-dessus et le controle, le code
+    # designait une fenetre consommee et se faisait refuser comme un rejeu.
+    # L'echec ressemblait alors a un defaut de tolerance, une fois sur cinq.
     time.sleep(4)                     # laisse retomber la temporisation par IP
+    # On se reconnecte AVANT les essais volontairement faux qui suivent : chaque
+    # echec repousse exponentiellement la prochaine tentative, et la reconnexion
+    # se retrouvait derriere un blocage qu'elle avait elle-meme provoque. Une
+    # connexion reussie remet ce compteur a zero.
+    #
+    # Le passage de frontiere garantit par ailleurs que ce code appartient a une
+    # fenetre strictement posterieure a toutes celles deja consommees : il ne
+    # peut donc pas etre pris pour un rejeu.
+    # Franchir UNE frontiere ne suffit pas : la connexion precedente avait
+    # utilise le code de la fenetre SUIVANTE, c'est donc exactement dans
+    # celle-la qu'on atterrit. On vise la fenetre d'apres, qui n'a jamais servi
+    # et reste dans la tolerance de plus ou moins une.
+    time.sleep(31 - (time.time() % 30))
     c, b = appel("/auth/connexion",
-                 {"email": "d@e.fr", "mdp": MDP, "code": totp.code(secret, time.time() - 30)},
+                 {"email": "d@e.fr", "mdp": MDP,
+                  "code": totp.code(secret, time.time() + 30)},
                  forme=True)
-    t("tolerance d'une fenetre de decalage", c == 200, c)
+    t("un code frais, d'une fenetre jamais utilisee, est accepte", c == 200, c)
+
     c, b = appel("/auth/connexion",
                  {"email": "d@e.fr", "mdp": MDP, "code": totp.code(secret, time.time() + 120)},
                  forme=True)

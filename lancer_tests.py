@@ -50,7 +50,8 @@ def unitaires():
     titre("unitaires")
     ok = True
     for mod in ("switchlib.tests.test_titleid", "switchlib.tests.test_device",
-                "switchlib.tests.test_import_roms"):
+                "switchlib.tests.test_import_roms",
+                "switchlib.tests.test_totp_unite"):
         r = subprocess.run([sys.executable, "-m", mod], cwd=str(RACINE))
         print("   %-34s %s" % (mod, "OK" if r.returncode == 0 else "ECHEC"), flush=True)
         ok = (r.returncode == 0) and ok
