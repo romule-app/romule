@@ -1,0 +1,76 @@
+# ============================================================================
+# Ce depot ne contient QUE du code. Les donnees d'une ludotheque — jeux,
+# jaquettes, sauvegardes, comptes, cles de console — vivent ailleurs, dans le
+# dossier designe par ROMULE_ROOT / SWITCH_ROOT.
+#
+# Les motifs sont volontairement LARGES et places en tete : ce fichier existe
+# pour qu'un fichier personnel ne puisse pas se glisser dans un commit, pas
+# pour lister ce qui existe aujourd'hui.
+# ============================================================================
+
+# --- etat de l'application (tout ce que l'outil ecrit commence par « _ »)
+_*
+# … sauf les fichiers de paquet Python, qui commencent eux aussi par « _ ».
+# Sans cette exception, `switchlib/__init__.py` n'est pas suivi et le paquet
+# n'existe plus pour quiconque clone le depot.
+!**/__init__.py
+
+# --- cles de console : ne doivent JAMAIS approcher un depot
+*.keys
+prod.keys
+title.keys
+Keys*/
+keys/
+
+# --- jeux et images disque
+*.nsp
+*.nsz
+*.xci
+*.xcz
+*.iso
+*.gba
+*.gb
+*.gbc
+*.nds
+*.3ds
+*.cia
+*.sfc
+*.smc
+*.n64
+*.z64
+# `*.md` est volontairement ABSENT : c'est l'extension des ROMs Mega Drive,
+# mais aussi celle de tout le Markdown du projet. Une ludotheque vit de
+# toute facon hors du depot ; la documentation, elle, doit y entrer.
+*.gen
+*.bin
+*.cue
+*.chd
+*.wbfs
+*.rvz
+
+# --- emplacements de donnees usuels
+data/
+library/
+ludotheque/
+GAMES/
+UPDATE/
+DLC/
+
+# --- artefacts de test (regeneres par switchlib/tests/navigateur/)
+switchlib/tests/navigateur/*.png
+
+# --- Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# --- systeme et editeurs
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

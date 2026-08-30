@@ -1,0 +1,186 @@
+"""Execution d'une tache de fond unique, avec journal et progression.
+
+Une seule tache a la fois (conversion, import, transfert). L'UI interroge
+`snapshot()` en boucle pour afficher le journal et la barre de progression.
+"""
+
+import os
+import shutil
+import subprocess
+import threading
+from datetime import datetime
+
+# Journal : on ecrit a chaque evenement (un message perdu lors d'un plantage
+# ne sert a rien), et on fait tourner le fichier par taille — pratique
+# standard, preferable a une sauvegarde periodique.
+MAX_OCTETS = 2 * 1024 * 1024
+GARDER = 3
+NIVEAUX = ("debug", "info", "ok", "warn", "error")
+
+
+def _rotate(chemin):
+    try:
+        if os.path.getsize(chemin) < MAX_OCTETS:
+            return
+    except OSError:
+        return
+    for i in range(GARDER - 1, 0, -1):
+        vieux, neuf = "%s.%d" % (chemin, i), "%s.%d" % (chemin, i + 1)
+        if os.path.exists(vieux):
+            os.replace(vieux, neuf)
+    try:
+        os.replace(chemin, "%s.1" % chemin)
+    except OSError:
+        pass
+
+
+def _devine_niveau(texte):
+    """Deduit la gravite d'un message qui n'en precise pas."""
+    t = texte.lower()
+    if any(m in t for m in ("erreur", "echec", "impossible", "invalide", "corrompu",
+                            "introuvable", "[erreur]")):
+        return "error"
+    if any(m in t for m in ("ignore", "attention", "aucun", "non connect", "interrompu",
+                            "deja present", "exclu")):
+        return "warn"
+    if any(m in t for m in ("ok ", "termine", "installe", "range", "applique",
+                            "enregistre", "recu")):
+        return "ok"
+    return "info"
+
+
+def notify(message, title="Ludotheque Switch"):
+    """Notification macOS de fin de tache (ignoree ailleurs)."""
+    if not shutil.which("osascript"):
+        return
+    safe = message.replace('"', "'")[:200]
+    try:
+        subprocess.run(["osascript", "-e",
+                        'display notification "%s" with title "%s"' % (safe, title)],
+                       capture_output=True, timeout=10)
+    except (OSError, subprocess.SubprocessError):
+        pass
+
+
+class JobRunner:
+    def __init__(self, logfile=None):
+        self._lock = threading.Lock()
+        self._resume = threading.Event()
+        self._resume.set()
+        self.running = False
+        self.paused = False
+        self.cancelled = False
+        self.label = ""
+        self.log_lines = []
+        self.done = 0
+        self.total = 0
+        self.detail = ""       # debit / ETA / info libre affichee dans le dock
+        self.logfile = logfile
+        self.notify_end = True
+
+    def log(self, line, niveau=None):
+        """Journalise un evenement. Le niveau est deduit s'il n'est pas donne."""
+        niveau = niveau if niveau in NIVEAUX else _devine_niveau(str(line))
+        entree = {"t": datetime.now().strftime("%H:%M:%S"),
+                  "date": datetime.now().strftime("%F"),
+                  "n": niveau, "m": str(line)}
+        with self._lock:
+            self.log_lines.append(entree)
+            del self.log_lines[:-800]
+        if self.logfile:
+            try:
+                _rotate(self.logfile)
+                with open(self.logfile, "a", encoding="utf-8") as fh:
+                    fh.write("%s %s %-5s %s\n" % (entree["date"], entree["t"],
+                                                  niveau.upper(), entree["m"]))
+            except OSError:
+                pass
+
+    def clear(self):
+        with self._lock:
+            self.log_lines = []
+
+    def set_total(self, n):
+        with self._lock:
+            self.total = n
+            self.done = 0
+
+    def tick(self):
+        with self._lock:
+            self.done += 1
+
+    def set_detail(self, text):
+        with self._lock:
+            self.detail = text
+
+    # ------------------------------------------------------------ pause / arret
+
+    def pause(self):
+        with self._lock:
+            self.paused = True
+        self._resume.clear()
+
+    def resume(self):
+        with self._lock:
+            self.paused = False
+        self._resume.set()
+
+    def cancel(self):
+        with self._lock:
+            self.cancelled = True
+        self._resume.set()          # debloque une tache en pause pour qu'elle sorte
+
+    def checkpoint(self):
+        """A appeler entre deux elements : bloque si en pause, renvoie False si annule."""
+        self._resume.wait()
+        with self._lock:
+            return not self.cancelled
+
+    def snapshot(self):
+        with self._lock:
+            return {
+                "running": self.running,
+                "paused": self.paused,
+                "label": self.label,
+                "log": list(self.log_lines),
+                "done": self.done,
+                "total": self.total,
+                "detail": self.detail,
+            }
+
+    def start(self, label, fn, *args):
+        """Lance fn(*args) en tache de fond. False si une tache tourne deja."""
+        with self._lock:
+            if self.running:
+                return False
+            self.running = True
+            self.label = label
+            self.log_lines = []
+            self.done = 0
+            self.total = 0
+            self.detail = ""
+            self.paused = False
+            self.cancelled = False
+        self._resume.set()
+
+        def wrap():
+            err = None
+            try:
+                fn(*args)
+            except Exception as exc:  # une tache qui plante ne doit pas figer l'UI
+                err = str(exc)
+                self.log("Erreur : %s" % exc)
+            finally:
+                with self._lock:
+                    self.running = False
+                    done, total, cancelled = self.done, self.total, self.cancelled
+                if self.notify_end:
+                    if err:
+                        notify("%s : echec (%s)" % (label, err))
+                    elif cancelled:
+                        notify("%s : interrompu (%d/%d)" % (label, done, total))
+                    else:
+                        notify("%s : termine (%d/%d)" % (label, done, total))
+
+        threading.Thread(target=wrap, daemon=True).start()
+        return True

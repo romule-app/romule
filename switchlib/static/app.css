@@ -1,0 +1,2878 @@
+/* Polices et courbe d'animation : invariants de l'interface, hors theme.
+   Les COULEURS sont declarees plus bas, dans la couche de composants — un seul
+   endroit ou les redefinir pour changer de theme. */
+:root{
+  --mono:"SF Mono",SFMono-Regular,Menlo,monospace;
+  --disp:"Avenir Next Condensed","Helvetica Neue",sans-serif;
+  --body:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);
+  font-size:14px;padding-bottom:56px}
+a{color:var(--amber)}
+::selection{background:var(--primary-trait)}
+
+/* ---------------------------------------------------------------- en-tete */
+header{position:sticky;top:0;z-index:20;background:var(--verre);
+  backdrop-filter:blur(10px);border-bottom:1px solid var(--rule)}
+.head-in{max-width:1180px;margin:0 auto;padding:12px 22px;
+  display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.brand{font-family:var(--disp);font-weight:600;text-transform:uppercase;
+  letter-spacing:.16em;font-size:15px;white-space:nowrap}
+.brand span{color:var(--amber)}
+nav.tabs{display:flex;gap:4px;background:var(--panel);border:1px solid var(--rule);
+  border-radius:9px;padding:3px}
+nav.tabs button{font-family:var(--disp);text-transform:uppercase;letter-spacing:.12em;
+  font-size:12px;font-weight:600;padding:7px 15px;border:0;border-radius:6px;
+  background:transparent;color:var(--mute);cursor:pointer;transition:color .25s var(--ease),background .25s var(--ease)}
+nav.tabs button:hover{color:var(--ink)}
+nav.tabs button.active{background:var(--panel2);color:var(--amber);
+  box-shadow:inset 0 0 0 1px var(--rule)}
+.status{margin-left:auto;display:flex;align-items:center;gap:14px;
+  font-family:var(--mono);font-size:11.5px;color:var(--mute)}
+.hostchip{padding:2px 8px;border-radius:5px;background:var(--panel2);
+  border:1px solid var(--rule);color:var(--indigo);font-size:11px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--mute);
+  transition:background .3s,box-shadow .3s}
+.dot.on{background:var(--green);box-shadow:0 0 0 3px var(--success-doux)}
+.dot.off{background:var(--red);box-shadow:0 0 0 3px var(--danger-doux)}
+
+/* ---------------------------------------------------------------- panneaux */
+main{max-width:1180px;margin:0 auto;padding:22px}
+.panel{display:none}
+.panel.active{display:block;animation:enter .35s var(--ease)}
+@keyframes enter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+section{margin-bottom:30px}
+/* Le titre de section domine clairement les boutons et le corps de texte. */
+h2{font-family:var(--disp);font-size:19px;letter-spacing:.01em;color:var(--ink);
+  margin:0 0 5px;font-weight:600}
+.lead{color:var(--mute);font-size:12.5px;margin:0 0 14px;max-width:70ch;line-height:1.55}
+
+/* ---------------------------------------------------------------- boutons */
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+/* Les boutons doivent se distinguer nettement des champs de saisie :
+   fond plus clair, texte plein contraste, jamais l'aspect d'un input vide. */
+button{font-family:var(--body);font-size:13px;font-weight:500;padding:8px 14px;border-radius:7px;
+  cursor:pointer}
+  /* fond, texte, trait et transitions : voir la couche de composants */
+
+/* Tous les types de champ texte, pas seulement `text` : un champ mot de passe
+   laisse de cote s'affichait en BLANC, avec la bordure du navigateur — le
+   defaut sautait aux yeux mais aucune regle ne le couvrait. */
+input[type=text],input[type=password],input[type=email],input[type=search],
+input[type=url],input[type=number],select,textarea{
+  font-family:var(--mono);font-size:12.5px;
+  padding:9px 11px;border-radius:7px;border:1px solid var(--rule);background:var(--panel);
+  color:var(--ink);transition:border-color .15s;max-width:100%;min-width:0}
+/* les champs s'adaptent au conteneur : jamais de debordement sur petit ecran */
+input[type=text],input[type=password],input[type=email],input[type=search],
+input[type=url]{flex:1 1 260px}
+input:focus,select:focus,textarea:focus{outline:0;border-color:var(--indigo)}
+input.search{flex:1 1 200px}
+label.opt{color:var(--mute);font-size:12.5px;display:flex;align-items:center;gap:7px;cursor:pointer}
+input[type=checkbox]{accent-color:var(--amber);width:15px;height:15px;cursor:pointer}
+input[type=radio]{accent-color:var(--amber);cursor:pointer}
+
+/* ---------------------------------------------------------------- tuiles */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:18px}
+.tile{background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:13px 15px;
+  transition:border-color .2s,transform .2s var(--ease)}
+.tile:hover{border-color:var(--indigo);transform:translateY(-2px)}
+.tile b{display:block;font-family:var(--disp);font-size:26px;line-height:1;color:var(--ink)}
+.tile.hot b{color:var(--amber)}
+.tile span{display:block;margin-top:6px;font-size:11px;color:var(--mute);
+  text-transform:uppercase;letter-spacing:.08em}
+
+/* ---------------------------------------------------------------- listes */
+.toolbar{position:sticky;top:60px;z-index:10;background:var(--verre);
+  backdrop-filter:blur(8px);padding:10px 0;margin-bottom:6px}
+.game{background:var(--panel);border:1px solid var(--rule);border-radius:10px;
+  margin-bottom:9px;overflow:hidden}
+.ghead{display:flex;align-items:center;gap:11px;padding:11px 14px;background:var(--panel2)}
+.gname{font-weight:600;flex:1}
+.row{display:flex;align-items:center;gap:11px;padding:9px 14px;border-top:1px solid var(--rule);
+  transition:background .15s}
+.row:hover{background:var(--surface-2)}
+.grow{flex:1;min-width:0}
+.fname{font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* signature : le title ID segmente montre POURQUOI le fichier est classe ainsi */
+.tid{font-family:var(--mono);font-size:11px;color:var(--mute);letter-spacing:.04em}
+.tid b{color:var(--amber);font-weight:700;background:var(--primary-doux);padding:0 2px;border-radius:2px}
+.tag{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.09em;
+  padding:2px 6px;border-radius:3px;border:1px solid currentColor;white-space:nowrap}
+.t-BASE{color:var(--green)} .t-UPDATE{color:var(--indigo)}
+.t-DLC{color:var(--amber)} .t-INCONNU{color:var(--mute)}
+.ext{font-family:var(--mono);font-size:10.5px;color:var(--mute);width:30px}
+.size{font-family:var(--mono);font-size:11px;color:var(--mute);width:78px;text-align:right}
+.flag{font-size:10.5px;padding:2px 8px;border-radius:10px;white-space:nowrap}
+.f-orphan,.f-nopatch{background:var(--danger-doux);color:var(--red)}
+.f-old,.f-outdated{background:var(--primary-doux);color:var(--amber)}
+.f-done{background:var(--success-doux);color:var(--green)}
+.f-nodlc{background:var(--info-doux);color:var(--indigo)}
+.empty{color:var(--mute);padding:26px;text-align:center;border:1px dashed var(--rule);border-radius:10px}
+.drop{border:1px dashed var(--rule);border-radius:10px;padding:18px;text-align:center;color:var(--mute);
+  transition:border-color .2s,background .2s}
+.drop b{color:var(--ink);font-family:var(--mono);font-size:12px}
+.drop.over{border-color:var(--amber);background:var(--primary-doux);color:var(--ink)}
+
+/* toggle segmente (vue liste / jaquettes) */
+.seg{display:inline-flex;background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:3px;gap:3px}
+.seg button{padding:5px 12px;border:0;border-radius:6px;background:transparent;color:var(--mute);
+  font-size:12px;transition:color .2s,background .2s}
+.seg button.on{background:var(--panel2);color:var(--amber);box-shadow:inset 0 0 0 1px var(--rule)}
+.seg button:hover:not(.on){color:var(--ink);transform:none}
+select{cursor:pointer}
+#sysel{font-family:var(--disp);text-transform:uppercase;letter-spacing:.1em;font-size:12px;
+  font-weight:600;color:var(--amber);padding:8px 12px;min-width:170px}
+
+/* ---------------------------------------------------------------- bibliotheque v2 */
+.libbar{position:sticky;top:60px;z-index:10;display:flex;gap:10px;flex-wrap:wrap;align-items:center;
+  background:var(--verre);backdrop-filter:blur(8px);padding:12px 0;margin-bottom:14px}
+.filters{display:flex;gap:6px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:20px;
+  border:1px solid var(--rule);background:var(--panel);color:var(--mute);font-size:12.5px;
+  transition:color .2s,border-color .2s,background .2s}
+.chip b{font-family:var(--disp);font-size:15px;color:var(--ink)}
+.chip:hover{color:var(--ink);border-color:var(--indigo);transform:none}
+.chip.on{border-color:var(--amber);color:var(--amber);background:var(--primary-doux)}
+.chip.on b{color:var(--amber)}
+
+/* grille de jeux (jaquettes systematiques) */
+.games{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:16px}
+/* Le SURVOL n'est plus decrit ici : il appartient a la section APPARENCE, en
+   fin de fichier, qui le derive du reglage choisi par l'utilisateur. Trois
+   blocs se disputaient auparavant cette regle et c'est celui charge le plus
+   tard qui gagnait — d'ou un survol qui changeait de comportement selon la
+   largeur d'ecran. Ne pas redeclarer `.gcard:hover` ailleurs. */
+.gcard{background:var(--panel);border:1px solid var(--rule);border-radius:12px;overflow:hidden;
+  cursor:pointer}
+.gcard .art{position:relative;aspect-ratio:3/4;background:var(--art-fond);
+  display:flex;align-items:center;justify-content:center;overflow:hidden}
+.gcard .art img{width:100%;height:100%;object-fit:cover}
+.gcard .ph{position:absolute;font-family:var(--disp);font-size:46px;color:var(--line-fort)}
+.gcard .badge{position:absolute;left:8px;bottom:8px;font-size:10.5px;font-weight:600;
+  padding:3px 9px;border-radius:20px;backdrop-filter:blur(4px);background:var(--capot)}
+/* REGLE : une classe b-* ne porte QUE de la couleur, jamais de cadre.
+   Ces classes servent aussi bien a une pastille qu'a une ligne de texte ; y
+   attacher un box-shadow encadrait le texte partout ou on les reutilisait.
+   Le cadre, quand il est voulu, appartient a l'element (.badge, .flag), pas
+   a la couleur. Ne pas revenir en arriere. */
+.b-upd{color:var(--amber)}
+.b-conv{color:var(--indigo)}
+.b-dlc{color:var(--text-2)}
+.b-clean,.b-orph{color:var(--red)}
+.b-ok{color:var(--green)}
+.gcard.sel{border-color:var(--amber);box-shadow:0 0 0 1px var(--amber)}
+/* jeu deja pret : rien a faire dessus, on le montre sans le proposer */
+.gcard.fige{cursor:default;opacity:.62}
+.gcard.fige:hover{transform:none;border-color:var(--rule);box-shadow:none}
+.gcard .cap{padding:10px 11px}
+.gcard .gname{font-size:12.5px;font-weight:600;line-height:1.3;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.gcard .meta{margin-top:5px;font-family:var(--mono);font-size:10.5px;color:var(--mute)}
+/* carte d'envoi : coche de selection + bouton infos */
+.pcheck{position:absolute;top:7px;right:7px;width:22px;height:22px;border-radius:50%;
+  border:2px solid var(--rule);background:var(--capot);display:flex;align-items:center;
+  justify-content:center;font-size:13px;color:var(--on-primary);transition:background .15s,border-color .15s}
+.pcheck.on{background:var(--amber);border-color:var(--amber);font-weight:700}
+.gcard .pinfo{margin-top:8px;width:100%;padding:5px;font-size:11.5px;background:var(--panel2)}
+
+/* fenetre de detail */
+.modal{position:fixed;inset:0;z-index:50;background:var(--rideau);backdrop-filter:blur(3px);
+  display:none;align-items:flex-start;justify-content:center;padding:40px 18px;overflow:auto}
+.modal.open{display:flex;animation:enter .25s var(--ease)}
+.sheet{background:var(--panel);border:1px solid var(--rule);border-radius:14px;max-width:640px;width:100%;
+  overflow:hidden}
+.sheet .top{display:flex;gap:16px;padding:18px;background:var(--panel2);border-bottom:1px solid var(--rule)}
+.sheet .cover{width:104px;aspect-ratio:3/4;border-radius:9px;object-fit:cover;background:var(--creux);flex-shrink:0}
+.sheet h3{margin:0 0 6px;font-size:17px}
+.sheet .sub2{font-family:var(--mono);font-size:11px;color:var(--mute)}
+.sheet .status{margin-top:9px;display:flex;flex-direction:column;gap:5px}
+.sheet .st{font-size:12px;display:flex;gap:7px;align-items:center}
+.sheet .body{padding:16px 18px}
+.sheet .gdesc{margin:0 0 14px;font-size:12.5px;line-height:1.6;color:var(--mute);
+  max-height:150px;overflow:auto;white-space:pre-wrap}
+.sheet .gdesc:empty{display:none}
+.sheet .frow{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--rule);font-size:12px}
+.sheet .frow:first-child{border-top:0}
+.sheet .frow .grow{min-width:0}
+.sheet .acts{display:flex;gap:8px;flex-wrap:wrap;padding:14px 18px;border-top:1px solid var(--rule);background:var(--panel2)}
+.iconbtn{border:1px solid var(--rule);background:var(--panel);color:var(--red);border-radius:6px;
+  padding:4px 9px;font-size:11px;cursor:pointer}
+.iconbtn:hover{border-color:var(--red);transform:none}
+
+/* vue jaquettes (ancienne, conservee) */
+.covers{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:14px}
+.cover{background:var(--panel);border:1px solid var(--rule);border-radius:11px;overflow:hidden;
+  cursor:pointer;transition:transform .18s var(--ease),border-color .18s}
+.cover:hover{transform:translateY(-3px);border-color:var(--indigo)}
+.cover.sel{border-color:var(--amber);box-shadow:0 0 0 1px var(--amber)}
+.cover .art{position:relative;aspect-ratio:1;background:linear-gradient(135deg,var(--surface-2),var(--surface));
+  display:flex;align-items:center;justify-content:center}
+.cover .art img{width:100%;height:100%;object-fit:cover;display:block}
+.cover .ph{font-family:var(--disp);font-size:34px;color:var(--rule);text-transform:uppercase}
+.cover .art .tag{position:absolute;top:7px;left:7px}
+.cover .art .fl{position:absolute;top:7px;right:7px}
+.cover .cap{padding:9px 10px}
+.cover .cap .fname{font-size:12px}
+.cover .cap .tid{font-size:10px}
+#shop,#nand{background:var(--puits);border:1px solid var(--rule);border-radius:9px;padding:13px;
+  font-family:var(--mono);font-size:11.5px;line-height:1.7;white-space:pre;overflow:auto;
+  max-height:240px;color:var(--text-2)}
+
+/* ---------------------------------------------------------------- console */
+.card{background:var(--panel);border:1px solid var(--rule);border-radius:10px;overflow:hidden}
+.vol{display:flex;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid var(--rule);
+  cursor:pointer;transition:background .15s}
+.vol:first-child{border-top:0}
+.vol:hover{background:var(--surface-2)}
+.vol .grow div{font-size:13px}
+.meter{height:6px;border-radius:3px;background:var(--rule);overflow:hidden;width:150px}
+.meter i{display:block;height:100%;background:linear-gradient(90deg,var(--green),var(--amber));
+  width:0;transition:width .6s var(--ease)}
+.meter.tight i{background:linear-gradient(90deg,var(--amber),var(--red))}
+
+/* ------------------------------------------------- parcours de premier lancement */
+.onboard{position:fixed;inset:0;z-index:60;background:var(--rideau);backdrop-filter:blur(4px);
+  display:none;align-items:center;justify-content:center;padding:24px 16px;overflow:auto}
+.onboard.open{display:flex;animation:enter .3s var(--ease)}
+.obox{background:var(--panel);border:1px solid var(--rule);border-radius:14px;
+  max-width:560px;width:100%;padding:24px}
+.obt{font-family:var(--disp);text-transform:uppercase;letter-spacing:.12em;font-size:15px;
+  margin:0 0 6px;color:var(--amber)}
+.obox>.lead{margin-bottom:16px}
+.osteps{list-style:none;margin:0 0 18px;padding:0;display:flex;flex-direction:column;gap:9px}
+.ostep{display:flex;gap:12px;align-items:flex-start;padding:12px 13px;border-radius:9px;
+  border:1px solid var(--rule);background:var(--panel2);
+  animation:slidein .35s var(--ease) both}
+@keyframes slidein{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:none}}
+.ostep.ok{border-color:var(--success-trait)}
+.ostep.ko{border-color:var(--primary-halo)}
+.omark{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
+.ostep.ok .omark{background:var(--success-doux);color:var(--green)}
+.ostep.ko .omark{background:var(--primary-doux);color:var(--amber)}
+.ostep b{font-size:13px}
+.odesc{font-size:12px;color:var(--mute);margin-top:2px;line-height:1.5}
+.oaide{font-family:var(--mono);font-size:11px;color:var(--amber);margin-top:6px;
+  background:var(--puits);border-radius:6px;padding:7px 9px;word-break:break-word}
+@media (max-width:640px){.obox{padding:18px}}
+
+/* invitation a ajouter l'app a l'ecran d'accueil (affichee a distance seulement) */
+.a2hs{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px;padding:13px 16px;
+  border:1px solid var(--indigo);border-radius:11px;background:var(--panneau-relief);
+  animation:enter .35s var(--ease)}
+.a2hs .a2icon{font-size:22px;line-height:1}
+.a2hs b{font-size:13.5px}
+.a2hs .tid{margin-top:3px;font-family:var(--body);font-size:12px}
+.a2hs button{padding:6px 12px;font-size:12.5px}
+@media (max-width:640px){.a2hs{padding:12px 13px}.a2hs .grow{flex-basis:100%}}
+
+/* bandeau : comment la console est reliee */
+.conn{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;
+  background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:12px 15px;font-size:13px}
+.conn b{font-weight:600}
+.cdot{width:9px;height:9px;border-radius:50%;background:var(--mute);flex-shrink:0}
+.cdot.on{background:var(--green);box-shadow:0 0 0 3px var(--success-doux)}
+.cdot.off{background:var(--red);box-shadow:0 0 0 3px var(--danger-doux)}
+/* parcours d'appairage sans fil */
+.pairbox{background:var(--panel);border:1px solid var(--amber);border-radius:10px;
+  padding:16px 18px;margin-top:12px;animation:enter .3s var(--ease)}
+.pairbox h3{margin:0 0 6px;font-size:14px}
+.steps{margin:12px 0;padding-left:20px;display:flex;flex-direction:column;gap:11px}
+.steps li{font-size:12.5px;line-height:1.7}
+.steps input{margin-left:8px}
+.steps b{color:var(--ink)}
+.curdir{font-family:var(--mono);font-size:12.5px;color:var(--mute);
+  background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:10px 13px}
+.curdir b{color:var(--amber)}
+.curdir a{margin-left:10px;font-family:var(--body);font-size:12px}
+.crumb{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:12px 0 8px;
+  font-family:var(--mono);font-size:12px}
+.crumb a{color:var(--amber);cursor:pointer;text-decoration:none}
+.crumb a:hover{text-decoration:underline}
+.crumb .sep{color:var(--mute)}
+.brow.up{background:var(--creux)}
+.brow.up .ic{color:var(--indigo)}
+/* simulation de l'arborescence GAMES/UPDATE/DLC */
+.tree{margin-top:12px}
+.tree:empty{margin:0}
+.treebox{background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:14px 16px}
+.tlbl{font-size:12.5px;color:var(--mute);margin-bottom:10px}
+.tlbl b{color:var(--amber);font-family:var(--mono);font-size:11.5px}
+.troot{font-family:var(--mono);font-size:13px;color:var(--ink);margin-bottom:4px}
+.trow{font-family:var(--mono);font-size:12.5px;color:var(--ink);padding:3px 0 3px 22px}
+.trow b{color:var(--indigo)}
+.tok{font-size:12px;color:var(--green)}
+.tko{font-size:12px;color:var(--amber)}
+.tree button{margin-top:4px}
+
+/* ------------------------------------------------- dialogue (erreurs, bilans) */
+.dlg{max-width:520px}
+.dlg .dhead{display:flex;gap:14px;align-items:flex-start;padding:20px 20px 6px}
+.dlg .dico{font-size:22px;line-height:1.2;flex-shrink:0}
+.dlg h3{margin:0 0 4px;font-size:15.5px}
+.dlg .dmsg{margin:0;font-size:13px;color:var(--mute);line-height:1.6}
+/* options a cocher : tout se decide dans une seule fenetre */
+.dopts{display:flex;flex-direction:column;gap:8px;padding:14px 20px 0}
+.dopt{display:flex;gap:11px;align-items:flex-start;padding:11px 13px;cursor:pointer;
+  border:1px solid var(--rule);border-radius:9px;background:var(--panel2);
+  transition:border-color .15s,background .15s}
+.dopt:hover{border-color:var(--indigo)}
+.dopt:has(input:checked){border-color:var(--amber);background:var(--primary-doux)}
+.dopt input{margin-top:2px;flex-shrink:0}
+.dopt b{display:block;font-size:13px;font-weight:600}
+.dopt .dsub{display:block;font-size:11.5px;color:var(--mute);margin-top:3px;line-height:1.5}
+.dopt.off{opacity:.5;cursor:not-allowed}
+.dlg .ddet{margin:10px 20px 0}
+.dlg .ddet summary{cursor:pointer;font-size:12px;color:var(--mute);padding:6px 0;list-style:none}
+.dlg .ddet summary::-webkit-details-marker{display:none}
+.dlg .ddet summary::before{content:"▸ ";color:var(--amber)}
+.dlg .ddet[open] summary::before{content:"▾ "}
+.dlg .ddet pre{background:var(--puits);border:1px solid var(--rule);border-radius:8px;padding:11px;
+  font-family:var(--mono);font-size:11px;line-height:1.6;margin:4px 0 0;max-height:180px;
+  overflow:auto;white-space:pre-wrap;color:var(--text-2)}
+.dlg .acts{margin-top:16px}
+.dlg.d-error{border-color:var(--danger-trait)}
+.dlg.d-error .dhead{border-bottom:1px solid var(--danger-doux)}
+.dlg.d-ok{border-color:var(--success-trait)}
+@media (max-width:640px){.dlg .dhead{padding:16px 16px 6px}.dlg .ddet{margin:10px 16px 0}}
+
+/* --------------------------------------------- EmuReady (beta) */
+.beta{display:inline-block;font-family:var(--body);font-size:9.5px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.08em;padding:2px 6px;border-radius:4px;
+  background:var(--info-doux);color:var(--indigo);vertical-align:middle;margin-left:6px}
+/* pastille de compatibilite, en bas a droite de la jaquette */
+.erbadge{position:absolute;right:8px;bottom:8px;font-size:10px;font-weight:600;
+  padding:3px 8px;border-radius:20px;backdrop-filter:blur(4px);background:var(--capot)}
+.erbadge.b-ok{color:var(--green)}
+.erbadge.b-upd{color:var(--amber)}
+.erbadge.b-orph{color:var(--red)}
+.erbadge.b-dlc{color:var(--mute)}
+/* bloc des rapports dans la fiche d'un jeu */
+.erbox{background:var(--panel2);border:1px solid var(--rule);border-radius:9px;
+  padding:12px 14px;margin-bottom:14px}
+.erbox>b{font-size:12.5px}
+.erbox .tid{margin:3px 0 8px}
+.errow{display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid var(--rule);
+  font-size:12.5px}
+.errow:first-of-type{border-top:0}
+.errow.mien{color:var(--ink)}
+.errow .badge{position:static;font-size:10.5px;padding:2px 8px;border-radius:20px;
+  background:var(--capot-leger)}
+.errow button{padding:4px 10px;font-size:11.5px}
+
+/* resume de l'activation des MAJ/DLC dans Eden */
+.nandsum{font-size:12.5px;color:var(--mute);background:var(--panel);border:1px solid var(--rule);
+  border-radius:9px;padding:10px 14px;margin-bottom:12px}
+.nandsum b{font-family:var(--disp);font-size:15px;color:var(--ink);margin-right:2px}
+.nandsum b.ok{color:var(--green)} .nandsum b.bad{color:var(--red)}
+.nandsum .bad{color:var(--red)}
+#nand .game{margin-bottom:8px}
+#nand .ghead input,#nand .row input{flex-shrink:0}
+#nand .row input:disabled{opacity:.35}
+#nand .badge{position:static;font-size:10.5px;padding:2px 8px;border-radius:20px;
+  background:var(--capot-leger)}
+
+/* ligne d'information discrete : une action secondaire sans bloc encombrant */
+.hintline{display:flex;align-items:center;gap:11px;flex-wrap:wrap;padding:10px 14px;
+  border:1px solid var(--rule);border-radius:9px;background:var(--panel);
+  font-size:12.5px;color:var(--mute);margin-top:12px}
+.hintline .hicon{font-size:15px;line-height:1}
+.hintline .grow{flex:1;min-width:150px;color:var(--ink)}
+.hintline button{padding:6px 12px;font-size:12px}
+.hintline a{font-size:12px}
+.hinthelp{font-size:12.5px;color:var(--mute);line-height:1.6;padding:11px 14px;margin-top:8px;
+  border-left:2px solid var(--indigo);background:var(--panel);border-radius:0 8px 8px 0}
+
+/* section repliee « aller plus loin » : un vrai titre, pas une ligne perdue */
+.advanced{margin-top:10px;border-top:1px solid var(--rule);padding-top:18px}
+.advanced>summary{cursor:pointer;list-style:none;padding:4px 0}
+.advanced>summary::-webkit-details-marker{display:none}
+.advanced>summary h2{display:inline-block;margin:0}
+.advanced>summary h2::after{content:" ▸";color:var(--amber);font-size:14px}
+.advanced[open]>summary h2::after{content:" ▾"}
+.advanced>summary .lead{display:block;margin:2px 0 0}
+.advanced[open]>summary{margin-bottom:18px}
+/* navigateur de fichiers de la console */
+.brow{display:flex;align-items:center;gap:11px;padding:9px 13px;border-top:1px solid var(--rule);
+  transition:background .15s}
+.brow:first-child{border-top:0}
+.brow.dir{cursor:pointer}
+.brow.dir:hover{background:var(--surface-2)}
+.brow .ic{width:18px;text-align:center;color:var(--amber)}
+.brow .fn{flex:1;font-family:var(--mono);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.brow.file .fn{color:var(--mute)}
+.brow.game .ic{color:var(--green)}
+
+/* legende des pastilles */
+.legend{margin-bottom:18px;border:1px solid var(--rule);border-radius:9px;background:var(--panel);padding:0 14px}
+.legend summary{cursor:pointer;padding:11px 0;font-size:12.5px;color:var(--mute);list-style:none}
+.legend summary::-webkit-details-marker{display:none}
+.legend summary::before{content:"▸ ";color:var(--amber)}
+.legend[open] summary::before{content:"▾ "}
+.legrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:9px;padding:4px 0 14px}
+.legrid span{font-size:12px;color:var(--mute);display:flex;align-items:center;gap:8px}
+.legend .flag{font-style:normal;flex-shrink:0}
+
+/* manifeste de transfert : montre le routage GAMES / UPDATE / DLC */
+.manifest{background:var(--panel);border:1px solid var(--rule);border-radius:10px;
+  padding:14px;margin-top:12px;animation:enter .3s var(--ease)}
+.mfhead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;
+  font-family:var(--mono);font-size:12px;color:var(--mute)}
+.mfhead b{font-family:var(--disp);font-size:16px;color:var(--ink)}
+.mfhead .bad{color:var(--red)}
+.mfgroup{margin-bottom:10px}
+.mflabel{font-family:var(--disp);text-transform:uppercase;letter-spacing:.1em;font-size:12px;
+  color:var(--amber);display:flex;align-items:center;gap:8px;margin:0 0 5px}
+.mflabel .arrow{color:var(--mute)}
+.mfitem{font-family:var(--mono);font-size:11.5px;color:var(--text-2);padding:2px 0 2px 22px;
+  display:flex;justify-content:space-between;gap:12px}
+.mfitem span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ---------------------------------------------------------------- reglages */
+/* Patron classique d'un ecran de reglages : une colonne lisible, groupee par
+   theme, chaque ligne = libelle a gauche / controle a droite. */
+.setwrap{max-width:820px;margin:0 auto}
+.setgroup{background:var(--panel);border:1px solid var(--rule);border-radius:12px;
+  margin-bottom:16px;overflow:hidden}
+.setgt{font-family:var(--disp);text-transform:uppercase;letter-spacing:.13em;font-size:11.5px;
+  color:var(--amber);padding:13px 18px;background:var(--panel2);
+  border-bottom:1px solid var(--rule)}
+.setrow{display:flex;align-items:center;gap:24px;padding:15px 18px;
+  border-top:1px solid var(--rule);transition:background .15s}
+.setgroup>.setrow:first-of-type,.setgt+.setrow{border-top:0}
+.setrow:hover{background:var(--surface-2)}
+.setlab{flex:1 1 auto;min-width:0}
+/* `>` volontaire : seul le TITRE de la ligne est un bloc. Sans cela, une
+   emphase <b> dans la description passait a la ligne — « Le dossier parent de
+   / toutes / tes plateformes… ». */
+.setlab > b{display:block;font-size:13.5px;font-weight:600;margin-bottom:3px}
+.setlab span b{font-weight:600;color:var(--ink)}
+.setlab span{display:block;font-size:12px;color:var(--mute);line-height:1.55}
+.setctl{flex:0 0 auto;display:flex;justify-content:flex-end;align-items:center;
+  gap:8px;width:300px;max-width:45%}
+.setctl input[type=text],.setctl input[type=password],.setctl input[type=email],
+.setctl input[type=url],.setctl select,.setctl textarea{width:100%}
+.setctl input[type=number]{width:88px;text-align:center}
+.setctl button{white-space:nowrap}
+/* reglage visible mais sans effet avec l'option courante : on l'estompe et on
+   explique pourquoi, plutot que de le faire disparaitre */
+.setrow.inactive .setlab b,.setrow.inactive .setctl{opacity:.5}
+.setrow.inactive .setlab span::after{content:" — " attr(data-note);color:var(--amber);opacity:.85}
+/* Plusieurs controles pour UN reglage (deux identifiants, un bouton de test).
+   `.setctl` est une rangee : sans ce variant, les champs se partageaient la
+   largeur et le premier tombait a 24 px. */
+.setctl.pile{flex-direction:column;align-items:stretch;gap:8px}
+/* `flex:1 1 260px` porte sur la LARGEUR en rangee, sur la HAUTEUR en colonne :
+   sans cette remise a plat, le premier champ montait a 260 px de haut. */
+.setctl.pile > *{width:100%;flex:0 0 auto}
+.setctl.pile button{width:auto;align-self:flex-start}
+
+/* ligne en pleine largeur (zones de texte) */
+.setrow.col{flex-direction:column;align-items:stretch;gap:10px}
+.setrow.col .setctl{width:100%;max-width:100%}
+/* bloc avance repliable */
+.setadv>summary{cursor:pointer;list-style:none}
+.setadv>summary::-webkit-details-marker{display:none}
+.setadv>summary::after{content:" ▸";color:var(--mute)}
+.setadv[open]>summary::after{content:" ▾"}
+/* La confirmation d'enregistrement s'affiche dans le sommaire colle. */
+.setnav-etat{margin-left:auto;align-self:center;padding:0 12px;
+  font-family:var(--mono);font-size:11px;color:var(--green);
+  opacity:0;transition:opacity .2s var(--ease)}
+.setnav-etat.okflash{opacity:1}
+
+/* interrupteur : plus lisible qu'une case a cocher pour un oui/non */
+.sw{position:relative;display:inline-block;width:44px;height:25px;cursor:pointer;flex-shrink:0}
+.sw input{opacity:0;width:0;height:0;position:absolute}
+.sw span{position:absolute;inset:0;border-radius:25px;background:var(--rule);
+  transition:background .22s var(--ease)}
+.sw span::before{content:"";position:absolute;width:19px;height:19px;left:3px;top:3px;
+  border-radius:50%;background:var(--mute);transition:transform .22s var(--ease),background .22s}
+.sw input:checked+span{background:var(--primary-trait)}
+.sw input:checked+span::before{transform:translateX(19px);background:var(--amber)}
+.sw input:focus-visible+span{box-shadow:0 0 0 2px var(--indigo)}
+.radios{display:flex;flex-direction:column;gap:9px}
+.radios label{display:flex;gap:9px;align-items:flex-start;font-size:12.5px;cursor:pointer;
+  padding:9px 11px;border:1px solid var(--rule);border-radius:8px;transition:border-color .15s,background .15s}
+.radios label:hover{border-color:var(--indigo)}
+.radios label.sel{border-color:var(--amber);background:var(--primary-doux)}
+.radios .rt{font-weight:600;display:block}
+.radios .rd{color:var(--mute);font-size:11.5px}
+.radios code{font-family:var(--mono);color:var(--amber)}
+
+/* ---------------------------------------------------------------- dock bas */
+/* pastille : du nouveau dans le journal, sans l'ouvrir de force */
+#journalbtn.news{border-color:var(--amber);color:var(--amber)}
+#journalbtn.news::after{content:"";display:inline-block;width:6px;height:6px;margin-left:6px;
+  border-radius:50%;background:var(--amber);vertical-align:middle}
+#journal{max-width:1180px;margin:0 auto;padding:0 22px;max-height:0;overflow:hidden;
+  transition:max-height .35s var(--ease)}
+/* hauteur relative : le journal ne monopolise jamais un petit ecran */
+.jbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 0}
+.jbar .chip{padding:4px 10px;font-size:11.5px}
+.jbar .chip b{font-size:11.5px;margin-left:4px}
+.jbar input.search{flex:1 1 140px;font-size:11.5px;padding:5px 9px}
+.jbar button{padding:5px 10px;font-size:11.5px}
+#log{background:var(--puits);border:1px solid var(--rule);border-radius:9px;padding:6px 0;
+  max-height:min(calc(46vh - 70px),250px);overflow:auto}
+.jline{display:flex;gap:10px;align-items:baseline;padding:3px 12px;
+  font-family:var(--mono);font-size:11.5px;line-height:1.55;border-left:2px solid transparent}
+.jline:hover{background:var(--puits)}
+.jt{color:var(--text-3);flex-shrink:0}
+.jn{flex-shrink:0;width:44px;text-transform:uppercase;font-size:9.5px;letter-spacing:.06em}
+.jm{color:var(--text-2);word-break:break-word}
+.j-error{border-left-color:var(--red);background:var(--danger-voile)}
+.j-error .jn{color:var(--red)} .j-error .jm{color:var(--danger-texte)}
+.j-warn{border-left-color:var(--amber)}
+.j-warn .jn{color:var(--amber)} .j-warn .jm{color:var(--primary-texte)}
+.j-ok .jn{color:var(--green)} .j-ok .jm{color:var(--success-texte)}
+.j-info .jn{color:var(--indigo)}
+.j-debug{opacity:.6}
+.jempty{padding:16px;text-align:center;color:var(--mute);font-size:12px}
+
+/* ---------------------------------------------------------------- toasts */
+/* Une notification informe, elle ne se manipule pas : elle ne doit jamais
+   capter un appui. Sur telephone, la pile couvrait les cartes et le bouton
+   « Détails » ne repondait plus pendant plusieurs secondes. */
+.toasts{position:fixed;right:18px;bottom:64px;z-index:40;display:flex;flex-direction:column;
+  gap:9px;max-width:340px;pointer-events:none}
+.toast{pointer-events:none}
+.toast{background:var(--panel2);border:1px solid var(--rule);border-left:3px solid var(--indigo);
+  border-radius:8px;padding:11px 14px;font-size:12.5px;box-shadow:0 8px 24px -10px var(--ombre);
+  animation:toastin .3s var(--ease)}
+.toast.out{animation:toastout .3s var(--ease) forwards}
+.toast.ok{border-left-color:var(--green)} .toast.warn{border-left-color:var(--amber)}
+.toast.err{border-left-color:var(--red)}
+@keyframes toastin{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:none}}
+@keyframes toastout{to{opacity:0;transform:translateX(30px)}}
+
+/* ------------------------------------------------------------- adaptations */
+
+/* tablette / console en main */
+@media (max-width:900px){
+  .libbar{gap:8px}
+  #sysel{min-width:140px}
+}
+
+/* telephone et petits ecrans de console */
+@media (max-width:640px){
+  .size,.ext{display:none}
+  main{padding:14px 14px 20px}
+  .head-in{padding:10px 14px;gap:12px}
+  .brand{font-size:13px}
+  nav.tabs{order:3;width:100%;justify-content:space-between}
+  nav.tabs button{flex:1;padding:9px 8px;font-size:11px;letter-spacing:.08em}
+  .status{margin-left:0;font-size:11px;gap:10px}
+  .libbar{position:static;padding:0 0 10px}
+  .toolbar{position:static}
+  .tiles{grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
+  .tile b{font-size:21px}
+  .games{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:11px}
+  .sheet .top{flex-direction:column}
+  .sheet .cover{width:96px}
+  .meter{width:90px}
+  h2{font-size:11.5px}
+  .steps{padding-left:16px}
+  .steps input{margin:6px 0 0;display:block;width:100%}
+  /* reglages : le controle passe sous son libelle, en pleine largeur */
+  .setrow{flex-direction:column;align-items:stretch;gap:10px;padding:14px}
+  .setctl{width:100%;max-width:100%;justify-content:flex-start}
+  .setctl button{width:100%}
+  .setctl input[type=number]{width:100%}
+  .setgt{padding:12px 14px}
+}
+
+/* ecrans tactiles : cibles plus larges, pas d'effets de survol trompeurs */
+@media (pointer:coarse){
+  button{padding:11px 15px;font-size:13.5px}
+  .chip{padding:9px 14px}
+  nav.tabs button{padding:10px 14px}
+  input[type=checkbox]{width:20px;height:20px}
+  .row{padding:12px 14px}
+  .brow{padding:13px}
+
+  /* `.gcard:hover` n'est plus neutralise ici : la section APPARENCE enferme
+     desormais toute l'animation de carte dans `@media (hover:hover)`, qui est
+     la question reellement posee — « le survol existe-t-il ? » — la ou
+     `pointer:coarse` demandait « le doigt est-il gros ? ». Un portable a
+     ecran tactile repondait oui aux deux et perdait l'animation. */
+  .tile:hover{transform:none}
+}
+
+/* plus de barre en bas : on garde seulement la marge d'encoche */
+body{padding-bottom:env(safe-area-inset-bottom,0)}
+
+/* ---- ecrans bas / mode paysage : la hauteur est la ressource rare */
+@media (max-height:560px){
+  header{position:static}                    /* rendre les ~60px a la lecture */
+  .head-in{padding:8px 16px;gap:12px}
+  .brand{font-size:12px}
+  nav.tabs{padding:2px}
+  nav.tabs button{padding:6px 12px;font-size:11px}
+  .status{font-size:10.5px}
+  main{padding:12px 16px}
+  section{margin-bottom:18px}
+  h2{font-size:16px}
+  .lead{margin-bottom:9px}
+  .libbar{position:static;padding:0 0 8px}
+  .tiles{margin-bottom:12px}
+  .tile{padding:9px 11px}
+  .tile b{font-size:18px}
+  /* le journal ne doit jamais manger la moitie de l'ecran */
+  .dock.open #journal{max-height:34vh}
+  #journal pre{max-height:calc(34vh - 26px)}
+  body{padding-bottom:calc(44px + env(safe-area-inset-bottom,0))}
+  .games{grid-template-columns:repeat(auto-fill,minmax(112px,1fr))}
+  .gcard .art{aspect-ratio:1}               /* moins haut : plus de jeux visibles */
+  .modal{padding:12px}
+  .sheet .gdesc{max-height:90px}
+  .onboard{padding:12px}
+
+  /* Neutralise l'agrandissement tactile : en hauteur reduite, la place compte
+     plus que la taille des cibles (elles restent au-dessus de 32 px). */
+  button{padding:7px 12px;font-size:12.5px}
+  .chip{padding:6px 11px;font-size:12px}
+  .chip b{font-size:13px}
+  input[type=text],input[type=password],input[type=email],input[type=search],
+  input[type=url],input[type=number],select,textarea{padding:6px 9px;font-size:12px}
+  input[type=checkbox]{width:16px;height:16px}
+  .sw{width:38px;height:22px}
+  .sw span::before{width:16px;height:16px}
+  .sw input:checked+span::before{transform:translateX(16px)}
+  .row{padding:7px 12px}
+  .brow{padding:8px 12px}
+  .setrow{padding:10px 14px;gap:16px}
+  .setgt{padding:9px 14px}
+  .hintline{padding:7px 12px}
+  .drop{padding:12px}
+  .conn{padding:9px 13px}
+}
+/* paysage etroit : on privilegie la largeur */
+@media (max-height:460px) and (orientation:landscape){
+  .a2hs,.drop{display:none}                  /* messages secondaires masques */
+  .dock.open #journal{max-height:30vh}
+}
+
+@media (prefers-reduced-motion:reduce){
+  *{transition:none!imporhavior:auto}
+}
+
+/* ================================================================ refonte
+   Bibliotheque unifiee : barre d'outils, tailles de vignette, pagination,
+   barre d'actions groupees et bouton d'ajout flottant. */
+
+/* --- barre d'outils : tri et taille d'affichage */
+.toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0 4px}
+.tlbl{display:inline-flex;align-items:center;gap:8px;color:var(--mute);font-size:12.5px}
+.tlbl select{background:var(--panel2);color:var(--ink);border:1px solid var(--rule);
+  border-radius:8px;padding:6px 9px;font-size:12.5px}
+.sizes{display:inline-flex;border:1px solid var(--rule);border-radius:9px;overflow:hidden}
+.szbtn{border:0;background:var(--panel);color:var(--mute);padding:6px 11px;font-size:11px;
+  letter-spacing:1px;cursor:pointer;transition:background .15s,color .15s}
+.szbtn:hover{color:var(--ink);background:var(--panel2)}
+.szbtn.on{background:var(--primary);color:var(--on-primary);font-weight:700}
+
+/* --- tailles de vignette : une seule variable pilote la grille */
+.games{grid-template-columns:repeat(auto-fill,minmax(var(--carte,158px),1fr))}
+.games.taille-compact{gap:11px}
+.games.taille-compact .gname{font-size:11.5px;-webkit-line-clamp:2}
+.games.taille-compact .cap{padding:8px 9px}
+.games.taille-compact .pinfo,.games.taille-compact .erline{display:none}
+.games.taille-grand{gap:20px}
+.games.taille-grand .gname{font-size:14.5px}
+.games.taille-grand .ph{font-size:64px}
+
+/* L'entree en cascade des cartes est definie une seule fois, en section
+   APPARENCE : elle etait declaree ici ET 200 lignes plus bas, avec deux
+   `@keyframes cardin` differents, donc une duree qui dependait de l'ordre. */
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+}
+
+/* --- lignes d'information sous le titre */
+.erline{margin-top:6px;font-size:10.5px;font-weight:600;opacity:.92}
+.erline.b-ok{color:var(--green)} .erline.b-upd{color:var(--amber)}
+.erline.b-orph{color:var(--red)} .erline.b-dlc{color:var(--mute)}
+.cardnote{margin-top:6px;font-size:10.5px;line-height:1.35;color:var(--mute)}
+.cardnote.bad{color:var(--red)}
+.cardnote.warn{color:var(--amber)}
+
+/* --- pagination */
+.pager{display:flex;align-items:center;justify-content:center;gap:14px;margin:18px 0 4px}
+.pager button[disabled]{opacity:.35;cursor:default}
+
+/* --- barre d'actions : glisse depuis le bas des qu'une selection existe */
+.actionbar{position:fixed;left:50%;bottom:calc(var(--dock-h,46px) + 14px);transform:translate(-50%,140%);
+  z-index:31;display:flex;align-items:center;gap:12px;max-width:min(1100px,94vw);
+  padding:11px 16px;border-radius:14px;background:var(--verre-plein);
+  border:1px solid var(--rule);box-shadow:0 18px 44px -18px var(--ombre);
+  backdrop-filter:blur(10px);opacity:0;pointer-events:none;
+  transition:transform .3s var(--ease),opacity .25s var(--ease);flex-wrap:wrap}
+.actionbar.on{transform:translate(-50%,0);opacity:1;pointer-events:auto}
+.actionbar .acts{display:flex;gap:8px;flex-wrap:wrap}
+.actionbar button .tid{font-weight:400}
+
+/* --- bouton flottant d'ajout */
+.fab{position:fixed;right:22px;bottom:calc(var(--dock-h,46px) + 16px);z-index:31;width:54px;height:54px;border-radius:50%;
+  border:0;background:var(--primary);color:var(--on-primary);font-size:30px;line-height:1;cursor:pointer;
+  box-shadow:0 12px 30px -10px var(--primary-halo);
+  transition:transform .25s var(--ease),box-shadow .25s}
+.fab:hover{transform:scale(1.04)}
+.fab .fabmark{display:block;transition:transform .25s var(--ease)}
+.fab:hover .fabmark{transform:rotate(90deg)}
+.fab.on .fabmark{transform:rotate(135deg)}
+.dropwrap{position:fixed;right:22px;bottom:calc(var(--dock-h,46px) + 82px);z-index:31;width:min(430px,92vw);
+  padding:16px 18px;border-radius:14px;background:var(--panel);border:1px solid var(--rule);
+  box-shadow:0 22px 50px -20px var(--ombre);opacity:0;transform:translateY(14px) scale(.98);
+  pointer-events:none;transition:opacity .22s var(--ease),transform .22s var(--ease)}
+.dropwrap.on{opacity:1;transform:none;pointer-events:auto}
+.drophead{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+
+/* --- corbeille : le resume d'abord, le detail sur demande */
+.trashsum{padding:11px 14px;border-radius:10px;background:var(--panel2);
+  border:1px solid var(--rule);margin-bottom:12px;font-size:13px}
+
+/* --- pastille de connexion : elle respire quand la console repond */
+.cdot.on,.dot.on{animation:pulse 2.4s ease-in-out infinite}
+@keyframes pulse{
+  0%,100%{box-shadow:0 0 0 3px var(--success-doux)}
+  50%{box-shadow:0 0 0 7px var(--success-voile)}
+}
+.cdot.off,.dot.off{animation:none}
+@media (prefers-reduced-motion:reduce){.cdot.on,.dot.on{animation:none}}
+
+/* ================================================================ filtres avances */
+.favwrap{position:relative}
+.favpop{position:absolute;left:0;top:calc(100% + 8px);z-index:26;width:262px;padding:12px;
+  border-radius:12px;background:var(--panel);border:1px solid var(--rule);
+  box-shadow:0 18px 40px -18px var(--ombre);opacity:0;transform:translateY(-6px);
+  pointer-events:none;transition:opacity .18s var(--ease),transform .18s var(--ease)}
+.favpop.on{opacity:1;transform:none;pointer-events:auto}
+.favhead{display:flex;align-items:center;justify-content:space-between;
+  font-size:12px;color:var(--mute);margin-bottom:8px}
+.favrow{display:flex;align-items:center;gap:9px;padding:7px 6px;border-radius:8px;
+  font-size:12.5px;cursor:pointer;transition:background .13s}
+.favrow:hover{background:var(--panel2)}
+.favrow .tid{font-size:11px}
+#favbtn.on{border-color:var(--amber);color:var(--amber)}
+.sensbtn{border:1px solid var(--rule);border-radius:9px;padding:6px 10px;font-size:13px}
+
+/* la coche apparait au survol : la carte reste lisible au repos */
+.gcard .pcheck{opacity:0;transition:opacity .15s,background .15s,border-color .15s}
+.gcard:hover .pcheck,.gcard.sel .pcheck{opacity:1}
+
+/* ================================================================ assistant wifi */
+.wizhead{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.wizhead h3{margin:0}
+.wizprog{height:3px;border-radius:3px;background:var(--rule);overflow:hidden;margin:12px 0 18px}
+.wizprog i{display:block;height:100%;width:33%;background:var(--amber);
+  transition:width .35s var(--ease)}
+.wstep{display:none;gap:14px}
+.wstep.on{display:flex;animation:wstepin .3s var(--ease)}
+@keyframes wstepin{from{opacity:0;transform:translateX(10px)}to{opacity:1;transform:none}}
+.wnum{flex:0 0 30px;height:30px;border-radius:50%;background:var(--primary);color:var(--on-primary);
+  display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
+.wbody{flex:1;min-width:0}
+.wtitle{font-size:15px;font-weight:600;margin-bottom:8px;display:flex;
+  align-items:center;gap:9px;flex-wrap:wrap}
+.ou{font-size:10.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;
+  padding:3px 9px;border-radius:20px}
+.ou-console{background:var(--info-doux);color:var(--indigo);
+  box-shadow:inset 0 0 0 1px var(--info-trait)}
+.ou-mac{background:var(--primary-doux);color:var(--amber);
+  box-shadow:inset 0 0 0 1px var(--primary-halo)}
+.wbody p{margin:6px 0;line-height:1.5}
+.wpath{margin:10px 0;padding:11px 13px;border-radius:10px;background:var(--panel2);
+  border:1px solid var(--rule);font-size:12.5px;line-height:1.6}
+.wpath code{font-family:var(--mono);color:var(--amber)}
+.wtip{margin:10px 0;font-size:12.5px}
+.wtip summary{cursor:pointer;color:var(--amber)}
+.wtip p{color:var(--mute)}
+.wfield{display:block;margin:12px 0}
+.wfield span{display:block;font-size:12.5px;margin-bottom:5px}
+.wfield em{color:var(--mute);font-style:normal;font-size:11.5px}
+.wfield input{width:100%;padding:10px 12px;border-radius:9px;background:var(--panel2);
+  border:1px solid var(--rule);color:var(--ink);font-family:var(--mono);font-size:14px;
+  transition:border-color .15s}
+.wfield input:focus{outline:none;border-color:var(--amber)}
+.wmsg{display:none;margin:8px 0;padding:9px 12px;border-radius:9px;font-size:12.5px;
+  background:var(--danger-doux);color:var(--red);
+  box-shadow:inset 0 0 0 1px var(--danger-trait)}
+.wmsg.on{display:block}
+.wmsg code{font-family:var(--mono)}
+.wsep{margin:16px 0 10px;color:var(--mute);font-size:12px;text-align:center;position:relative}
+.wsep:before,.wsep:after{content:"";position:absolute;top:50%;width:42%;height:1px;background:var(--rule)}
+.wsep:before{left:0} .wsep:after{right:0}
+
+/* Le dock du journal est fixe en bas : sans reserve, il recouvrait le bouton +
+   et la barre d'actions. Sa hauteur reelle est publiee par le JS. */
+.actionbar,.fab,.dropwrap{transition-property:transform,opacity,bottom;}
+body{padding-bottom:calc(var(--dock-h,46px) + 18px)}
+
+/* Le bouton « Détails » doit s'aligner d'une carte a l'autre : sans cela il
+   flotte a une hauteur differente selon la longueur du titre et des notes. */
+.gcard{display:flex;flex-direction:column}
+.gcard .art{flex:0 0 auto}
+.gcard .cap{flex:1;display:flex;flex-direction:column;min-height:0}
+.gcard .pinfo{margin-top:auto}
+.gcard .gname{min-height:2.6em}          /* deux lignes reservees, meme pour un titre court */
+
+/* ================================================================================
+   IDENTITE VISUELLE — « etagere de cartouches »
+   --------------------------------------------------------------------------------
+   Les jaquettes sont l'element le plus colore de l'ecran : l'habillage doit se
+   taire pour les laisser parler. D'ou un graphite CHAUD (et non le bleu-noir
+   habituel), une seule couleur d'action (laiton), et un ardoise froid a la place
+   de l'ancien indigo violet — le violet etant devenu la signature involontaire
+   des interfaces generees.
+   Redefinir les jetons suffit a repeindre toute l'interface : chaque regle
+   existante passe deja par var().
+   ================================================================================ */
+/* Meme remarque : les couleurs vivent en section APPARENCE. Ne restent ici que
+   les deux constantes qui ne dependent pas du theme. */
+:root{
+  --ease:cubic-bezier(.22,.61,.36,1);
+  --pas:4px;                 /* rythme : toutes les marges sont un multiple */
+}
+
+/* --- typographie : les chiffres alignes donnent le ton « instrument » */
+body{font-feature-settings:"kern" 1}
+.meta,.tid,.size,code,.mono,.chip b,.pager{font-variant-numeric:tabular-nums}
+.brand{letter-spacing:-.2px}
+h2,h3{font-family:var(--disp);letter-spacing:.2px}
+
+/* --- l'etat devient une etiquette serigraphiee, non une pastille flottante */
+.gcard .art{border-radius:0}
+.gcard .badge{
+  left:0;right:0;bottom:0;border-radius:0;text-align:center;
+  padding:5px 8px;font-family:var(--disp);font-size:10.5px;font-weight:600;
+  letter-spacing:.9px;text-transform:uppercase;
+  background:var(--capot);backdrop-filter:blur(6px);
+  box-shadow:none;border-top:1px solid var(--eclat)}
+.gcard{position:relative;border-radius:10px}
+.badge.b-ok{color:var(--green)} .badge.b-upd{color:var(--amber)}
+.badge.b-conv{color:var(--indigo)} .badge.b-orph,.badge.b-clean{color:var(--red)}
+.badge.b-dlc{color:var(--mute)}
+
+/* Dernier des trois blocs qui se disputaient le survol : c'est lui qui gagnait,
+   et il ANNULAIT le mouvement decrit ligne 143 (`transform:none`). Le survol est
+   maintenant decrit une seule fois, en section APPARENCE. */
+.gcard .art{overflow:hidden}
+.gcard.sel{border-color:var(--amber);box-shadow:0 0 0 1px var(--amber)}
+
+/* --- legende : hierarchie nette entre titre, chiffres et remarques */
+.gcard .cap{padding:9px 11px 11px}
+.gcard .gname{font-size:12.5px;letter-spacing:.1px}
+.gcard .meta{font-size:10px;letter-spacing:.2px;opacity:.85}
+.erline{font-size:10px;letter-spacing:.2px;font-weight:600}
+.cardnote{font-size:10px;letter-spacing:.1px}
+.gcard .pinfo{border-radius:7px;font-size:11px;letter-spacing:.3px;
+  background:transparent;border:1px solid var(--rule);color:var(--mute);
+  transition:color .16s,border-color .16s,background .16s}
+.gcard .pinfo:hover{color:var(--ink);border-color:var(--indigo);background:var(--panel2)}
+
+/* L'entree des cartes vit en section APPARENCE (voir reactive.js pour savoir
+   quelles cartes sont reellement nouvelles). */
+
+/* --- puces de filtre : plus proches d'un selecteur d'appareil que d'un bouton web */
+.chip{border-radius:7px;letter-spacing:.2px;font-size:12px}
+.chip.on{background:var(--primary-doux);border-color:var(--amber);color:var(--amber)}
+.szbtn.on{background:var(--amber);color:var(--on-primary)}
+
+/* --- en-tete : un filet laiton marque l'onglet actif, sans fond plein */
+.tabs button{position:relative;letter-spacing:.3px}
+.tabs button.active:after{content:"";position:absolute;left:10px;right:10px;bottom:-1px;
+  height:2px;background:var(--amber);border-radius:2px}
+
+/* --- barre d'actions : elle se pose comme un tiroir, pas comme une popup */
+.actionbar{border-radius:12px;box-shadow:0 0 0 1px var(--rule),0 20px 46px -24px var(--ombre)}
+.fab{background:var(--amber);color:var(--on-primary);
+  box-shadow:0 0 0 1px var(--primary-trait),0 14px 30px -14px var(--primary-trait-fort)}
+
+/* ================================================================================
+   CORRECTIFS DE LISIBILITE ET NOUVELLE PLACE DU JOURNAL
+   ================================================================================ */
+
+/* --- EmuReady et remarques : du texte, pas des cadres.
+   `.erline` reutilisait les classes de pastille (.b-ok, .b-upd…), qui portent un
+   box-shadow : d'ou un rectangle autour du texte. On neutralise le cadre et on
+   remplace la couleur portante par une pastille discrete en tete de ligne. */
+.erline{box-shadow:none;display:flex;align-items:center;gap:6px;
+  color:var(--mute);font-weight:500}
+.erline:before{content:"";width:6px;height:6px;border-radius:50%;
+  background:currentColor;flex:0 0 auto}
+.erline.b-ok{color:var(--green)} .erline.b-upd{color:var(--amber)}
+.erline.b-orph{color:var(--red)} .erline.b-dlc{color:var(--mute)}
+.erline .tid{color:var(--mute);font-weight:400}
+
+/* --- contraste des boutons : le detail en gris sur fond ambre etait illisible */
+button .tid{color:inherit;opacity:.72;font-weight:400}
+
+.gcard .pinfo{color:var(--text-2);border-color:var(--rule)}
+.gcard .pinfo:hover{color:var(--ink);border-color:var(--amber);background:var(--panel2)}
+
+/* --- bandeau de connexion : global, sous le menu, lisible d'un coup d'oeil */
+.conn{position:sticky;top:57px;z-index:19;display:flex;align-items:center;gap:12px;
+  flex-wrap:wrap;max-width:1180px;margin:0 auto;padding:10px 22px;
+  border-bottom:1px solid var(--rule);background:var(--bg)}
+.conn .cnom{font-family:var(--disp);font-size:16px;letter-spacing:.2px}
+.conn .clien{color:var(--mute);font-size:12.5px}
+.conn.off .cnom{color:var(--mute)}
+@media(max-width:720px){
+  .conn{top:0;position:static;padding:9px 14px;gap:8px}
+  .conn .clien{width:100%;order:9}
+}
+
+/* --- bandeau de tache : present uniquement pendant un travail */
+.dock{transform:translateY(100%);transition:transform .28s var(--ease)}
+
+/* --- journal : bouton flottant a droite + tiroir lateral */
+/* `trap` n'existe pas : la declaration etait ignoree, et surtout il manquait
+   le recentrage vertical — le bouton pendait sous le milieu de l'ecran au lieu
+   d'y etre centre. */
+.jfab{position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:32;
+  gap:8px;padding:12px 10px;
+  border:1px solid var(--rule);border-right:0;border-radius:10px 0 0 10px;
+  background:var(--panel);color:var(--mute);cursor:pointer;
+  writing-mode:vertical-rl;font-size:11.5px;letter-spacing:1.2px;
+  text-transform:uppercase;font-family:var(--disp);
+  transition:color .16s,background .16s,box-shadow .16s,
+             transform .18s var(--ease),opacity .18s;will-change:transform}
+.jfab:hover{color:var(--ink);background:var(--panel2);
+  transform:translate(-3px,-50%);box-shadow:-6px 0 18px -10px var(--ombre)}
+/* Cible tactile confortable sans boite vide : le libelle etant masque sous
+   520 px, une hauteur de 96 px ne laissait qu'un grand rectangle vide autour
+   du chevron. 64 px suffit au doigt et reste discret. */
+@media (pointer:coarse){
+  .jfab{min-height:64px;padding:14px 11px;align-items:center;justify-content:center}
+}
+@media (pointer:coarse) and (min-width:521px){.jfab{min-height:104px}}
+.jfab.masque{opacity:0;pointer-events:none;transform:translate(100%,-50%)}
+.jfab-ic{writing-mode:horizontal-tb;font-size:13px}
+.jfab.news{color:var(--amber);border-color:var(--amber)}
+
+.jvoile{position:fixed;inset:0;z-index:33;background:var(--rideau-leger);
+  opacity:0;pointer-events:none;transition:opacity .25s var(--ease)}
+.jvoile.on{opacity:1;pointer-events:auto}
+
+.jdrawer{position:fixed;top:0;right:0;bottom:0;z-index:34;
+  width:min(430px,94vw);display:flex;flex-direction:column;
+  background:var(--panel);border-left:1px solid var(--rule);
+  box-shadow:-24px 0 60px -30px var(--ombre);
+  transform:translateX(100%);transition:transform .3s var(--ease)}
+.jdrawer.open{transform:none}
+.jhead{display:flex;align-items:center;gap:10px;padding:14px 16px;
+  border-bottom:1px solid var(--rule);flex:0 0 auto}
+.jhead b{font-family:var(--disp);font-size:16px;letter-spacing:.3px}
+/* le journal occupe toute la hauteur du tiroir et defile a l'interieur :
+   indispensable sur la console en paysage, ou la hauteur est tres faible */
+.jdrawer #journal{max-width:none;margin:0;padding:0 16px 16px;
+  max-height:none;overflow:auto;flex:1;min-height:0}
+.jdrawer .jbar{flex-direction:column;align-items:stretch;gap:8px;
+  position:sticky;top:0;background:var(--panel);padding-top:12px;z-index:1}
+.jdrawer .jbar .search{width:100%;flex:0 0 auto}   /* en colonne, flex:1 etirerait la HAUTEUR */
+body.sansdefilement{overflow:hidden}
+
+/* --- responsive console : en paysage l'ecran est large mais tres bas */
+@media(max-height:520px){
+  .jfab{padding:9px 7px;font-size:10.5px}
+  .jdrawer{width:min(380px,86vw)}
+  .actionbar{padding:8px 12px;gap:8px}
+  .fab{width:44px;height:44px;font-size:24px}
+  .conn{padding:7px 14px}
+  .conn .cnom{font-size:14px}
+}
+@media(max-width:520px){
+  .jfab .jfab-lbl{display:none}
+  .jdrawer{width:100vw}
+}
+
+/* --- fiche d'un jeu : information hierarchisee, plus de pastilles empilees.
+   `.status` designe AUSSI le bloc d'etat de l'en-tete : sans cette portee,
+   la regle en colonne s'y appliquait et cassait l'en-tete sur deux lignes. */
+.sheet .status{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.stline{display:flex;align-items:flex-start;gap:9px;font-size:13px;line-height:1.45}
+.stline i{width:7px;height:7px;border-radius:50%;margin-top:6px;flex:0 0 auto;
+  background:var(--mute)}
+.stline.s-ok i{background:var(--green)}
+.stline.s-upd i{background:var(--amber)}
+.stline.s-conv i{background:var(--indigo)}
+.stline.s-orph i{background:var(--red)}
+.stline.s-dlc i{background:var(--mute)}
+.stline.s-ok span{color:var(--ink)}
+.stline span{color:var(--ink)}
+
+/* chiffres cles : lecture immediate, alignes, sans cadre autour de chacun */
+.chiffres{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));
+  gap:1px;margin:14px 0;background:var(--rule);border:1px solid var(--rule);
+  border-radius:10px;overflow:hidden}
+.chiffres>div{background:var(--panel);padding:11px 13px;display:flex;
+  flex-direction:column;gap:3px}
+.chiffres b{font-family:var(--disp);font-size:19px;letter-spacing:.3px;
+  font-variant-numeric:tabular-nums}
+.chiffres span{font-size:11px;color:var(--mute);letter-spacing:.2px}
+
+/* intertitre de section dans la fiche */
+.ssect{margin:16px 0 8px;font-family:var(--disp);font-size:12px;letter-spacing:1px;
+  text-transform:uppercase;color:var(--mute);
+  display:flex;align-items:center;gap:8px}
+.ssect:after{content:"";flex:1;height:1px;background:var(--rule)}
+.ssect .tid{text-transform:none;letter-spacing:0}
+
+/* note EmuReady dans la fiche : pastille + texte, sans rectangle */
+.errow .note{display:inline-flex;align-items:center;gap:7px;min-width:104px;
+  font-size:12.5px;font-weight:600;color:var(--mute)}
+.errow .note i{width:7px;height:7px;border-radius:50%;background:currentColor;flex:0 0 auto}
+.errow .note.b-ok{color:var(--green)} .errow .note.b-upd{color:var(--amber)}
+.errow .note.b-orph{color:var(--red)} .errow .note.b-dlc{color:var(--mute)}
+.errow.mien{background:var(--primary-voile);border-radius:8px}
+
+/* ================================================================================
+   CARTES : les chiffres sur la jaquette, UNE ligne de texte sous le titre
+   --------------------------------------------------------------------------------
+   Avant : taille, contenu, note EmuReady et remarque s'empilaient sous le titre,
+   quatre lignes concurrentes dont aucune ne ressortait. Ce qui se chiffre se lit
+   mieux posé sur l'image ; ce qui se raconte tient en une ligne.
+   ================================================================================ */
+.ovslot{position:absolute;left:0;right:0;top:0;display:flex;align-items:flex-start;
+  justify-content:space-between;gap:6px;padding:7px;pointer-events:none;
+  background:linear-gradient(180deg,var(--capot),transparent)}
+.ovtaille{font-family:var(--mono);font-size:10px;font-variant-numeric:tabular-nums;
+  color:var(--sur-image);text-shadow:0 1px 3px rgba(0,0,0,.9);letter-spacing:.2px}
+.ovdroite{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+.ov{font-family:var(--disp);font-size:9.5px;font-weight:600;letter-spacing:.7px;
+  text-transform:uppercase;padding:2px 6px;border-radius:4px;
+  background:var(--capot);color:var(--sur-image);
+  box-shadow:inset 0 0 0 1px var(--eclat-fort)}
+/* la coche passe au-dessus du degrade */
+.pcheck{z-index:3}
+
+/* une seule ligne sous le titre : hauteur reservee pour que les boutons
+   « Détails » restent alignes d'une carte a l'autre */
+.gcard .ligne{margin-top:5px;min-height:2.5em;font-size:10.5px;line-height:1.32;
+  color:var(--mute);display:-webkit-box;-webkit-line-clamp:2;
+  -webkit-box-orient:vertical;overflow:hidden}
+.gcard .ligne.bad{color:var(--red)}
+.gcard .ligne.warn{color:var(--amber)}
+.gcard .ligne.action{color:var(--ink)}
+.gcard .ligne.er{font-weight:600}
+.gcard .ligne.er.b-ok{color:var(--green)}
+.gcard .ligne.er.b-upd{color:var(--amber)}
+.gcard .ligne.er.b-orph{color:var(--red)}
+.gcard .ligne.er.b-dlc{color:var(--mute)}
+/* en vignettes compactes, la ligne disparait : le badge et les pastilles suffisent */
+.games.taille-compact .ligne{display:none}
+.games.taille-compact .ovtaille{font-size:9px}
+
+/* La lettre de remplacement etait en position absolue, donc peinte PAR-DESSUS
+   la jaquette : un « M » gris flottait au milieu de chaque image. On la place
+   derriere ; elle ne se voit que si l'image manque ou n'a pas pu etre chargee
+   (coverRate retire alors la balise). */
+.gcard .art{position:relative}
+.gcard .ph{z-index:0}
+.gcard .art img{position:absolute;inset:0;z-index:1}
+
+/* ================================================================================
+   ETIQUETTE DE LA JAQUETTE : où est le jeu · ce qu'il reste à faire
+   --------------------------------------------------------------------------------
+   Deux temoins allumes/eteints a gauche (Mac, Console), l'etat a droite. Le
+   vocabulaire reste celui d'un appareil : on lit une facade, pas un formulaire.
+   ================================================================================ */
+.gcard .badge{display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:5px 8px;text-align:left;text-transform:none;letter-spacing:0}
+.temoins{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+.tem{display:inline-flex;align-items:center;gap:4px;font-style:normal;
+  font-family:var(--disp);font-size:9.5px;font-weight:600;letter-spacing:.6px;
+  text-transform:uppercase;color:var(--mute);white-space:nowrap}
+.tem:before{content:"";width:6px;height:6px;border-radius:50%;flex:0 0 auto;
+  background:transparent;box-shadow:inset 0 0 0 1.5px currentColor}
+/* allume : pastille pleine et halo — l'oeil accroche sans lire */
+.tem.p-oui{color:var(--green)}
+.tem.p-oui:before{background:currentColor;box-shadow:0 0 0 2px var(--success-doux)}
+/* a moitie : pastille pleine mais ambre, sans halo */
+.tem.p-partiel{color:var(--amber)}
+.tem.p-partiel:before{background:currentColor}
+/* eteint : contour seul */
+.tem.p-non{color:var(--text-3)}
+.tem.p-inconnu{color:var(--text-3)}
+.tem.p-inconnu:before{box-shadow:inset 0 0 0 1.5px currentColor;opacity:.6}
+
+/* Les temoins sont muets : le `:before` EST la pastille. Sans largeur propre,
+   un `<i>` vide se reduirait a zero et la pastille disparaitrait. */
+.tem{min-width:6px}
+.tem:empty{gap:0}
+
+.etatmot{font-family:var(--disp);font-size:9.5px;font-weight:700;letter-spacing:.9px;
+  text-transform:uppercase;text-align:right;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+
+/* en vignettes compactes, seuls les temoins subsistent : l'etat reste lisible
+   par la couleur, et le nom du jeu reprend la place */
+.games.taille-compact .tem{font-size:0;gap:0}
+.games.taille-compact .tem:before{width:7px;height:7px}
+.games.taille-compact .etatmot{font-size:8.5px;letter-spacing:.5px}
+
+/* meme code couleur dans la fiche que sur la carte : oui vert, en partie ambre */
+.chiffres .pres b.p-oui{color:var(--green)}
+.chiffres .pres b.p-partiel{color:var(--amber)}
+.chiffres .pres b.p-non{color:var(--mute)}
+.chiffres .pres b.p-inconnu{color:var(--text-3)}
+
+/* Empilement de la jaquette, declare en un seul endroit pour ne plus le casser
+   par accident : avoir donne un z-index a l'image (pour masquer la lettre de
+   remplacement) avait fait passer les surcouches DERRIERE elle.
+     0 lettre de remplacement · 1 image · 2 surcouches · 3 coche de selection */
+.gcard .ph{z-index:0}
+.gcard .art img{z-index:1}
+.gcard .ovslot,.gcard .badge{z-index:2}
+.gcard .pcheck{z-index:3}
+
+/* debut de resume : texte de lecture, volontairement discret face au titre */
+.gcard .ligne.resume{color:var(--text-3);font-style:normal;line-height:1.38;
+  -webkit-line-clamp:3;min-height:3.7em}
+
+/* bloc EmuReady : du texte courant, jamais d'encart */
+.erdit{margin:8px 0;font-size:12.5px;line-height:1.5;color:var(--mute)}
+.erdit.alerte{color:var(--amber)}
+.erdit.petit{font-size:11.5px;margin-top:10px}
+.errow{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;
+  flex-wrap:wrap}
+.errow + .errow{margin-top:2px}
+.errow .grow{font-size:12.5px}
+
+/* ================================================================================
+   EN-TETE UNIFIE : une seule ligne d'etat de la console
+   -------------------------------------------------------------------------------- */
+.status{display:flex;align-items:center;gap:12px;min-width:0}
+.conn{display:flex;align-items:center;gap:9px;min-width:0;
+  position:static;padding:0;margin:0;border:0;background:transparent}
+.conn .cnom{font-family:var(--disp);font-size:15px;letter-spacing:.2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.conn.off .cnom{color:var(--mute)}
+.conn .cfaits{display:flex;align-items:center;gap:7px;flex-wrap:wrap;
+  font-size:11.5px;color:var(--mute);min-width:0}
+.conn .cfaits i{font-style:normal;opacity:.45}
+.conn .lien{background:none;border:0;padding:0;font-size:11.5px;color:var(--amber);
+  cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.conn .lien:hover{color:var(--ink)}
+/* sur un ecran etroit, on garde le nom et la pastille, on plie le reste */
+@media(max-width:820px){
+  .head-in{flex-wrap:wrap;row-gap:8px}
+  .status{width:100%;order:9}
+  .conn .cfaits{font-size:11px}
+}
+@media(max-width:520px){.conn .cfaits{display:none}}
+
+/* --- selecteur de densite : icones de grille, plus de « ▪ ▪▪ ▪▪▪ » */
+.szbtn{display:inline-flex;align-items:center;justify-content:center;
+  padding:6px 9px;line-height:0}
+.szbtn svg{display:block;opacity:.75;transition:opacity .15s}
+.szbtn:hover svg,.szbtn.on svg{opacity:1}
+.sensbtn{line-height:1}
+
+/* section « Mises à jour » de la fiche : un fait par ligne, aligne a droite */
+.majbloc{border:1px solid var(--rule);border-radius:10px;overflow:hidden}
+.majrow{display:flex;align-items:baseline;justify-content:space-between;gap:14px;
+  padding:9px 13px;font-size:12.5px}
+.majrow + .majrow{border-top:1px solid var(--rule)}
+.majrow span{color:var(--mute);flex:0 0 auto}
+.majrow b{text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+.majrow b.p-partiel{color:var(--amber);font-weight:500}
+.majrow b.p-non{color:var(--red);font-weight:500;word-break:break-word}
+
+/* une ligne de la section MAJ peut porter une action : le bouton reste a droite,
+   apres la valeur, pour que la colonne des faits garde son alignement */
+.majrow.act{gap:10px}
+.majrow.act b{margin-left:auto}
+.majrow.act button{flex:0 0 auto;padding:5px 12px;font-size:12px}
+.majrow.act button[disabled]{opacity:.45;cursor:default}
+
+/* ================================================================================
+   COUCHE DE COMPOSANTS — jetons semantiques et boutons reutilisables
+   --------------------------------------------------------------------------------
+   Pourquoi cette couche existe
+   ----------------------------
+   Les boutons etaient stylés par 40 regles dispersees, avec des couleurs ecrites
+   en dur. Consequence concrete : `button:hover:not(:disabled)` (specificite 0,2,1)
+   l'emportait sur `button.go` (0,1,1), donc le bouton d'action ambre virait au
+   gris au survol EN GARDANT son texte sombre — illisible.
+
+   Principe retenu
+   ---------------
+   Une variante ne redefinit jamais une propriete : elle redefinit des JETONS.
+   Les etats (survol, actif, desactive, focus) consomment ces jetons. Il n'y a
+   donc plus de guerre de specificite possible, et changer de theme revient a
+   redefinir des variables — pas a reecrire des regles.
+
+   Ajouter un theme
+   ----------------
+   Redefinir les jetons semantiques sous un selecteur de portee, par exemple :
+       [data-theme="clair"]{ --surface:#f6f3ef; --text:#1b1820; ... }
+   Aucun composant n'a besoin d'etre touche.
+   ================================================================================ */
+/* Les valeurs de ces jetons ont demenage en section APPARENCE (fin de
+   fichier), ou elles existent en deux exemplaires : un jeu sombre et un jeu
+   clair. Les declarer ici EN PLUS obligerait a modifier deux endroits a
+   chaque retouche, et le theme clair heriterait silencieusement d'une valeur
+   sombre le jour ou l'un des deux serait oublie. */
+
+/* --------------------------------------------------------------- BOUTON
+   Base neutre. Les variantes ne touchent QUE ces quatre jetons. */
+button{
+  --btn-fond:        var(--surface-2);
+  --btn-texte:       var(--text);
+  --btn-trait:       var(--line);
+  --btn-fond-survol: var(--surface-3);
+  --btn-trait-survol:var(--line-fort);
+  background:var(--btn-fond);
+  color:var(--btn-texte);
+  border:1px solid var(--btn-trait);
+  transition:background .15s var(--ease),color .15s var(--ease),
+             border-color .15s var(--ease),box-shadow .15s var(--ease);
+}
+button:hover:not(:disabled){
+  background:var(--btn-fond-survol);
+  color:var(--btn-texte);
+  border-color:var(--btn-trait-survol);
+}
+button:active:not(:disabled){filter:brightness(.94)}
+button:disabled{opacity:.42;cursor:not-allowed;filter:grayscale(.35)}
+button:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+/* le detail dans un bouton suit toujours la couleur du bouton */
+button .tid{color:inherit;opacity:.75;font-weight:400}
+
+/* --- variante principale : l'action attendue */
+button.go{
+  --btn-fond:var(--primary);        --btn-texte:var(--on-primary);
+  --btn-trait:var(--primary);       --btn-fond-survol:var(--primary-vif);
+  --btn-trait-survol:var(--primary-vif);
+  font-weight:600;
+}
+button.go:hover:not(:disabled){box-shadow:0 4px 18px -8px var(--primary)}
+
+/* --- variante discrete : presente sans appeler */
+button.ghost{
+  --btn-fond:transparent;           --btn-texte:var(--text-2);
+  --btn-trait:var(--line);          --btn-fond-survol:var(--surface-2);
+  --btn-trait-survol:var(--info);
+}
+button.ghost:hover:not(:disabled){color:var(--text)}
+
+/* --- variante destructrice : lisible au repos, franche au survol */
+button.warn{
+  --btn-fond:transparent;           --btn-texte:var(--danger);
+  --btn-trait:var(--danger-trait);  --btn-fond-survol:var(--danger);
+  --btn-trait-survol:var(--danger);
+}
+button.warn:hover:not(:disabled){color:var(--on-danger)}
+
+/* --- lien-bouton : aucun fond, aucun trait */
+button.lien{
+  --btn-fond:transparent;           --btn-texte:var(--primary);
+  --btn-trait:transparent;          --btn-fond-survol:transparent;
+  --btn-trait-survol:transparent;
+  padding:0;text-decoration:underline;text-underline-offset:2px}
+button.lien:hover:not(:disabled){color:var(--text)}
+
+/* ================================================================================
+   TACHE EN COURS — carte compacte, jamais un bandeau
+   --------------------------------------------------------------------------------
+   Le bandeau du bas mangeait une bande d'ecran entiere, ce qui est ruineux sur un
+   handheld en paysage. La carte se pose en haut a droite, sous l'en-tete, et
+   renvoie au journal d'un clic pour le detail complet.
+   ================================================================================ */
+/* Le detail de ce qui tourne vit maintenant DANS le panneau du bouton « + » :
+   une bulle flottante separee repetait ce que le bouton affichait deja, a un
+   autre endroit de l'ecran. */
+.tachewrap{position:fixed;right:22px;bottom:calc(var(--dock-h,46px) + 82px);z-index:31;
+  width:min(380px,92vw);padding:16px 18px;border-radius:14px;
+  background:var(--panel);border:1px solid var(--rule);
+  box-shadow:0 22px 50px -20px var(--ombre);opacity:0;transform:translateY(14px) scale(.98);
+  pointer-events:none;transition:opacity .22s var(--ease),transform .22s var(--ease)}
+.tachewrap.on{opacity:1;transform:none;pointer-events:auto}
+.tache[hidden],.tache-vide[hidden]{display:none}
+.tache-detail{margin-top:8px;font-family:var(--mono);font-size:11px;
+  color:var(--mute);word-break:break-word;min-height:0}
+.tache-detail:empty{display:none}
+.tache-tete{display:flex;align-items:center;gap:8px}
+.tache-nom{flex:1;min-width:0;font-size:12.5px;font-weight:600;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tache-tete button{padding:3px 9px;font-size:11px}
+.tache-barre{height:4px;margin:9px 0 7px;border-radius:3px;
+  background:var(--surface-3);overflow:hidden}
+.tache-barre i{display:block;height:100%;width:0;border-radius:3px;
+  background:var(--primary);transition:width .35s var(--ease)}
+/* total inconnu : on montre qu'il se passe quelque chose sans mentir sur l'avancement */
+.tache.indetermine .tache-barre i{width:38% !important;
+  animation:vaEtVient 1.5s var(--ease) infinite}
+@keyframes vaEtVient{0%{margin-left:-38%}100%{margin-left:100%}}
+.tache-pied{display:flex;gap:10px;font-family:var(--mono);font-size:10.5px;
+  color:var(--text-3);font-variant-numeric:tabular-nums}
+#tachereste{color:var(--primary)}
+
+/* le bouton du journal devient un temoin : une tache tourne, on le voit */
+.jfab.occupe{color:var(--primary);border-color:var(--primary)}
+.jfab.occupe .jfab-ic{animation:battement 1.6s ease-in-out infinite}
+@keyframes battement{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* plus de bandeau en bas : les elements flottants reprennent leur place */
+:root{--dock-h:0px}
+@media(max-height:520px){
+  .tachewrap{right:10px;width:min(340px,calc(100vw - 20px));padding:13px 14px}
+  .tache-pied{font-size:10px}
+}
+@media(prefers-reduced-motion:reduce){
+  .tache.indetermine .tache-barre i{animation:none}
+  .jfab.occupe .jfab-ic{animation:none}
+}
+
+/* ================================================================================
+   PLATEFORMES DETECTEES — le cœur du « plug & play »
+   L'utilisateur voit ce que sa console heberge, et y accede d'un clic.
+   ================================================================================ */
+.plateformes{margin:12px 0}
+.pfgrille{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:8px}
+.pfcarte{display:flex;flex-direction:column;align-items:flex-start;gap:2px;
+  padding:11px 12px;border-radius:10px;text-align:left;cursor:pointer;
+  --btn-fond:var(--surface-2); --btn-fond-survol:var(--surface-3);
+  --btn-trait:var(--line); --btn-trait-survol:var(--primary)}
+.pfnom{font-family:var(--disp);font-size:13.5px;letter-spacing:.2px;color:var(--text)}
+.pfn{font-family:var(--disp);font-size:22px;line-height:1.1;color:var(--primary);
+  font-variant-numeric:tabular-nums}
+.pftaille,.pfdir{font-family:var(--mono);font-size:10px;color:var(--text-3)}
+.pfdir{opacity:.7}
+
+/* Les reglages propres a une plateforme sont desormais REELLEMENT groupes
+   dans le HTML, sous « Console et émulateur ». L'ordre n'a plus a etre
+   rattrape par CSS : un ordre visuel qui contredit l'ordre du document se
+   paie au clavier et a la lecture d'ecran. */
+.setwrap{display:flex;flex-direction:column}
+.setwrap > .sepgroupe{margin:22px 0 4px;padding-top:16px;border-top:1px solid var(--line);
+  font-family:var(--disp);font-size:15px;letter-spacing:.3px;color:var(--text-2);
+  display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+
+/* ================================================================================
+   DEPOT DE JEUX — plus grand, et groupe par plateforme
+   ================================================================================ */
+.dropwrap{width:min(560px,94vw);padding:18px 20px}
+.drop{min-height:150px;max-height:min(52vh,420px);overflow:auto;padding:14px;
+  border:1.5px dashed var(--line-fort);border-radius:12px;
+  background:var(--surface-2);transition:border-color .18s,background .18s}
+.drop.over{border-color:var(--primary);background:var(--primary-voile)}
+.dropvide{display:flex;flex-direction:column;align-items:center;gap:7px;
+  text-align:center;padding:22px 10px;color:var(--text-3)}
+.dropvide b{font-family:var(--disp);font-size:17px;color:var(--text);letter-spacing:.2px}
+.dropvide span{font-size:12.5px;line-height:1.5;max-width:38ch}
+.dropicone{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:22px;color:var(--primary);
+  background:var(--primary-doux);box-shadow:inset 0 0 0 1px var(--primary-trait);
+  animation:respire 2.4s ease-in-out infinite}
+@keyframes respire{0%,100%{transform:translateY(0)}50%{transform:translateY(4px)}}
+.dgroupe + .dgroupe{margin-top:14px}
+.dgtete{display:flex;align-items:baseline;gap:9px;margin-bottom:6px;
+  font-family:var(--disp);font-size:12px;letter-spacing:.8px;text-transform:uppercase;
+  color:var(--text-2)}
+.dgtete .tid{text-transform:none;letter-spacing:0}
+.drow{display:flex;align-items:center;gap:9px;padding:5px 0;font-size:12.5px}
+.drow .grow{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ddest{font-family:var(--mono);font-size:10.5px;color:var(--primary);flex:0 0 auto}
+@media(prefers-reduced-motion:reduce){.dropicone{animation:none}}
+
+/* ================================================================================
+   DEMARRAGE — ne rien affirmer avant de savoir
+   ================================================================================ */
+.chargeur{position:fixed;inset:0;z-index:60;display:flex;align-items:center;
+  justify-content:center;background:var(--bg);
+  opacity:0;pointer-events:none;transition:opacity .3s var(--ease)}
+body.chargement .chargeur{opacity:1;pointer-events:auto}
+.chargeur-in{display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center}
+.chargeur-in b{font-family:var(--disp);font-size:17px;letter-spacing:.3px}
+.chargeur-anneau{width:34px;height:34px;border-radius:50%;
+  border:2.5px solid var(--line);border-top-color:var(--primary);
+  animation:tourne .8s linear infinite}
+@keyframes tourne{to{transform:rotate(360deg)}}
+/* pendant le chargement, l'interface reste en place mais silencieuse */
+body.chargement main,body.chargement header{opacity:.25;filter:blur(1px)}
+body.chargement main,body.chargement header,.chargeur{transition:opacity .3s var(--ease)}
+@media(prefers-reduced-motion:reduce){.chargeur-anneau{animation-duration:2s}}
+
+/* detail d'une plateforme, ouvert sous la grille */
+.pfcarte.on{--btn-trait:var(--primary);--btn-fond:var(--surface-3)}
+.pfdetail:not(:empty){margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.pftitre{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  margin-bottom:10px;font-family:var(--disp);font-size:15px;letter-spacing:.2px}
+.pfdetail .majrow b{font-weight:500}
+.pfdetail code{font-family:var(--mono);font-size:11.5px;color:var(--text-2)}
+.tok{color:var(--success)} .tko{color:var(--danger)}
+
+/* bouton « sur la console » dans l'en-tete : compact, il ne pousse rien */
+.surconsole{display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;
+  padding:5px 10px;font-size:11.5px;white-space:nowrap}
+.surconsole .hicon{font-size:13px}
+/* La regle masquait « le dernier span » pour retirer le libelle sur petit
+   ecran. Le bouton ne portant plus qu'une icone, elle masquait justement
+   cette icone : un bouton de 44 px entierement vide. On ne cache que ce qui
+   est explicitement un libelle. */
+@media(max-width:820px){.surconsole .hlbl{display:none}}
+
+
+/* champ de dossier dans le detail d'une plateforme */
+.pfinput{width:min(220px,42vw);padding:5px 9px;border-radius:7px;
+  background:var(--surface-2);border:1px solid var(--line);color:var(--text);
+  font-family:var(--mono);font-size:11.5px}
+.pfinput:focus{outline:none;border-color:var(--primary)}
+
+/* pastille de plateforme sur la jaquette : discrete mais toujours lisible */
+.ov.ovsys{background:var(--primary);color:var(--on-primary);
+  box-shadow:none;font-weight:700}
+.games.taille-compact .ov.ovsys{font-size:8.5px;padding:1px 5px}
+.setlab span.avert{color:var(--amber)}
+
+/* bouton « sur la console » : icone seule, il ne doit pas peser dans l'en-tete */
+.surconsole{padding:5px 8px;min-width:0}
+.surconsole .hicon{font-size:15px;line-height:1}
+
+/* champs de saisie dans une fenetre de dialogue */
+.dchamps{display:flex;flex-direction:column;gap:12px;margin:16px 0;
+  padding:0 20px}
+.dchamp{display:flex;flex-direction:column;gap:5px}
+.dchamp span{font-size:12.5px;color:var(--text-2)}
+/* `flex:1 1 260px` porte sur la LARGEUR en rangee, sur la HAUTEUR en colonne :
+   dans cette pile, chaque champ montait a 260 px de haut. */
+.dchamp input{flex:0 0 auto;width:100%;padding:9px 11px;border-radius:9px;
+  background:var(--surface-2);border:1px solid var(--line);color:var(--text);
+  font-size:13px;font-family:var(--body)}
+.dchamp input:focus{outline:none;border-color:var(--primary)}
+/* chemin d'une plateforme : lisible, non modifiable au clavier */
+.pfchemin{font-family:var(--mono);font-size:11px;color:var(--text-2);
+  word-break:break-all}
+
+/* `.sw` etait deja la classe des interrupteurs (44x25 px) : nommer ainsi les
+   groupes de reglages leur donnait cette taille, d'ou l'affichage ecrase.
+   Le nom est desormais explicite et ne peut plus entrer en collision. */
+.setgroup.groupe-plateforme{display:block;width:auto;height:auto;position:static}
+.setgroup.groupe-plateforme[hidden]{display:none}
+
+/* --- Console et emulateur : le selecteur et ses blocs ne font qu'un ensemble.
+   Le trait de gauche relie visuellement les reglages a la plateforme choisie
+   juste au-dessus, sans encadrer ni colorer le texte. */
+#groupe-console{margin-bottom:0}
+#pf-specifique{display:flex;flex-direction:column;gap:14px;
+  margin:0 0 22px;padding-left:14px;border-left:2px solid var(--rule)}
+#pf-specifique:empty{display:none}
+#pf-commun{margin-top:14px}
+#pf-commun:empty{display:none}
+@media (max-width:640px){
+  #pf-specifique{padding-left:8px;gap:10px}
+}
+
+/* ------------------------------------------------------------- comptes
+   Carte « mon compte » et liste des personnes autorisees. Aucun cadre de
+   couleur autour du texte : seule la pastille d'avatar porte de la matiere. */
+.moncompte{display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  padding:14px;margin-bottom:16px;border-radius:12px;
+  background:var(--panel2);border:1px solid var(--rule)}
+.avatar{flex:0 0 auto;width:46px;height:46px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--panel);border:1px solid var(--rule);
+  background-size:cover;background-position:center;
+  font-family:var(--disp);font-size:19px;font-weight:600;color:var(--amber)}
+.moncompte-txt{min-width:0;display:flex;flex-direction:column;gap:2px}
+.moncompte-txt b{font-size:14px}
+.moncompte-act{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
+
+.compte-ligne{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:8px 0;border-bottom:1px solid var(--rule)}
+.compte-ligne:last-child{border-bottom:0}
+.compte-nom{font-weight:600}
+.compte-ligne button{margin-left:auto}
+
+/* Sur l'ecran de la console, la carte passe en colonne plutot que de
+   comprimer les boutons. */
+@media (max-width:640px){
+  .moncompte-act{margin-left:0;width:100%}
+  .moncompte-act button{flex:1 1 auto}
+}
+#listecomptes.vide::after{content:"Aucun compte pour l'instant.";
+  font-family:var(--mono);font-size:11.5px;color:var(--mute)}
+
+/* ---------------------------------------------------------------- audit
+   Le niveau est porte par une etiquette a gauche, pas par un cadre autour
+   du texte : la couleur reste lisible sans encadrer quoi que ce soit. */
+.auditliste{margin-top:12px;display:flex;flex-direction:column;gap:2px}
+.auditc{display:flex;gap:12px;align-items:flex-start;padding:10px 0;
+  border-bottom:1px solid var(--rule)}
+.auditc:last-child{border-bottom:0}
+.auditn{flex:0 0 88px;font-family:var(--mono);font-size:10.5px;
+  text-transform:uppercase;letter-spacing:.08em;padding-top:2px;color:var(--mute)}
+.a-grave  .auditn{color:var(--red)}
+.a-alerte .auditn{color:var(--amber)}
+.a-bon    .auditn{color:var(--green)}
+@media (max-width:640px){
+  .auditc{flex-direction:column;gap:4px}
+  .auditn{flex:none}
+}
+
+/* ====================================================================== 
+   TEMOIN D'ACTIVITE ET DEPOT
+   ====================================================================== */
+
+/* --- Le bouton « + » devient le temoin de ce qui tourne.
+   Au repos : un rond de 54 px. Pendant une tache : il s'allonge pour dire
+   quoi et pour combien de temps, et un anneau fait le tour du contour.
+   Aucun cadre de couleur : c'est la piste de l'anneau qui porte l'etat. */
+/* Une grille d'une seule case : le « + » et le temps restant s'y superposent
+   et se remplacent en fondu. En flex ils se seraient pousses l'un l'autre, et
+   le bouton aurait change de largeur a chaque seconde ecoulee. */
+.fab{display:grid;place-items:center;padding:0;overflow:visible;
+  border-radius:50%;width:54px;
+  transition:transform .25s var(--ease),box-shadow .25s}
+.fab .fabmark{position:relative;z-index:1;width:54px;
+  display:flex;align-items:center;justify-content:center;
+  transition:opacity var(--t-moyen) var(--ease),
+             transform var(--t-moyen) var(--ease)}
+/* Le bouton reste un CERCLE pendant le travail. Il s'allongeait en pilule
+   pour afficher le nom de la tache, ce qui deplacait un objet flottant
+   pendant qu'on lisait la grille derriere — et l'anneau, epousant la pilule,
+   cessait d'etre un anneau de progression pour devenir un contour. Le nom
+   complet vit desormais dans l'infobulle et dans le panneau ; le bouton, lui,
+   ne porte que le temps restant. */
+.fab .fabinfo{position:absolute;width:1px;height:1px;overflow:hidden;
+  clip-path:inset(50%);white-space:nowrap}
+
+/* Le temps restant, au centre. Il remplace le « + » en fondu croise : les
+   deux occupent la meme case de la grille, donc rien ne bouge. */
+.fab .fabmark,.fab .fabeta{grid-area:1 / 1}
+.fab .fabeta{position:relative;z-index:1;display:flex;align-items:center;
+  justify-content:center;width:54px;
+  font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:-.2px;
+  font-variant-numeric:tabular-nums;line-height:1;
+  opacity:0;transform:scale(.86);pointer-events:none;
+  transition:opacity var(--t-moyen) var(--ease),
+             transform var(--t-moyen) var(--ease)}
+.fab.travaille .fabeta{opacity:1;transform:none}
+.fab.travaille .fabmark{opacity:0;transform:rotate(90deg) scale(.7)}
+/* Le chiffre change : il se pose, il ne saute pas. */
+@keyframes fabchiffre{
+  from{opacity:0;transform:translateY(4px) scale(.9)}
+  to{opacity:1;transform:none}
+}
+.fab .fabeta.change{animation:fabchiffre var(--t-moyen) var(--ease)}
+.fab.pause .fabeta{font-size:15px;letter-spacing:0}
+
+/* Trois points qui s'allument tour a tour, tant qu'il n'y a pas encore de
+   chiffre a annoncer. Le bouton n'est jamais vide pendant qu'il travaille. */
+.fabpoints{display:inline-flex;gap:3.5px;align-items:center}
+.fabpoints span{width:4px;height:4px;border-radius:50%;
+  background:var(--on-primary);opacity:.3;
+  animation:fabpoint 1.1s ease-in-out infinite}
+.fabpoints span:nth-child(2){animation-delay:.16s}
+.fabpoints span:nth-child(3){animation-delay:.32s}
+@keyframes fabpoint{0%,70%,100%{opacity:.3;transform:scale(1)}
+  35%{opacity:1;transform:scale(1.3)}}
+
+/* L'anneau epouse le contour, quelle que soit la largeur du bouton :
+   `pathLength=100` (pose dans le HTML) rend la jauge directement en pourcent. */
+.fabring{position:absolute;inset:0;width:100%;height:100%;overflow:visible;
+  pointer-events:none}
+/* L'anneau est pose HORS du bouton : ses couleurs doivent donc contraster
+   avec la PAGE, pas avec le laiton. Le trait etait reste en `--on-primary`,
+   c'est-a-dire presque noir — lisible tant qu'il epousait la pilule ambre,
+   invisible des qu'il s'en est ecarte. */
+.fabpiste,.fabjauge{fill:none;stroke-width:3.5;stroke-linecap:round}
+.fabpiste{stroke:var(--eclat-fort);opacity:0}
+.fabjauge{stroke:var(--primary-vif);opacity:0;
+  stroke-dasharray:0 100;stroke-dashoffset:0;
+  transition:stroke-dasharray .4s var(--ease),opacity .25s,stroke .3s}
+.fab.travaille .fabpiste,.fab.travaille .fabjauge{opacity:1}
+/* Assez d'ecart pour que le trait ne morde pas le bord du bouton. */
+.fabring{transform:scale(1.16)}
+
+/* Total inconnu : au lieu d'annoncer un pourcentage invente, un segment
+   court tourne autour du bouton. */
+.fab.cherche .fabjauge{transition:none;animation:fabtourne 1.5s linear infinite}
+@keyframes fabtourne{to{stroke-dashoffset:-100}}
+
+/* Respiration lente pendant le travail : visible du coin de l'oeil, sans
+   attirer l'attention en permanence. */
+.fab.travaille{animation:fabsouffle 2.8s ease-in-out infinite}
+@keyframes fabsouffle{
+  0%,100%{box-shadow:0 0 0 1px var(--primary-trait),0 14px 30px -14px var(--primary-trait-fort)}
+  50%    {box-shadow:0 0 0 1px var(--primary-trait-fort),0 16px 38px -12px var(--primary-trait-fort)}
+}
+/* En pause, la respiration s'arrete : c'est le signe le plus direct que rien
+   n'avance. */
+.fab.pause{animation:none}
+.fab.pause .fabjauge{stroke:var(--sur-image);opacity:.55}
+
+/* Fin de tache : l'anneau se referme en vert, le bouton pousse une onde, puis
+   tout retombe. Une seconde, une seule fois — c'est un accuse de reception,
+   pas une celebration. */
+@keyframes fabfini{
+  0%   {box-shadow:0 0 0 0 var(--success-trait),0 12px 30px -10px var(--primary-halo)}
+  55%  {box-shadow:0 0 0 12px var(--success-voile),0 12px 30px -10px var(--primary-halo)}
+  100% {box-shadow:0 0 0 0 rgba(0,0,0,0),0 12px 30px -10px var(--primary-halo)}
+}
+.fab.fini{animation:fabfini 1.1s var(--ease)}
+.fab.fini .fabpiste,.fab.fini .fabjauge{opacity:1}
+.fab.fini .fabjauge{stroke:var(--success);stroke-dasharray:100 100 !important;
+  transition:stroke-dasharray .35s var(--ease),opacity .5s .55s}
+.fab.fini .fabpiste{transition:opacity .5s .55s}
+.fab.fini .fabpiste,.fab.fini .fabjauge{opacity:0}
+
+/* --- Depot : toute la fenetre accepte les fichiers. */
+.dropzone{position:fixed;inset:0;z-index:60;display:flex;
+  align-items:center;justify-content:center;padding:24px;
+  background:var(--rideau);backdrop-filter:blur(6px);
+  opacity:0;pointer-events:none;transition:opacity .18s var(--ease)}
+.dropzone.on{opacity:1;pointer-events:none}   /* laisse passer le drop au dessous */
+.dropzone-in{display:flex;flex-direction:column;align-items:center;gap:10px;
+  padding:44px 56px;border-radius:20px;text-align:center;
+  border:2px dashed var(--amber);background:var(--primary-doux);
+  animation:dropentre .22s var(--ease)}
+.dropzone-in b{font-family:var(--disp);text-transform:uppercase;
+  letter-spacing:.14em;font-size:17px;color:var(--ink)}
+.dropzone-ic{font-size:30px;line-height:1;color:var(--amber);
+  animation:dropflotte 1.5s ease-in-out infinite}
+@keyframes dropentre{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}
+@keyframes dropflotte{0%,100%{transform:translateY(-3px)}50%{transform:translateY(3px)}}
+
+/* Sur l'ecran de la console, le bouton garde sa place mais borne son texte. */
+@media(max-width:720px){
+  .fab.travaille .fabinfo{max-width:min(46vw,190px)}
+  .fab .fabinfo b{font-size:11.5px}
+  .dropzone-in{padding:30px 26px}
+}
+
+/* Quelqu'un qui a demande moins d'animation ne veut pas d'un bouton qui
+   respire ni d'un segment qui tourne : l'information reste, le mouvement part. */
+@media(prefers-reduced-motion:reduce){
+  .fab.travaille{animation:none}
+  .fab.cherche .fabjauge{animation:none;stroke-dasharray:50 100}
+  .dropzone-ic{animation:none}
+}
+
+/* ======================================================================
+   CIBLES TACTILES
+   ======================================================================
+   Au doigt, un controle de 26 a 36 px de haut se rate une fois sur deux.
+   44 px est le minimum couramment retenu (Apple HIG, WCAG 2.2 « Target
+   Size »). Ce bloc est volontairement en fin de fichier : il doit gagner
+   sur les regles qui compriment la mise en page en paysage, ou la hauteur
+   est rare mais ou le doigt n'a pas retreci. */
+@media (pointer:coarse){
+  button,
+  select,
+  .chip,
+  input[type=text],input[type=search],input[type=password],
+  input[type=email],input[type=number],input[type=url]{
+    min-height:44px;
+  }
+  nav.tabs button{min-height:44px}
+  /* Controles carres : ils doivent aussi etre assez LARGES. */
+  #sens,#installwrap,.szbtn,.iconbtn{min-width:44px;min-height:44px}
+  /* Le sommaire des reglages est fait de liens : ils se visent au doigt
+     comme des boutons. */
+  .setnav a{min-height:44px;display:flex;align-items:center}
+  #installwrap{padding:0 10px;justify-content:center}
+  .szbtn{display:inline-flex;align-items:center;justify-content:center}
+  /* Le bouton « Détails » d'une carte : meme regle, la carte s'ajuste. */
+  .gcard .pinfo{min-height:44px}
+  /* Deux boutons cote a cote dans une barre etroite : on les laisse passer
+     a la ligne plutot que de les ecraser. */
+  .bar,.acts{flex-wrap:wrap}
+}
+
+/* Un ecran tactile bas (telephone en paysage) reste un ecran tactile :
+   la compression de hauteur ne doit pas reduire les cibles. */
+@media (pointer:coarse) and (max-height:560px){
+  nav.tabs button{padding:10px 14px}
+  .brand{font-size:12px}
+}
+
+/* Sur telephone, une valeur longue (chemin, « 19 jeu(x) · 272 Mio ») debordait
+   de sa ligne : l'etiquette et la valeur passent l'une sous l'autre. */
+@media (max-width:640px){
+  .majrow{flex-direction:column;align-items:flex-start;gap:4px}
+  /* `.majrow.act b{margin-left:auto}` pousse la valeur a droite : utile sur
+     une ligne, absurde en colonne ou elle se retrouvait decalee sous son
+     etiquette. On neutralise la marge plutot que de la contourner. */
+  .majrow b{text-align:left;word-break:break-word;width:100%}
+  .majrow.act b{margin-left:0}
+  .majrow .pfchemin{white-space:normal;word-break:break-all}
+  .majrow.act{align-items:stretch}
+  .majrow.act button{align-self:flex-start}
+}
+
+/* ====================================================================== 
+   BATTERIE DE LA CONSOLE
+   ======================================================================
+   Une pastille dessinee plutot qu'un pourcentage noye dans une phrase : le
+   niveau se lit d'un coup d'oeil, ce qui est le seul interet de l'info avant
+   de lancer un transfert de plusieurs gigaoctets. */
+.batt{display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;
+  font-family:var(--mono);font-size:11px;color:var(--mute);cursor:default}
+.batt-corps{position:relative;width:26px;height:13px;border-radius:3px;
+  border:1.5px solid currentColor;padding:1.5px;display:block}
+.batt-corps i{display:block;height:100%;border-radius:1px;
+  background:currentColor;transition:width .6s var(--ease)}
+.batt-borne{width:2px;height:6px;border-radius:0 2px 2px 0;
+  background:currentColor;margin-left:-4px}
+.batt-txt{font-variant-numeric:tabular-nums}
+
+.batt-ok{color:var(--green)}
+.batt-faible{color:var(--amber)}
+/* Sous 10 %, la pastille respire : c'est le seul cas ou l'on veut attirer
+   l'oeil sans que l'utilisateur ait rien demande. */
+.batt-critique{color:var(--red);animation:battAlerte 1.8s ease-in-out infinite}
+@keyframes battAlerte{0%,100%{opacity:1}50%{opacity:.45}}
+
+/* En charge : le remplissage monte en boucle, l'eclair reste fixe. */
+.batt-charge{color:var(--green)}
+.batt-charge .batt-corps i{animation:battCharge 2.2s ease-in-out infinite}
+@keyframes battCharge{
+  0%{opacity:.35;transform:scaleX(.25);transform-origin:left}
+  60%{opacity:1;transform:scaleX(1);transform-origin:left}
+  100%{opacity:1;transform:scaleX(1);transform-origin:left}
+}
+.batt-eclair{font-size:9px;line-height:1;margin-left:-2px}
+
+/* Sur telephone, on garde la pastille et on retire le chiffre : c'est le
+   niveau qu'on lit, pas la precision au pourcent. */
+@media (max-width:520px){
+  .batt-txt{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  .batt-critique,.batt-charge .batt-corps i{animation:none}
+}
+
+/* ---------------------------------------------------------- entretien
+   Cinq volets, un seul a l'ecran : la question posee reste lisible. */
+.entretien{display:flex;flex-wrap:wrap;gap:8px}
+.entretien button.on{background:var(--panel2);color:var(--amber);
+  border-color:var(--amber)}
+#entretien{margin-top:14px}
+#entretien:empty{display:none}
+.entretien-t{font-family:var(--disp);font-size:13px;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--amber);margin:18px 0 4px}
+.entretien-l{list-style:none;margin:8px 0 0;padding:0;
+  display:flex;flex-direction:column;gap:2px}
+.entretien-l li{padding:9px 0;border-bottom:1px solid var(--rule);font-size:12.5px;
+  line-height:1.55}
+.entretien-l li:last-child{border-bottom:0}
+.entretien-l code{font-size:11px;color:var(--mute);word-break:break-all}
+/* La couleur porte le type d'evenement par une pastille en tete de ligne,
+   jamais par un cadre autour du texte. */
+.entretien-acces li{padding-left:14px;position:relative}
+.entretien-acces li::before{content:"";position:absolute;left:0;top:15px;
+  width:6px;height:6px;border-radius:50%;background:var(--mute)}
+.entretien-acces li.ac-connexion::before{background:var(--green)}
+.entretien-acces li.ac-refus::before{background:var(--red)}
+.entretien-acces li.ac-compte::before{background:var(--amber)}
+
+/* ======================================================================
+   RÉGLAGES : SECTIONS
+   ======================================================================
+   La page depassait 4 700 px d'un seul tenant, groupes ranges dans l'ordre
+   ou ils avaient ete ecrits. Cinq sections repondent maintenant a « qu'est-ce
+   que je suis en train de regler ? », et un sommaire colle en haut permet d'y
+   aller directement. */
+/* `--tete-h` est mesuree a l'execution : l'en-tete change de hauteur selon la
+   largeur (les onglets passent a la ligne). Colle a `top:0` comme lui, le
+   sommaire disparaissait derriere. */
+.setnav{position:sticky;top:var(--tete-h,60px);z-index:12;display:flex;gap:2px;flex-wrap:wrap;
+  margin:0 0 26px;padding:6px;border-radius:11px;
+  background:var(--verre-plein);backdrop-filter:blur(10px);
+  border:1px solid var(--rule)}
+.setnav a{padding:8px 14px;border-radius:8px;text-decoration:none;
+  font-family:var(--disp);font-size:12px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--mute);
+  transition:color .2s var(--ease),background .2s var(--ease)}
+.setnav a:hover{color:var(--ink);background:var(--panel2)}
+.setnav a.on{color:var(--amber);background:var(--panel2);
+  box-shadow:inset 0 0 0 1px var(--rule)}
+
+.setsection{display:flex;flex-direction:column;gap:16px;margin:0 0 46px;
+  /* en-tete + sommaire sont colles : sans cette marge, un titre vise atterrit
+     dessous et reste illisible */
+  scroll-margin-top:calc(var(--tete-h,60px) + var(--somm-h,52px) + 16px)}
+/* La derniere section est courte : la page ne peut pas defiler assez pour
+   l'amener sous le sommaire, donc cliquer son entree ne menait nulle part et
+   le sommaire designait la precedente. Une hauteur minimale lui donne la
+   place de monter. */
+.setsection:last-of-type{margin-bottom:24px;min-height:calc(100vh - 150px)}
+.sectitre{font-family:var(--disp);font-size:26px;font-weight:600;
+  letter-spacing:.01em;margin:0;color:var(--ink)}
+.sectxt{margin:-12px 0 4px;color:var(--mute);font-size:13px;max-width:62ch}
+/* Un filet sous le titre : il separe sans encadrer. */
+.sectitre::after{content:"";display:block;width:44px;height:2px;margin-top:9px;
+  border-radius:2px;background:var(--amber);opacity:.75}
+
+/* Les groupes d'une meme section se suivent sans marge propre : c'est la
+   section qui porte l'espacement. */
+.setsection > .setgroup{margin:0}
+#pf-specifique{margin:0 0 4px}
+
+@media (max-width:640px){
+  .setnav{gap:2px;padding:4px;margin-bottom:18px;overflow-x:auto;
+    flex-wrap:nowrap;-webkit-overflow-scrolling:touch}
+  .setnav a{white-space:nowrap;padding:9px 12px;font-size:11px}
+  .sectitre{font-size:21px}
+  .setsection{gap:12px;margin-bottom:34px}
+}
+
+/* ------------------------------------------------- choix de plateforme
+   Une ligne par fichier, le choix a droite : on voit d'un coup ce qui reste
+   a trancher, sans enchainer les fenetres. */
+.classer{display:flex;flex-direction:column;gap:2px;padding:14px 20px 0;
+  max-height:min(52vh,420px);overflow:auto}
+.classer-l{display:flex;align-items:center;gap:14px;padding:11px 0;
+  border-bottom:1px solid var(--rule)}
+.classer-l:last-child{border-bottom:0}
+.classer-n{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.classer-n b{font-size:13px;word-break:break-word}
+.classer-l select{flex:0 0 auto;width:min(210px,42%)}
+@media (max-width:640px){
+  .classer-l{flex-direction:column;align-items:stretch;gap:8px}
+  .classer-l select{width:100%}
+}
+
+/* ------------------------------------------------- fiche en cours d'arrivee
+   Un jeu importe a l'instant n'a ni titre officiel ni jaquette. Une carte vide
+   laisse croire a un echec : on montre que la recherche est en cours, et le
+   voile disparait de lui-meme quand la fiche arrive. */
+.gcard.sansfiche .art{position:relative}
+.gcard.sansfiche .art::after{content:"";position:absolute;inset:0;z-index:4;
+  background:linear-gradient(100deg,transparent 20%,var(--eclat) 45%,
+    transparent 70%);background-size:220% 100%;
+  animation:fiche-attente 1.6s ease-in-out infinite}
+@keyframes fiche-attente{from{background-position:140% 0}to{background-position:-40% 0}}
+.enattente{position:absolute;left:8px;right:8px;bottom:8px;z-index:5;
+  padding:5px 8px;border-radius:7px;text-align:center;
+  background:var(--verre);backdrop-filter:blur(3px);
+  font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--amber)}
+.gcard.sansfiche .gname{opacity:.72}
+@media (prefers-reduced-motion:reduce){
+  .gcard.sansfiche .art::after{animation:none;background:var(--eclat-faible)}
+}
+
+/* Un fichier dont on ne sait pas encore sur quelle plateforme il va : il
+   attend une decision, ce que la couleur dit sans avoir a le lire. */
+.drow.aclasser{background:var(--primary-voile)}
+.drow.aclasser .grow{color:var(--ink)}
+.tag.t-AMBIGU{color:var(--amber);border-color:var(--primary-halo)}
+#btnclasser[hidden]{display:none}
+
+/* ====================================================================== 
+   INDEX ALPHABÉTIQUE
+   ======================================================================
+   Une bande de lettres le long de la grille, comme dans une médiathèque. Elle
+   n'apparaît que sur un tri par nom : sauter à « M » dans une liste triée par
+   taille n'aurait aucun sens. */
+.libzone{display:flex;align-items:flex-start;gap:14px}
+.libzone > #lib{flex:1;min-width:0}
+
+.alphabet{position:sticky;top:calc(var(--tete-h,60px) + 12px);
+  display:flex;flex-direction:column;gap:1px;flex:0 0 auto;
+  padding:6px 2px;border-radius:10px;
+  background:var(--panel);border:1px solid var(--rule)}
+.alphabet[hidden]{display:none}
+.alpha{width:22px;height:19px;padding:0;border:0;border-radius:5px;
+  background:transparent;color:var(--mute);cursor:pointer;
+  font-family:var(--mono);font-size:10.5px;line-height:1;
+  transition:color .15s,background .15s,transform .15s var(--ease)}
+.alpha:hover:not(:disabled){color:var(--ink);background:var(--panel2);
+  transform:translateX(-2px)}
+/* Une lettre sans jeu reste visible mais éteinte : la faire disparaître ferait
+   sauter la colonne à chaque filtre. */
+.alpha.vide{opacity:.22;cursor:default}
+.alpha.on{color:var(--amber);background:var(--panel2);
+  box-shadow:inset 0 0 0 1px var(--rule)}
+
+/* Repère bref sur la carte visée : sans lui, on ne sait pas laquelle des dix
+   cartes visibles est celle qu'on cherchait. */
+/* L'en-tete est colle : sans cette marge, la carte visee atterrit DESSOUS et
+   l'index designe deja la lettre suivante. */
+.gcard{scroll-margin-top:calc(var(--tete-h,60px) + 18px)}
+.gcard.visee{animation:carte-visee 1.4s var(--ease)}
+@keyframes carte-visee{
+  0%,100%{box-shadow:0 0 0 0 var(--primary-nul)}
+  18%{box-shadow:0 0 0 3px var(--primary-trait-fort)}
+  70%{box-shadow:0 0 0 3px var(--primary-trait)}
+}
+
+/* Sur téléphone la bande passe à l'horizontale, au-dessus de la grille : une
+   colonne de 26 lettres mangerait la largeur utile. */
+@media (max-width:640px){
+  .libzone{flex-direction:column;gap:8px}
+  .alphabet{flex-direction:row;flex-wrap:nowrap;overflow-x:auto;width:100%;
+    position:static;padding:5px 6px;-webkit-overflow-scrolling:touch}
+  .alpha{flex:0 0 auto;width:28px;height:30px;font-size:11.5px}
+  .alpha:hover:not(:disabled){transform:none}
+}
+@media (prefers-reduced-motion:reduce){
+  .gcard.visee{animation:none;box-shadow:0 0 0 3px var(--primary-halo)}
+}
+
+/* ================================================================================
+   APPARENCE — themes, mouvement, animation des cartes
+   --------------------------------------------------------------------------------
+   Cette section est la DERNIERE du fichier, et c'est voulu : elle a le dernier
+   mot sur le survol des cartes et sur les couleurs. Trois blocs se disputaient
+   auparavant `.gcard:hover`, et celui qui gagnait annulait le mouvement decrit
+   par les deux autres — d'ou un survol qui semblait changer de comportement
+   selon l'ecran. Ne pas redeclarer `.gcard:hover` ailleurs.
+
+   Trois reglages, tous poses par l'utilisateur sur <html> :
+
+     data-theme  sombre | clair | auto      (auto = suit le systeme)
+     data-carte  aucune | 0 1 2 3 4 5       (animation de la jaquette)
+     data-mvt    complet | reduit | aucun   (tout le reste du mouvement)
+
+   Ils sont ecrits avant le premier rendu par le script en tete de index.html :
+   les lire depuis app.js aurait fait clignoter la page en sombre avant de
+   passer au clair.
+
+   Ajouter un theme = redefinir les jetons ci-dessous sous un selecteur de
+   portee. Aucun composant n'a besoin d'etre touche : tout passe par var().
+   ================================================================================ */
+
+/* ---------------------------------------------------------------- JETONS
+   Le theme SOMBRE est la reference : graphite chaud, un seul laiton pour
+   l'action, un ardoise froid pour l'information neutre. */
+:root, :root[data-theme="sombre"]{
+  color-scheme:dark;
+
+  --bg:#141216;              /* graphite chaud, pas bleu */
+  --panel:#1c191f;
+  --panel2:#241f28;
+  --rule:#332c39;
+  --ink:#ece6e2;             /* blanc casse chaud, moins agressif que #fff */
+  --mute:#8d8492;
+  --amber:#e0a340;           /* laiton : identite ET action, une seule */
+  --indigo:#8496ad;          /* ardoise : information neutre (ex-violet) */
+  --green:#6fbf8b;
+  --red:#e8695c;
+
+  --surface:#1c191f;         /* fond des elements poses sur le fond de page */
+  --surface-2:#241f28;       /* fond au repos des controles */
+  --surface-3:#2e2833;       /* fond au survol */
+  --line:#332c39;
+  --line-fort:#453c4d;
+
+  --text:#ece6e2;
+  --text-2:#b3aab8;
+  --text-3:#8d8492;
+
+  --primary:#e0a340;  --on-primary:#17141a;  --primary-vif:#f0b45a;
+  --danger:#e8695c;   --on-danger:#17141a;   --danger-vif:#f07d70;
+  --success:#6fbf8b;  --on-success:#17141a;
+  --info:#8496ad;     --on-info:#17141a;
+  --focus:#8496ad;
+
+  /* teintes derivees : un aplat, un trait, un halo, un texte clair */
+  --primary-nul:rgba(224,163,64,0);
+  --primary-voile:rgba(224,163,64,.07);
+  --primary-doux:rgba(224,163,64,.14);
+  --primary-trait:rgba(224,163,64,.35);
+  --primary-trait-fort:rgba(224,163,64,.55);
+  --primary-halo:rgba(224,163,64,.45);
+  --primary-texte:#ffd9a3;
+  --danger-voile:rgba(232,105,92,.07);
+  --danger-doux:rgba(232,105,92,.18);
+  --danger-trait:rgba(232,105,92,.45);
+  --danger-texte:#ffb3bb;
+  --success-voile:rgba(111,191,139,.05);
+  --success-doux:rgba(111,191,139,.18);
+  --success-trait:rgba(111,191,139,.45);
+  --success-texte:#b6e8ce;
+  --info-doux:rgba(132,150,173,.18);
+  --info-trait:rgba(132,150,173,.45);
+
+  /* profondeur */
+  --ombre:#000;
+  --ombre-trait:rgba(0,0,0,.22);
+  --eclat:rgba(255,255,255,.07);        /* filet de lumiere en haut d'un relief */
+  --eclat-fort:rgba(255,255,255,.14);
+  --eclat-faible:rgba(255,255,255,.04);
+
+  /* surfaces particulieres */
+  --verre:rgba(18,16,22,.92);           /* en-tete et barres collantes */
+  --verre-plein:rgba(21,19,25,.97);
+  --panneau-relief:linear-gradient(135deg,#241f28,#1a171d);
+  --puits:#0e0c11;                      /* journal, blocs de code : en creux */
+  --creux:#171419;                      /* emplacement d'image vide */
+  --art-fond:linear-gradient(140deg,#241f28,#141216);
+}
+
+/* Le theme CLAIR n'est pas l'inverse du sombre : c'est un papier chaud. Le
+   laiton #e0a340 y tomberait a 1,9:1 sur blanc — illisible. Il est donc
+   assombri en bronze, et le texte pose dessus devient clair. */
+:root[data-theme="clair"]{
+  color-scheme:light;
+
+  --bg:#efeae4;
+  --panel:#fdfbf9;
+  --panel2:#f2ece5;
+  --rule:#e1d8ce;
+  --ink:#221c26;
+  --mute:#696072;
+  --amber:#96620f;
+  --indigo:#4a5d73;
+  --green:#1c7548;
+  --red:#ad2f23;
+
+  --surface:#fdfbf9;
+  --surface-2:#f2ece5;
+  --surface-3:#e7ded4;
+  --line:#e1d8ce;
+  --line-fort:#c1b4a6;
+
+  --text:#221c26;
+  --text-2:#574e5c;
+  --text-3:#696072;
+
+  --primary:#96620f;  --on-primary:#fffaf2;  --primary-vif:#7a4e08;
+  --danger:#ad2f23;   --on-danger:#fff5f4;   --danger-vif:#8b2219;
+  --success:#1c7548;  --on-success:#f2fff8;
+  --info:#4a5d73;     --on-info:#f5f8fc;
+  --focus:#4a5d73;
+
+  --primary-nul:rgba(150,98,15,0);
+  --primary-voile:rgba(150,98,15,.06);
+  --primary-doux:rgba(150,98,15,.13);
+  --primary-trait:rgba(150,98,15,.34);
+  --primary-trait-fort:rgba(150,98,15,.55);
+  --primary-halo:rgba(150,98,15,.4);
+  --primary-texte:#7a4e08;
+  --danger-voile:rgba(173,47,35,.06);
+  --danger-doux:rgba(173,47,35,.13);
+  --danger-trait:rgba(173,47,35,.4);
+  --danger-texte:#8b2219;
+  --success-voile:rgba(28,117,72,.05);
+  --success-doux:rgba(28,117,72,.13);
+  --success-trait:rgba(28,117,72,.4);
+  --success-texte:#155c38;
+  --info-doux:rgba(74,93,115,.13);
+  --info-trait:rgba(74,93,115,.4);
+
+  /* Sur papier, la profondeur vient d'une ombre douce et coloree, pas d'un
+     noir pur qui salirait le fond. Le « filet de lumiere » s'inverse : c'est
+     une ligne sombre. */
+  --ombre:rgba(58,44,66,.42);
+  --ombre-trait:rgba(58,44,66,.14);
+  --eclat:rgba(34,28,38,.07);
+  --eclat-fort:rgba(34,28,38,.13);
+  --eclat-faible:rgba(34,28,38,.04);
+
+  --verre:rgba(239,234,228,.88);
+  --verre-plein:rgba(253,251,249,.97);
+  --panneau-relief:linear-gradient(135deg,#f8f2ea,#efe7dd);
+  --puits:#f5efe8;
+  --creux:#e8e0d7;
+  --art-fond:linear-gradient(140deg,#e8e0d7,#d7cdc2);
+}
+
+/* Ces trois-la ne suivent PAS le theme : ils se posent sur une jaquette, donc
+   sur une image dont on ne sait rien. Un capot clair sur une pochette claire
+   rendrait le texte illisible. */
+:root{
+  --capot:rgba(14,12,16,.8);
+  --capot-leger:rgba(14,12,16,.6);
+  --rideau:rgba(8,7,10,.72);            /* voile derriere une modale */
+  --rideau-leger:rgba(8,7,10,.55);
+  --sur-image:#f7f2ee;
+}
+:root[data-theme="clair"]{
+  --rideau:rgba(38,30,44,.44);
+  --rideau-leger:rgba(38,30,44,.3);
+}
+
+/* AUTO : le systeme decide. `data-theme` est toujours pose par le script de
+   tete, mais la regle vaut aussi sans lui (JavaScript coupe). */
+@media (prefers-color-scheme:light){
+  :root[data-theme="auto"]{
+    color-scheme:light;
+    --bg:#efeae4; --panel:#fdfbf9; --panel2:#f2ece5; --rule:#e1d8ce;
+    --ink:#221c26; --mute:#696072; --amber:#96620f; --indigo:#4a5d73;
+    --green:#1c7548; --red:#ad2f23;
+    --surface:#fdfbf9; --surface-2:#f2ece5; --surface-3:#e7ded4;
+    --line:#e1d8ce; --line-fort:#c1b4a6;
+    --text:#221c26; --text-2:#574e5c; --text-3:#696072;
+    --primary:#96620f; --on-primary:#fffaf2; --primary-vif:#7a4e08;
+    --danger:#ad2f23; --on-danger:#fff5f4; --danger-vif:#8b2219;
+    --success:#1c7548; --on-success:#f2fff8;
+    --info:#4a5d73; --on-info:#f5f8fc; --focus:#4a5d73;
+    --primary-nul:rgba(150,98,15,0); --primary-voile:rgba(150,98,15,.06);
+    --primary-doux:rgba(150,98,15,.13); --primary-trait:rgba(150,98,15,.34);
+    --primary-trait-fort:rgba(150,98,15,.55); --primary-halo:rgba(150,98,15,.4);
+    --primary-texte:#7a4e08;
+    --danger-voile:rgba(173,47,35,.06); --danger-doux:rgba(173,47,35,.13);
+    --danger-trait:rgba(173,47,35,.4); --danger-texte:#8b2219;
+    --success-voile:rgba(28,117,72,.05); --success-doux:rgba(28,117,72,.13);
+    --success-trait:rgba(28,117,72,.4); --success-texte:#155c38;
+    --info-doux:rgba(74,93,115,.13); --info-trait:rgba(74,93,115,.4);
+    --ombre:rgba(58,44,66,.42); --ombre-trait:rgba(58,44,66,.14);
+    --eclat:rgba(34,28,38,.07); --eclat-fort:rgba(34,28,38,.13);
+    --eclat-faible:rgba(34,28,38,.04);
+    --verre:rgba(239,234,228,.88); --verre-plein:rgba(253,251,249,.97);
+    --panneau-relief:linear-gradient(135deg,#f8f2ea,#efe7dd);
+    --puits:#f5efe8; --creux:#e8e0d7;
+    --art-fond:linear-gradient(140deg,#e8e0d7,#d7cdc2);
+    --rideau:rgba(38,30,44,.44); --rideau-leger:rgba(38,30,44,.3);
+  }
+}
+
+/* Le changement de theme se fait en fondu, mais SEULEMENT pendant la seconde
+   qui suit le clic : laisser une transition permanente sur `background` et
+   `color` rendrait poisseux chaque survol de ligne de l'interface. */
+:root.vire, :root.vire *{
+  transition:background-color .38s var(--ease), color .38s var(--ease),
+             border-color .38s var(--ease) !important;
+}
+
+/* ------------------------------------------------------------- MOUVEMENT
+   Une seule echelle de durees, consommee partout. Baisser le reglage revient
+   a raccourcir ces trois valeurs — aucune regle n'a besoin d'etre reecrite. */
+:root{
+  --t-court:.15s;
+  --t-moyen:.26s;
+  --t-long:.44s;
+  --t-cascade:34ms;          /* ecart entre deux cartes qui entrent */
+  --amplitude:1;             /* multiplie les deplacements */
+}
+:root[data-mvt="reduit"]{
+  --t-court:.1s; --t-moyen:.14s; --t-long:.18s;
+  --t-cascade:0ms; --amplitude:.4;
+}
+/* Le systeme a le dernier mot : quelqu'un qui a demande moins de mouvement a
+   l'echelle de sa machine ne devrait pas avoir a le redemander ici. */
+@media (prefers-reduced-motion:reduce){
+  :root:not([data-mvt="complet"]){
+    --t-court:.1s; --t-moyen:.14s; --t-long:.18s;
+    --t-cascade:0ms; --amplitude:.4;
+  }
+}
+:root[data-mvt="aucun"] *,
+:root[data-mvt="aucun"] *::before,
+:root[data-mvt="aucun"] *::after{
+  animation-duration:1ms !important;
+  animation-iteration-count:1 !important;
+  transition-duration:1ms !important;
+  scroll-behavior:auto !important;
+}
+
+/* ================================================================================
+   ANIMATION DE LA CARTE — six variantes, une seule active
+   --------------------------------------------------------------------------------
+   Tout est enferme dans `@media (hover:hover)` : c'est la vraie question posee
+   (« le survol existe-t-il ? »), la ou `pointer:coarse` demandait « le doigt
+   est-il gros ? ». Un portable a ecran tactile repondait oui aux deux et
+   perdait l'animation.
+   ================================================================================ */
+
+/* La grille garde de l'air sous la barre collante. Une carte de la premiere
+   rangee grandit d'environ 20 px vers le haut quand elle se souleve : sans
+   cette reserve, elle venait buter dans « Trier par » et s'y faisait couper,
+   ce qui donnait l'impression que l'animation debordait sur l'en-tete. */
+.games{padding-top:18px}
+
+/* Une carte survolee passe devant ses voisines — mais reste DERRIERE les
+   barres collantes (`.toolbar` est a 10, l'en-tete a 20). Une valeur plus
+   haute ferait passer une jaquette par-dessus l'en-tete, ce qui serait pire
+   que le probleme d'origine. */
+@media (hover:hover){ .gcard:hover{z-index:3} }
+
+/* socle commun a toutes les variantes */
+.gcard{position:relative;border-radius:10px;
+  transition:transform var(--t-moyen) var(--ease),
+             border-color var(--t-moyen) var(--ease),
+             box-shadow var(--t-moyen) var(--ease)}
+.gcard .art img{transition:transform var(--t-long) var(--ease),
+                           filter var(--t-long) var(--ease)}
+/* un jeu deja pret n'a rien a proposer : il ne reagit pas */
+.gcard.fige:hover{transform:none !important;border-color:var(--rule);
+  box-shadow:none}
+
+@media (hover:hover){
+
+/* --- 0 : SOBRE — le repere historique ------------------------------------ */
+:root[data-carte="0"] .gcard:hover{
+  transform:translateY(calc(-3px * var(--amplitude)));
+  border-color:var(--indigo);
+  box-shadow:0 12px 28px -16px var(--ombre)}
+:root[data-carte="0"] .gcard:hover .art img{transform:scale(1.045)}
+
+/* --- 1 : AFFICHE INCLINEE + REFLET  (defaut) ------------------------------
+   `:root:not([data-carte])` couvre le cas ou le script de tete n'a pas tourne :
+   sans lui, aucune variante ne s'appliquerait et le survol serait mort. */
+/* Pas de `perspective` sur la grille : son point de fuite serait le CENTRE de
+   la grille entiere, a plusieurs centaines de pixels sous la premiere rangee.
+   Une carte du haut poussee vers l'oeil s'en eloignait donc vers le haut, et
+   montait de 23 px de plus — c'est ce qui la faisait passer derriere la barre
+   d'outils. La perspective est deja dans la transformation de la carte, ou
+   son point de fuite est le pivot de la carte elle-meme.
+
+   Le pivot est remonte au tiers superieur plutot qu'au centre : l'effet se
+   developpe alors davantage vers le bas, ou il y a de la place. Plus haut
+   (12 %) la carte penchait de facon bancale, le bas chassant tout seul ;
+   plus bas, elle recommencait a mordre sur la barre d'outils. C'est le seul
+   des six effets assez ample pour poser la question. */
+:root:not([data-carte]) .gcard,
+:root[data-carte="1"] .gcard{transform-origin:50% 32%}
+:root:not([data-carte]) .gcard:hover,
+:root[data-carte="1"] .gcard:hover{
+  transform:perspective(1100px)
+            rotateX(calc(6deg * var(--amplitude)))
+            rotateY(calc(-9deg * var(--amplitude)))
+            translateZ(calc(24px * var(--amplitude)))
+            scale(calc(1 + .04 * var(--amplitude)));
+  border-color:var(--line-fort);
+  box-shadow:calc(-14px * var(--amplitude)) 22px 46px -18px var(--ombre)}
+/* le reflet speculaire : un degre qui traverse la jaquette une fois */
+:root:not([data-carte]) .gcard .art::after,
+:root[data-carte="1"] .gcard .art::after{
+  content:"";position:absolute;inset:-40%;pointer-events:none;z-index:2;
+  background:linear-gradient(112deg,transparent 38%,rgba(255,255,255,.30) 48%,
+    rgba(255,255,255,.06) 56%,transparent 64%);
+  transform:translateX(-70%);opacity:0;
+  transition:transform calc(var(--t-long) * 1.4) var(--ease),
+             opacity var(--t-moyen)}
+:root:not([data-carte]) .gcard:hover .art::after,
+:root[data-carte="1"] .gcard:hover .art::after{
+  transform:translateX(70%);opacity:1}
+
+/* --- 2 : ELEVATION ET HALO ------------------------------------------------ */
+:root[data-carte="2"] .gcard::before{
+  content:"";position:absolute;inset:-1px;border-radius:inherit;z-index:4;
+  pointer-events:none;opacity:0;transition:opacity var(--t-moyen);
+  box-shadow:0 0 0 1px var(--primary-trait-fort),
+             0 0 34px -4px var(--primary-halo)}
+:root[data-carte="2"] .gcard:hover{
+  transform:translateY(calc(-8px * var(--amplitude))) scale(1.015)}
+:root[data-carte="2"] .gcard:hover::before{opacity:1}
+:root[data-carte="2"] .gcard:hover .art img{
+  transform:scale(1.06);filter:saturate(1.18) brightness(1.05)}
+
+/* --- 3 : REVELATION DU TITRE ----------------------------------------------
+   La legende passe PAR-DESSUS la jaquette : la carte perd la hauteur de son
+   texte, donc la grille montre environ 30 % de jeux en plus. */
+:root[data-carte="3"] .gcard .cap{
+  position:absolute;left:0;right:0;bottom:0;z-index:3;
+  background:linear-gradient(to top,var(--capot) 55%,transparent);
+  transform:translateY(101%);
+  transition:transform var(--t-moyen) var(--ease)}
+:root[data-carte="3"] .gcard .cap .gname{color:var(--sur-image);min-height:0}
+:root[data-carte="3"] .gcard .cap .meta{color:var(--sur-image);opacity:.75}
+:root[data-carte="3"] .gcard:hover .cap{transform:none}
+:root[data-carte="3"] .gcard:hover{
+  transform:translateY(calc(-4px * var(--amplitude)));
+  box-shadow:0 16px 34px -18px var(--ombre)}
+:root[data-carte="3"] .gcard:hover .art img{transform:scale(1.08)}
+/* Un jeu sans jaquette deviendrait un rectangle vide et anonyme : sa legende
+   reste donc affichee, quel que soit le reglage. */
+:root[data-carte="3"] .gcard.sansfiche .cap{transform:none}
+
+/* --- 4 : LISERE QUI TOURNE ------------------------------------------------ */
+@property --ang{syntax:"<angle>";initial-value:0deg;inherits:false}
+:root[data-carte="4"] .gcard{isolation:isolate}
+:root[data-carte="4"] .gcard::before{
+  content:"";position:absolute;inset:0;border-radius:inherit;z-index:4;
+  padding:1px;pointer-events:none;opacity:0;transition:opacity var(--t-moyen);
+  background:conic-gradient(from var(--ang,0deg),transparent 0deg,
+    var(--primary) 40deg,transparent 90deg,transparent 360deg);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude}
+:root[data-carte="4"] .gcard:hover::before{
+  opacity:1;animation:lisere-tourne 2.6s linear infinite}
+:root[data-carte="4"] .gcard:hover{
+  transform:translateY(calc(-5px * var(--amplitude)))}
+@keyframes lisere-tourne{to{--ang:360deg}}
+
+/* --- 5 : PROFONDEUR INTERNE ----------------------------------------------- */
+:root[data-carte="5"] .games{perspective:900px}
+:root[data-carte="5"] .gcard{transform-style:preserve-3d}
+:root[data-carte="5"] .gcard:hover{
+  transform:translateY(calc(-6px * var(--amplitude)))
+            rotateX(calc(4deg * var(--amplitude)));
+  box-shadow:0 20px 40px -20px var(--ombre)}
+:root[data-carte="5"] .gcard:hover .art img{
+  transform:scale(1.1) translateY(-6px)}
+:root[data-carte="5"] .gcard .badge,
+:root[data-carte="5"] .gcard .ovslot{
+  transition:transform var(--t-long) var(--ease)}
+:root[data-carte="5"] .gcard:hover .badge{transform:translateZ(30px)}
+:root[data-carte="5"] .gcard:hover .ovslot{transform:translateZ(18px)}
+
+}  /* fin @media (hover:hover) */
+
+/* --- AUCUNE : le survol ne fait plus que marquer la cible ----------------- */
+:root[data-carte="aucune"] .gcard:hover{
+  transform:none;border-color:var(--line-fort);box-shadow:none}
+
+/* --------------------------------------------------------- AU DOIGT
+   Sur la console, il n'y a pas de survol : sans ces regles, le reglage
+   d'animation serait purement decoratif la ou l'outil est le plus utilise.
+   L'appui rejoue donc l'effet choisi, en plus court et en plus sage — un
+   geste tactile dure quelques dizaines de millisecondes, pas une demi-seconde.
+   La variante 3 est volontairement absente : elle cache le titre jusqu'au
+   survol, et sur un ecran tactile ce survol n'arrive jamais. */
+@media (hover:none){
+  .gcard{transition:transform .12s var(--ease),box-shadow .12s var(--ease)}
+  :root[data-carte="0"] .gcard:active{transform:translateY(-2px)}
+  :root:not([data-carte]) .gcard:active,
+  :root[data-carte="1"] .gcard:active{
+    transform:perspective(900px) rotateX(4deg) rotateY(-5deg) scale(1.02);
+    box-shadow:-8px 14px 30px -14px var(--ombre)}
+  :root[data-carte="2"] .gcard:active{transform:scale(1.03);
+    box-shadow:0 0 0 1px var(--primary-trait-fort),
+               0 0 26px -6px var(--primary-halo)}
+  :root[data-carte="3"] .gcard:active{transform:scale(.98)}
+  :root[data-carte="4"] .gcard:active{
+    box-shadow:0 0 0 1px var(--primary),0 0 20px -6px var(--primary-halo)}
+  :root[data-carte="5"] .gcard:active{
+    transform:perspective(800px) rotateX(4deg) translateY(-3px);
+    box-shadow:0 14px 30px -16px var(--ombre)}
+  :root[data-carte="aucune"] .gcard:active{transform:none;box-shadow:none}
+}
+
+/* ================================================================================
+   LE RESTE DU MOUVEMENT
+   --------------------------------------------------------------------------------
+   Une animation ne se justifie que si elle repond a une question que
+   l'utilisateur se pose : « qu'est-ce qui vient de changer ? », « ou suis-je
+   arrive ? », « est-ce que ca travaille ? ». Les autres sont du bruit.
+   ================================================================================ */
+
+/* --- entree de la grille : la liste se pose, elle n'apparait pas d'un bloc.
+   L'ecart est fixe par rang plutot que par un `--i` calcule en JavaScript :
+   au-dela de la premiere fournee, l'oeil ne suit plus la cascade de toute
+   facon, et 24 regles coutent moins qu'un attribut ecrit sur 300 cartes. */
+@keyframes cardin{
+  from{opacity:0;transform:translateY(calc(14px * var(--amplitude))) scale(.985)}
+  to{opacity:1;transform:none}
+}
+.gcard{animation:cardin var(--t-long) var(--ease) backwards}
+.gcard:nth-child(1){animation-delay:calc(var(--t-cascade) * 0)}
+.gcard:nth-child(2){animation-delay:calc(var(--t-cascade) * 1)}
+.gcard:nth-child(3){animation-delay:calc(var(--t-cascade) * 2)}
+.gcard:nth-child(4){animation-delay:calc(var(--t-cascade) * 3)}
+.gcard:nth-child(5){animation-delay:calc(var(--t-cascade) * 4)}
+.gcard:nth-child(6){animation-delay:calc(var(--t-cascade) * 5)}
+.gcard:nth-child(7){animation-delay:calc(var(--t-cascade) * 6)}
+.gcard:nth-child(8){animation-delay:calc(var(--t-cascade) * 7)}
+.gcard:nth-child(9){animation-delay:calc(var(--t-cascade) * 8)}
+.gcard:nth-child(10){animation-delay:calc(var(--t-cascade) * 9)}
+.gcard:nth-child(11){animation-delay:calc(var(--t-cascade) * 10)}
+.gcard:nth-child(12){animation-delay:calc(var(--t-cascade) * 11)}
+.gcard:nth-child(13){animation-delay:calc(var(--t-cascade) * 12)}
+.gcard:nth-child(14){animation-delay:calc(var(--t-cascade) * 13)}
+.gcard:nth-child(15){animation-delay:calc(var(--t-cascade) * 14)}
+.gcard:nth-child(16){animation-delay:calc(var(--t-cascade) * 15)}
+.gcard:nth-child(17){animation-delay:calc(var(--t-cascade) * 16)}
+.gcard:nth-child(18){animation-delay:calc(var(--t-cascade) * 17)}
+.gcard:nth-child(n+19){animation-delay:calc(var(--t-cascade) * 18)}
+
+/* --- la jaquette arrive en fondu plutot qu'en a-coup */
+@keyframes imgin{from{opacity:0}to{opacity:1}}
+.gcard .art img{animation:imgin var(--t-moyen) var(--ease) backwards}
+
+/* --- l'emplacement porte deja la couleur de la pochette
+   `--jaq` est pose par le script des que la couleur dominante du jeu est
+   connue (elle est calculee une fois puis rangee dans le navigateur). Tant
+   qu'elle ne l'est pas, on retombe sur le degrade neutre. Resultat : au
+   defilement, la grille se remplit de couleurs plutot que de trous gris, et
+   l'arrivee de l'image ne fait plus sauter la carte. */
+.gcard .art{background:var(--jaq,var(--art-fond))}
+.gcard .art::before{content:"";position:absolute;inset:0;z-index:0;
+  background:linear-gradient(155deg,var(--eclat-fort),transparent 60%);
+  pointer-events:none}
+.gcard .art img{position:relative;z-index:1}
+
+/* --- la fiche prend la couleur du jeu
+   La teinte reste tres diluee : la pochette doit rester le seul aplat franc
+   de la fenetre, et le texte de l'en-tete doit rester lisible quelle que
+   soit la couleur tiree — d'ou le melange avec la surface du theme plutot
+   qu'une couleur posee telle quelle. */
+.sheet .top{
+  background:color-mix(in srgb, var(--jaq,var(--panel2)) 22%, var(--panel2));
+  transition:background var(--t-long) var(--ease)}
+.sheet .cover{box-shadow:0 10px 26px -14px var(--ombre)}
+/* un filet de la couleur du jeu ferme l'en-tete, comme une tranche de boitier */
+.sheet .top{border-bottom:1px solid
+  color-mix(in srgb, var(--jaq,var(--rule)) 45%, var(--rule))}
+
+/* --- onglets : un curseur glisse d'un onglet a l'autre, le panneau se pose */
+nav.tabs{position:relative}
+@keyframes panneau-entre{
+  from{opacity:0;transform:translateY(calc(8px * var(--amplitude)))}
+  to{opacity:1;transform:none}
+}
+.panel.active{animation:panneau-entre var(--t-moyen) var(--ease)}
+
+/* Quand le navigateur sait le faire, le changement d'onglet devient un fondu
+   croise reel plutot que deux animations independantes. */
+/* Les deux transitions de vue de l'application ne se ressemblent pas : un
+   changement d'onglet remplace la page, l'ouverture d'une fiche fait grandir
+   une jaquette par-dessus. Sans ce cloisonnement, l'ouverture d'une fiche
+   heritait du glissement vertical prevu pour les onglets. */
+@media (prefers-reduced-motion:no-preference){
+  :root.vt-onglet::view-transition-old(root){animation:vt-sort var(--t-court) var(--ease) both}
+  :root.vt-onglet::view-transition-new(root){animation:vt-entre var(--t-moyen) var(--ease) both}
+  :root.vt-fiche::view-transition-old(root){animation:vt-sort var(--t-court) var(--ease) both}
+  :root.vt-fiche::view-transition-new(root){animation:vt-sort var(--t-moyen) var(--ease) reverse both}
+}
+@keyframes vt-sort{to{opacity:0}}
+@keyframes vt-entre{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* Pendant que la jaquette grandit, la fenetre ne doit PAS jouer sa propre
+   entree : les deux mouvements se superposeraient et l'image partirait de
+   travers. `sansentree` prend le relais APRES la transition — sans elle, le
+   retrait de `vt-fiche` rendait son animation a la fenetre, qui se mettait
+   alors a entrer une seconde fois, une fois deja en place. */
+:root.vt-fiche .modal.open,
+:root.vt-fiche .modal.open .sheet,
+.modal.sansentree.open,
+.modal.sansentree.open .sheet{animation:none}
+
+/* --- modales : elles arrivent de la ou on a clique, elles ne clignotent pas */
+@keyframes voile-entre{from{opacity:0}to{opacity:1}}
+@keyframes feuille-entre{
+  from{opacity:0;transform:translateY(calc(18px * var(--amplitude))) scale(.97)}
+  to{opacity:1;transform:none}
+}
+/* `#dialog` et `#modal` sont les deux seuls voiles : la fiche d'un jeu vit
+   dans `.modal .sheet`, les questions dans `#dialog .sheet.dlg`. */
+.modal.open,#dialog.open{animation:voile-entre var(--t-court) var(--ease)}
+.modal.open .sheet,#dialog.open .dlg{
+  animation:feuille-entre var(--t-moyen) var(--ease)}
+/* fermeture : sans cela la modale disparait d'un coup, ce qui se lit comme un
+   bug plutot que comme une fermeture */
+@keyframes feuille-sort{
+  to{opacity:0;transform:translateY(calc(10px * var(--amplitude))) scale(.985)}
+}
+.modal.ferme,#dialog.ferme{animation:voile-entre var(--t-court) var(--ease) reverse both}
+.modal.ferme .sheet,#dialog.ferme .dlg{
+  animation:feuille-sort var(--t-court) var(--ease) both}
+
+/* --- journal : chaque ligne arrive par le bas, comme un vrai terminal */
+@keyframes jline-entre{
+  from{opacity:0;transform:translateY(calc(6px * var(--amplitude)))}
+  to{opacity:1;transform:none}
+}
+.jline.neuve{animation:jline-entre var(--t-court) var(--ease)}
+
+/* --- squelettes : pendant une attente, la forme de ce qui arrive vaut mieux
+   qu'un trou. Le balayage indique que ca travaille encore. */
+@keyframes squelette{to{background-position:-140% 0}}
+.squelette{
+  background:linear-gradient(100deg,var(--surface-2) 20%,var(--surface-3) 42%,
+             var(--surface-2) 64%);
+  background-size:280% 100%;background-position:140% 0;
+  animation:squelette 1.5s linear infinite;
+  border-radius:8px;color:transparent !important;pointer-events:none;
+  user-select:none}
+.squelette *{visibility:hidden}
+.gcard.squelette-carte{cursor:default;pointer-events:none;animation:none}
+.gcard.squelette-carte .art{background:var(--creux)}
+.gcard.squelette-carte .art::before{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(100deg,transparent 20%,var(--eclat) 45%,
+             transparent 70%);
+  background-size:280% 100%;animation:squelette 1.4s linear infinite}
+.gcard.squelette-carte .gname,.gcard.squelette-carte .meta{
+  background:var(--surface-2);border-radius:4px;color:transparent}
+.gcard.squelette-carte .gname{height:1.9em}
+.gcard.squelette-carte .meta{height:.9em;width:60%}
+/* Le squelette ne vit que pendant le chargement, et disparait des que la
+   premiere vraie carte existe — sinon la grille afficherait les deux. */
+#libsquelette{display:none}
+body.chargement #libsquelette{display:grid}
+body.chargement #lib{display:none}
+
+/* --- boutons : un appui doit s'entendre du doigt autant que de l'oeil */
+button:active:not(:disabled){transform:scale(.97)}
+button{transition:background var(--t-court) var(--ease),
+                  color var(--t-court) var(--ease),
+                  border-color var(--t-court) var(--ease),
+                  box-shadow var(--t-court) var(--ease),
+                  transform .08s var(--ease)}
+
+/* --- puces de filtre et rail alphabetique : la cible active se signale */
+.chip,.szbtn,.alpha{transition:background var(--t-court) var(--ease),
+  color var(--t-court) var(--ease),border-color var(--t-court) var(--ease),
+  transform var(--t-court) var(--ease)}
+.chip:active,.szbtn:active,.alpha:active{transform:scale(.94)}
+@keyframes lettre-atteinte{
+  0%{transform:scale(1)} 40%{transform:scale(1.35)} 100%{transform:scale(1)}
+}
+.alpha.atteinte{animation:lettre-atteinte var(--t-long) var(--ease);
+  color:var(--primary)}
+
+/* --- reglages : chaque bloc se pose a l'ouverture de l'onglet */
+@keyframes bloc-entre{
+  from{opacity:0;transform:translateY(calc(10px * var(--amplitude)))}
+  to{opacity:1;transform:none}
+}
+/* Une seule section est affichee a la fois : la cascade n'a plus lieu d'etre,
+   et un retard sur la cinquieme aurait fait attendre pour rien celui qui la
+   choisit. Ce sont les GROUPES de la section ouverte qui se posent. */
+.setsection[hidden]{display:none}
+.panel.active .setsection{animation:bloc-entre var(--t-moyen) var(--ease)}
+.setsection > .setgroup{animation:bloc-entre var(--t-moyen) var(--ease) backwards}
+.setsection > .setgroup:nth-of-type(2){animation-delay:calc(var(--t-cascade) * 1.2)}
+.setsection > .setgroup:nth-of-type(3){animation-delay:calc(var(--t-cascade) * 2.4)}
+.setsection > .setgroup:nth-of-type(n+4){animation-delay:calc(var(--t-cascade) * 3.6)}
+
+/* --- lignes de reglage et de fichier : le survol suit le doigt sans traine */
+.setrow,.row,.brow,.drow,.jline{
+  transition:background var(--t-court) var(--ease)}
+
+/* --- l'en-tete gagne une ombre seulement quand la page a defile : au repos,
+   une ombre permanente donne l'impression d'un bandeau qui flotte. */
+header{transition:box-shadow var(--t-moyen) var(--ease),
+                  background var(--t-moyen) var(--ease)}
+header.defile{box-shadow:0 10px 30px -22px var(--ombre)}
+
+/* --- en-tete compact : sur un handheld en paysage, la hauteur est la
+   ressource rare. Une fois la lecture engagee, le titre et l'etat de la
+   console n'ont plus a occuper trois lignes ; les CONTROLES, eux, restent
+   tous accessibles — on retrecit, on ne cache pas. */
+.head-in,.libbar,.toolbar,.brand,.status{
+  transition:padding var(--t-moyen) var(--ease),
+             font-size var(--t-moyen) var(--ease),
+             opacity var(--t-moyen) var(--ease),
+             margin var(--t-moyen) var(--ease)}
+body.compact .head-in{padding-top:5px;padding-bottom:5px}
+body.compact .brand{font-size:13px}
+body.compact .libbar{padding:6px 0;margin-bottom:6px}
+body.compact .toolbar{padding:5px 0;margin-bottom:2px}
+body.compact .filters{margin-bottom:2px}
+/* L'etat de la console est une information de contexte, pas une commande :
+   c'est la seule chose qui s'efface, et elle revient des qu'on remonte. */
+@media (max-width:900px){
+  body.compact .status{opacity:0;pointer-events:none;height:0;overflow:hidden}
+}
+
+/* ================================================================================
+   APERCU DANS LES REGLAGES
+   --------------------------------------------------------------------------------
+   Choisir une animation sans la voir revient a choisir a l'aveugle. Le
+   selecteur montre donc six vraies cartes miniatures, chacune portant sa
+   propre variante — d'ou `data-apercu` en local plutot que `data-carte` sur
+   la racine.
+   ================================================================================ */
+.animchoix{display:grid;gap:10px;width:100%;
+  grid-template-columns:repeat(auto-fit,minmax(92px,1fr))}
+.animopt{background:var(--surface-2);border:1px solid var(--line);
+  border-radius:10px;padding:9px;cursor:pointer;text-align:left;
+  display:flex;flex-direction:column;gap:8px;
+  --btn-fond:var(--surface-2);--btn-fond-survol:var(--surface-3)}
+.animopt.on{border-color:var(--primary);
+  box-shadow:0 0 0 1px var(--primary),0 0 22px -8px var(--primary-halo)}
+.animopt .apercu{position:relative;aspect-ratio:3/4;border-radius:6px;
+  overflow:hidden;background:var(--art-fond);
+  transition:transform var(--t-moyen) var(--ease),
+             box-shadow var(--t-moyen) var(--ease)}
+/* Une vraie pochette de la ludotheque : c'est le seul moyen de juger un
+   reflet ou une inclinaison. Si elle manque, le degrade du fond reste. */
+.animopt .apimg{position:absolute;inset:0;z-index:0;
+  width:100%;height:100%;object-fit:cover;display:block}
+/* le bandeau d'etat, comme sur une vraie carte : c'est lui qui donne a la
+   vignette sa silhouette reconnaissable */
+.animopt .apbandeau{position:absolute;left:0;right:0;bottom:0;height:19%;
+  z-index:2;background:var(--capot);border-top:1px solid var(--eclat)}
+/* les effets (reflet, legende, lisere) passent au-dessus de la pochette */
+.animopt .apercu::before,.animopt .apercu::after{z-index:3}
+.animopt .anom{font-size:11.5px;font-weight:600;color:var(--text-2);
+  line-height:1.25}
+.animopt.on .anom{color:var(--primary)}
+
+/* Chaque vignette rejoue sa variante, en reduit. Les selecteurs sont les memes
+   que plus haut mais portes par `data-apercu` : une vignette ne doit pas
+   dependre du reglage actuellement enregistre. */
+@media (hover:hover){
+  .animopt[data-apercu="0"]:hover .apercu{transform:translateY(-3px);
+    box-shadow:0 10px 22px -14px var(--ombre)}
+  /* meme pivot haut que sur la vraie carte, pour que l'apercu ne mente pas */
+  .animopt[data-apercu="1"] .apercu{transform-origin:50% 32%}
+  .animopt[data-apercu="1"]:hover .apercu{
+    transform:perspective(500px) rotateX(6deg) rotateY(-9deg) scale(1.04);
+    box-shadow:-8px 14px 26px -12px var(--ombre)}
+  .animopt[data-apercu="1"] .apercu::after{content:"";position:absolute;
+    inset:-40%;background:linear-gradient(112deg,transparent 38%,
+    rgba(255,255,255,.3) 48%,rgba(255,255,255,.06) 56%,transparent 64%);
+    transform:translateX(-70%);opacity:0;
+    transition:transform .62s var(--ease),opacity .28s}
+  .animopt[data-apercu="1"]:hover .apercu::after{
+    transform:translateX(70%);opacity:1}
+  .animopt[data-apercu="2"]:hover .apercu{transform:translateY(-6px);
+    box-shadow:0 0 0 1px var(--primary-trait-fort),
+               0 0 24px -4px var(--primary-halo)}
+  .animopt[data-apercu="3"] .apercu::after{content:"";position:absolute;
+    left:0;right:0;bottom:0;height:34%;
+    background:linear-gradient(to top,var(--capot),transparent);
+    transform:translateY(101%);transition:transform var(--t-moyen) var(--ease)}
+  .animopt[data-apercu="3"]:hover .apercu::after{transform:none}
+  .animopt[data-apercu="4"] .apercu::before{content:"";position:absolute;
+    inset:0;border-radius:inherit;padding:1px;opacity:0;
+    transition:opacity var(--t-moyen);
+    background:conic-gradient(from var(--ang,0deg),transparent 0deg,
+      var(--primary) 40deg,transparent 90deg,transparent 360deg);
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+    mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor;mask-composite:exclude}
+  .animopt[data-apercu="4"]:hover .apercu::before{opacity:1;
+    animation:lisere-tourne 2.6s linear infinite}
+  .animopt[data-apercu="5"]:hover .apercu{
+    transform:perspective(400px) translateY(-5px) rotateX(6deg);
+    box-shadow:0 16px 30px -16px var(--ombre)}
+  /* c'est le DECALAGE entre le bandeau et la jaquette qui fait l'effet : sans
+     lui, la vignette 5 serait indiscernable de la 0 */
+  .animopt[data-apercu="5"] .apbandeau{
+    transition:transform var(--t-moyen) var(--ease)}
+  .animopt[data-apercu="5"]:hover .apbandeau{transform:translateY(-4px)}
+}
+
+/* ------------------------------------------------------ VERSIONS REGIONALES
+   Le bouton porte le nombre de versions ET l'etat du pliage : c'est la seule
+   information qui distingue cette carte des autres, elle merite sa ligne. */
+.gcard .pgrp{margin-top:8px;width:100%;padding:5px;font-size:11px;
+  letter-spacing:.3px;border-radius:7px;background:var(--primary-voile);
+  border:1px solid var(--primary-trait);color:var(--primary);
+  --btn-fond:var(--primary-voile);--btn-texte:var(--primary);
+  --btn-trait:var(--primary-trait);--btn-fond-survol:var(--primary-doux);
+  --btn-trait-survol:var(--primary)}
+/* La carte qui porte un groupe se signale sans crier : un filet laiton sur la
+   tranche, du cote ou les versions vont se deplier. */
+/* Cette pastille se pose SUR une jaquette : elle garde donc le capot sombre
+   des autres, comme `--sur-image`. Une teinte diluee du theme y devenait
+   illisible des que la pochette etait claire — c'est exactement la regle que
+   `--capot` existe pour tenir. Le liseré laiton suffit a la distinguer. */
+/* Presence sur la console, en haut de la jaquette. Le boitier est toujours
+   dessine ; c'est l'ECRAN qui s'allume — plein et vert quand le jeu est la,
+   ambre quand il n'y est qu'en partie, eteint quand il manque. Le meme code
+   couleur que partout ailleurs dans l'outil. */
+.ov.ovconsole{background:var(--capot);padding:3px 6px;display:inline-flex;
+  align-items:center;box-shadow:inset 0 0 0 1px var(--eclat)}
+.ov.ovconsole svg{display:block}
+.ov.ovconsole.p-oui{color:var(--green)}
+.ov.ovconsole.p-partiel{color:var(--amber)}
+.ov.ovconsole.p-non{color:var(--sur-image);opacity:.55}
+.ov.ovconsole.p-non .ecran{fill:none}
+
+.ov.ovlangue{background:var(--capot);color:var(--sur-image);
+  box-shadow:inset 0 0 0 1px var(--primary-trait-fort);
+  text-transform:none;letter-spacing:.2px}
+.gcard.groupe{box-shadow:inset 3px 0 0 var(--primary-trait)}
+/* Les versions ont leur fenetre : une liste, pas un depliage dans la grille.
+   Depliees en ligne, elles se melangeaient aux autres jeux et plus rien ne
+   disait ou le groupe commencait. */
+.dlghead{display:flex;align-items:baseline;gap:10px;padding:16px 18px 12px}
+.dlghead h3{margin:0;font-size:16px;flex:1;min-width:0}
+.versions{max-height:min(58vh,460px);overflow:auto;
+  border-top:1px solid var(--line)}
+.vrow{display:flex;align-items:center;gap:12px;padding:9px 18px;
+  border-bottom:1px solid var(--line);font-size:13px}
+.vrow:last-child{border-bottom:0}
+.vrow:hover{background:var(--surface-2)}
+.vcover{flex:0 0 auto;width:34px;aspect-ratio:3/4;border-radius:4px;
+  overflow:hidden;background:var(--creux);line-height:0}
+.vcover img{width:100%;height:100%;object-fit:cover}
+.vnom{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;
+  color:var(--text)}
+.vfichier{font:10px/1.3 var(--mono);color:var(--text-3);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vlangue{flex:0 0 auto;font:10px/1 var(--mono);letter-spacing:.06em;
+  color:var(--primary);border:1px solid var(--primary-trait);
+  border-radius:4px;padding:4px 6px}
+.vtaille{flex:0 0 auto;font:11px/1 var(--mono);color:var(--text-3);
+  font-variant-numeric:tabular-nums}
+.vetat{flex:0 0 auto;font:9.5px/1 var(--disp);font-weight:700;
+  letter-spacing:.8px;text-transform:uppercase;min-width:74px;text-align:right}
+@media (max-width:560px){
+  .vfichier,.vtaille{display:none}
+  .vrow{gap:9px;padding:9px 12px}
+}
+
+/* ------------------------------------------------------ SUPPORTS PHYSIQUES
+   Six silhouettes pour vingt-trois plateformes. Elles ne cherchent pas a
+   remplacer une jaquette : elles occupent la place quand il n'y en a pas, et
+   nomment le support dans la fiche. */
+.support{width:100%;height:100%;display:block;color:var(--text-3)}
+.gcard .ph{display:flex;align-items:center;justify-content:center;
+  inset:0;padding:20%}
+/* Assez presente pour se lire, assez discrete pour qu'on voie tout de suite
+   qu'il manque une jaquette : c'est un emplacement vide, pas une illustration. */
+.gcard .ph .support{opacity:.42}
+.games.taille-compact .gcard .ph{padding:16%}
+
+/* Dans la fiche : le nom du support, precede de son dessin. */
+.supportligne{display:flex;align-items:center;gap:7px;margin:0 0 7px;
+  font-family:var(--disp);font-size:11.5px;font-weight:600;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--text-3)}
+.supportligne{flex-wrap:wrap}
+.supportligne .support.gros{width:15px;height:15px;flex:0 0 auto;
+  color:var(--text-2)}
+.supportligne .sep{opacity:.5}
+.supportligne .langues{letter-spacing:.04em;text-transform:none;
+  font-family:var(--body);font-size:12px;font-weight:500}
+
+/* Liseré du support, en haut de la jaquette. Il n'apparait qu'en vue
+   « toutes les plateformes », ou il distingue vraiment une carte d'une
+   autre ; ailleurs, ce serait trente-quatre fois la meme barre.
+   Les teintes restent desaturees : l'ambre garde le monopole de l'action. */
+/* Porte par `.gcard::after` et non par `.art::after` : ce dernier est deja
+   pris par le reflet de l'animation « affiche inclinee », et `.art::before`
+   par le degrade de la jaquette. */
+.gcard[data-media]:not([data-media=""])::after{
+  content:"";position:absolute;left:0;right:0;top:0;height:3px;z-index:5;
+  pointer-events:none;background:var(--media,var(--line-fort))}
+.gcard[data-media="switch"]      {--media:#c94a4a}
+.gcard[data-media="poche"]       {--media:#6f77c4}
+.gcard[data-media="cartouche"]   {--media:#8d8577}
+.gcard[data-media="carte"]       {--media:#5aa1a8}
+.gcard[data-media="disque"]      {--media:#9aa3b2}
+.gcard[data-media="borne"]       {--media:#c08a3e}
+
+/* ----------------------------------------------------------------- LOUPE
+   La jaquette occupe presque tout l'ecran : c'est le sujet, le reste
+   s'efface. Le voile est plus opaque que celui d'une fenetre ordinaire —
+   on regarde une image, pas un formulaire pose sur la page. */
+.sheet .cover{cursor:pointer}
+.sheet .cover:focus-visible{outline:2px solid var(--focus);outline-offset:3px}
+.loupe{position:fixed;inset:0;z-index:70;display:none;
+  flex-direction:column;align-items:center;justify-content:center;gap:16px;
+  padding:24px;background:var(--rideau);backdrop-filter:blur(8px)}
+.loupe.on{display:flex;animation:voile-entre var(--t-court) var(--ease)}
+
+/* L'affiche tourne, elle ne grossit pas. La perspective est portee par le
+   CADRE : posee sur l'image elle-meme, le point de fuite aurait suivi
+   l'image dans sa rotation et l'effet se serait aplati. */
+.loupecadre{perspective:1200px;cursor:pointer;
+  animation:feuille-entre var(--t-moyen) var(--ease)}
+.loupeplan{position:relative;line-height:0;transform-style:preserve-3d;
+  border-radius:12px;overflow:hidden;
+  box-shadow:0 40px 90px -30px var(--ombre);
+  transition:transform .45s var(--ease)}
+/* Le retour au repos est lent, la poursuite de la souris est immediate :
+   sinon l'affiche traine derriere le curseur. */
+.loupecadre:hover .loupeplan{transition:transform .12s linear}
+.loupeplan img{display:block;max-width:min(560px,92vw);max-height:78vh;
+  width:auto;height:auto;object-fit:contain;background:var(--creux)}
+/* Le point brillant : une tache de lumiere placee sous la souris, plus un
+   voile diagonal. C'est lui qui fait la surface vernie. */
+.loupereflet{position:absolute;inset:0;pointer-events:none;opacity:0;
+  transition:opacity var(--t-moyen) var(--ease);
+  background:
+    radial-gradient(38% 38% at var(--rx,50%) var(--ry,50%),
+      rgba(255,255,255,.34), rgba(255,255,255,.06) 55%, transparent 72%),
+    linear-gradient(115deg, transparent 42%, rgba(255,255,255,.10) 50%,
+      transparent 58%)}
+
+.loupepied{display:flex;flex-direction:column;align-items:center;gap:5px;
+  text-align:center;color:var(--sur-image);max-width:min(560px,92vw)}
+.loupepied #loupetitre{font-size:14.5px;font-weight:600;text-wrap:balance}
+.loupeaide{font:11px/1.4 var(--mono);color:rgba(247,242,238,.62)}
+/* Sans souris, il n'y a rien a suivre : l'affiche reste droite et l'aide le dit. */
+@media (hover:none){
+  .loupeaide{font-size:0}
+  .loupeaide::after{content:"Touche le fond pour fermer";font-size:11px}
+}
+@media (prefers-reduced-motion:reduce){
+  .loupeplan{transition:none}
+}
+
+/* ---------------------------------------------------------------- PALETTE
+   Posee haut dans l'ecran plutot qu'au centre : on la lit en gardant la
+   bibliotheque visible derriere, et le regard n'a pas a redescendre pour
+   voir le resultat. */
+.palette{position:fixed;inset:0;z-index:60;display:none;
+  background:var(--rideau-leger);backdrop-filter:blur(3px);
+  padding:12vh 16px 16px;justify-content:center;align-items:flex-start}
+.palette.on{display:flex;animation:voile-entre var(--t-court) var(--ease)}
+.palboite{width:min(620px,100%);border-radius:14px;overflow:hidden;
+  background:var(--verre-plein);border:1px solid var(--line-fort);
+  box-shadow:0 30px 70px -24px var(--ombre);
+  animation:feuille-entre var(--t-moyen) var(--ease)}
+.palboite input{width:100%;border:0;border-bottom:1px solid var(--line);
+  background:transparent;color:var(--text);font:16px/1 var(--body);
+  padding:17px 19px;outline:none}
+.palboite input::placeholder{color:var(--text-3)}
+.palliste{max-height:min(52vh,430px);overflow:auto;padding:6px}
+.palitem{display:flex;align-items:center;gap:10px;padding:9px 12px;
+  border-radius:9px;cursor:pointer;font-size:13.5px;
+  transition:background var(--t-court) var(--ease)}
+.palitem.on{background:var(--primary-doux)}
+.palitem:hover{background:var(--surface-2)}
+.paltype{font:9.5px/1 var(--mono);letter-spacing:.08em;color:var(--text-3);
+  border:1px solid var(--line);border-radius:4px;padding:4px 5px;flex:0 0 auto;
+  min-width:48px;text-align:center}
+.palitem.on .paltype{border-color:var(--primary-trait);color:var(--primary)}
+.paltitre{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap;color:var(--text)}
+.paletat{font:9.5px/1 var(--disp);font-weight:700;letter-spacing:.8px;
+  text-transform:uppercase;flex:0 0 auto}
+.paldetail{font:10.5px/1 var(--mono);color:var(--text-3);flex:0 0 auto;
+  font-variant-numeric:tabular-nums}
+.palvide{padding:22px;text-align:center;color:var(--text-3);font-size:13px}
+.palpied{display:flex;gap:16px;justify-content:flex-end;padding:9px 14px;
+  border-top:1px solid var(--line);background:var(--surface-2);
+  font-size:11px;color:var(--text-3)}
+.palpied b{font-family:var(--mono);font-weight:400;color:var(--text-2);
+  border:1px solid var(--line);border-radius:4px;padding:1px 5px;margin-right:3px}
+@media (max-width:560px){
+  .palette{padding-top:6vh}
+  .palpied{display:none}          /* pas de clavier physique : rien a annoncer */
+  .paldetail{display:none}
+}
+
+/* --- carte visee au clavier : le meme marquage que la selection ne
+   conviendrait pas — on peut viser une carte sans la cocher. */
+.gcard:focus{outline:none}
+.gcard:focus-visible{outline:2px solid var(--focus);outline-offset:3px;
+  box-shadow:0 0 0 4px var(--info-doux)}
+
+/* ---------------------------------------------------------------- APERCU
+   Fiche reduite qui parait apres un survol appuye. Volontairement etroite :
+   elle repond a « qu'est-ce que c'est, et ou en est-il ? », pas davantage —
+   sinon autant ouvrir la vraie fiche. */
+.apercujeu{position:fixed;z-index:40;width:270px;max-width:82vw;
+  padding:13px 15px;border-radius:12px;
+  background:var(--verre-plein);border:1px solid var(--line);
+  box-shadow:0 22px 50px -22px var(--ombre);backdrop-filter:blur(10px);
+  opacity:0;transform:translateY(6px) scale(.985);pointer-events:none;
+  transition:opacity var(--t-court) var(--ease),
+             transform var(--t-court) var(--ease)}
+.apercujeu.on{opacity:1;transform:none}
+.apercujeu .aptitre{font-size:13.5px;font-weight:600;line-height:1.3;
+  color:var(--text)}
+.apercujeu .apetat{margin-top:5px;font-family:var(--disp);font-size:10px;
+  font-weight:700;letter-spacing:.9px;text-transform:uppercase}
+.apercujeu .apgrille{margin-top:10px;display:grid;gap:4px;
+  border-top:1px solid var(--line);padding-top:9px}
+.apercujeu .apl{display:flex;justify-content:space-between;gap:12px;
+  font-size:11.5px;color:var(--text-3)}
+.apercujeu .apl b{color:var(--text-2);font-weight:600;
+  font-family:var(--mono);font-size:11px;font-variant-numeric:tabular-nums;
+  text-align:right}
+.apercujeu .apresume{margin:9px 0 0;font-size:11.5px;line-height:1.5;
+  color:var(--text-3);border-top:1px solid var(--line);padding-top:9px}
+
+/* --- selecteur a segments : theme et mouvement se choisissent d'un coup
+   d'oeil, pas dans une liste deroulante qu'il faut ouvrir pour lire. */
+.segment{display:inline-flex;background:var(--surface-2);
+  border:1px solid var(--line);border-radius:9px;padding:3px;gap:3px}
+.segment button{border:none;background:transparent;border-radius:6px;
+  padding:7px 13px;font-size:12.5px;color:var(--text-2);
+  --btn-fond:transparent;--btn-fond-survol:var(--surface-3);
+  --btn-trait:transparent;--btn-trait-survol:transparent}
+.segment button.on{background:var(--primary);color:var(--on-primary);
+  font-weight:600;--btn-fond:var(--primary);--btn-fond-survol:var(--primary-vif);
+  --btn-texte:var(--on-primary)}
+@media (pointer:coarse){.segment button{padding:10px 14px}}
