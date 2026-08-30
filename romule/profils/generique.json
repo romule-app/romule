@@ -1,0 +1,12 @@
+{
+  "cle": "generique",
+  "nom": "Autre emulateur",
+  "ordre": 9,
+  "paquets": [],
+  "donnees": "",
+  "jeux_defaut": "/storage/emulated/0/Switch",
+  "config": null,
+  "sauvegardes": [],
+  "verifie": false,
+  "note": "Depot de jeux dans un dossier que tu indiques, et rien d'autre : ni lecture de la NAND, ni sauvegardes, ni reglages."
+}

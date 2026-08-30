@@ -19,11 +19,32 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-from . import config, device, nand
+from . import config, device, profils
 
-CONFIG_DIR = nand.EDEN_FILES + "/config"
-GLOBAL_INI = CONFIG_DIR + "/config.ini"
-CUSTOM_DIR = CONFIG_DIR + "/custom"
+# Les chemins de configuration viennent du profil : chaque emulateur range ses
+# reglages a sa facon, et certains — Ryujinx — n'ont pas de format que cet
+# outil sache lire. `pilotable()` dit lequel.
+
+
+def _conf():
+    return (profils.actif().get("config") or {})
+
+
+def pilotable():
+    """L'emulateur actif expose-t-il des reglages que l'on sache modifier ?"""
+    return profils.config_pilotable()
+
+
+def config_dir():
+    return profils.sous(_conf().get("dossier", "config"))
+
+
+def global_ini():
+    return "%s/%s" % (config_dir(), _conf().get("global", "config.ini"))
+
+
+def custom_dir():
+    return "%s/%s" % (config_dir(), _conf().get("par_jeu", "custom"))
 PROFILES = config.ROOT / "_profils-eden"
 BACKUP = config.ROOT / "_eden-backup"
 
@@ -128,19 +149,19 @@ def game_ini(tid):
     tid = str(tid or "").strip()
     if not _TID.match(tid):
         raise ValueError("Identifiant de jeu invalide : %r" % tid[:32])
-    return "%s/%s.ini" % (CUSTOM_DIR, tid.upper())
+    return "%s/%s.ini" % (custom_dir(), tid.upper())
 
 
 def read_config(tid=None):
     """Configuration globale, ou celle d'un jeu. Renvoie (texte, structure)."""
-    chemin = game_ini(tid) if tid else GLOBAL_INI
+    chemin = game_ini(tid) if tid else global_ini()
     texte = _lire(chemin)
     return texte, parse(texte)
 
 
 def games_with_config():
     """Title IDs ayant une configuration propre sur la console."""
-    out = device._shell("ls -1 %s 2>/dev/null" % device._q(CUSTOM_DIR), timeout=30)
+    out = device._shell("ls -1 %s 2>/dev/null" % device._q(custom_dir()), timeout=30)
     return [l.strip()[:-4].lower() for l in out.splitlines() if l.strip().endswith(".ini")]
 
 
@@ -149,7 +170,7 @@ def write_config(changements, job, tid=None):
     if device.state() != "device":
         job.log("Console non connectee.")
         return False
-    chemin = game_ini(tid) if tid else GLOBAL_INI
+    chemin = game_ini(tid) if tid else global_ini()
     texte = _lire(chemin)
     if not texte.strip() and tid:
         job.log("Aucune configuration pour ce jeu : creation.")

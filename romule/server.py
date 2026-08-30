@@ -25,7 +25,7 @@ from urllib.parse import parse_qs, unquote
 from . import (actions, audit, auth, comptes, config, covers, device, edenconf,
                doublons, emuready, igdb, integrity, journal_acces, meta, nand,
                sauvegarde, saves,
-               scan, systems, titleid, transferts, trash, versions)
+               scan, systems, titleid, transferts, trash, versions, profils)
 from .jobs import JobRunner
 
 LIB = scan.Library()
@@ -1349,6 +1349,15 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"message": "Cache EmuReady vide."})
 
         # ---- configuration d'Eden
+        elif p in ("/api/eden-config", "/api/eden-apply", "/api/emuready-apply") \
+                and not edenconf.pilotable():
+            # Tous les emulateurs n'exposent pas des reglages que l'on sache
+            # lire : Ryujinx les range en JSON, avec une autre arborescence.
+            # Mieux vaut le dire que d'ecrire au hasard dans ses fichiers.
+            return self._json(
+                {"error": "Les reglages de %s ne sont pas pilotables depuis "
+                          "Romule." % profils.actif(CFG)["nom"]}, 400)
+
         elif p == "/api/eden-config":
             tid = (d.get("tid") or "").strip() or None
             texte, data = edenconf.read_config(tid)
