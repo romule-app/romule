@@ -37,6 +37,9 @@ import urllib.request
 from . import config
 
 DUREE_SESSION = 12 * 3600      # au-dela, il faut repasser par le fournisseur
+# Duree du « pont » remis a celui qui vient d'activer
+# l'authentification : juste de quoi finir de se configurer.
+DUREE_PONT = 30 * 60
 DUREE_TRANSIT = 10 * 60        # duree de vie d'une demande de connexion en cours
 _DECOUVERTE = {}               # cache {issuer: (expiration, document)}
 _JWKS = {}                     # cache {uri: (expiration, cles)}
