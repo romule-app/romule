@@ -74,6 +74,16 @@ PORT = int(os.environ.get("SWITCH_WEB_PORT", "8787"))
 ENV_LAN = os.environ.get("SWITCH_LAN", "").strip().lower() in ("1", "true", "yes", "on")
 TOKEN = os.environ.get("SWITCH_TOKEN", "").strip()
 
+# Adresses des reverse proxys autorises a parler au nom de leurs clients.
+# Sans cette declaration, un en-tete `X-Forwarded-For` ne prouve rien :
+# n'importe qui peut l'ecrire. Avec elle, et seulement depuis ces adresses,
+# l'application accepte de lire la vraie adresse du client.
+#     ROMULE_TRUSTED_PROXIES=127.0.0.1,172.18.0.1
+PROXYS_CONFIANCE = {a.strip() for a in
+                    (os.environ.get("ROMULE_TRUSTED_PROXIES")
+                     or os.environ.get("SWITCH_TRUSTED_PROXIES", "")).split(",")
+                    if a.strip()}
+
 
 def _bool_env(name):
     return os.environ.get(name, "").strip().lower() in ("1", "true", "yes", "on")

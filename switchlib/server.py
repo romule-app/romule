@@ -1,4 +1,11 @@
-"""Serveur web local (stdlib). Ecoute uniquement sur 127.0.0.1."""
+"""Serveur web (bibliotheque standard seule).
+
+Ecoute sur 127.0.0.1 par defaut. Il ne s'ouvre au reseau que si son
+proprietaire l'a demande : reglage `lan_access`, SWITCH_LAN, SWITCH_TOKEN,
+ou execution en conteneur — ou la publication de port fait office de
+decision explicite. La docstring precedente affirmait n'ecouter que sur
+127.0.0.1 alors que le socket etait lie a 0.0.0.0 depuis toujours.
+"""
 
 import hashlib
 import json
@@ -208,8 +215,45 @@ class Handler(BaseHTTPRequestHandler):
         q = parse_qs(self.path.partition("?")[2]).get("token")
         return bool(q and q[0] == config.TOKEN)
 
+    # En-tetes ajoutes par un relais. Leur seule presence signifie que la
+    # requete n'arrive PAS directement de son auteur.
+    ENTETES_RELAI = ("X-Forwarded-For", "X-Real-IP", "Forwarded",
+                     "X-Forwarded-Host", "X-Forwarded-Proto")
+
+    def _relayee(self):
+        return any(self.headers.get(h) for h in self.ENTETES_RELAI)
+
+    def _client_reel(self):
+        """Adresse de l'auteur de la requete, ou None si elle est indeterminable.
+
+        Le pair TCP suffit tant que personne ne relaie. Des qu'un relais
+        s'intercale, il devient l'adresse du RELAIS — et derriere un reverse
+        proxy pose sur la meme machine, c'est 127.0.0.1 pour tout le monde,
+        y compris pour l'Internet entier. C'est la faille que cette methode
+        ferme : on ne croit un en-tete que s'il vient d'un proxy declare.
+        """
+        pair = self.client_address[0]
+        if not self._relayee():
+            return pair
+        if pair not in config.PROXYS_CONFIANCE:
+            return None                     # quelqu'un relaie sans mandat
+        # Le proxy declare a ajoute a droite le pair qu'il a vu. On remonte la
+        # chaine en sautant les relais eux-memes declares.
+        chaine = [a.strip() for a in
+                  (self.headers.get("X-Forwarded-For") or "").split(",") if a.strip()]
+        for adresse in reversed(chaine):
+            if adresse not in config.PROXYS_CONFIANCE:
+                return adresse
+        # Toute la chaine est faite d'adresses declarees. Cela arrive quand le
+        # client est LUI-MEME sur la machine du proxy — le cas courant d'un
+        # nginx local devant l'application. La premiere entree reste alors la
+        # seule candidate.
+        if chaine:
+            return chaine[0]
+        return self.headers.get("X-Real-IP", "").strip() or None
+
     def _local(self):
-        return self.client_address[0] in ("127.0.0.1", "::1", "localhost")
+        return self._client_reel() in ("127.0.0.1", "::1", "localhost")
 
     def _secure(self):
         """La requete arrive-t-elle en HTTPS (directement ou via un proxy) ?"""
@@ -1248,6 +1292,25 @@ def _health():
     }
 
 
+def _adresse_ecoute():
+    """Sur quelle interface se poser.
+
+    Le socket etait lie a `0.0.0.0` en toutes circonstances, le filtrage se
+    faisant requete par requete. Cela marche, mais cela expose un port a tout
+    le reseau pour une installation que son proprietaire croit locale — et
+    toute erreur dans le filtrage devient immediatement joignable de partout.
+
+    On ne s'ouvre donc que sur decision explicite. En conteneur, la decision
+    est prise par celui qui publie le port : y rester sur 127.0.0.1 rendrait
+    l'application injoignable.
+    """
+    if os.environ.get("ROMULE_BIND", "").strip():
+        return os.environ["ROMULE_BIND"].strip()
+    ouvert = (CFG.get("lan_access") or config.ENV_LAN or config.TOKEN
+              or _in_container())
+    return "0.0.0.0" if ouvert else "127.0.0.1"
+
+
 def _in_container():
     """Detecte un deploiement conteneurise (pas de navigateur a ouvrir)."""
     if os.path.exists("/.dockerenv"):
@@ -1333,14 +1396,16 @@ def serve(open_browser=True):
         else:
             print("             ATTENTION : accessible sans mot de passe par tout appareil du reseau.")
     else:
-        print("Reseau     : desactive (activable dans Reglages, sans redemarrage)")
+        # Le socket est desormais lie a 127.0.0.1 seul : le reglage ne peut
+        # plus prendre effet a chaud, et le dire faussement enverrait
+        # l'utilisateur chercher une panne qui n'existe pas.
+        print("Reseau     : desactive — pour ouvrir : ROMULE_BIND=0.0.0.0, "
+              "SWITCH_LAN=1 ou un jeton, puis redemarrer")
     if not adb_hint():
         print("adb        : absent — la console ne pourra pas etre pilotee")
     if open_browser and not service:
         threading.Timer(1.0, lambda: webbrowser.open(url)).start()
-    # On ecoute partout, mais les requetes distantes sont refusees tant que
-    # l'acces reseau n'est pas autorise : le reglage prend effet immediatement.
-    srv = ThreadingHTTPServer(("0.0.0.0", config.PORT), Handler)
+    srv = ThreadingHTTPServer((_adresse_ecoute(), config.PORT), Handler)
 
     def stop(*_):
         # `docker stop` envoie SIGTERM : on previent la tache en cours et on
