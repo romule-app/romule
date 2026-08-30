@@ -4,11 +4,19 @@ services:
     container_name: ludotheque
     restart: unless-stopped
 
-    # Reseau de l'hote : necessaire pour qu'adb decouvre la console (mDNS) et
-    # la joigne directement. C'est le mode recommande.
-    # Sans lui, l'appairage automatique ne fonctionne pas ; il faut alors
-    # basculer sur le bloc "ports" plus bas et connecter la console a la main.
-    network_mode: host
+    # Reseau ordinaire, et un port publie : ce fichier doit marcher partout,
+    # y compris sous Docker Desktop (macOS, Windows) ou `network_mode: host`
+    # n'existe pas.
+    #
+    # adb par Wi-Fi fonctionne dans ce mode : le conteneur atteint le reseau
+    # local, il suffit de saisir l'adresse de la console une fois.
+    #
+    # Pour que la console soit DECOUVERTE toute seule (mDNS), il faut le
+    # reseau de l'hote — Linux uniquement. Remplacer alors les deux lignes
+    # `ports:` par :
+    #     network_mode: host
+    ports:
+      - "8787:8787"
 
     environment:
       # Emplacement de la ludotheque DANS le conteneur (ne pas changer).
@@ -37,12 +45,14 @@ services:
       # Ta ludotheque sur le NAS  ->  /library
       - ./library:/library
       # Le dossier contenant prod.keys  ->  /root/.switch
-      - ./keys:/root/.switch:ro
+      - ./keys:/keys:ro
 
-    # Pour que les fichiers crees appartiennent a ton utilisateur plutot qu'a
-    # root, decommente en adaptant les identifiants (id -u / id -g).
+    # L'image tourne deja sous l'utilisateur 1000. Si le tien porte un autre
+    # identifiant, adapte ici (id -u / id -g) pour que les fichiers deposes
+    # t'appartiennent.
     # user: "1000:1000"
 
-    # A utiliser SEULEMENT si tu retires network_mode: host.
-    # ports:
-    #   - "8787:8787"
+    # USB plutot que Wi-Fi (Linux uniquement, et cela affaiblit l'isolation du
+    # conteneur — a n'activer qu'en connaissance de cause) :
+    # devices:
+    #   - /dev/bus/usb:/dev/bus/usb

@@ -401,6 +401,11 @@ class Handler(BaseHTTPRequestHandler):
         # garde aucune prise sur celle-ci.
         self.send_header("Cross-Origin-Opener-Policy", "same-origin")
         self.send_header("Cross-Origin-Resource-Policy", "same-origin")
+        # Les reponses qui portent des comptes ou des reglages ne doivent
+        # laisser aucune trace dans un cache partage — ni proxy, ni disque.
+        if any(self.path.startswith(x) for x in
+               ("/api/comptes", "/api/config", "/auth/", "/api/compte-")):
+            self.send_header("Cache-Control", "no-store, private")
         # HSTS uniquement quand la liaison est deja chiffree : l'annoncer en
         # clair enfermerait l'utilisateur hors d'une installation sans TLS,
         # et la plupart le sont.

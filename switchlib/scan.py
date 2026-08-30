@@ -28,7 +28,7 @@ class Library:
         self.versions_at = None
         self.maxkey = 0
         self.scanned_at = None
-        self.keyfile = Path.home() / ".switch" / "prod.keys"
+        self.keyfile = config.CLES
 
     # ------------------------------------------------------------ inventaire
 

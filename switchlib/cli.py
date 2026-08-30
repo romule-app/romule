@@ -158,8 +158,24 @@ def _verifier_racine():
     sys.exit(1)
 
 
+def _verifier_jeton():
+    """Un jeton d'exemple n'est pas un jeton.
+
+    Le fichier compose en proposait un tout fait. Celui qui le laisse en place
+    croit son service protege alors que le mot de passe est ecrit dans le
+    depot public — c'est pire que pas de jeton du tout, parce qu'on ne s'en
+    mefie pas.
+    """
+    if config.TOKEN and config.TOKEN.strip().lower() in config.JETONS_INTERDITS:
+        print("SWITCH_TOKEN vaut encore une valeur d'exemple : %r" % config.TOKEN)
+        print("Genere le tien :")
+        print("    python3 -c \"import secrets; print(secrets.token_urlsafe(32))\"")
+        sys.exit(1)
+
+
 def main(argv):
     _verifier_racine()
+    _verifier_jeton()
     parser = argparse.ArgumentParser(prog="switch.py", description="Ludotheque Switch")
     sub = parser.add_subparsers(dest="cmd")
 
