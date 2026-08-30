@@ -43,7 +43,11 @@ def _langues():
     for f in sorted(LOCALES.glob("*.json")):
         try:
             m = json.loads(f.read_text(encoding="utf-8")).get("_meta", {})
-            out.append({"code": m.get("code", f.stem), "nom": m.get("nom", f.stem)})
+            # Le fichier dit « langue », pas « nom » : la lecture se rabattait
+            # donc toujours sur le nom du fichier, et le selecteur proposait
+            # « fr » et « en » au lieu de « Francais » et « English ».
+            out.append({"code": m.get("code", f.stem),
+                        "nom": m.get("langue") or m.get("nom") or f.stem})
         except (ValueError, OSError):
             continue
     return out
@@ -677,7 +681,7 @@ class Handler(BaseHTTPRequestHandler):
         elif p == "/api/import-list":
             self._json({"items": actions.scan_import()})
         elif p == "/api/langues":
-            self._json({"langues": _langues(), "courante": CFG.get("ui_lang", "fr")})
+            self._json({"langues": _langues(), "courante": CFG.get("ui_lang", "en")})
         elif p.startswith("/locales/"):
             f = LOCALES / (p.rsplit("/", 1)[-1].replace("..", ""))
             if f.is_file() and f.suffix == ".json":
@@ -1177,7 +1181,7 @@ class Handler(BaseHTTPRequestHandler):
         elif p == "/api/console-open":
             ip = _lan_ip()
             if not ip:
-                self._json({"ok": False, "message": "Adresse reseau du Mac introuvable."})
+                self._json({"ok": False, "message": "Adresse reseau du serveur introuvable."})
             elif not CFG.get("lan_access"):
                 self._json({"ok": False, "message": "Active d'abord l'acces reseau (Reglages)."})
             elif device.connection()["kind"] is None:

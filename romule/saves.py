@@ -1,4 +1,4 @@
-"""Sauvegarde des sauvegardes de jeu depuis la console vers le Mac.
+"""Sauvegarde des sauvegardes de jeu depuis la console vers le serveur.
 
 C'est le contenu le plus precieux : un jeu se re-telecharge, pas 200 h de
 progression. Les sauvegardes partent dans `_saves/<date>/`, jamais ecrasees.

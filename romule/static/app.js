@@ -188,7 +188,10 @@ async function api(path, body, discret) {
 // l'interface entiere, y compris ce qui est genere en JavaScript, sans qu'on
 // ait a modifier 400 appels — et sans qu'un oubli soit possible.
 let I18N = {};
-let LANGUE = 'fr';
+// Langue d'affichage. La CLE de traduction reste la phrase francaise — c'est
+// le principe gettext retenu par le projet — mais la langue par defaut est
+// l'anglais : `en.json` traduit ces cles au chargement.
+let LANGUE = 'en';
 
 // Ce qu'on ne traduit JAMAIS : du code, des chemins, et surtout les donnees de
 // l'utilisateur (noms de jeux, adresses email, chemins de fichiers).
@@ -306,7 +309,14 @@ const OBSERVATEUR = new MutationObserver(mutations => {
 });
 
 async function chargerLangue(code) {
-  LANGUE = code || 'fr';
+  LANGUE = code || 'en';
+  // L'attribut `lang` de la page etait fige a « fr », quelle que soit la langue
+  // choisie : les lecteurs d'ecran prononcaient l'anglais avec une phonetique
+  // francaise, et la correction orthographique des champs de saisie se
+  // trompait de dictionnaire.
+  document.documentElement.setAttribute('lang', LANGUE);
+  // Le francais est la langue SOURCE : ses cles sont deja les phrases
+  // affichees, il n'y a rien a traduire.
   if (LANGUE === 'fr') { I18N = {}; return; }
   try {
     const r = await fetch('/locales/' + LANGUE + '.json');
@@ -1262,16 +1272,16 @@ function resumeUtile(g) {
 const ETAT_COURT = {
   probleme: 'Problème', importer: 'À rapatrier', envoyer: 'À transférer',
   activer: 'À activer', convert: 'À convertir', pret: 'Jouable',
-  local: 'Sur le Mac',
+  local: 'Sur le serveur',
 };
 
 function carteEtiquette({e}) {
   const p = e.presence || {mac: true, console: 'inconnu'};
-  const tMac = p.mac ? 'Présent sur le Mac' : 'Absent du Mac';
+  const tMac = p.mac ? 'Présent sur le serveur' : 'Absent du serveur';
   const tCons = TITRE_PRESENCE[p.console];
   // Pastilles muettes : la couleur porte l'information, l'infobulle la nomme.
   // Les mots « MAC » et « CONSOLE » mangeaient les deux tiers de la largeur
-  // pour repeter un ordre qui ne change jamais (le Mac d'abord).
+  // pour repeter un ordre qui ne change jamais (le serveur d'abord).
   // La console a quitte ce bandeau pour la pastille du haut, ou elle se lit
   // d'un coup d'oeil sur toute la grille. La repeter ici dirait deux fois la
   // meme chose a 200 px d'ecart.
@@ -1578,7 +1588,7 @@ function renderActionBar() {
     boutons.push(['go', 'appliquer', 'Envoyer vers la console',
                   c.envoyer.length ? fmt(c.poids) : c.activer.length + ' MAJ/DLC']);
   if (c.importer.length)
-    boutons.push(['go', 'appliquer', 'Copier vers le Mac', c.importer.length + ' fichier(s)']);
+    boutons.push(['go', 'appliquer', 'Copier vers le serveur', c.importer.length + ' fichier(s)']);
   if (surConsole)
     boutons.push(['warn', 'supprimerConsole', 'Retirer de la console', surConsole + ' fichier(s)']);
   if (c.local.length)
@@ -1664,11 +1674,11 @@ function openGameHtml(g) {
     pret:     ['ok',   'Prêt à jouer sur la console'],
     activer:  ['upd',  'Sur la console — voir « Mises à jour » ci-dessous'],
     envoyer:  ['conv', e.aEnvoyer.length + ' fichier(s) à envoyer sur la console'],
-    importer: ['conv', 'Sur la console seulement — à importer vers le Mac'],
+    importer: ['conv', 'Sur la console seulement — à importer vers le serveur'],
     convert:  ['conv', 'À convertir avant envoi'],
     probleme: ['orph', e.casses.length ? 'Fichier incomplet — à retélécharger'
                                        : 'Le jeu de base est absent'],
-    local:    ['dlc',  'Sur le Mac — branche la console pour en savoir plus'],
+    local:    ['dlc',  'Sur le serveur — branche la console pour en savoir plus'],
   };
   if (libelles[e.etat]) lines.push(libelles[e.etat]);
   if (e.raison) lines.push(['orph', e.raison]);
@@ -1691,7 +1701,7 @@ function openGameHtml(g) {
   if (g.needsConvert)
     acts.push('<button class="go" onclick="app.convertGame(\'' + esc(g.key) + '\')">Convertir ce jeu</button>');
   if (g.console)
-    acts.push('<button class="go" onclick="app.importerJeu(\'' + esc(g.key) + '\')">Copier vers le Mac</button>');
+    acts.push('<button class="go" onclick="app.importerJeu(\'' + esc(g.key) + '\')">Copier vers le serveur</button>');
   else if (e.aEnvoyer.length)
     acts.push('<button class="go" onclick="app.sendGame(\'' + esc(g.key) + '\')">Envoyer vers la console</button>');
   acts.push('<button class="ghost" onclick="app.closeGame()">Fermer</button>');
@@ -1731,7 +1741,7 @@ function openGameHtml(g) {
     '<div class="chiffres">' +
       '<div><b>' + fmt(g.size) + '</b><span>total</span></div>' +
       '<div class="pres"><b class="' + (e.presence.mac ? 'p-oui' : 'p-non') + '">' +
-        (e.presence.mac ? 'oui' : 'non') + '</b><span>sur le Mac</span></div>' +
+        (e.presence.mac ? 'oui' : 'non') + '</b><span>sur le serveur</span></div>' +
       '<div class="pres"><b class="p-' + e.presence.console + '">' +
         {oui: 'oui', partiel: 'en partie', non: 'non', inconnu: '?'}[e.presence.console] +
         '</b><span>sur la console</span></div>' +
@@ -2428,12 +2438,12 @@ function nandParChemin() {
 // quoi faire. Le badge constate, l'action decide.
 const ETATS = {
   probleme: ['b-orph', 'Problème'],
-  importer: ['b-conv', 'Pas sur le Mac'],
+  importer: ['b-conv', 'Pas sur le serveur'],
   envoyer:  ['b-conv', 'Pas sur la console'],
   activer:  ['b-upd',  'MAJ à activer'],
   convert:  ['b-upd',  'À convertir'],
   pret:     ['b-ok',   'Prêt'],
-  local:    ['b-dlc',  'Sur le Mac'],
+  local:    ['b-dlc',  'Sur le serveur'],
 };
 // Ces etats n'ont de sens que si la console a repondu : sans elle on ne peut pas
 // savoir ce qui y manque, et afficher « 0 » serait une reponse inventee.
@@ -2642,7 +2652,7 @@ function jeuxSysteme() {
     systeme: SYS, sysNom: libelleSysteme(SYS),
     _surConsole: surConsole.has(String(f.file || '').toLowerCase()),
   }));
-  // Presents sur la console mais pas sur le Mac : sans eux, 19 jeux GBA
+  // Presents sur la console mais pas sur le serveur : sans eux, 19 jeux GBA
   // n'apparaissaient nulle part et ne pouvaient pas etre rapatries.
   const nomsLocaux = new Set(SGAMES.map(f => String(f.file || '').toLowerCase()));
   const distants = SCONSOLE_PATHS
@@ -2922,7 +2932,7 @@ function jeuxFiltres(tous) {
 
 
 // Tout ce que la selection permet de faire, dans les deux sens : ce qui manque
-// sur la console, ce qui manque sur le Mac, et ce qu'on peut retirer de chaque cote.
+// sur la console, ce qui manque sur le serveur, et ce qu'on peut retirer de chaque cote.
 function deployCibles() {
   // Hors Switch : pas de NAND ni de MAJ, mais les memes gestes — envoyer,
   // retirer de la console, mettre a la corbeille.
@@ -2970,8 +2980,8 @@ function deployCibles() {
 // Description affichee sous chaque menu : l'utilisateur voit l'effet de son
 // choix sans avoir a deplier trois pavés de texte.
 const SET_DESC = {
-  'd-layout': {type: 'Chaque fichier est classé selon sa nature. Le plus clair dans Eden.',
-               game: 'Reproduit l\'arborescence du Mac : un dossier par jeu.',
+  'd-layout': {type: 'Chaque fichier est classé selon sa nature. Le plus clair pour l\'émulateur.',
+               game: 'Reproduit l\'arborescence du serveur : un dossier par jeu.',
                flat: 'Tout dans le dossier cible, sans sous-dossier.'},
   'd-local': {type: 'Comme sur la console. Recommandé pour rester cohérent.',
               game: 'Un dossier par jeu, nommé d\'après le jeu.'},
@@ -3426,7 +3436,7 @@ const app = {
     if (!g || !g.paths || !g.paths.length) return;
     const r = await api('/api/device-import',
                         {paths: g.paths, convert: !g.systeme || g.systeme === 'switch'});
-    if (!r.error) { toast('Copie vers le Mac lancée.', 'ok'); this.closeGame(); this.poll(); }
+    if (!r.error) { toast('Copie vers le serveur lancée.', 'ok'); this.closeGame(); this.poll(); }
   },
   async convertGame(k) {
     const g = this.gameByKey(k); if (!g) return;
@@ -3455,7 +3465,7 @@ const app = {
     if (sys !== 'switch') {
       const paths = locaux.map(f => f.path);
       if (!paths.length) {
-        return toast('« ' + nomJeu(g) + ' » n\'est pas sur le Mac : rien à envoyer.',
+        return toast('« ' + nomJeu(g) + ' » n\'est pas sur le serveur : rien à envoyer.',
                      'warn');
       }
       this.closeGame();
@@ -3472,7 +3482,7 @@ const app = {
       return toast(compresses.length
         ? 'Ce jeu est compressé (.' + compresses[0].ext
           + ') : convertis-le d\'abord, Eden ne lit pas ce format.'
-        : '« ' + nomJeu(g) + ' » n\'est pas sur le Mac : rien à envoyer.', 'warn');
+        : '« ' + nomJeu(g) + ' » n\'est pas sur le serveur : rien à envoyer.', 'warn');
     }
     this.closeGame();
     this.basculerTaches(true);
@@ -3927,7 +3937,7 @@ const app = {
     wrap.title = !r.lan
       ? 'Active « Accès depuis le téléphone » dans les Réglages pour piloter l\'outil depuis la console.'
       : !r.url
-        ? 'Adresse réseau introuvable : vérifie la connexion Wi-Fi du Mac.'
+        ? 'Adresse réseau introuvable : vérifie la connexion Wi-Fi du serveur.'
         : 'Ouvrir cette interface sur l\'écran de la console (' + r.url + ')';
   },
   // ---- premier lancement
@@ -4119,7 +4129,7 @@ const app = {
     if (r.error) return;
     DGAMES = r.games || []; buildConset();
     renderLib(); this.checkTree();
-    annonce(r.total + ' fichier(s) sur la console, ' + r.new + ' absent(s) du Mac.',
+    annonce(r.total + ' fichier(s) sur la console, ' + r.new + ' absent(s) du serveur.',
             r.total ? 'ok' : 'warn');
   },
   async checkTree() {
@@ -4182,7 +4192,7 @@ const app = {
     dialogue({
       titre: 'Retirer ' + supprConsole.length + ' fichier(s) de la console ?',
       niveau: 'warn',
-      message: 'Ces fichiers seront supprimés de la console. Tes copies sur le Mac ne sont pas touchées.',
+      message: 'Ces fichiers seront supprimés de la console. Tes copies sur le serveur ne sont pas touchées.',
       detail: supprConsole.slice(0, 20).map(p => p.split('/').pop()).join('\n') +
               (supprConsole.length > 20 ? '\n… et ' + (supprConsole.length - 20) + ' autre(s)' : ''),
       fermer: 'Annuler',
@@ -4250,13 +4260,13 @@ const app = {
     if (e) e.stopPropagation();
     $('favpop').classList.toggle('on');
   },
-  // Un seul bouton « Actualiser » : relire le Mac ET la console. Avoir cinq
+  // Un seul bouton « Actualiser » : relire le serveur ET la console. Avoir cinq
   // rafraichissements differents obligeait a deviner lequel repondait a quoi.
   // « Actualiser » ne relisait que la bibliotheque Switch : sur une autre
   // plateforme, ou en vue « toutes les plateformes », le bouton semblait ne
   // rien faire. Il relit maintenant ce qui est REELLEMENT a l'ecran.
   async actualiser() {
-    await this.scan();                            // fichiers du Mac
+    await this.scan();                            // fichiers du serveur
     if (CONN.kind) {
       await this.explore();                       // ce qui est deja sur la console
       await this.loadNand();                      // ce qui est actif dans Eden
@@ -4308,7 +4318,7 @@ const app = {
     // Une seule fenetre : tout ce qui va se passer, modifiable avant de lancer.
     const options = [];
     if (importer.length) options.push({id: 'importer', coche: true,
-      libelle: 'Copier vers le Mac les jeux qui n\'y sont pas',
+      libelle: 'Copier vers le serveur les jeux qui n\'y sont pas',
       detail: importer.length + ' fichier(s) depuis la console'});
     if (envoyer.length) options.push({id: 'fichiers', coche: true,
       libelle: 'Copier les fichiers de jeu',
@@ -4419,7 +4429,7 @@ const app = {
     if (!silent) toast('Réglages enregistrés.', 'ok');
   },
   async reorganizeLocal() {
-    if (!confirm('Réorganiser toute la bibliothèque locale en GAMES / UPDATE / DLC ?\nLes fichiers seront déplacés sur le Mac.')) return;
+    if (!confirm('Réorganiser toute la bibliothèque locale en GAMES / UPDATE / DLC ?\nLes fichiers seront déplacés sur le serveur.')) return;
     const r = await api('/api/reorganize-local', {});
     r.error || (toast('Réorganisation en cours…', 'ok'), this.poll());
   },
@@ -5778,7 +5788,7 @@ function paletteOuverte() {
 /* ============================================================================
    CLAVIER
    ----------------------------------------------------------------------------
-   L'outil se pilote depuis un Mac, et tout y passait par la souris : viser une
+   L'outil se pilote depuis un ordinateur, et tout y passait par la souris : viser une
    jaquette de 158 px pour lire son etat, revenir a la recherche, recommencer.
    Les raccourcis retenus sont ceux que l'on trouve dans un gestionnaire de
    fichiers ou une mediatheque — rien a apprendre.
@@ -6039,8 +6049,8 @@ majApparence();
   renderA2HS();
   app.langLoad();
   try {
-    await app.scan();              // fichiers du Mac : la base de tout
-    // La bibliotheque s'affiche des que le Mac a repondu. Attendre en plus la
+    await app.scan();              // fichiers du serveur : la base de tout
+    // La bibliotheque s'affiche des que le serveur a repondu. Attendre en plus la
     // console retardait tout l'ecran de deux secondes et demie pour une
     // information qui n'occupe que trois puces de filtre — et `renderLib`
     // sait deja se passer d'elle.
