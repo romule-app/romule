@@ -51,7 +51,8 @@ def unitaires():
     ok = True
     for mod in ("romule.tests.test_titleid", "romule.tests.test_device",
                 "romule.tests.test_import_roms",
-                "romule.tests.test_totp_unite"):
+                "romule.tests.test_totp_unite",
+                "romule.tests.test_profils"):
         r = subprocess.run([sys.executable, "-m", mod], cwd=str(RACINE))
         print("   %-34s %s" % (mod, "OK" if r.returncode == 0 else "ECHEC"), flush=True)
         ok = (r.returncode == 0) and ok

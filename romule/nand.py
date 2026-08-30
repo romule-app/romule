@@ -16,12 +16,24 @@ import struct
 from datetime import datetime
 from pathlib import Path
 
-from . import config, device
+from . import config, device, profils
 
-EDEN_PKG = "dev.eden.eden_emulator"
-EDEN_FILES = "/storage/emulated/0/Android/data/%s/files" % EDEN_PKG
-REGISTERED = EDEN_FILES + "/nand/user/Contents/registered"
-TITLE_KEYS = EDEN_FILES + "/keys/title.keys"
+# Ces chemins dependent de l'emulateur choisi : ils ne peuvent plus etre des
+# constantes de module. Ils l'etaient, figes sur Eden, ce qui rendait tout
+# autre emulateur inatteignable sans modifier le code.
+
+
+def dossier():
+    """Dossier de donnees de l'emulateur actif, ou "" s'il est inconnu."""
+    return profils.dossier_donnees()
+
+
+def registered():
+    return profils.sous("nand/user/Contents/registered")
+
+
+def title_keys():
+    return profils.sous("keys/title.keys")
 
 # Emplacements du ticket (format Nintendo) : cle de titre chiffree et rights ID.
 TIK_KEY_OFF, TIK_RIGHTS_OFF = 0x180, 0x2A0
@@ -112,8 +124,8 @@ def inspect(nsp_path):
 
 def backup_state(job):
     """Note l'etat de registered/ et de title.keys avant d'y toucher."""
-    liste = device._shell("ls -1 %s 2>/dev/null" % device._q(REGISTERED), timeout=60)
-    cles = device._shell("cat %s 2>/dev/null" % device._q(TITLE_KEYS), timeout=60)
+    liste = device._shell("ls -1 %s 2>/dev/null" % device._q(registered()), timeout=60)
+    cles = device._shell("cat %s 2>/dev/null" % device._q(title_keys()), timeout=60)
     dossier = config.ROOT / "_eden-backup"
     dossier.mkdir(exist_ok=True)
     horo = datetime.now().strftime("%Y-%m-%d_%H%M%S")
@@ -126,7 +138,7 @@ def backup_state(job):
 
 def installed_ids():
     """Content IDs deja presents dans la NAND d'Eden."""
-    out = device._shell("ls -1 %s 2>/dev/null" % device._q(REGISTERED), timeout=60)
+    out = device._shell("ls -1 %s 2>/dev/null" % device._q(registered()), timeout=60)
     return {l.strip() for l in out.splitlines() if l.strip()}
 
 
@@ -179,12 +191,13 @@ def install(paths, job):
     if device.state() != "device":
         job.log("Console non connectee.")
         return
-    if not device._shell("[ -d %s ] && echo 1" % device._q(EDEN_FILES)).strip():
-        job.log("Eden introuvable sur la console (%s)." % EDEN_PKG)
+    if not device._shell("[ -d %s ] && echo 1" % device._q(dossier())).strip():
+        job.log("%s introuvable sur la console (%s)."
+                % (profils.actif()["nom"], profils.paquet() or "paquet inconnu"))
         return
 
     backup_state(job)
-    device._shell("mkdir -p %s" % device._q(REGISTERED))
+    device._shell("mkdir -p %s" % device._q(registered()))
     deja = installed_ids()
     tmp = Path(config.ROOT) / "_import" / "_nand_tmp"
     tmp.mkdir(parents=True, exist_ok=True)
@@ -223,16 +236,16 @@ def install(paths, job):
                                 % (nom[:20] + "…", local / 1048576, taille / 1048576))
                         f.unlink(missing_ok=True)
                         continue
-                    rc, out, err = device._run(["push", str(f), REGISTERED + "/"], timeout=3600)
-                    distant = device.remote_size(REGISTERED + "/" + nom)
+                    rc, out, err = device._run(["push", str(f), registered() + "/"], timeout=3600)
+                    distant = device.remote_size(registered() + "/" + nom)
                     if rc == 0 and distant == taille:
                         poses += 1
-                        device.ouvrir_droits(REGISTERED + "/" + nom)
+                        device.ouvrir_droits(registered() + "/" + nom)
                         job.log("  installe %s (%.1f Mo)" % (nom[:20] + "…", taille / 1048576))
                     else:
                         # ne jamais laisser un contenu partiel dans la NAND :
                         # Eden le chargerait et le jeu planterait.
-                        device.remote_rm(REGISTERED + "/" + nom)
+                        device.remote_rm(registered() + "/" + nom)
                         job.log("  ECHEC %s : %s" % (nom[:20] + "…",
                                 "copie incomplete (%s sur %s octets), retiree de la console"
                                 % (distant, taille) if rc == 0
@@ -261,7 +274,7 @@ def install(paths, job):
 
 def _merge_title_keys(nouvelles, job):
     """Ajoute les cles de titre sans toucher a celles deja presentes."""
-    actuel = device._shell("cat %s 2>/dev/null" % device._q(TITLE_KEYS), timeout=60)
+    actuel = device._shell("cat %s 2>/dev/null" % device._q(title_keys()), timeout=60)
     lignes, connues = [], set()
     for l in actuel.splitlines():
         lignes.append(l.rstrip())
@@ -278,8 +291,8 @@ def _merge_title_keys(nouvelles, job):
         return
     local = config.ROOT / "_import" / "_title.keys"
     local.write_text("\n".join([l for l in lignes if l.strip()]) + "\n", encoding="utf-8")
-    device._shell("mkdir -p %s" % device._q(EDEN_FILES + "/keys"))
-    device._run(["push", str(local), TITLE_KEYS], timeout=120)
-    device.ouvrir_droits(TITLE_KEYS)
+    device._shell("mkdir -p %s" % device._q(dossier() + "/keys"))
+    device._run(["push", str(local), title_keys()], timeout=120)
+    device.ouvrir_droits(title_keys())
     local.unlink(missing_ok=True)
     job.log("Cles de titre : %d ajoutee(s) dans title.keys." % ajout)

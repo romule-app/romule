@@ -1,0 +1,16 @@
+{
+  "cle": "ryujinx",
+  "nom": "Ryujinx",
+  "ordre": 5,
+  "paquets": [
+    "org.ryujinx.android"
+  ],
+  "donnees": "/storage/emulated/0/Android/data/{paquet}/files",
+  "jeux_defaut": "/storage/emulated/0/Switch",
+  "config": null,
+  "sauvegardes": [
+    "bis/user/save"
+  ],
+  "verifie": false,
+  "note": "Sa configuration est en JSON et son arborescence differe de celle des forks de Yuzu. Transfert de jeux et sauvegardes seulement : l'edition des reglages n'est pas prise en charge."
+}
