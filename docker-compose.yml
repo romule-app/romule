@@ -1,0 +1,48 @@
+services:
+  ludotheque:
+    build: .
+    container_name: ludotheque
+    restart: unless-stopped
+
+    # Reseau de l'hote : necessaire pour qu'adb decouvre la console (mDNS) et
+    # la joigne directement. C'est le mode recommande.
+    # Sans lui, l'appairage automatique ne fonctionne pas ; il faut alors
+    # basculer sur le bloc "ports" plus bas et connecter la console a la main.
+    network_mode: host
+
+    environment:
+      # Emplacement de la ludotheque DANS le conteneur (ne pas changer).
+      SWITCH_ROOT: /library
+      SWITCH_WEB_PORT: "8787"
+
+      # Service accessible 24/7 : protege-le par un jeton.
+      #
+      # Aucune valeur par defaut n'est fournie, et c'est deliberé : un jeton
+      # ecrit dans un depot public n'est pas un secret, c'est une porte
+      # ouverte pour quiconque a lu le README. Genere le tien :
+      #     python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+      # puis decommente la ligne suivante en y collant le resultat.
+      # SWITCH_TOKEN: ""
+      #
+      # L'adresse a ouvrir devient http://<serveur>:8787/?token=<ton-jeton>
+      # (le navigateur le memorise ensuite).
+
+      # Sans jeton, mets plutot SWITCH_LAN=1 pour ouvrir l'acces au reseau
+      # local — a reserver a un reseau de confiance.
+      # SWITCH_LAN: "1"
+
+      TZ: Europe/Paris
+
+    volumes:
+      # Ta ludotheque sur le NAS  ->  /library
+      - ./library:/library
+      # Le dossier contenant prod.keys  ->  /root/.switch
+      - ./keys:/root/.switch:ro
+
+    # Pour que les fichiers crees appartiennent a ton utilisateur plutot qu'a
+    # root, decommente en adaptant les identifiants (id -u / id -g).
+    # user: "1000:1000"
+
+    # A utiliser SEULEMENT si tu retires network_mode: host.
+    # ports:
+    #   - "8787:8787"

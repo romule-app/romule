@@ -1,0 +1,172 @@
+"""Chemins, constantes et configuration persistante."""
+
+import json
+import os
+from pathlib import Path
+
+PKG = Path(__file__).resolve().parent
+STATIC = PKG / "static"
+
+# ----------------------------------------------------------------- LA RACINE
+# La ludotheque — jeux, jaquettes, comptes, journaux — vit dans un dossier
+# DISTINCT du code. Elle valait auparavant `PKG.parent`, c'est-a-dire le
+# dossier qui contient le paquet : le code se retrouvait donc installe au
+# milieu des jeux, et l'application ecrivait son etat dans ses propres sources.
+# Tant que l'outil n'avait qu'un utilisateur, cela passait ; pour un depot
+# public, c'est un piege — quiconque clone le projet voit sa bibliotheque
+# apparaitre dans `git status`, et un `git add` emporte ses cles de console.
+#
+# Ordre retenu, du plus explicite au plus implicite :
+#   1. ROMULE_ROOT   — le nom du projet
+#   2. SWITCH_ROOT   — l'ancien nom, encore accepte
+#   3. ~/.local/share/romule (ou XDG_DATA_HOME), cree au besoin
+def _racine_par_defaut():
+    base = os.environ.get("XDG_DATA_HOME", "").strip()
+    return Path(base or (Path.home() / ".local" / "share")) / "romule"
+
+
+ROOT = Path(os.environ.get("ROMULE_ROOT")
+            or os.environ.get("SWITCH_ROOT")
+            or _racine_par_defaut()).expanduser().resolve()
+
+
+def racine_douteuse(chemin=None):
+    """La racine designe-t-elle un endroit ou l'on ne doit rien ecrire ?
+
+    L'application deplace des fichiers et cree des dossiers. Une racine mal
+    reglee n'est pas une gene : c'est une perte de donnees. On refuse donc les
+    emplacements dont on est sur qu'ils ne sont pas une ludotheque.
+    """
+    c = Path(chemin or ROOT).resolve()
+    if c == Path(c.anchor):
+        return "la racine du disque"
+    if c == Path.home().resolve():
+        return "le dossier personnel"
+    if (c / "switchlib").is_dir() or (c / ".git").is_dir():
+        return "un depot de code (le code et les jeux doivent rester separes)"
+    return ""
+
+TRASH = ROOT / "_corbeille"
+IMPORT = ROOT / "_import"
+VCACHE = ROOT / "_cache_versions.txt"
+# Title IDs deja lus a l'interieur des conteneurs. Chaque lecture lance `nsz`,
+# soit un quart de seconde par fichier mal nomme — et ce cout etait paye a
+# chaque affichage de la page, pour un resultat qui ne change jamais tant que
+# le fichier ne change pas.
+TIDCACHE = ROOT / "_cache_conteneurs.json"
+NAND_LIST = ROOT / "_a_installer_dans_NAND.txt"
+LOGFILE = ROOT / "_switch-lib.log"
+CONFIG_FILE = ROOT / "_switch-config.json"
+
+EXTS = {".nsz", ".xcz", ".nsp", ".xci"}
+COMPRESSED = {".nsz", ".xcz"}
+PLAYABLE = {".nsp", ".xci"}
+
+# Dossiers a ne jamais parcourir pendant le scan de la ludotheque.
+IGNORE_DIRS = {"_corbeille", "_import", "_covers", "_saves", "switchlib", ".git"}
+
+PORT = int(os.environ.get("SWITCH_WEB_PORT", "8787"))
+
+# Deploiement en service (NAS, Docker) : regles fixees par l'environnement.
+#   SWITCH_LAN=1     autorise les appareils du reseau des le demarrage
+#   SWITCH_TOKEN=... exige ce jeton pour tout acces distant (recommande 24/7)
+#   SWITCH_ROOT=...  emplacement de la ludotheque
+ENV_LAN = os.environ.get("SWITCH_LAN", "").strip().lower() in ("1", "true", "yes", "on")
+TOKEN = os.environ.get("SWITCH_TOKEN", "").strip()
+
+
+def _bool_env(name):
+    return os.environ.get(name, "").strip().lower() in ("1", "true", "yes", "on")
+
+# titledb : liste ordonnee, on essaie chaque miroir jusqu'au premier qui repond.
+VERSIONS_URLS = [
+    "https://raw.githubusercontent.com/blawar/titledb/master/versions.txt",
+]
+
+DEFAULTS = {
+    "device_dir": "/storage/emulated/0/Switch",  # dossier ou Eden lit ses jeux
+    "jobs": 3,                                    # conversions en parallele
+    "push_layout": "type",                        # type | game | flat (voir device.py)
+    "verify_mode": "size",                        # none | size | hash (apres push)
+    "incremental": True,                          # ne pousser que ce qui manque/differe
+    "cover_provider": "nlib",                     # nlib | steamgriddb | custom
+    "cover_url": "https://api.nlib.cc/nx/{tid}/icon/256/256",  # provider custom
+    "steamgriddb_key": "",                        # cle API si provider steamgriddb
+    # IGDB (via Twitch) : seule source gratuite de RESUMES pour les plateformes
+    # autres que la Switch. Vide = fonctionnalite inactive, rien n'est appele.
+    "igdb_client_id": "",
+    "igdb_client_secret": "",
+    "meta_lang": "fr",                            # langue des fiches de jeu (nlib)
+    "local_layout": "type",                       # rangement local : type | game
+    "versions_urls": list(VERSIONS_URLS),         # miroirs titledb, essayes dans l'ordre
+    "lan_access": False,                          # ouvrir l'interface au reseau local
+    "notify": True,                               # notification macOS en fin de tache
+    "roms_root": "",                              # racine des ROMs sur la console (multi-systemes)
+    "saves_dir": "",                              # dossier des sauvegardes sur la console
+    "wifi_addr": "",                              # derniere adresse de la console en wifi
+    "emuready": False,                            # reglages communautaires (beta)
+    "emuready_device": "",                        # identifiant de MA variante de console
+    "emuready_device_nom": "",                    # son nom lisible
+    "ui_lang": "fr",                              # langue de l'interface
+    "auto_nand": False,                           # activer MAJ/DLC des qu'ils arrivent
+    "trash_days": 0,                              # purge auto de la corbeille (0 = jamais)
+    "system_dirs": {},                            # nom de dossier par plateforme, si different
+    "systemes_perso": [],                         # plateformes ajoutees a la main
+    # --- authentification : "aucun" (defaut) ou "oidc" (SSO)
+    "auth_mode": "aucun",
+    "oidc_issuer": "",                            # ex. https://auth.exemple.fr/application/o/ludo/
+    "oidc_client_id": "",
+    "oidc_client_secret": "",
+    "oidc_scopes": "openid profile email",
+    "oidc_redirect": "",                          # adresse publique, si proxy
+    "oidc_emails": "",                            # liste blanche, separee par des virgules
+    "oidc_groupes": "",                           # ou par groupes
+    "auth_secret": "",                            # signature des cookies, genere seul
+}
+
+SAVES = ROOT / "_saves"
+
+# Archives acceptees dans _import (decompressees automatiquement).
+ARCHIVES = {".zip", ".7z", ".rar"}
+
+# Sous-dossiers cibles quand push_layout == "type" (organisation pour Eden).
+LAYOUT_FOLDER = {"BASE": "GAMES", "UPDATE": "UPDATE", "DLC": "DLC", "INCONNU": "GAMES"}
+
+COVERS = ROOT / "_covers"
+
+
+def load_config():
+    cfg = dict(DEFAULTS)
+    if CONFIG_FILE.exists():
+        try:
+            cfg.update(json.loads(CONFIG_FILE.read_text()))
+        except (ValueError, OSError):
+            pass
+    # En service, l'environnement a le dernier mot sur l'ouverture reseau.
+    if ENV_LAN or TOKEN:
+        cfg["lan_access"] = True
+    return cfg
+
+
+def save_config(cfg):
+    # `auth_secret` est cree a la volee par auth.py, apres le chargement de la
+    # configuration : la copie que detient l'appelant ne le contient donc pas
+    # forcement. L'ecraser par une chaine vide changerait la cle de signature
+    # des cookies, et deconnecterait tout le monde a chaque enregistrement des
+    # reglages. On ne laisse jamais un secret vide remplacer un secret existant.
+    if not cfg.get("auth_secret") and CONFIG_FILE.exists():
+        try:
+            ancien = json.loads(CONFIG_FILE.read_text()).get("auth_secret")
+            if ancien:
+                cfg = dict(cfg, auth_secret=ancien)
+        except (ValueError, OSError):
+            pass
+    try:
+        CONFIG_FILE.write_text(json.dumps(cfg, indent=2, ensure_ascii=False) + "\n")
+        # Le fichier porte la cle de signature des sessions et les cles d'API :
+        # il n'a aucune raison d'etre lisible par les autres comptes de la
+        # machine.
+        os.chmod(CONFIG_FILE, 0o600)
+        return True
+    except OSError:
+        return False
