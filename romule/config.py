@@ -130,7 +130,9 @@ DEFAULTS = {
     # autres que la Switch. Vide = fonctionnalite inactive, rien n'est appele.
     "igdb_client_id": "",
     "igdb_client_secret": "",
-    "meta_lang": "fr",                            # langue des fiches de jeu (nlib)
+    # Anglais par defaut : c'est la langue d'un projet auto-heberge public.
+    # Le francais reste livre, et se choisit dans les reglages.
+    "meta_lang": "en",                            # langue des fiches de jeu (nlib)
     "local_layout": "type",                       # rangement local : type | game
     "versions_urls": list(VERSIONS_URLS),         # miroirs titledb, essayes dans l'ordre
     "lan_access": False,                          # ouvrir l'interface au reseau local
@@ -141,7 +143,7 @@ DEFAULTS = {
     "emuready": False,                            # reglages communautaires (beta)
     "emuready_device": "",                        # identifiant de MA variante de console
     "emuready_device_nom": "",                    # son nom lisible
-    "ui_lang": "fr",                              # langue de l'interface
+    "ui_lang": "en",                              # langue de l'interface
     "auto_nand": False,                           # activer MAJ/DLC des qu'ils arrivent
     "trash_days": 0,                              # purge auto de la corbeille (0 = jamais)
     "system_dirs": {},                            # nom de dossier par plateforme, si different

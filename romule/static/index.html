@@ -78,7 +78,7 @@
       <span style="flex:1"></span>
       <button class="go" id="bulkconv" style="display:none" onclick="app.convertAll()"></button>
       <button class="ghost" onclick="app.actualiser()"
-              title="Relire le Mac et la console">Actualiser</button>
+              title="Relire le serveur et la console">Actualiser</button>
       <button class="ghost" onclick="app.actualiserFiches()"
               title="Chercher les titres, résumés et jaquettes manquants, toutes plateformes">Fiches manquantes</button>
     </div>
@@ -87,7 +87,7 @@
       <button class="chip on" data-f="all"><b id="c-all">0</b> Tous</button>
       <button class="chip" data-f="envoyer"><b id="c-envoyer">0</b> Pas sur la console</button>
       <button class="chip" data-f="activer"><b id="c-activer">0</b> MAJ à activer</button>
-      <button class="chip" data-f="importer"><b id="c-importer">0</b> Pas sur le Mac</button>
+      <button class="chip" data-f="importer"><b id="c-importer">0</b> Pas sur le serveur</button>
       <button class="chip" data-f="convert"><b id="c-convert">0</b> À convertir</button>
       <button class="chip" data-f="probleme"><b id="c-probleme">0</b> Problème</button>
     </div>
@@ -269,7 +269,7 @@
             <div class="wbody">
               <div class="wtitle"><span class="ou ou-console">Sur la console</span>
                 Activer le débogage sans fil</div>
-              <p>Ouvre <b>Paramètres</b> (l'app Android, pas Eden), puis&nbsp;:</p>
+              <p>Ouvre <b>Paramètres</b> (l'app Android, pas l'émulateur), puis&nbsp;:</p>
               <div class="wpath">Paramètres → Système → Options pour les développeurs
                 → <b>Débogage sans fil</b> <span class="tid">(à activer)</span></div>
               <details class="wtip"><summary>Je ne vois pas « Options pour les développeurs »</summary>
@@ -304,7 +304,7 @@
           <div class="wstep" id="wstep3">
             <div class="wnum">3</div>
             <div class="wbody">
-              <div class="wtitle"><span class="ou ou-mac">Ici, sur le Mac</span>
+              <div class="wtitle"><span class="ou ou-mac">Ici, sur le serveur</span>
                 Recopier ce qui s'affiche</div>
               <label class="wfield">
                 <span>Adresse IP et port <em>(fenêtre d'appairage de la console)</em></span>
@@ -386,14 +386,14 @@
             <span id="d-layout">Comment ranger les fichiers envoyés.</span></div>
           <div class="setctl"><select id="s-layout">
             <option value="type">Par type — GAMES / UPDATE / DLC</option>
-            <option value="game">Par jeu (miroir du Mac)</option>
+            <option value="game">Par jeu (miroir du serveur)</option>
             <option value="flat">À plat, sans sous-dossier</option>
           </select></div>
         </div>
 
         <div class="setrow">
           <div class="setlab"><b>Activer les MAJ et DLC automatiquement</b>
-            <span>Dès qu'une mise à jour ou un DLC est importé, l'installer dans Eden
+            <span>Dès qu'une mise à jour ou un DLC est importé, l'installer dans l'émulateur
               sans rien demander (si la console est connectée). Sinon, ça se fait
               quand tu cliques « Envoyer vers la console ».</span></div>
           <div class="setctl"><label class="sw"><input type="checkbox" id="s-autonand"><span></span></label></div>
@@ -428,7 +428,7 @@
               Sans lui, les notes viennent d'autres appareils.</span></div>
           <div class="setctl">
             <input type="text" id="s-erdevice" list="erdevices" autocomplete="off"
-                   placeholder="Tape « Thor », « Odin »…">
+                   placeholder="Tape le modèle de ta console…">
             <datalist id="erdevices"></datalist>
           </div>
         </div>
@@ -451,7 +451,7 @@
         <div id="saves"></div>
       </div>
       <details class="setgroup groupe-plateforme" data-plateforme="switch" id="edengroup">
-        <summary class="setgt">Émulateur Eden <span class="beta">Switch</span></summary>
+        <summary class="setgt">Émulateur <span class="beta">Switch</span></summary>
         <p class="lead" style="margin:10px 0">Réglages de l'émulateur pour <b>tous</b> les jeux.
           Pour un jeu précis, ouvre sa fiche depuis la liste : c'est là que vivent
           ses réglages et ceux recommandés par la communauté.</p>
@@ -498,7 +498,7 @@
 
         <div class="setrow">
           <div class="setlab"><b>Rangement local</b>
-            <span id="d-local">Comment organiser tes fichiers sur le Mac.</span></div>
+            <span id="d-local">Comment organiser tes fichiers sur le serveur.</span></div>
           <div class="setctl"><select id="s-local">
             <option value="type">Par type — GAMES / UPDATE / DLC</option>
             <option value="game">Par jeu</option>
