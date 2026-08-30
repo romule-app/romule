@@ -84,7 +84,7 @@ def serveur():
     ok = True
     for f in ("test_auth_interne.py", "test_oidc_sso.py", "test_totp.py",
               "test_verrouillage.py", "test_proxy.py",
-              "test_autorisation.py", "test_igdb.py"):
+              "test_autorisation.py", "test_limites.py", "test_igdb.py"):
         ok = script(TESTS / f) and ok
     return ok
 
