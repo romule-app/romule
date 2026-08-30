@@ -13,6 +13,7 @@ import os
 import shutil
 import signal
 import threading
+import time
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -633,6 +634,41 @@ class Handler(BaseHTTPRequestHandler):
         JOB.log("Recu par glisser-deposer : %s" % name)
         self._json({"message": name, "size": dest.stat().st_size})
 
+    def _admin_requis(self):
+        """Renvoie une raison de refus, ou "" si l'appelant peut administrer.
+
+        La regle depend du mode, et c'est volontaire :
+
+        * authentification ACTIVE  -> il faut une session, et elle doit porter
+          le role d'administrateur ;
+        * authentification ETEINTE -> il n'existe aucune identite a verifier.
+          Exiger une session rendrait l'outil inutilisable dans son mode le
+          plus courant. `_allowed()` a deja tranche : cet appelant a le droit
+          d'etre la, et dans ce mode il a tous les droits — l'audit le signale
+          comme un point d'attention, ce qu'il est.
+
+        Cas a part, la creation du PREMIER compte : elle doit rester possible
+        alors qu'aucune session ne peut exister, mais pas depuis n'importe ou.
+        Sans cela, « le premier compte est administrateur » signifierait « le
+        premier venu sur le reseau devient administrateur ».
+        """
+        if not auth.actif(CFG):
+            return ""
+        # Session d'anti-verrouillage : elle est remise a celui qui vient
+        # d'activer l'authentification depuis un acces deja autorise, pour
+        # qu'il ne s'enferme pas dehors. Elle vaut donc administration — sinon
+        # activer un SSO mal configure rendrait les reglages inaccessibles a
+        # tout le monde, y compris a celui qui vient de les changer.
+        jeton = auth.session(self.headers.get("Cookie"))
+        if jeton and jeton.get("src") == "config":
+            return ""
+        u = self._qui()
+        if not u:
+            return "Aucun compte connecte."
+        if not comptes.est_admin(u["id"]):
+            return "Reserve a un administrateur."
+        return ""
+
     def _qui(self):
         """Compte connecte, ou None si l'authentification est desactivee."""
         s = auth.session(self.headers.get("Cookie"))
@@ -709,6 +745,20 @@ class Handler(BaseHTTPRequestHandler):
                         "mdp_min": comptes.MDP_MIN})
 
         elif p == "/api/compte-creer":
+            if not comptes.liste():
+                # Tout premier compte : il devient administrateur, donc sa
+                # creation ne peut pas etre ouverte au reseau. Sinon « le
+                # premier compte gouverne » signifierait « le premier appareil
+                # du reseau gouverne » — et l'acces reseau sans mot de passe
+                # est un mode que l'outil propose.
+                if not self._local():
+                    return self._json(
+                        {"error": "Le premier compte se cree depuis la machine "
+                                  "qui heberge la ludotheque."}, 403)
+            else:
+                refus = self._admin_requis()
+                if refus:
+                    return self._json({"error": refus}, 403)
             try:
                 u = comptes.creer(d.get("email", ""), d.get("mdp", ""), d.get("nom", ""))
             except ValueError as exc:
@@ -753,6 +803,9 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.write(corps)
 
         elif p == "/api/compte-supprimer":
+            refus = self._admin_requis()
+            if refus:
+                return self._json({"error": refus}, 403)
             try:
                 comptes.supprimer(d.get("id", ""))
             except ValueError as exc:
@@ -1211,6 +1264,9 @@ class Handler(BaseHTTPRequestHandler):
         elif p == "/api/config":
             # L'etat AVANT toute modification : `CFG` est mute juste apres,
             # donc le lire ensuite repondrait toujours « deja actif ».
+            refus = self._admin_requis()
+            if refus:
+                return self._json({"error": refus}, 403)
             avant = auth.actif(CFG)
             # Un champ renvoye masque signifie « ne change pas » : sinon
             # enregistrer les reglages effacerait le secret a chaque fois.
@@ -1248,10 +1304,14 @@ class Handler(BaseHTTPRequestHandler):
                 if CFG.get("auth_mode") == "interne":
                     liste = comptes.liste()
                     u = comptes.par_id(liste[0]["id"]) if liste else None
+                # Ce jeton n'est rattache a aucun compte : c'est un pont, le
+                # temps de finir de se configurer et de se connecter pour de
+                # bon. Lui donner les douze heures d'une vraie session en
+                # faisait un acces administrateur anonyme d'une demi-journee.
                 jeton = (auth.session_interne(u) if u else
                          auth._signer({"sub": "local", "nom": "Accès local",
                                        "email": "", "src": "config",
-                                       "exp": __import__("time").time() + auth.DUREE_SESSION}))
+                                       "exp": time.time() + auth.DUREE_PONT}))
                 self.send_header("Set-Cookie", auth.entete_cookie(jeton, self._secure()))
                 JOB.log("Authentification activée : ce navigateur reste connecté.",
                         "warn")
@@ -1374,6 +1434,10 @@ def _audit_demarrage():
 
 def serve(open_browser=True):
     config.IMPORT.mkdir(exist_ok=True)
+    # Les comptes crees avant l'existence des roles n'en portent aucun :
+    # sans cette reprise, une installation existante se retrouverait sans
+    # administrateur apres la mise a jour.
+    comptes.reprendre_roles()
     JOB.notify_end = bool(CFG.get("notify", True))
     threading.Thread(target=_reconnect_wifi, daemon=True).start()
     LIB.scan(log=JOB.log)
