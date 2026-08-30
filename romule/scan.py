@@ -220,7 +220,7 @@ def shopping_text(rows):
 
 def write_nand_list(rows):
     from datetime import datetime
-    lines = ["# Genere le %s par switchlib" % datetime.now().strftime("%F %T"),
+    lines = ["# Genere le %s par romule" % datetime.now().strftime("%F %T"),
              "# Eden : File > Install Files to NAND", ""]
     lines += ["[%s] %s" % (f["type"], f["rel"]) for f in rows]
     config.NAND_LIST.write_text("\n".join(lines) + "\n")

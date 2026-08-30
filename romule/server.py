@@ -38,7 +38,7 @@ LOCALES = config.PKG / "locales"
 
 
 def _langues():
-    """Langues disponibles, lues dans switchlib/locales/ (hors du code)."""
+    """Langues disponibles, lues dans romule/locales/ (hors du code)."""
     out = []
     for f in sorted(LOCALES.glob("*.json")):
         try:
@@ -1591,7 +1591,7 @@ def _audit_demarrage():
     n = r["resume"]["grave"] + r["resume"]["alerte"]
     if n:
         print("Securite   : %d point(s) a regarder — voir le journal, "
-              "ou `python3 -m switchlib.audit`" % n)
+              "ou `python3 -m romule.audit`" % n)
     else:
         print("Securite   : aucun point d'attention.")
 

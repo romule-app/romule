@@ -42,7 +42,7 @@ def racine_douteuse(chemin=None):
         return "la racine du disque"
     if c == Path.home().resolve():
         return "le dossier personnel"
-    if (c / "switchlib").is_dir() or (c / ".git").is_dir():
+    if (c / "romule").is_dir() or (c / ".git").is_dir():
         return "un depot de code (le code et les jeux doivent rester separes)"
     return ""
 
@@ -63,7 +63,7 @@ COMPRESSED = {".nsz", ".xcz"}
 PLAYABLE = {".nsp", ".xci"}
 
 # Dossiers a ne jamais parcourir pendant le scan de la ludotheque.
-IGNORE_DIRS = {"_corbeille", "_import", "_covers", "_saves", "switchlib", ".git"}
+IGNORE_DIRS = {"_corbeille", "_import", "_covers", "_saves", "romule", ".git"}
 
 PORT = int(os.environ.get("SWITCH_WEB_PORT", "8787"))
 

@@ -143,7 +143,7 @@ def autotest():
         ("g.txt", b"otpauth://totp/App:moi?secret=JBSWY3DPEHPK3PXP", True),
         ("h.py", b'return "otpauth://totp/%s?%s" % (label, params)', False),
         ("d.js", b"const s = 'a' + '\x00' + 'b';", True),
-        ("switchlib/__init__.py", b'__version__ = "0.1.0"', False),
+        ("romule/__init__.py", b'__version__ = "0.1.0"', False),
         ("e.py", b'exemple = "192.168.1.42:5555"', False),
         ("f.py", b'# fuite:ok exemple de documentation\nk = "api_key: \'abcdef0123456789\'"', False),
     ]

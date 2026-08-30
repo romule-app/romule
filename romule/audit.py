@@ -18,9 +18,9 @@ Chaque controle rend un niveau : `grave`, `alerte`, `info` ou `bon`.
 0 sinon — de quoi bloquer un deploiement dans un pipeline.
 
 Usage :
-    python3 -m switchlib.audit            # rapport lisible
-    python3 -m switchlib.audit --json     # pour un pipeline
-    python3 -m switchlib.audit --hors-ligne
+    python3 -m romule.audit            # rapport lisible
+    python3 -m romule.audit --json     # pour un pipeline
+    python3 -m romule.audit --hors-ligne
 """
 
 import json
@@ -313,7 +313,7 @@ def _python(hors_ligne):
                    "(mode hors ligne).")]
     try:
         req = urllib.request.Request("https://endoflife.date/api/python.json",
-                                     headers={"User-Agent": "switchlib-audit"})
+                                     headers={"User-Agent": "romule-audit"})
         with urllib.request.urlopen(req, timeout=10) as r:
             series = json.loads(r.read().decode("utf-8", "replace"))
     except Exception as exc:
@@ -337,7 +337,7 @@ def _python(hors_ligne):
 def _dependances():
     """Le projet revendique zero dependance : on le verifie, ca ne se decrete pas."""
     externes = set()
-    connus = {p.stem for p in config.PKG.glob("*.py")} | {"switchlib"}
+    connus = {p.stem for p in config.PKG.glob("*.py")} | {"romule"}
     for f in config.PKG.glob("*.py"):
         for ligne in f.read_text(encoding="utf-8", errors="replace").splitlines():
             m = re.match(r"\s*(?:from|import)\s+([a-zA-Z_][\w]*)", ligne)

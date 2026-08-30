@@ -28,12 +28,12 @@ jobs:
           python-version: "3.12"
 
       - name: Compilation de tous les modules
-        run: python -m compileall -q switchlib switch.py
+        run: python -m compileall -q romule switch.py
 
       - name: Audit interne (posture, code, dependances, version de Python)
         run: |
-          python -m switchlib.audit --json > audit.json || true
-          python -m switchlib.audit
+          python -m romule.audit --json > audit.json || true
+          python -m romule.audit
           python - <<'PY'
           import json, sys
           r = json.load(open("audit.json"))
@@ -49,7 +49,7 @@ jobs:
       - name: Analyse statique (bandit)
         run: |
           pip install --quiet bandit
-          bandit -q -r switchlib -f screen --severity-level medium
+          bandit -q -r romule -f screen --severity-level medium
 
       - name: Vulnerabilites connues des paquets installes (pip-audit)
         run: |
@@ -58,8 +58,8 @@ jobs:
 
       - name: Syntaxe du front
         run: |
-          node --check switchlib/static/app.js
-          node --check switchlib/static/reactive.js
+          node --check romule/static/app.js
+          node --check romule/static/reactive.js
 
       - uses: actions/upload-artifact@v4
         if: always()

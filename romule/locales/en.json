@@ -236,7 +236,7 @@
   "Client secret": "Client secret",
   "Apparence": "Appearance",
   "Langue de l'interface": "Interface language",
-  "Les traductions sont des fichiers dans switchlib/locales/.": "Translations are files in switchlib/locales/.",
+  "Les traductions sont des fichiers dans romule/locales/.": "Translations are files in romule/locales/.",
   "Corbeille": "Trash",
   "corbeille": "trash",
   "Rien n'est jamais supprimé par l'outil : tout passe ici et reste restaurable.": "The tool never deletes anything: everything comes here and stays restorable.",

@@ -1,6 +1,6 @@
 """Tests des parsers adb (purs, sans appareil).
 
-Lancer :  python3 -m switchlib.tests.test_device
+Lancer :  python3 -m romule.tests.test_device
 """
 
 import sys
@@ -8,7 +8,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from switchlib import device as d  # noqa: E402
+from romule import device as d  # noqa: E402
 
 
 def test_parse_devices():

@@ -28,7 +28,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-AGENT = "switchlib/1.0 (ludotheque personnelle)"
+AGENT = "romule/1.0 (ludotheque personnelle)"
 WIKIDATA = "https://www.wikidata.org/w/api.php"
 
 # Wikidata : « jeu video » et ses sous-classes courantes. Sans ce filtre, une

@@ -8,7 +8,9 @@
 """
 
 import argparse
+import shutil
 import sys
+from pathlib import Path
 
 from . import config, convert, device, scan, versions
 from .jobs import JobRunner
@@ -158,6 +160,61 @@ def _verifier_racine():
     sys.exit(1)
 
 
+# Conseils d'installation, par systeme. L'ancien message ne connaissait que
+# Homebrew : sur un NAS ou une machine Linux, il envoyait l'utilisateur nulle
+# part.
+REMEDES = {
+    "nsz": {
+        "quoi": "conversion des .nsz/.xcz",
+        "macos": "brew install pipx && pipx install nsz",
+        "debian": "sudo apt install pipx && pipx install nsz",
+        "arch": "sudo pacman -S python-pipx && pipx install nsz",
+        "autre": "pipx install nsz  (ou pip install --user nsz)",
+    },
+    "adb": {
+        "quoi": "pilotage de la console",
+        "macos": "brew install android-platform-tools",
+        "debian": "sudo apt install android-tools-adb",
+        "arch": "sudo pacman -S android-tools",
+        "autre": "installe les « platform-tools » d'Android",
+    },
+}
+
+
+def _famille():
+    if sys.platform == "darwin":
+        return "macos"
+    if sys.platform.startswith("linux"):
+        for fichier, cle in (("/etc/debian_version", "debian"),
+                             ("/etc/arch-release", "arch")):
+            if Path(fichier).exists():
+                return cle
+    return "autre"
+
+
+def remede(outil):
+    """Comment installer un outil manquant, sur CETTE machine."""
+    r = REMEDES.get(outil) or {}
+    return r.get(_famille()) or r.get("autre") or ""
+
+
+def _signaler_outils():
+    """Signale les outils absents sans empecher de demarrer.
+
+    L'entree du programme s'arretait net quand `nsz` manquait, avec un conseil
+    Homebrew pour toute reponse. Or `nsz` ne sert qu'a convertir : sans lui, on
+    peut parfaitement consulter sa ludotheque, la ranger, la transferer. Un
+    outil absent desactive SA fonction, il n'interdit pas l'application.
+    """
+    for outil in ("nsz", "adb"):
+        if shutil.which(outil):
+            continue
+        print("%-4s absent — %s desactivee." % (outil, REMEDES[outil]["quoi"]))
+        conseil = remede(outil)
+        if conseil:
+            print("     %s" % conseil)
+
+
 def _verifier_jeton():
     """Un jeton d'exemple n'est pas un jeton.
 
@@ -176,7 +233,10 @@ def _verifier_jeton():
 def main(argv):
     _verifier_racine()
     _verifier_jeton()
-    parser = argparse.ArgumentParser(prog="switch.py", description="Ludotheque Switch")
+    _signaler_outils()
+    parser = argparse.ArgumentParser(
+        prog="romule",
+        description="Romule — ludotheque de jeux auto-hebergee")
     sub = parser.add_subparsers(dest="cmd")
 
     sub.add_parser("serve", help="interface web (defaut)")
