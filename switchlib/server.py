@@ -8,6 +8,8 @@ decision explicite. La docstring precedente affirmait n'ecouter que sur
 """
 
 import hashlib
+import hmac
+from http.cookies import SimpleCookie, CookieError
 import json
 import os
 import shutil
@@ -133,6 +135,40 @@ def _taille(n):
         n /= 1024.0
 
 
+# --------------------------------------------------------------- BORNES
+# Un serveur qui accepte tout finit par tomber sur le premier venu qui insiste.
+# Trois limites, toutes reglables, toutes larges : elles ne genent pas un usage
+# normal et rendent le pire cas fini.
+DELAI_SOCKET = int(os.environ.get("ROMULE_TIMEOUT", "300"))       # secondes
+CONNEXIONS_MAX = int(os.environ.get("ROMULE_MAX_CONN", "64"))
+APPELS_PAR_MINUTE = int(os.environ.get("ROMULE_RATE", "600"))
+
+_PLACES = threading.BoundedSemaphore(CONNEXIONS_MAX)
+
+# Compteur d'appels par client. Volontairement grossier : une fenetre d'une
+# minute, remise a zero d'un bloc. Un limiteur exact demanderait un etat qui
+# grandit ; celui-ci se vide tout seul.
+_CADENCE = {}
+_CADENCE_VERROU = threading.Lock()
+
+
+def _trop_vite(client):
+    """Ce client a-t-il depasse son quota sur la minute en cours ?"""
+    minute = int(time.time() // 60)
+    with _CADENCE_VERROU:
+        fenetre, compte = _CADENCE.get(client, (minute, 0))
+        if fenetre != minute:
+            fenetre, compte = minute, 0
+        compte += 1
+        _CADENCE[client] = (fenetre, compte)
+        # Le dictionnaire ne doit pas grandir indefiniment : on le vide quand
+        # il devient gros, ce qui offre au passage un tour de grace a tout le
+        # monde — sans consequence, la fenetre ne dure qu'une minute.
+        if len(_CADENCE) > 4096:
+            _CADENCE.clear()
+        return compte > APPELS_PAR_MINUTE
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *a):
         pass
@@ -215,14 +251,64 @@ class Handler(BaseHTTPRequestHandler):
 
     # ---------------------------------------------------------- GET
 
+    # Sans delai, une connexion ouverte et laissee muette immobilise un fil
+    # pour toujours : c'est le principe meme de l'attaque « slowloris ».
+    timeout = DELAI_SOCKET
+
+    def handle(self):
+        """Une place, ou un refus poli.
+
+        `ThreadingHTTPServer` cree un fil par connexion, sans plafond. Un
+        millier de connexions simultanees creait un millier de fils avant que
+        la moindre regle ne s'applique.
+        """
+        if not _PLACES.acquire(timeout=10):
+            try:
+                self.send_response(503)
+                self.send_header("Retry-After", "5")
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+            except Exception:
+                pass
+            return
+        try:
+            BaseHTTPRequestHandler.handle(self)
+        finally:
+            _PLACES.release()
+
+    def _cookie(self, nom):
+        """Valeur d'un cookie, lue comme un cookie et non comme du texte.
+
+        La lecture precedente cherchait la sous-chaine « switch_token=<jeton> »
+        dans l'en-tete brut : un cookie voisin nomme `x_switch_token`, ou une
+        valeur qui contenait le jeton en prefixe, satisfaisaient le test.
+        """
+        brut = self.headers.get("Cookie")
+        if not brut:
+            return ""
+        try:
+            pot = SimpleCookie()
+            pot.load(brut)
+        except CookieError:
+            return ""
+        morceau = pot.get(nom)
+        return morceau.value if morceau else ""
+
     def _token_ok(self):
-        """Jeton fourni par cookie, en-tete ou ?token= (service expose 24/7)."""
-        if self.headers.get("X-Token", "").strip() == config.TOKEN:
-            return True
-        if ("switch_token=" + config.TOKEN) in (self.headers.get("Cookie") or ""):
-            return True
+        """Jeton fourni par cookie, en-tete ou ?token= (service expose 24/7).
+
+        Comparaison a temps constant : un `==` sur une chaine s'arrete au
+        premier octet different, ce qui laisse mesurer le prefixe correct.
+        """
+        if not config.TOKEN:
+            return False
+        attendu = config.TOKEN
+        candidats = [self.headers.get("X-Token", "").strip(),
+                     self._cookie("switch_token")]
         q = parse_qs(self.path.partition("?")[2]).get("token")
-        return bool(q and q[0] == config.TOKEN)
+        if q:
+            candidats.append(q[0])
+        return any(hmac.compare_digest(c, attendu) for c in candidats if c)
 
     # En-tetes ajoutes par un relais. Leur seule presence signifie que la
     # requete n'arrive PAS directement de son auteur.
@@ -306,6 +392,21 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("X-Frame-Options", "DENY")
         self.send_header("Referrer-Policy", "same-origin")
+        # Aucune de ces capacites n'est utilisee par l'interface : les refuser
+        # explicitement evite qu'une injection future en dispose.
+        self.send_header("Permissions-Policy",
+                         "camera=(), microphone=(), geolocation=(), "
+                         "payment=(), usb=(), interest-cohort=()")
+        # Isole la page des autres onglets : une fenetre ouverte depuis ici ne
+        # garde aucune prise sur celle-ci.
+        self.send_header("Cross-Origin-Opener-Policy", "same-origin")
+        self.send_header("Cross-Origin-Resource-Policy", "same-origin")
+        # HSTS uniquement quand la liaison est deja chiffree : l'annoncer en
+        # clair enfermerait l'utilisateur hors d'une installation sans TLS,
+        # et la plupart le sont.
+        if self._secure():
+            self.send_header("Strict-Transport-Security",
+                             "max-age=15552000; includeSubDomains")
         # `script-src` doit tolerer l'inline : l'interface repose sur des
         # attributs `onclick`, y compris generes a la volee avec un title ID en
         # argument. Sans cette tolerance, la quasi-totalite des boutons cesse
@@ -319,6 +420,28 @@ class Handler(BaseHTTPRequestHandler):
                          "script-src 'self' 'unsafe-inline'; "
                          "connect-src 'self'; frame-ancestors 'none'; "
                          "base-uri 'none'; form-action 'self'")
+
+    def _cadence_ok(self):
+        """Refuse au-dela du quota, avec un 429 et le delai d'attente.
+
+        Seule la connexion etait limitee jusqu'ici. Tout le reste — y compris
+        les essais de jeton et les depots de fichiers — pouvait etre repete
+        sans fin.
+        """
+        client = self._client_reel() or self.client_address[0]
+        if not _trop_vite(client):
+            return True
+        try:
+            self.send_response(429)
+            self.send_header("Retry-After", "60")
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            corps = b"Trop de requetes. Reessaie dans une minute.\n"
+            self.send_header("Content-Length", str(len(corps)))
+            self.end_headers()
+            self.wfile.write(corps)
+        except Exception:
+            pass
+        return False
 
     def _allowed(self):
         """Qui a le droit d'entrer.
@@ -358,9 +481,13 @@ class Handler(BaseHTTPRequestHandler):
     def _set_token_cookie(self):
         """Memorise le jeton apres un acces par ?token= : plus besoin de le retaper."""
         if config.TOKEN and "token=" in self.path:
+            # HttpOnly : aucun script n'a besoin de relire ce jeton, et le
+            # cacher retire une cible aux injections. Secure des que la
+            # liaison est chiffree, pour qu'il ne reparte jamais en clair.
             self.send_header("Set-Cookie",
-                             "switch_token=%s; Path=/; Max-Age=31536000; SameSite=Lax"
-                             % config.TOKEN)
+                             "switch_token=%s; Path=/; Max-Age=31536000; "
+                             "SameSite=Lax; HttpOnly%s"
+                             % (config.TOKEN, "; Secure" if self._secure() else ""))
 
     # ------------------------------------------------------- connexion SSO
 
@@ -519,6 +646,8 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
+        if not self._cadence_ok():
+            return
         p = self.path.partition("?")[0]      # ignore ?token=... et autres parametres
         if p.startswith("/auth/") and self._auth_route(p):
             return
@@ -714,6 +843,8 @@ class Handler(BaseHTTPRequestHandler):
         self._json({"message": "Photo mise a jour.", **d})
 
     def do_POST(self):
+        if not self._cadence_ok():
+            return
         if self.path.partition("?")[0] == "/auth/connexion":
             if CFG.get("auth_mode") != "interne":
                 return self._json({"error": "connexion interne desactivee"}, 404)

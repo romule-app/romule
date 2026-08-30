@@ -150,12 +150,38 @@ def liste(cfg=None):
         cle = str(p.get("key") or "").strip().lower()
         if not cle or cle in BY_KEY:
             continue
-        exts = [e if e.startswith(".") else "." + e
-                for e in (p.get("exts") or []) if str(e).strip()]
+        # Les extensions partent dans un `find` execute sur la console : une
+        # apostrophe y casserait la mise entre guillemets. On ne garde que des
+        # extensions qui ressemblent a des extensions.
+        exts = [x for x in (extension_sure(e) for e in (p.get("exts") or [])) if x]
         out.append({"key": cle, "name": p.get("name") or cle,
-                    "folder": p.get("folder") or cle, "engine": "generic",
-                    "exts": [e.lower() for e in exts], "perso": True})
+                    "folder": dossier_sur(p.get("folder"), cle),
+                    "engine": "generic",
+                    "exts": exts, "perso": True})
     return out
+
+
+# Un nom de dossier venu de la configuration finit en `config.ROOT / folder`,
+# et l'outil DEPLACE des fichiers dedans. « ../.. » y suffisait donc a ranger
+# des ROMs n'importe ou sur la machine hote. On n'accepte qu'un nom simple.
+_NOM_DOSSIER = re.compile(r"^[^/\\:\x00]{1,64}$")
+
+
+def dossier_sur(nom, defaut):
+    """Nom de dossier utilisable, ou `defaut` si celui propose ne l'est pas."""
+    nom = str(nom or "").strip()
+    if not nom or nom in (".", "..") or not _NOM_DOSSIER.match(nom):
+        return defaut
+    return nom
+
+
+def extension_sure(e):
+    """Extension utilisable : elle finit dans des commandes distantes."""
+    e = str(e or "").strip().lower()
+    if not e:
+        return ""
+    e = e if e.startswith(".") else "." + e
+    return e if re.match(r"^\.[a-z0-9]{1,8}$", e) else ""
 
 
 def get_cfg(key, cfg=None):
@@ -185,7 +211,14 @@ def local_dir(sys_key, cfg=None):
     une ROM d'une plateforme perso n'avait nulle part ou aller.
     """
     s = get_cfg(sys_key, cfg) if cfg else get(sys_key)
-    return config.ROOT if s["engine"] == "switch" else config.ROOT / s["folder"]
+    if s["engine"] == "switch":
+        return config.ROOT
+    chemin = (config.ROOT / s["folder"]).resolve()
+    # Ceinture ET bretelles : meme si un nom passait le filtre, le chemin
+    # construit ne doit jamais sortir de la ludotheque.
+    if not str(chemin).startswith(str(config.ROOT.resolve())):
+        raise ValueError("Dossier hors de la ludotheque : %s" % s["folder"])
+    return chemin
 
 
 def device_dir(sys_key, cfg):
