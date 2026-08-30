@@ -116,7 +116,18 @@ def _sauvegarder(chemin, texte):
     (BACKUP / ("%s_%s" % (nom, horo))).write_text(texte or "", encoding="utf-8")
 
 
+# Un title ID Switch fait 16 chiffres hexadecimaux, toujours. Le chemin
+# construit ici part vers `adb push` et `adb shell rm -f` : sans cette
+# verification, un « tid » comme « ../../../../data/x » ecrivait et effacait
+# des fichiers arbitraires sur la console. La mise entre guillemets protege
+# des metacaracteres du shell, pas des chemins relatifs.
+_TID = __import__("re").compile(r"^[0-9A-Fa-f]{16}$")
+
+
 def game_ini(tid):
+    tid = str(tid or "").strip()
+    if not _TID.match(tid):
+        raise ValueError("Identifiant de jeu invalide : %r" % tid[:32])
     return "%s/%s.ini" % (CUSTOM_DIR, tid.upper())
 
 

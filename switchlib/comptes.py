@@ -169,11 +169,22 @@ def _normaliser(mdp):
     return unicodedata.normalize("NFKC", mdp or "")
 
 
+# scrypt a N=2^17 mobilise environ 128 Mio par calcul. C'est voulu : c'est ce
+# qui rend une attaque hors ligne couteuse. Mais rien ne limitait le nombre de
+# calculs SIMULTANES — quelques tentatives de connexion en parallele suffisaient
+# a epuiser la memoire du serveur, ce qui transformait une protection en levier.
+# Deux a la fois : assez pour ne pas ralentir un usage normal, assez peu pour
+# que le pire cas reste borne.
+_PLACES_SCRYPT = threading.BoundedSemaphore(
+    int(os.environ.get("ROMULE_SCRYPT_PARALLELE", "2")))
+
+
 def hacher(mdp):
     sel = secrets.token_bytes(16)
-    dk = hashlib.scrypt(_normaliser(mdp).encode("utf-8"), salt=sel,
-                        n=SCRYPT_N, r=SCRYPT_R, p=SCRYPT_P,
-                        dklen=SCRYPT_LEN, maxmem=SCRYPT_MAXMEM)
+    with _PLACES_SCRYPT:
+        dk = hashlib.scrypt(_normaliser(mdp).encode("utf-8"), salt=sel,
+                            n=SCRYPT_N, r=SCRYPT_R, p=SCRYPT_P,
+                            dklen=SCRYPT_LEN, maxmem=SCRYPT_MAXMEM)
     return "scrypt$%d$%d$%d$%s$%s" % (
         SCRYPT_N, SCRYPT_R, SCRYPT_P,
         base64.b64encode(sel).decode(), base64.b64encode(dk).decode())
@@ -186,9 +197,11 @@ def verifier_mdp(mdp, empreinte):
         if algo != "scrypt":
             return False
         attendu = base64.b64decode(dk)
-        calcule = hashlib.scrypt(
-            _normaliser(mdp).encode("utf-8"), salt=base64.b64decode(sel),
-            n=int(n), r=int(r), p=int(p), dklen=len(attendu), maxmem=SCRYPT_MAXMEM)
+        with _PLACES_SCRYPT:
+            calcule = hashlib.scrypt(
+                _normaliser(mdp).encode("utf-8"), salt=base64.b64decode(sel),
+                n=int(n), r=int(r), p=int(p), dklen=len(attendu),
+                maxmem=SCRYPT_MAXMEM)
     except Exception:
         return False
     return hmac.compare_digest(calcule, attendu)
