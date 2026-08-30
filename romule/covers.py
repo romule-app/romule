@@ -155,7 +155,7 @@ def _resolve_url(tid, name, cfg):
 
 
 def _download(url, headers=None):
-    req = urllib.request.Request(url, headers=headers or {"User-Agent": "switchlib"})
+    req = urllib.request.Request(url, headers=headers or {"User-Agent": "romule"})
     with urllib.request.urlopen(req, timeout=25) as r:
         return r.read()
 
@@ -167,7 +167,7 @@ def sgdb_infos(name, key):
     l'on dispose d'un nom officiel pour une ROM qui ne porte aucun identifiant.
     """
     base = "https://www.steamgriddb.com/api/v2"
-    h = {"Authorization": "Bearer " + key, "User-Agent": "switchlib"}
+    h = {"Authorization": "Bearer " + key, "User-Agent": "romule"}
     try:
         found = _json.loads(_download(base + "/search/autocomplete/"
                                       + urllib.parse.quote(search_name(name)), h))

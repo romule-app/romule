@@ -178,7 +178,7 @@ def fetch(tid, cfg=None):
             return None
     try:
         url = "https://api.nlib.cc/nx/%s?lang=%s" % (tid, lang)
-        req = urllib.request.Request(url, headers={"User-Agent": "switchlib"})
+        req = urllib.request.Request(url, headers={"User-Agent": "romule"})
         with urllib.request.urlopen(req, timeout=20) as r:
             data = json.loads(r.read().decode("utf-8", "ignore"))
         keep = {k: data.get(k) for k in _KEEP if data.get(k) not in (None, "")}

@@ -1,6 +1,6 @@
 """Tests de la logique title ID — le coeur du classement.
 
-Lancer :  python3 -m switchlib.tests.test_titleid
+Lancer :  python3 -m romule.tests.test_titleid
 (ou avec pytest si installe)
 """
 
@@ -9,7 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from switchlib import titleid as t  # noqa: E402
+from romule import titleid as t  # noqa: E402
 
 # title ID reels tires de la ludotheque
 BASE_POKE = "0100f43008c44000"

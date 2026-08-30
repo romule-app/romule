@@ -16,7 +16,7 @@ library you already own.
 ```sh
 python3 lancer_tests.py            # unit + end-to-end server suites + audit
 python3 lancer_tests.py --tout     # adds the Chrome/CDP browser suites
-python3 -m switchlib.audit         # self-audit (fails the build on "grave")
+python3 -m romule.audit         # self-audit (fails the build on "grave")
 python3 outils/verifier-fuite.py   # refuses personal data in the git index
 ```
 
