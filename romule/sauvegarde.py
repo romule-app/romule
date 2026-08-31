@@ -95,8 +95,8 @@ def restaurer(lot):
     d = DOSSIER / lot
     try:
         d.resolve().relative_to(DOSSIER.resolve())
-    except (ValueError, OSError):
-        raise ValueError("Lot invalide.")
+    except (ValueError, OSError) as exc:
+        raise ValueError("Lot invalide.") from exc
     if not d.is_dir():
         raise ValueError("Lot introuvable.")
     creer("avant-restauration")          # on ne perd jamais l'etat courant

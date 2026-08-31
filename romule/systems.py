@@ -356,7 +356,7 @@ def detect_on_device(cfg):
     etaient vides : on lit une fois la racine des ROMs, puis on compte par
     extension. Une seule commande shell, pas une par plateforme.
     """
-    from . import device, meta
+    from . import device
     racine = roms_root(cfg)
     if not racine or device.state() != "device":
         return {"racine": racine, "connectee": False, "plateformes": []}

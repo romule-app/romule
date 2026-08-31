@@ -12,7 +12,6 @@ un journal qui contient des secrets devient lui-meme un secret a proteger.
 import json
 import os
 import time
-from pathlib import Path
 
 from . import config
 

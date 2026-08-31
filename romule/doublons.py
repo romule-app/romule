@@ -16,9 +16,8 @@ doublon ? », la decision reste a l'utilisateur.
 
 import re
 import unicodedata
-from pathlib import Path
 
-from . import config, systems
+from . import systems
 
 # Ce qu'on retire d'un nom de fichier pour comparer des TITRES : region,
 # langue, revision, numero de version, marqueurs de scene, extension.

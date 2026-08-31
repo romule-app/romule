@@ -11,6 +11,23 @@ Self-hosted library manager for your own game backups.
 Romule ships no games, no console keys and no links to either. It manages a
 library you already own.
 
+## Quick start (Docker)
+
+```sh
+git clone https://github.com/romule-app/romule
+cd romule
+docker compose up -d
+docker compose logs romule      # prints the URL with your access token
+```
+
+Open the printed address, create your account in the first-run wizard, and
+point Romule at your library. Nothing else needs configuring.
+
+The token is generated on first start because the container is reachable from
+your network and has no account yet — opening the service without a password
+would have been the other way to make it usable, and the wrong one. It is
+stored in the library folder and does not change when the container restarts.
+
 ## Development
 
 ```sh

@@ -1,0 +1,207 @@
+# Integration continue de Romule.
+#
+# Quatre jobs bloquent la fusion, deux avertissent. La distinction n'est pas
+# cosmetique : un job bloquant qu'on ne peut pas corriger devient un job qu'on
+# desactive, et une CI desactivee ne protege plus de rien.
+#
+#   BLOQUANTS   fuite · tests · qualite · front
+#   AVERTISSENT securite (bandit, pip-audit) · performance
+#
+# Aucun de ces outils n'est une dependance du projet : ils ne sont installes
+# que dans le pipeline. Romule lui-meme reste a zero dependance, et le job
+# `qualite` echoue si ce n'est plus vrai.
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  schedule:
+    - cron: "17 6 * * 1"        # lundi : une CVE peut sortir sans le moindre commit
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  # --------------------------------------------------------------- BLOQUANT
+  # En premier, et sans dependance : si une donnee personnelle est entree dans
+  # l'index, rien d'autre n'a d'importance.
+  fuite:
+    name: Aucune donnee personnelle
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Autotest du verificateur
+        # Un controle qui ne mord jamais ne protege de rien : on verifie
+        # d'abord qu'il refuse ce qu'il doit refuser.
+        run: python outils/verifier-fuite.py --autotest
+      - name: Verification de l'index
+        run: python outils/verifier-fuite.py
+
+  # --------------------------------------------------------------- BLOQUANT
+  tests:
+    name: Tests (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false          # savoir QUELLES versions cassent, pas juste qu'une casse
+      matrix:
+        python: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "${{ matrix.python }}" }
+      - name: Suites unitaires, serveur et audit
+        run: python lancer_tests.py
+
+  # --------------------------------------------------------------- BLOQUANT
+  # Les tests navigateur sont les seuls a voir ce qu'un lecteur de CSS ne voit
+  # pas : un debordement, un bouton recouvert, une phrase restee en francais.
+  # Ils tournent une seule fois, sur une version de Python : ce qu'ils testent
+  # est du cote du navigateur.
+  navigateur:
+    name: Interface (Chrome sans tete)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - uses: browser-actions/setup-chrome@v1
+        id: chrome
+        with: { chrome-version: stable }
+      - name: Suites navigateur
+        env:
+          ROMULE_CHROME: ${{ steps.chrome.outputs.chrome-path }}
+        run: python lancer_tests.py --navigateur
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: captures-navigateur
+          path: romule/tests/navigateur/*.png
+          if-no-files-found: ignore
+
+  # --------------------------------------------------------------- BLOQUANT
+  qualite:
+    name: Audit interne et zero dependance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+
+      - name: Compilation de tous les modules
+        run: python -m compileall -q romule outils
+
+      - name: Audit interne
+        run: |
+          python -m romule.audit --json > audit.json || true
+          python -m romule.audit
+
+      - name: Verdict de l'audit
+        run: |
+          python - <<'PY'
+          import json, sys
+          r = json.load(open("audit.json"))
+          graves, alertes, dep = [], [], False
+          for c in r["controles"]:
+              if c["niveau"] == "grave":
+                  graves.append(c)
+                  print("::error title=%s::%s" % (c["titre"], c["constat"]))
+              elif c["niveau"] == "alerte":
+                  alertes.append(c)
+                  print("::warning title=%s::%s" % (c["titre"], c["constat"]))
+              # La propriete « zero dependance » est une promesse faite dans le
+              # README et dans pyproject : l'audit la classe en alerte, ce qui
+              # est juste pour un utilisateur, mais elle bloque ici.
+              if "Dependance externe" in c["titre"]:
+                  dep = True
+                  print("::error title=Dependance externe::%s" % c["constat"])
+          print("Bilan : %d grave(s), %d alerte(s)." % (len(graves), len(alertes)))
+          sys.exit(1 if (graves or dep) else 0)
+          PY
+
+      - name: Style du code (ruff)
+        run: |
+          pip install --quiet ruff
+          ruff check romule outils lancer_tests.py
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: rapport-audit, path: audit.json }
+
+  # --------------------------------------------------------------- BLOQUANT
+  front:
+    name: Syntaxe du front
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - name: Syntaxe JavaScript
+        run: |
+          node --check romule/static/app.js
+          node --check romule/static/reactive.js
+      - name: Les deux catalogues de traduction ont les memes cles
+        run: |
+          python3 - <<'PY'
+          import json, sys
+          fr = json.load(open("romule/locales/fr.json"))
+          en = json.load(open("romule/locales/en.json"))
+          manque = sorted(set(fr) - set(en))
+          surplus = sorted(set(en) - set(fr))
+          for k in manque:
+              print("::error title=Traduction manquante::%r absent de en.json" % k)
+          for k in surplus:
+              print("::warning title=Cle orpheline::%r n'existe plus dans fr.json" % k)
+          print("fr : %d cles, en : %d cles." % (len(fr), len(en)))
+          sys.exit(1 if manque else 0)
+          PY
+
+  # ------------------------------------------------------------- AVERTIT
+  securite:
+    name: Analyse statique (avertissement)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: bandit
+        run: |
+          pip install --quiet bandit
+          bandit -q -r romule -f screen --severity-level medium
+      - name: pip-audit
+        run: |
+          pip install --quiet pip-audit
+          pip-audit --strict --progress-spinner off
+
+  # ------------------------------------------------------------- AVERTIT
+  # Avertit d'abord, bloquera ensuite : il faut d'abord savoir ce que ces
+  # chiffres valent sur un runner partage, qui n'est pas une machine calme.
+  performance:
+    name: Performance (avertissement)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: 500 titres
+        run: python outils/mesurer-perf.py --titres 500 | tee perf.txt
+      - name: Resume dans l'onglet du job
+        if: always()
+        run: |
+          {
+            echo '### Performance — 500 titres'
+            echo '```'
+            cat perf.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

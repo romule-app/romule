@@ -2,7 +2,6 @@
 
 import os
 import time
-from pathlib import Path
 
 from . import config, nsztool, titleid
 

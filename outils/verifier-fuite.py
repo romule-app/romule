@@ -107,8 +107,13 @@ def examiner(chemins):
         texte = brut.decode("utf-8", "replace")
         lignes = texte.split("\n")
 
-        def exemptee(n):
-            """Le marqueur vaut pour sa ligne ou pour celle qui la precede."""
+        def exemptee(n, lignes=lignes):
+            """Le marqueur vaut pour sa ligne ou pour celle qui la precede.
+
+            `lignes` est liee par defaut : la fonction est certes appelee dans
+            la meme iteration, mais la lier rend cette garantie visible plutot
+            que dependante de l'ordre des appels.
+            """
             for i in (n - 1, n - 2):
                 if 0 <= i < len(lignes) and MARQUEUR in lignes[i]:
                     return True

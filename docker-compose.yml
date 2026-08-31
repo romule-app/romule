@@ -1,7 +1,7 @@
 services:
-  ludotheque:
+  romule:
     build: .
-    container_name: ludotheque
+    container_name: romule
     restart: unless-stopped
 
     # Reseau ordinaire, et un port publie : ce fichier doit marcher partout,
@@ -23,20 +23,20 @@ services:
       ROMULE_ROOT: /library
       ROMULE_WEB_PORT: "8787"
 
-      # Service accessible 24/7 : protege-le par un jeton.
+      # RIEN N'EST A REGLER ICI POUR DEMARRER.
       #
-      # Aucune valeur par defaut n'est fournie, et c'est deliberé : un jeton
-      # ecrit dans un depot public n'est pas un secret, c'est une porte
-      # ouverte pour quiconque a lu le README. Genere le tien :
+      # Au premier lancement, Romule engendre un jeton d'acces et l'affiche
+      # avec l'adresse complete :
+      #     docker compose logs romule
+      # Ouvre cette adresse, cree ton compte dans l'assistant, et c'est fait.
+      # Le jeton est conserve : il ne change pas au redemarrage.
+      #
+      # Pour imposer le tien plutot que celui engendre :
       #     python3 -c "import secrets; print(secrets.token_urlsafe(32))"
-      # puis decommente la ligne suivante en y collant le resultat.
       # ROMULE_TOKEN: ""
       #
-      # L'adresse a ouvrir devient http://<serveur>:8787/?token=<ton-jeton>
-      # (le navigateur le memorise ensuite).
-
-      # Sans jeton, mets plutot ROMULE_LAN=1 pour ouvrir l'acces au reseau
-      # local — a reserver a un reseau de confiance.
+      # Reseau de confiance et personne d'autre dessus ? On peut se passer de
+      # jeton — mais alors tout appareil du reseau a tous les droits.
       # ROMULE_LAN: "1"
 
       TZ: Europe/Paris
@@ -44,7 +44,7 @@ services:
     volumes:
       # Ta ludotheque sur le NAS  ->  /library
       - ./library:/library
-      # Le dossier contenant prod.keys  ->  /root/.switch
+      # Le dossier contenant prod.keys  ->  /keys (lecture seule)
       - ./keys:/keys:ro
 
     # L'image tourne deja sous l'utilisateur 1000. Si le tien porte un autre

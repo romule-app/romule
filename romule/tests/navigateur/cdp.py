@@ -7,13 +7,52 @@ peut que supposer ce que fait la mise en page sur telephone.
 import base64
 import json
 import os
+import shutil
 import socket
 import struct
 import subprocess
+import tempfile
 import time
 import urllib.request
+from pathlib import Path
 
-CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+# Chemins usuels, du plus specifique au plus generique. Un seul chemin en dur
+# rendait ces tests impossibles a jouer ailleurs que sur un Mac — donc absents
+# de l'integration continue, la ou ils servent le plus.
+CHROMES = [
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    "/Applications/Chromium.app/Contents/MacOS/Chromium",
+    "/usr/bin/google-chrome",
+    "/usr/bin/google-chrome-stable",
+    "/usr/bin/chromium",
+    "/usr/bin/chromium-browser",
+    "/snap/bin/chromium",
+]
+
+
+def trouver_chrome():
+    """Chemin de Chrome, ou une erreur qui dit quoi faire.
+
+    ROMULE_CHROME passe avant tout : c'est ce qui permet a un poste ou a un
+    conteneur de designer un binaire que cette liste ne connait pas.
+    """
+    impose = os.environ.get("ROMULE_CHROME", "").strip()
+    if impose:
+        if not Path(impose).exists():
+            raise RuntimeError("ROMULE_CHROME designe un fichier absent : %s" % impose)
+        return impose
+    for c in CHROMES:
+        if Path(c).exists():
+            return c
+    for nom in ("google-chrome", "chromium", "chromium-browser"):
+        trouve = shutil.which(nom)
+        if trouve:
+            return trouve
+    raise RuntimeError(
+        "Chrome introuvable. Installe-le, ou indique-le par ROMULE_CHROME.\n"
+        "  macOS  : brew install --cask google-chrome\n"
+        "  Debian : apt install chromium\n"
+        "  CI     : browser-actions/setup-chrome")
 
 
 class WS:
@@ -75,9 +114,9 @@ class WS:
 class Navigateur:
     def __init__(self, port=9333, largeur=430, hauteur=932, dpr=3):
         self.proc = subprocess.Popen(
-            [CHROME, "--headless=new", "--remote-debugging-port=%d" % port,
+            [trouver_chrome(), "--headless=new", "--remote-debugging-port=%d" % port,
              "--no-first-run", "--no-default-browser-check", "--disable-gpu",
-             "--hide-scrollbars", "--user-data-dir=/tmp/cdp-profil-%d" % port,
+             "--hide-scrollbars", "--user-data-dir=%s" % (Path(tempfile.gettempdir()) / ("cdp-profil-%d" % port)),
              "about:blank"],
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         cible = None
