@@ -2876,3 +2876,15 @@ body.compact .filters{margin-bottom:2px}
   font-weight:600;--btn-fond:var(--primary);--btn-fond-survol:var(--primary-vif);
   --btn-texte:var(--on-primary)}
 @media (pointer:coarse){.segment button{padding:10px 14px}}
+
+/* ------------------------------------------------------- ASSISTANT (suite)
+   Un point grave se distingue d'un point a regarder : le second est une
+   invitation, le premier une mise en garde. Les confondre, c'est apprendre a
+   l'utilisateur a ignorer les deux. */
+.ostep.grave{border-color:var(--danger-trait);background:var(--danger-voile)}
+.ostep.grave .omark{background:var(--danger-doux);color:var(--danger)}
+.ostep.grave .odesc{color:var(--text)}
+
+/* L'assistant ne fait plus que constater : il agit. */
+.ostep .omini{margin-top:9px;padding:7px 13px;font-size:12.5px}
+.ostep .ochoix{margin-top:9px;width:100%;max-width:320px}
