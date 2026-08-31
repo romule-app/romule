@@ -37,6 +37,11 @@ The browser suite drives a real headless Chrome and catches what reading CSS
 cannot: overflow, controls covered by other controls, untranslated strings.
 If you touch the interface, run it.
 
+Opening a pull request additionally runs CodeQL on both languages, builds the
+Docker image for amd64 and arm64, starts it and checks that it answers. None of
+that needs an account or a secret, so it works the same on a pull request from
+your fork as it does on a branch here.
+
 ## House style
 
 The codebase has conventions that are deliberate, not accidental:

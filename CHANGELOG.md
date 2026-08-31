@@ -51,6 +51,12 @@ what the release actually contains rather than how it was built.
 ### Security
 
 - The service binds to `127.0.0.1` unless network access is explicitly enabled.
+- CodeQL analyses both the Python and the JavaScript sources; Trivy reports
+  fixable HIGH/CRITICAL vulnerabilities in the published image. Neither existed
+  before: the 6 500-line front-end had only a syntax check, and the image was
+  not scanned at all.
+- Every GitHub Action is pinned by commit SHA rather than by a mutable tag, and
+  Dependabot proposes a grouped update once a month.
 - A reachable service is never left open by default: the first-access token is
   generated instead of opening the door, it is stored outside the
   browser-visible configuration, and it stays stable across restarts.
