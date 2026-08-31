@@ -26,6 +26,7 @@ from . import (actions, audit, auth, comptes, config, covers, device, edenconf,
                doublons, emuready, igdb, integrity, journal_acces, meta, nand,
                sauvegarde, saves,
                scan, systems, titleid, transferts, trash, versions, profils)
+from . import cli
 from .jobs import JobRunner
 
 LIB = scan.Library()
@@ -702,6 +703,12 @@ class Handler(BaseHTTPRequestHandler):
                             % (n, octets / 2 ** 30))
             self._json({"items": trash.listing(), "resume": trash.resume(),
                         "jours": jours})
+        elif p == "/api/health":
+            # La sonde du conteneur interroge cette route en GET. Elle n'etait
+            # declaree qu'en POST : le HEALTHCHECK du Dockerfile recevait donc
+            # « route inconnue » depuis toujours, et le conteneur ne pouvait
+            # jamais etre declare sain.
+            self._json(_health())
         elif p == "/api/systems":          # lecture seule : accessible en GET
             self._json({"systems": systems.summary(CFG),
                         "roms_root": systems.roms_root(CFG),
@@ -1168,6 +1175,20 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"dir": device.detect_games_dir()})
 
         # ---- installer l'acces sur la console
+        elif p == "/api/emulateur-detecter":
+            # Le nom du paquet Android change d'une version d'emulateur a
+            # l'autre. On demande a la console lequel est installe et on le
+            # retient, plutot que de reinterroger a chaque affichage.
+            refus = self._admin_requis()
+            if refus:
+                return self._json({"error": refus}, 403)
+            trouve = profils.detecter(CFG)
+            if trouve:
+                CFG["emulateur_paquet"] = trouve
+                config.save_config(CFG)
+                JOB.log("Emulateur detecte sur la console : %s" % trouve)
+            self._json({"paquet": trouve})
+
         elif p == "/api/health":
             self._json(_health())
 
@@ -1525,7 +1546,21 @@ def _health():
             # transfert coupe la connexion, et le message n'arrive jamais.
             "televersement_max": config.TELEVERSEMENT_MAX,
             "container": _in_container(),
+            # Conseils d'installation adaptes a CETTE machine. L'assistant
+            # affichait une commande Homebrew a tout le monde, y compris sur
+            # un NAS Debian ou dans un conteneur.
+            "remede_nsz": cli.remede("nsz"),
+            "remede_adb": cli.remede("adb"),
+            # De quoi juger si l'acces doit etre protege AVANT toute autre
+            # chose : un service joignable par le reseau et sans authentification
+            # est le defaut le plus grave qu'une installation neuve puisse avoir.
+            "ecoute": _adresse_ecoute(),
+            "expose": _adresse_ecoute() != "127.0.0.1",
+            "auth_mode": CFG.get("auth_mode", "aucun"),
+            "comptes": len(comptes.liste()),
+            "emulateur": CFG.get("emulateur") or profils.DEFAUT,
         },
+        "profils": profils.public(),
     }
 
 

@@ -3950,6 +3950,25 @@ const app = {
     if (force || (HEALTH.first_run && !vu)) renderOnboard();
     return HEALTH;
   },
+  // Depuis l'assistant : emmener l'utilisateur la ou se cree un compte, plutot
+  // que de lui decrire le chemin.
+  allerComptes() {
+    this.closeOnboard();
+    this.tab('settings');
+    voirSectionReglages('sec-acces');
+  },
+
+  // Le profil d'emulateur dicte tous les chemins sur la console : le changer
+  // depuis l'assistant evite d'avoir a le chercher dans les reglages avant
+  // meme d'avoir compris a quoi il sert.
+  async choisirEmulateur(cle) {
+    await this.saveField('emulateur', cle);
+    // Le nom du paquet Android differe d'une version a l'autre : on demande a
+    // la console lequel est reellement installe, plutot que de le deviner.
+    try { await api('/api/emulateur-detecter', {}); } catch (e) { /* console absente */ }
+    await this.checkHealth(true);
+  },
+
   closeOnboard() {
     localStorage.setItem('onboard-vu', '1');
     $('onboard').classList.remove('open');
@@ -4909,51 +4928,134 @@ function renderManifest(r) {
 let HEALTH = null;
 
 function onboardSteps(h) {
-  const c = h.checks;
-  return [
-    {ok: c.nsz, titre: 'Outil de conversion',
-     bon: 'nsz est installé.',
-     ko: 'nsz est introuvable. Sans lui, impossible de décompresser les jeux.',
-     aide: 'brew install pipx && pipx install nsz'},
-    {ok: c.keys, titre: 'Clés de la console',
-     bon: 'prod.keys trouvé.',
-     ko: 'prod.keys est absent : les conversions échoueront.',
-     aide: 'Place le fichier ici : ' + c.keys_path},
-    {ok: c.library > 0, titre: 'Ta ludothèque',
-     bon: c.library + ' fichier(s) détecté(s) dans ' + h.root,
-     ko: 'Aucun jeu trouvé dans ' + h.root,
-     aide: 'Dépose tes jeux (ou des .zip/.rar) dans le dossier _import, puis « Ranger et convertir ».'},
-    {ok: c.adb, titre: 'Lien avec la console',
-     bon: 'adb est disponible.',
-     ko: 'adb est introuvable : la console ne pourra pas être pilotée.',
-     aide: 'brew install android-platform-tools'},
-    {ok: !!c.device, titre: 'Console connectée',
-     bon: 'Console reliée (' + (c.device === 'wifi' ? 'Wi-Fi' : 'USB') + ').',
-     ko: 'Aucune console connectée pour l\'instant.',
-     aide: 'Branche-la en USB, ou connecte-la sans fil depuis l\'onglet Console. ' +
-           'Tu peux aussi le faire plus tard.'},
-  ];
+  const c = h.checks || {};
+  const etapes = [];
+
+  // --- 1. l'acces, avant tout le reste --------------------------------------
+  // Un service joignable par le reseau et sans authentification est le defaut
+  // le plus grave qu'une installation neuve puisse avoir, et c'est aussi celui
+  // qu'on ne remarque pas : tout fonctionne. Il passe donc en tete, et il est
+  // le seul a etre annonce comme grave.
+  if (c.expose) {
+    const protege = c.auth_mode !== 'aucun' || c.token;
+    etapes.push({
+      grave: !protege, ok: protege, titre: 'Accès protégé',
+      bon: c.token ? 'Un jeton est exigé pour les accès distants.'
+                   : 'L\'authentification est active.',
+      ko: 'Ce serveur écoute sur le réseau et n\'importe qui peut l\'utiliser.',
+      aide: 'Crée un compte : le premier créé devient administrateur. '
+          + 'Ou lance le service avec un jeton (SWITCH_TOKEN).',
+      action: c.comptes ? null
+            : {libelle: 'Créer un compte', faire: 'app.allerComptes()'},
+    });
+  }
+
+  // --- 2. l'emulateur : c'est lui qui dicte tous les chemins -----------------
+  const profil = (h.profils || []).find(p => p.cle === c.emulateur)
+              || {nom: c.emulateur || '?', verifie: false};
+  etapes.push({
+    ok: true, titre: 'Émulateur',
+    bon: (traduit(profil.nom) || profil.nom)
+       + (profil.verifie ? ''
+          : ' — ' + (traduit('profil non vérifié sur matériel réel')
+                     || 'profil non vérifié sur matériel réel')),
+    ko: '', aide: '',
+    choix: {
+      valeurs: (h.profils || []).map(p => ({
+        // Le suffixe est une chaine a part : colle au nom du profil, il
+        // formait une phrase absente du catalogue et restait en francais.
+        // Nom ET suffixe traduits separement, puis assembles : la traduction
+        // porte sur un noeud de texte entier, et « Autre émulateur (not
+        // verified) » n'est une entree d'aucun catalogue.
+        v: p.cle,
+        t: (traduit(p.nom) || p.nom)
+           + (p.verifie ? '' : ' (' + (traduit('non vérifié') || 'non vérifié') + ')')})),
+      actuel: c.emulateur, faire: 'app.choisirEmulateur(this.value)',
+    },
+  });
+
+  // --- 3. la ludotheque ------------------------------------------------------
+  etapes.push({
+    ok: c.library > 0, titre: 'Ta ludothèque',
+    bon: c.library + ' fichier(s) dans ' + h.root,
+    ko: 'Aucun jeu dans ' + h.root,
+    aide: 'Dépose tes jeux dans _import, puis « Ranger et convertir ». '
+        + 'Pour ranger ta ludothèque ailleurs, lance le service avec '
+        + 'ROMULE_ROOT=/chemin/vers/ta/ludotheque.',
+  });
+
+  // --- 4. les outils externes ------------------------------------------------
+  etapes.push({
+    ok: c.nsz, titre: 'Outil de conversion',
+    bon: 'nsz est installé.',
+    ko: 'nsz est absent : les jeux compressés (.nsz, .xcz) ne pourront pas être '
+      + 'convertis. Tout le reste fonctionne.',
+    aide: c.remede_nsz || 'pipx install nsz',
+  });
+  etapes.push({
+    ok: c.adb, titre: 'Lien avec la console',
+    bon: 'adb est disponible.',
+    ko: 'adb est absent : la console ne pourra pas être pilotée.',
+    aide: c.remede_adb || 'installe les platform-tools d\'Android',
+  });
+
+  // --- 5. les cles, seulement si la conversion est possible ------------------
+  // Les annoncer alors que nsz manque donnerait deux alertes pour un seul
+  // probleme, et la seconde ne serait pas actionnable.
+  if (c.nsz) {
+    etapes.push({
+      ok: c.keys, titre: 'Clés de la console',
+      bon: 'prod.keys trouvé.',
+      ko: 'prod.keys est absent : les conversions échoueront.',
+      aide: 'Place le fichier ici : ' + (c.keys_path || '')
+          + '  (ou indique son emplacement avec ROMULE_KEYS)',
+    });
+  }
+
+  etapes.push({
+    ok: !!c.device, titre: 'Console connectée',
+    bon: 'Console reliée (' + (c.device === 'wifi' ? 'Wi-Fi' : 'USB') + ').',
+    // le catalogue porte « Console reliée (%s). » : le gabarit couvre les deux
+    // valeurs sans avoir a les enumerer
+    ko: 'Aucune console connectée pour l\'instant.',
+    aide: 'Branche-la en USB, ou connecte-la sans fil depuis les réglages. '
+        + 'Tu peux aussi le faire plus tard.',
+  });
+  return etapes;
 }
 
 function renderOnboard() {
   const el = $('onboard');
   if (!HEALTH) { el.classList.remove('open'); return; }
   const steps = onboardSteps(HEALTH);
-  const restants = steps.filter(s => !s.ok).length;
+  const graves = steps.filter(s => s.grave).length;
+  const restants = steps.filter(s => !s.ok && !s.choix).length;
+  const intro = graves
+    ? 'Un point demande ton attention avant d\'aller plus loin.'
+    : (restants ? 'Il reste ' + restants + ' point(s) à regarder — rien de bloquant '
+                + 'pour explorer.'
+                : 'Tout est prêt, bonne partie !');
   el.innerHTML = '<div class="obox">' +
-    '<h2 class="obt">Bienvenue dans ta ludothèque</h2>' +
-    '<p class="lead">Voici l\'état de ton installation. ' +
-    (restants ? 'Il reste ' + restants + ' point(s) à regarder — rien de bloquant pour explorer.'
-              : 'Tout est prêt, bonne partie !') + '</p>' +
+    '<h2 class="obt">Bienvenue dans Romule</h2>' +
+    '<p class="lead">' + esc(intro) + '</p>' +
     '<ol class="osteps">' + steps.map((s, i) =>
-      '<div class="ostep ' + (s.ok ? 'ok' : 'ko') + '" style="animation-delay:' + (i * 60) + 'ms">' +
-      '<span class="omark">' + (s.ok ? '✓' : '!') + '</span>' +
+      '<div class="ostep ' + (s.grave ? 'grave' : (s.ok ? 'ok' : 'ko')) +
+        '" style="animation-delay:' + (i * 60) + 'ms">' +
+      '<span class="omark">' + (s.grave ? '!' : (s.ok ? '✓' : '!')) + '</span>' +
       '<div><b>' + esc(s.titre) + '</b>' +
       '<div class="odesc">' + esc(s.ok ? s.bon : s.ko) + '</div>' +
-      (s.ok ? '' : '<div class="oaide">' + esc(s.aide) + '</div>') + '</div></div>').join('') +
+      (s.ok || !s.aide ? '' : '<div class="oaide">' + esc(s.aide) + '</div>') +
+      (s.choix ? '<select class="ochoix" onchange="' + s.choix.faire + '">' +
+        s.choix.valeurs.map(o => '<option value="' + esc(o.v) + '"' +
+          (o.v === s.choix.actuel ? ' selected' : '') + '>' + esc(o.t) +
+          '</option>').join('') + '</select>' : '') +
+      (s.action ? '<button class="go omini" onclick="' + s.action.faire + '">' +
+        esc(s.action.libelle) + '</button>' : '') +
+      '</div></div>').join('') +
     '</ol><div class="bar" style="justify-content:flex-end;margin:0">' +
     '<button class="ghost" onclick="app.closeOnboard()">Passer</button>' +
     '<button class="go" onclick="app.closeOnboard()">Commencer</button></div></div>';
+  traduireDOM(el);
   el.classList.add('open');
 }
 
