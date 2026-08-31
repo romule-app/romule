@@ -33,6 +33,14 @@ what the release actually contains rather than how it was built.
 - **Authentication**: internal accounts (scrypt), TOTP two-factor, and OIDC
   single sign-on. The first account created becomes the administrator.
 - **Two interface languages**, English and French, switchable at runtime.
+  Counts, units and badges are translated too: sizes read `GiB`/`MiB` in
+  English and `Gio`/`Mio` in French, and phrases carrying a number go through a
+  template rather than being glued together — which is what had left 49 of them
+  in French inside an English interface, invisible to the translation check.
+- **Documentation site** (MkDocs Material, GitHub Pages) covering installation,
+  first run, the console, every one of the 37 settings, security and exposure,
+  troubleshooting, and what each beta feature actually risks. A CI step fails if
+  a setting exists in the code but not in the reference.
 - **Themes** (light, dark, automatic), three cover animations, and a reduced
   motion setting honoured throughout.
 - **Built-in security audit** (`python3 -m romule.audit`) reporting on the

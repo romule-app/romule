@@ -59,6 +59,9 @@ DLC/
 # --- artefacts de test (regeneres par romule/tests/navigateur/)
 romule/tests/navigateur/*.png
 
+# --- site de documentation construit (regenere par MkDocs)
+site/
+
 # --- Python
 __pycache__/
 *.py[cod]
