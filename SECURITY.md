@@ -73,6 +73,20 @@ terminates TLS. Reports are assessed against that model.
 - Missing hardening headers with no demonstrated impact.
 - Reports from automated scanners with no working proof of concept.
 
+## What is scanned automatically
+
+| Surface | Tool | Blocking |
+|---|---|---|
+| Python code | CodeQL (`security-and-quality`) + bandit | no |
+| JavaScript front-end | CodeQL | no |
+| Container image | Trivy (HIGH/CRITICAL, fixable only) | no |
+| Runtime dependencies | nothing to scan — there are none, and CI enforces it | yes |
+| GitHub Actions | pinned by commit SHA, updated monthly by Dependabot | — |
+
+Findings land in the repository's Security tab. None of these gate a release:
+a CVE with no published fix in the base image cannot be resolved on our side,
+and blocking on it would only mean not shipping for someone else's reason.
+
 ## Hardening checklist for operators
 
 - Put a reverse proxy with TLS in front of anything reachable from the

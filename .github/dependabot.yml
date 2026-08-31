@@ -1,0 +1,23 @@
+# Epingler par SHA protege d'un tag reecrit ; cela fige aussi les versions.
+# Sans quoi suit, les actions resteraient a jamais sur la version du jour ou
+# elles ont ete epinglees — c'est-a-dire vulnerables en silence.
+#
+# `docker` et `pip` ne figurent pas ici, et c'est normal :
+#   - le Dockerfile suit `python:3.12-slim`, un tag que l'amont met a jour ;
+#   - le projet n'a AUCUNE dependance Python d'execution, ce qu'un job
+#     bloquant de la CI verifie a chaque fois.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    # Un lot par mois plutot qu'une pull request par action : dix actions
+    # mises a jour separement, c'est dix CI completes pour un meme risque.
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "CI"
+    labels: ["dependances", "ci"]
+    open-pull-requests-limit: 3
