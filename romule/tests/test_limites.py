@@ -10,7 +10,7 @@ Trois familles de defauts sont verrouillees ici.
     un service expose en permanence.
   * Les depots de fichiers n'avaient aucun plafond.
 """
-import http.cookiejar, json, os, secrets, socket, subprocess, sys, tempfile, time
+import os, secrets, socket, subprocess, sys, tempfile, time
 import urllib.error, urllib.request
 from pathlib import Path
 

@@ -12,6 +12,7 @@ import hmac
 from http.cookies import SimpleCookie, CookieError
 import json
 import os
+import secrets
 import shutil
 import signal
 import threading
@@ -99,7 +100,7 @@ def _png_icon(size):
 #   oidc_client_secret : authentifie l'application aupres du fournisseur.
 MASQUE = "\u2022" * 8
 SECRETS = ("oidc_client_secret", "igdb_client_secret")
-PRIVES = ("auth_secret",)
+PRIVES = ("auth_secret", "jeton_auto")
 
 
 def _config_publique():
@@ -1655,6 +1656,40 @@ def _audit_demarrage():
         print("Securite   : aucun point d'attention.")
 
 
+def _jeton_de_premier_demarrage():
+    """Rend joignable un service expose qui n'a encore aucun moyen d'entrer.
+
+    Le probleme, decouvert en ecrivant le test de fumee de l'image : un
+    conteneur se lie a 0.0.0.0 (sinon il serait injoignable depuis l'hote),
+    mais sans compte, sans jeton et sans `lan_access`, `_autorise()` refuse
+    tout client non local. `docker compose up` donnait donc un 403 disant
+    « active l'acces dans les reglages » — des reglages qu'on ne pouvait pas
+    atteindre. Un blocage complet, sur le chemin d'installation principal.
+
+    Ouvrir l'acces par defaut aurait resolu le blocage en livrant un service
+    sans mot de passe a tout le reseau. On engendre donc un jeton, une fois,
+    et on l'affiche : c'est ce que font les outils auto-heberges comparables,
+    et cela laisse l'installation sure par defaut ET utilisable.
+
+    Rien n'est engendre si l'operateur a deja tranche — compte, SSO, jeton
+    d'environnement ou acces reseau assume : sa decision prime toujours.
+    """
+    if _adresse_ecoute() == "127.0.0.1":
+        return None
+    if config.TOKEN or auth.actif(CFG) or CFG.get("lan_access"):
+        return None
+    jeton = (CFG.get("jeton_auto") or "").strip()
+    if not jeton:
+        jeton = secrets.token_urlsafe(24)
+        CFG["jeton_auto"] = jeton
+        config.save_config(CFG)
+        JOB.log("Jeton d'acces engendre au premier demarrage.")
+    # `config.TOKEN` est lu partout ailleurs : le renseigner ici evite de
+    # doubler chaque controle d'autorisation.
+    config.TOKEN = jeton
+    return jeton
+
+
 def serve(open_browser=True):
     config.IMPORT.mkdir(exist_ok=True)
     # Les comptes crees avant l'existence des roles n'en portent aucun :
@@ -1665,6 +1700,7 @@ def serve(open_browser=True):
     threading.Thread(target=_reconnect_wifi, daemon=True).start()
     LIB.scan(log=JOB.log)
     versions.load(LIB, log=JOB.log)
+    jeton_auto = _jeton_de_premier_demarrage()
     url = "http://127.0.0.1:%d" % config.PORT
     # ROMULE_NO_BROWSER : la ludotheque lancee par launchd a chaque ouverture
     # de session ne doit pas ouvrir un navigateur sans qu'on lui demande.
@@ -1688,6 +1724,15 @@ def serve(open_browser=True):
         # l'utilisateur chercher une panne qui n'existe pas.
         print("Reseau     : desactive — pour ouvrir : ROMULE_BIND=0.0.0.0, "
               "ROMULE_LAN=1 ou un jeton, puis redemarrer")
+    if jeton_auto:
+        # Sans l'adresse complete, le jeton est une chaine que l'utilisateur
+        # doit recoller a la main au bon endroit — c'est la que ca echoue.
+        print("Acces      : ce service est joignable par le reseau et n'a pas "
+              "encore de compte.")
+        print("             Ouvre cette adresse, puis cree ton compte dans "
+              "l'assistant :")
+        print("               http://%s:%d/?token=%s"
+              % (ip or "<adresse-du-serveur>", config.PORT, jeton_auto))
     if not adb_hint():
         print("adb        : absent — la console ne pourra pas etre pilotee")
     if open_browser and not service:

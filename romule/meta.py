@@ -68,7 +68,6 @@ def fiche_nom(nom, cfg=None, reseau=True):
     if not reseau:
         return None
     key = (cfg.get("steamgriddb_key") or "").strip()
-    from . import igdb as _igdb
     if not key and not _igdb.configure(cfg):
         return None                       # aucune source configuree
     infos = covers.sgdb_infos(nom, key) if key else None

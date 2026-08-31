@@ -1,0 +1,168 @@
+# Construction et publication de l'image.
+#
+# L'image est CONSTRUITE a chaque pull request, et seulement PUBLIEE au tag.
+# Sans cela, la premiere construction reelle serait la publication elle-meme —
+# c'est-a-dire le pire moment pour decouvrir qu'un paquet manque en arm64.
+#
+# Les deux architectures visees couvrent l'essentiel des machines de destination :
+# amd64 pour un mini-PC ou un NAS x86, arm64 pour un Raspberry Pi, un NAS ARM ou
+# un Mac. Les trois paquets Python compiles necessaires (pycryptodome, zstandard)
+# publient des roues manylinux aarch64 ; enlighten est du Python pur. Aucun
+# compilateur n'est donc necessaire dans l'image.
+name: Image Docker
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: docker-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}
+
+jobs:
+  image:
+    name: Construire${{ startsWith(github.ref, 'refs/tags/v') && ' et publier' || '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-qemu-action@v3        # arm64 sur un runner x86
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Authentification au registre
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Etiquettes et versions
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+
+      - name: Construction
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: ${{ startsWith(github.ref, 'refs/tags/v') }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VERSION=${{ github.ref_type == 'tag' && github.ref_name || github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          # Sur une pull request, l'image reste dans le cache de buildx : on
+          # veut savoir qu'elle SE CONSTRUIT, pas la conserver.
+          load: false
+
+  # L'image se construit-elle ET demarre-t-elle ? Une image qui se construit
+  # mais dont le service ne repond jamais passe toutes les etapes ci-dessus.
+  fumee:
+    name: L'image demarre et repond
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Construction locale (amd64 seul, pour pouvoir la lancer)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          tags: romule:fumee
+          cache-from: type=gha
+
+      - name: Demarrage sur une ludotheque vide
+        run: |
+          mkdir -p /tmp/ludo /tmp/cles
+          docker run -d --name romule \
+            -p 8787:8787 \
+            -v /tmp/ludo:/library -v /tmp/cles:/keys \
+            romule:fumee
+
+      - name: La sonde de sante passe-t-elle au vert ?
+        run: |
+          for i in $(seq 1 60); do
+            etat=$(docker inspect -f '{{.State.Health.Status}}' romule 2>/dev/null || echo absent)
+            [ "$etat" = "healthy" ] && echo "sain apres ${i}s" && exit 0
+            [ "$etat" = "unhealthy" ] && break
+            sleep 1
+          done
+          echo "::error::le conteneur n'est jamais devenu sain (etat : $etat)"
+          docker logs romule
+          exit 1
+
+      - name: Le service repond, et il repond du bon
+        run: |
+          curl -fsS http://127.0.0.1:8787/api/health | tee sante.json
+          python3 - <<'PY'
+          import json, sys
+          d = json.load(open("sante.json"))
+          erreurs = []
+          if not d.get("ok"):
+              erreurs.append("/api/health ne dit pas ok")
+          if d.get("version", "").count(".") != 2:
+              erreurs.append("version absente ou malformee : %r" % d.get("version"))
+          if d["root"] != "/library":
+              erreurs.append("racine inattendue : %r" % d["root"])
+          if not d["checks"]["adb"]:
+              erreurs.append("adb absent de l'image")
+          if not d["checks"]["nsz"]:
+              erreurs.append("nsz absent de l'image")
+          if not d.get("container"):
+              erreurs.append("le conteneur ne se reconnait pas comme tel")
+          for e in erreurs:
+              print("::error title=Fumee::%s" % e)
+          print("version %s, racine %s, adb %s, nsz %s"
+                % (d.get("version"), d["root"], d["checks"]["adb"], d["checks"]["nsz"]))
+          sys.exit(1 if erreurs else 0)
+          PY
+
+      # Le blocage que ce test existe pour empecher : un conteneur joignable
+      # mais qui refuse tout le monde, sans moyen d'atteindre les reglages.
+      - name: Sans jeton, la page est refusee
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8787/)
+          echo "sans jeton : HTTP $code"
+          [ "$code" = "403" ] || { echo "::error::attendu 403, obtenu $code"; exit 1; }
+
+      - name: Avec le jeton du journal, la page est servie
+        run: |
+          jeton=$(docker logs romule 2>&1 | grep -o 'token=[A-Za-z0-9_-]*' | head -1 | cut -d= -f2)
+          if [ -z "$jeton" ]; then
+            echo "::error::aucun jeton d'acces dans le journal du conteneur"
+            docker logs romule
+            exit 1
+          fi
+          code=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:8787/?token=$jeton")
+          echo "avec jeton : HTTP $code"
+          [ "$code" = "200" ] || { echo "::error::attendu 200, obtenu $code"; exit 1; }
+
+      - name: Le service ne tourne pas en root
+        run: |
+          qui=$(docker exec romule id -un)
+          echo "utilisateur du conteneur : $qui"
+          [ "$qui" = "romule" ] || { echo "::error::le conteneur tourne en $qui"; exit 1; }
+
+      - name: Journal du conteneur
+        if: always()
+        run: docker logs romule || true

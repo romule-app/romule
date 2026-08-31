@@ -1,0 +1,27 @@
+# Les deux controles qu'on regrette de ne pas avoir joues AVANT le commit.
+#
+#   python3 -m pip install pre-commit && pre-commit install
+#
+# Le reste (tests, audit, navigateur) tourne en CI : le placer ici rendrait
+# chaque commit assez lent pour qu'on prenne l'habitude de le contourner.
+repos:
+  - repo: local
+    hooks:
+      - id: fuite
+        name: aucune donnee personnelle dans l'index
+        entry: python3 outils/verifier-fuite.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: syntaxe
+        name: tous les modules compilent
+        entry: python3 -m compileall -q romule outils
+        language: system
+        pass_filenames: false
+        always_run: true
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.14.2
+    hooks:
+      - id: ruff            # regles F, B, W : voir [tool.ruff.lint] dans pyproject

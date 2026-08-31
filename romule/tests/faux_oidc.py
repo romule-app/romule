@@ -3,7 +3,7 @@
 Il expose la decouverte, un point d'autorisation qui redirige aussitot, un point
 de jetons qui signe un vrai id_token RS256, et le JWKS correspondant.
 """
-import base64, hashlib, json, random, sys, threading, urllib.parse
+import base64, hashlib, json, random, sys, urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 9901

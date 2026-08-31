@@ -392,7 +392,9 @@ def detect_games_dir():
 
     def ancetre(dirs):
         common = []
-        for parts in zip(*[d.split("/") for d in dirs]):
+        # `strict=False` explicite : s'arreter au chemin le plus court est
+        # exactement ce qu'on veut d'un ancetre commun.
+        for parts in zip(*[d.split("/") for d in dirs], strict=False):
             if len(set(parts)) == 1:
                 common.append(parts[0])
             else:
@@ -480,7 +482,6 @@ def organize(device_dir, job, types=None):
     make_tree(device_dir)
     base = device_dir.rstrip("/")
     reels = real_folders(device_dir)
-    prefixes = tuple(base + "/" + tf + "/" for tf in sorted(set(reels.values())))
     games = find_games(device_dir)
     job.set_total(len(games))
     moved = 0
