@@ -221,7 +221,11 @@ jobs:
               erreurs.append("adb absent de l'image")
           if not d["checks"]["nsz"]:
               erreurs.append("nsz absent de l'image")
-          if not d.get("container"):
+          # `container` vit dans `checks`, pas a la racine. L'assertion avait
+          # ete ecrite de memoire et n'avait jamais tourne : ecrite juste, elle
+          # aurait dit « le conteneur ne se reconnait pas » alors qu'il se
+          # reconnait tres bien.
+          if not d["checks"].get("container"):
               erreurs.append("le conteneur ne se reconnait pas comme tel")
           for e in erreurs:
               print("::error title=Fumee::%s" % e)
