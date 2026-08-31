@@ -1,0 +1,53 @@
+# Analyse de securite du code, Python ET JavaScript.
+#
+# C'est le seul controle qui regarde les 6 500 lignes du front. Jusqu'ici
+# `node --check` en verifiait la SYNTAXE — ce qui ne dit rien d'une injection
+# de HTML, d'un `postMessage` sans controle d'origine ou d'une redirection
+# ouverte.
+#
+# CodeQL plutot qu'un service tiers : gratuit sur un depot public, sans compte
+# ni secret a stocker, et — ce qui compte pour un projet qu'on va forker — il
+# fonctionne sur les pull requests venant d'un fork, la ou un jeton de service
+# ne serait pas expose.
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "23 4 * * 2"       # mardi : une regle nouvelle peut trouver du vieux code
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write       # depose les resultats dans l'onglet Security
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyse:
+    name: ${{ matrix.langue }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        langue: [python, javascript-typescript]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Initialisation
+        uses: github/codeql-action/init@cdf488f595d80d6e07e03d4674febd5ab45fa938  # v4.37.9
+        with:
+          languages: ${{ matrix.langue }}
+          # `security-and-quality` plutot que le jeu par defaut : le supplement
+          # porte sur la qualite, et ce depot n'a pas de dette a rattraper.
+          queries: security-and-quality
+
+      # Rien a construire : ni compilation Python, ni empaquetage du front.
+      - name: Analyse
+        uses: github/codeql-action/analyze@cdf488f595d80d6e07e03d4674febd5ab45fa938  # v4.37.9
+        with:
+          category: /langue:${{ matrix.langue }}
