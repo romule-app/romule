@@ -40,3 +40,7 @@ romule/tests/
 CONTRIBUTING.md
 SECURITY.md
 CHANGELOG.md
+docs/
+mkdocs.yml
+site/
+.pre-commit-config.yaml

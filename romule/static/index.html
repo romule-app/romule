@@ -62,7 +62,7 @@
   <div class="chargeur-in">
     <div class="chargeur-anneau"></div>
     <b>Lecture de ta ludothèque…</b>
-    <span class="tid" id="chargeurtxt">inventaire des fichiers</span>
+    <span class="mono" id="chargeurtxt">inventaire des fichiers</span>
   </div>
 </div>
 
@@ -223,7 +223,7 @@
       <div class="drop" id="drop"></div>
       <div class="bar" style="margin-top:12px">
         <button class="go" id="importbtn" onclick="app.doImport()">Importer</button>
-        <span class="tid" id="importinfo"></span>
+        <span class="mono" id="importinfo"></span>
         <span style="flex:1"></span>
         <button class="ghost" onclick="app.reloadImport()">Relire le dépôt</button>
       </div>
@@ -281,7 +281,7 @@
                 Activer le débogage sans fil</div>
               <p>Ouvre <b>Paramètres</b> (l'app Android, pas l'émulateur), puis&nbsp;:</p>
               <div class="wpath">Paramètres → Système → Options pour les développeurs
-                → <b>Débogage sans fil</b> <span class="tid">(à activer)</span></div>
+                → <b>Débogage sans fil</b> <span class="mono">(à activer)</span></div>
               <details class="wtip"><summary>Je ne vois pas « Options pour les développeurs »</summary>
                 <p>Elles sont masquées par défaut. Va dans <b>Paramètres → À propos du téléphone</b>
                   et tape <b>7 fois</b> sur <b>Numéro de build</b>. Le menu apparaît alors
@@ -385,7 +385,7 @@
 
       <div id="pf-specifique">
       <div class="setgroup groupe-plateforme" data-plateforme="switch">
-        <div class="setgt">Nintendo Switch <span class="beta">spécifique</span></div>
+        <div class="setgt">Nintendo Switch <span class="portee">spécifique</span></div>
 
         <!-- Le dossier se regle une seule fois, dans « Dossier sur la console »
              juste au-dessus : il valait pour toutes les plateformes, la Switch
@@ -422,7 +422,7 @@
         
       </div>
       <div class="setgroup groupe-plateforme" data-plateforme="switch">
-        <div class="setgt">Réglages communautaires <span class="beta">Switch · bêta</span></div>
+        <div class="setgt">Réglages communautaires <span class="portee">Switch</span><span class="beta">bêta</span></div>
 
         <div class="setrow">
           <div class="setlab"><b>Utiliser EmuReady</b>
@@ -450,7 +450,7 @@
         </div>
       </div>
       <div class="setgroup groupe-plateforme" data-plateforme="switch">
-        <div class="setgt">Sauvegardes de jeu <span class="beta">Switch</span></div>
+        <div class="setgt">Sauvegardes de jeu <span class="portee">Switch</span></div>
         <p class="lead" style="margin:0 0 10px">Tes progressions sont irremplaçables :
           un jeu se re-télécharge, pas 200 h de partie. Chaque sauvegarde est datée,
           rien n'est jamais écrasé.</p>
@@ -461,14 +461,14 @@
         <div id="saves"></div>
       </div>
       <details class="setgroup groupe-plateforme" data-plateforme="switch" id="edengroup">
-        <summary class="setgt">Émulateur <span class="beta">Switch</span></summary>
+        <summary class="setgt">Émulateur <span class="portee">Switch</span><span class="beta">bêta</span></summary>
         <p class="lead" style="margin:10px 0">Réglages de l'émulateur pour <b>tous</b> les jeux.
           Pour un jeu précis, ouvre sa fiche depuis la liste : c'est là que vivent
           ses réglages et ceux recommandés par la communauté.</p>
         <div class="bar">
           <select id="ec-scope" onchange="app.ecLoad()"></select>
           <button class="ghost" onclick="app.ecLoad()">Relire</button>
-          <span class="tid" id="ec-info"></span>
+          <span class="mono" id="ec-info"></span>
         </div>
         <div id="ec-table"></div>
         <div class="bar" style="margin-top:10px">
@@ -486,7 +486,7 @@
         <p class="sectxt">Ce qui part vers la console, comment c'est rangé, et d'où viennent les jaquettes.</p>
 
       <div class="setgroup">
-        <div class="setgt">Transferts <span class="tid">toutes plateformes</span></div>
+        <div class="setgt">Transferts <span class="mono">toutes plateformes</span></div>
 <div class="setrow">
           <div class="setlab"><b>Transfert incrémentiel</b>
             <span>Ne pas renvoyer ce qui est déjà sur la console à l'identique.</span></div>
@@ -504,7 +504,7 @@
       </div>
 
       <div class="setgroup">
-        <div class="setgt">Bibliothèque <span class="tid">toutes plateformes</span></div>
+        <div class="setgt">Bibliothèque <span class="mono">toutes plateformes</span></div>
 
         <div class="setrow">
           <div class="setlab"><b>Rangement local</b>
@@ -667,6 +667,10 @@
         <p class="lead" style="margin:0 0 10px">Indispensable dès que la ludothèque
           est jointe depuis l'extérieur. Le SSO délègue la connexion à ton
           fournisseur : aucun mot de passe n'est stocké ici.</p>
+        <p class="lead" style="margin:0 0 10px">Les comptes internes sont la voie
+          éprouvée. Le SSO vérifie les jetons avec une implémentation RS256
+          propre à Romule, sans bibliothèque tierce : elle est testée, mais elle
+          est jeune.</p>
 
         <div class="setrow">
           <div class="setlab"><b>Mode</b>
@@ -674,7 +678,7 @@
           <div class="setctl"><select id="s-authmode">
             <option value="aucun">Aucune — accès local uniquement</option>
             <option value="interne">Comptes email + mot de passe</option>
-            <option value="oidc">SSO OpenID Connect</option>
+            <option value="oidc">SSO OpenID Connect — bêta</option>
           </select></div>
         </div>
 
@@ -888,7 +892,7 @@
   <div class="dropzone-in">
     <span class="dropzone-ic">↓</span>
     <b>Lâche tes jeux ici</b>
-    <span class="tid" id="dropexts">.nsz .xcz .nsp .xci · .zip .7z .rar</span>
+    <span class="mono" id="dropexts">.nsz .xcz .nsp .xci · .zip .7z .rar</span>
   </div>
 </div>
 
@@ -900,7 +904,7 @@
 <aside class="jdrawer" id="jdrawer" aria-label="Journal">
   <div class="jhead">
     <b>Journal</b>
-    <span class="tid" id="jetat"></span>
+    <span class="mono" id="jetat"></span>
     <span style="flex:1"></span>
     <button class="ghost" onclick="app.toggleJournal()">Fermer</button>
   </div>
