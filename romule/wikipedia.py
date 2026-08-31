@@ -28,7 +28,13 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-AGENT = "romule/1.0 (ludotheque personnelle)"
+# Wikimedia exige un `User-Agent` qui identifie l'outil ET donne un moyen de
+# joindre son auteur : un projet distribue a des inconnus ne peut pas se
+# presenter comme « ludotheque personnelle » sans contact. Une adresse trop
+# vague fait limiter, puis bloquer, tout le monde d'un coup.
+from . import __version__, SOURCE_URL
+
+AGENT = "Romule/%s (%s)" % (__version__, SOURCE_URL)
 WIKIDATA = "https://www.wikidata.org/w/api.php"
 
 # Wikidata : « jeu video » et ses sous-classes courantes. Sans ce filtre, une
@@ -121,26 +127,33 @@ def _intro(article, langue, phrases=3):
 
 
 def resume(titre_anglais, langue="fr"):
-    """Resume dans la langue demandee, ou "" si l'article n'existe pas.
+    """(texte, url) dans la langue demandee, ou ("", "") si rien n'est trouve.
 
     On ne renvoie jamais l'anglais par ce chemin : l'appelant garde alors le
     resume d'IGDB, qui est deja anglais. Retourner deux fois la meme langue par
     deux sources differentes n'apporterait rien.
+
+    L'URL n'est pas un supplement : le texte de Wikipedia est sous CC BY-SA, et
+    cette licence demande de citer la source. La rendre ici est le seul moyen
+    pour l'interface de le faire.
     """
     titre_anglais = (titre_anglais or "").strip()
     if not titre_anglais or langue in ("", "en"):
-        return ""
+        return "", ""
     cle = (titre_anglais.lower(), langue)
     with _RYTHME:
         if cle in _ECHECS:
-            return ""
+            return "", ""
     _, article = _article(titre_anglais, langue)
     if not article:
         with _RYTHME:
             _ECHECS.add(cle)
-        return ""
+        return "", ""
     texte = _intro(article, langue)
     if not texte:
         with _RYTHME:
             _ECHECS.add(cle)
-    return texte
+        return "", ""
+    url = "https://%s.wikipedia.org/wiki/%s" % (
+        langue, urllib.parse.quote(article.replace(" ", "_")))
+    return texte, url

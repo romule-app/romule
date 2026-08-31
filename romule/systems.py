@@ -501,7 +501,11 @@ def _fiche_legere(f):
     """
     f = f or {}
     return {"titre": f.get("nom", ""), "resume": f.get("resume", ""),
-            "annee": f.get("annee", ""), "editeur": f.get("editeur", "")}
+            "annee": f.get("annee", ""), "editeur": f.get("editeur", ""),
+            # La provenance du resume voyage avec lui : citer sa source n'est
+            # pas une option quand ce texte vient de Wikipedia.
+            "source_resume": f.get("source_resume", ""),
+            "url_resume": f.get("url_resume", "")}
 
 
 def _memoriser_depuis(racine, fichiers):

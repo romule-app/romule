@@ -90,11 +90,14 @@ def fiche_nom(nom, cfg=None, reseau=True):
     langue = (cfg.get("meta_lang") or "fr").strip().lower()
     if langue not in ("", "en"):
         pivot = d.get("nom") or covers.search_name(nom)
-        texte = wikipedia.resume(pivot, langue)
+        texte, url = wikipedia.resume(pivot, langue)
         if texte:
             d["resume_en"] = d.get("resume", "")
             d["resume"] = texte
             d["source_resume"] = "wikipedia:" + langue
+            # Sans l'adresse de l'article, l'interface ne peut pas citer sa
+            # source — et la licence de Wikipedia l'exige.
+            d["url_resume"] = url
     config.COVERS.mkdir(exist_ok=True)
     p.write_text(json.dumps(d, ensure_ascii=False), encoding="utf-8")
     return d

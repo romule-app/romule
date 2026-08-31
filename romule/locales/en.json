@@ -731,5 +731,7 @@
   "Aucun fichier Switch dans ce dossier.": "No Switch file in this folder.",
   "Dépose des jeux avec le bouton %s, en bas à droite.": "Drop games in with the %s button, bottom right.",
   "Connecter sans câble": "Connect without a cable",
-  "Détection de la console...": "Detecting the console…"
+  "Détection de la console...": "Detecting the console…",
+  "Wikipédia": "Wikipedia",
+  "Résumé issu de %s, sous licence CC BY-SA.": "Summary from %s, under the CC BY-SA licence."
 }
