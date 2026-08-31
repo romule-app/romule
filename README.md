@@ -20,7 +20,8 @@
 
 <p align="center">
   <img src="docs/images/bibliotheque.png" alt="The Romule library view: a grid of
-  game covers with size, platform and update badges, and filters above."
+  game cards with size, platform and update badges, and filters above. The
+  library shown is synthetic — invented titles, no real cover art."
   width="900">
 </p>
 
@@ -214,6 +215,31 @@ files that are already on your disk.
 Whether you may legally hold those files depends on where you live and how you
 obtained them. That question is yours, not this project's. Please do not open
 issues asking where to find games or keys; they will be closed.
+
+### Console keys
+
+Romule never ships, generates, or helps you obtain console keys. Decrypting
+`.nsz` / `.xcz` is delegated to [`nsz`](https://github.com/nicoboss/nsz), a
+separate tool you install yourself and point at a key file you supply. Romule
+works without any of it — keys are needed only for those two formats.
+
+Be aware that in some jurisdictions, extracting or using such keys may be
+restricted **even for content you own**. Romule takes no position on that and
+gives no guidance on it.
+
+### Emulators
+
+Romule bundles no emulator and distributes none. An emulator *profile* is
+nothing more than a description of where a given third-party program keeps its
+files, so that Romule can copy games to the right place. Naming a program is
+not an endorsement, a partnership, or a claim that anyone authorised it.
+
+### Trademarks
+
+Nintendo Switch, and the names of every console, publisher and emulator
+mentioned here, are trademarks of their respective owners. Romule is an
+independent project, not affiliated with, endorsed by, or connected to any of
+them. Those names are used only to say what the software works with.
 
 ---
 

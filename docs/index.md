@@ -25,8 +25,9 @@ over adb.
 
 ## What Romule is not
 
-It ships **no games, no console keys, and no links to either**. It manages
-files already on your disk. Whether you may legally hold them depends on where
+It ships **no games, no console keys, and no links to either**, and it bundles
+no emulator. It manages files already on your disk. Whether you may legally
+hold them depends on where
 you live and how you got them — that question is yours, not this project's.
 
 ## Written with an AI assistant
@@ -37,3 +38,10 @@ their head. What holds it up is the checks — five test suites across four
 Python versions, a security audit, CodeQL on both languages, a container scan —
 not the author's memory of every line. Expect the plausible-but-wrong over the
 typo. Bug reports are especially useful here.
+
+!!! info "Trademarks"
+    Nintendo Switch, and the names of every console, publisher and emulator
+    mentioned in this documentation, are trademarks of their respective
+    owners. Romule is an independent project, not affiliated with, endorsed by,
+    or connected to any of them. Those names are used only to say what the
+    software works with. See [Legal](https://github.com/romule-app/romule#legal).
