@@ -9,14 +9,19 @@ interface, next to the setting.
 **Why beta.** Romule verifies RS256 identity tokens with an implementation
 written for this project, with no third-party library. A JWT verifier is
 exactly the kind of code where a subtle mistake is a security hole rather than
-a crash — and the current test suite only covers the **happy path**: a valid
-token from a working provider is accepted, and the login flow completes.
+a crash.
 
-The negative cases that matter most are **not covered yet**: a token signed
-with `alg: none`, a wrong audience or issuer, an expired token, a tampered
-signature. Each is a way in if the verifier gets it wrong, and none of them is
-proven closed by a test today. That is the single strongest reason this feature
-carries a beta label.
+Twenty tests forge tokens against it, one per known attack: `alg: none`,
+RS256/HS256 confusion (the public key used as an HMAC secret), a foreign
+signing key, an unknown `kid`, a tampered signature, a swapped payload keeping
+the original signature, a wrong issuer, a wrong audience — alone or in a list —
+an expired token, a token dated from the future, a mismatched nonce, and
+malformed input of every shape. All are refused, and a control test checks that
+a *valid* token still passes: a suite that rejects everything proves nothing.
+
+**It is still labelled beta**, because tests prove the cases you thought of.
+This code is young, it has had no outside scrutiny, and hand-written
+cryptographic verification earns caution rather than confidence.
 
 **The proven path** is internal accounts: email, password hashed with scrypt,
 optional TOTP two-factor.

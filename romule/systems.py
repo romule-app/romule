@@ -184,6 +184,28 @@ def extension_sure(e):
     return e if re.match(r"^\.[a-z0-9]{1,8}$", e) else ""
 
 
+def assainir_perso(entrees):
+    """Nettoie les plateformes ajoutees a la main, avant de les enregistrer.
+
+    Meme travail que `liste()` fait a la lecture, applique cette fois a
+    l'ecriture. Deux controles valent mieux qu'un quand le champ vient d'une
+    requete HTTP et finit dans un chemin de fichier ou une commande distante.
+    """
+    propres = []
+    for p in (entrees or []):
+        if not isinstance(p, dict):
+            continue
+        cle = str(p.get("key") or "").strip().lower()
+        if not cle or cle in BY_KEY:
+            continue
+        exts = [x for x in (extension_sure(e) for e in (p.get("exts") or [])) if x]
+        propres.append({"key": cle,
+                        "name": str(p.get("name") or cle)[:80],
+                        "folder": dossier_sur(p.get("folder"), cle),
+                        "exts": exts})
+    return propres
+
+
 def get_cfg(key, cfg=None):
     """Comme get(), mais connait aussi les plateformes ajoutees a la main."""
     for s in liste(cfg):

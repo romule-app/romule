@@ -1487,6 +1487,13 @@ class Handler(BaseHTTPRequestHandler):
                       "oidc_groupes"):
                 if k in d:
                     CFG[k] = d[k]
+            # Les plateformes ajoutees a la main sont assainies A L'ECRITURE,
+            # et pas seulement a la lecture. `systems.liste()` fait deja passer
+            # le dossier par `dossier_sur`, donc rien ne s'echappe aujourd'hui —
+            # mais garder un `../../..` dans le fichier de configuration, c'est
+            # armer le piege pour le prochain qui lira ce champ directement.
+            if "systemes_perso" in d:
+                CFG["systemes_perso"] = systems.assainir_perso(CFG["systemes_perso"])
             config.save_config(CFG)
             sauvegarde.auto("reglages")
             JOB.notify_end = bool(CFG.get("notify", True))
