@@ -10,10 +10,14 @@
 
 # --- etat de l'application (tout ce que l'outil ecrit commence par « _ »)
 _*
-# … sauf les fichiers de paquet Python, qui commencent eux aussi par « _ ».
-# Sans cette exception, `romule/__init__.py` n'est pas suivi et le paquet
-# n'existe plus pour quiconque clone le depot.
-!**/__init__.py
+# … sauf les fichiers a double tiret bas, qui sont ceux de Python et non les
+# notres. L'exception ne visait que `__init__.py` : `__main__.py` restait donc
+# hors du depot, et un clone neuf echouait sur
+#   « No module named romule.__main__ »
+# c'est-a-dire sur la premiere commande du README. Trouve par la repetition a
+# blanc, pas par les tests : ceux-ci tournent dans l'arbre de travail, ou le
+# fichier existe.
+!**/__*.py
 
 # --- cles de console : ne doivent JAMAIS approcher un depot
 *.keys
