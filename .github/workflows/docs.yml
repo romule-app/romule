@@ -67,7 +67,14 @@ jobs:
   publier:
     name: Publication sur GitHub Pages
     needs: construire
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    # GitHub Pages n'existe pas sur un depot PRIVE au plan gratuit. La
+    # construction, elle, tourne toujours : c'est elle qui attrape un lien mort
+    # ou un reglage non documente. Seule la publication attend le passage en
+    # public, et repart d'elle-meme ce jour-la.
+    if: >-
+      github.ref == 'refs/heads/main'
+      && github.event_name != 'pull_request'
+      && github.event.repository.visibility == 'public'
     runs-on: ubuntu-latest
     permissions:
       pages: write
