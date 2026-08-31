@@ -19,6 +19,11 @@ on:
     - cron: "23 4 * * 2"       # mardi : une regle nouvelle peut trouver du vieux code
   workflow_dispatch:
 
+# Le scan de code demande GitHub Advanced Security sur un depot PRIVE. Tant
+# que celui-ci l'est, l'analyse tourne jusqu'au bout puis echoue en deposant
+# ses resultats — un echec rouge a chaque commit, pour une raison qui n'a rien
+# a voir avec le code. Le garde ci-dessous la met en veille, et elle repart
+# d'elle-meme le jour ou le depot devient public.
 permissions:
   contents: read
   security-events: write       # depose les resultats dans l'onglet Security
@@ -36,6 +41,7 @@ jobs:
   analyse:
     name: ${{ matrix.langue }}
     runs-on: ubuntu-latest
+    if: github.event.repository.visibility == 'public'
     strategy:
       fail-fast: false
       matrix:

@@ -190,7 +190,16 @@ def fichier_etat(nom, ancien_nom):
     """
     neuf = ROOT / nom
     ancien = ROOT / ancien_nom
-    if neuf.exists() or not ancien.exists():
+    # `exists()` peut lever : un dossier auquel le processus n'a meme pas le
+    # droit d'acceder refuse le `stat`. Cette fonction s'execute a l'IMPORT du
+    # module — une exception ici tue le programme avant que quiconque ait pu
+    # expliquer quoi que ce soit, et l'utilisateur lit une trace de pile au
+    # lieu du remede. On rend le chemin neuf et on laisse le controle de
+    # demarrage faire son travail.
+    try:
+        if neuf.exists() or not ancien.exists():
+            return neuf
+    except OSError:
         return neuf
     try:
         ancien.rename(neuf)
