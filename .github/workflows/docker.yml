@@ -139,7 +139,24 @@ jobs:
       # qui ni sur quoi. Le message doit nommer le remede.
       - name: Un dossier non inscriptible explique au lieu de planter
         run: |
+          # Le cas REEL : un dossier de l'hote parfaitement lisible, mais qui
+          # appartient a l'utilisateur du runner (1001) et non a celui de
+          # l'image (1000). `chmod 500` testait autre chose — un dossier ou le
+          # processus ne peut meme pas faire un `stat`, ce qui est plus rare.
+          # Les deux sont verifies, dans cet ordre.
+          mkdir -p /tmp/pas-a-nous
+          sortie=$(docker run --rm -v /tmp/pas-a-nous:/data romule:fumee 2>&1 || true)
+          echo "--- proprietaire different ---"
+          echo "$sortie"
+          if echo "$sortie" | grep -q "Traceback"; then
+            echo "::error::trace de pile sur un dossier appartenant a un autre UID"
+            exit 1
+          fi
+          echo "$sortie" | grep -q "n'est pas inscriptible" \
+            || { echo "::error::pas de message explicite"; exit 1; }
+
           mkdir -p /tmp/interdit && chmod 500 /tmp/interdit
+          echo "--- inaccessible ---"
           sortie=$(docker run --rm -v /tmp/interdit:/data romule:fumee 2>&1 || true)
           echo "$sortie"
           if echo "$sortie" | grep -q "Traceback"; then
