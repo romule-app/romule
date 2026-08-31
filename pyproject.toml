@@ -63,8 +63,15 @@ line-length = 100
 target-version = "py310"
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "B", "UP"]
-ignore = [
-  "E501",   # la longueur est deja tenue a la main, et les URL ne se coupent pas
-  "UP031",  # le formatage par % est la convention du projet, uniformement
-]
+# On selectionne ce qui attrape des DEFAUTS, pas ce qui impose un gout.
+#
+#   F  pyflakes  — import mort, variable jetee, nom redefini : de vrais restes
+#   B  bugbear   — pieges reels (fermeture sur variable de boucle, cause perdue)
+#   W  warnings  — espaces en fin de ligne, fin de fichier
+#
+# `E` (pycodestyle) est volontairement absent : ses regles E701/E702/E401/E741
+# comptaient a elles seules 117 des 143 premiers signalements, et toutes
+# portent sur un style que ce code tient deja de facon uniforme. Les activer
+# aurait impose une reecriture de forme sans corriger un seul defaut — et un
+# job bloquant qu'on ne peut pas satisfaire devient un job qu'on desactive.
+select = ["F", "B", "W"]

@@ -41,10 +41,19 @@ what the release actually contains rather than how it was built.
   user, plus a `docker-compose.yml`.
 - **Zero runtime dependencies**: Python standard library only, enforced by the
   test suite.
+- **First-access token.** A service that is reachable over the network but has
+  no account, no token and no LAN access would refuse every request — including
+  the one needed to reach the settings and fix it. Romule now generates an
+  access token on first start in that situation, and prints it with the full
+  URL. `docker compose up`, then `docker compose logs romule`, and you are in.
+  Nothing is generated for a service listening on loopback only.
 
 ### Security
 
 - The service binds to `127.0.0.1` unless network access is explicitly enabled.
+- A reachable service is never left open by default: the first-access token is
+  generated instead of opening the door, it is stored outside the
+  browser-visible configuration, and it stays stable across restarts.
 - `X-Forwarded-For` and `X-Real-IP` grant nothing unless the operator names
   their proxies in `ROMULE_TRUSTED_PROXIES`.
 - Account creation and deletion require an administrator; the very first

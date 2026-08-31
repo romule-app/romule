@@ -170,8 +170,8 @@ def verifier_id_token(jeton, doc, client_id, nonce):
         entete = json.loads(_b64url_decode(e64))
         claims = json.loads(_b64url_decode(c64))
         signature = _b64url_decode(s64)
-    except (ValueError, TypeError):
-        raise ValueError("Jeton d'identite illisible.")
+    except (ValueError, TypeError) as exc:
+        raise ValueError("Jeton d'identite illisible.") from exc
 
     alg = entete.get("alg")
     if alg != "RS256":
@@ -306,7 +306,7 @@ def terminer(cfg, params, cookie_transit, redirect_uri):
     try:
         rep = _http_json(doc["token_endpoint"], donnees, entetes)
     except Exception as exc:                      # reseau, 4xx, JSON invalide
-        raise ValueError("Echange du code impossible : %s" % exc)
+        raise ValueError("Echange du code impossible : %s" % exc) from exc
 
     id_token = rep.get("id_token")
     if not id_token:
