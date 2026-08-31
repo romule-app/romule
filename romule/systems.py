@@ -147,7 +147,7 @@ def liste(cfg=None):
     cfg = cfg or config.load_config()
     out = list(SYSTEMS)
     for p in (cfg.get("systemes_perso") or []):
-        cle = str(p.get("key") or "").strip().lower()
+        cle = cle_sure(p.get("key"))
         if not cle or cle in BY_KEY:
             continue
         # Les extensions partent dans un `find` execute sur la console : une
@@ -175,6 +175,28 @@ def dossier_sur(nom, defaut):
     return nom
 
 
+# Le tiret bas est garde : il est sans danger dans un chemin comme dans une
+# chaine JavaScript, et le retirer renommerait des cles deja en place.
+_CLE_INTERDITE = re.compile(r"[^a-z0-9_]+")
+
+
+def cle_sure(k):
+    """Cle de plateforme utilisable, ou "" si rien d'exploitable n'en reste.
+
+    Le nom et le dossier passaient par un filtre, la cle non — elle se
+    contentait d'un `strip().lower()`, qui ne retire ni apostrophe, ni barre
+    oblique, ni chevron. Or cette cle sert d'identifiant partout : index des
+    plateformes, `system_dirs`, et jusque dans les gestionnaires de
+    l'interface.
+
+    On NORMALISE plutot que de rejeter : refuser ferait disparaitre en silence
+    une plateforme que quelqu'un avait deja declaree, et une plateforme perdue
+    est une ludotheque qu'on ne retrouve plus.
+    """
+    k = _CLE_INTERDITE.sub("-", str(k or "").strip().lower()).strip("-_")
+    return k[:32]
+
+
 def extension_sure(e):
     """Extension utilisable : elle finit dans des commandes distantes."""
     e = str(e or "").strip().lower()
@@ -195,7 +217,7 @@ def assainir_perso(entrees):
     for p in (entrees or []):
         if not isinstance(p, dict):
             continue
-        cle = str(p.get("key") or "").strip().lower()
+        cle = cle_sure(p.get("key"))
         if not cle or cle in BY_KEY:
             continue
         exts = [x for x in (extension_sure(e) for e in (p.get("exts") or [])) if x]
