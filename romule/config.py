@@ -62,9 +62,24 @@ def racine_douteuse(chemin=None):
         return "la racine du disque"
     if c == Path.home().resolve():
         return "le dossier personnel"
-    if (c / "romule").is_dir() or (c / ".git").is_dir():
+    # `os.path.isdir` plutot que `Path.is_dir` : le premier rend False quand il
+    # ne peut pas regarder, le second leve. Or c'est une HEURISTIQUE — ne pas
+    # pouvoir lire le dossier n'en fait pas un depot de code, et une exception
+    # ici tuait le demarrage avant le controle qui, lui, sait expliquer.
+    if os.path.isdir(c / "romule") or os.path.isdir(c / ".git"):
         return "un depot de code (le code et les jeux doivent rester separes)"
     return ""
+
+
+def en_conteneur():
+    """Deploiement conteneurise ? Le remede a proposer n'est pas le meme."""
+    if os.path.exists("/.dockerenv"):
+        return True
+    try:
+        with open("/proc/1/cgroup") as fh:
+            return any(k in fh.read() for k in ("docker", "kubepods", "containerd"))
+    except OSError:
+        return False
 
 # ------------------------------------------------------------- LA LUDOTHEQUE
 # `ROOT` melangeait deux choses qui n'ont pas la meme nature.

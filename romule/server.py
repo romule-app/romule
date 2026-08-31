@@ -15,7 +15,6 @@ import os
 import secrets
 import shutil
 import signal
-import sys
 import threading
 import time
 import webbrowser
@@ -1690,14 +1689,12 @@ def _adresse_ecoute():
 
 
 def _in_container():
-    """Detecte un deploiement conteneurise (pas de navigateur a ouvrir)."""
-    if os.path.exists("/.dockerenv"):
-        return True
-    try:
-        with open("/proc/1/cgroup") as fh:
-            return any(k in fh.read() for k in ("docker", "kubepods", "containerd"))
-    except OSError:
-        return False
+    """Detecte un deploiement conteneurise (pas de navigateur a ouvrir).
+
+    La detection vit dans `config` : `cli` en a besoin avant tout import du
+    serveur, pour adapter le remede qu'il propose.
+    """
+    return config.en_conteneur()
 
 
 def adb_hint():
@@ -1784,38 +1781,15 @@ def _jeton_de_premier_demarrage():
     return jeton
 
 
-def _verifier_ecriture():
-    """Le service peut-il ecrire la ou il doit ? Sinon, le dire utilement.
-
-    Un `mkdir` non protege tuait le demarrage sur une trace de pile. C'est le
-    cas le plus courant d'un deploiement conteneurise : un dossier de l'hote
-    monte dans le conteneur appartient a l'UID de l'hote, alors que l'image
-    tourne sous l'UID 1000. Le message doit donc nommer le remede, pas
-    l'exception Python — sinon l'operateur lit « Permission denied » sans
-    savoir de qui, ni sur quoi.
-    """
-    if not os.access(config.ROOT, os.W_OK):
-        print("Le dossier de donnees n'est pas inscriptible :")
-        print("    %s" % config.ROOT)
-        print("Romule y ecrit sa configuration, ses comptes et ses journaux.")
-        if _in_container():
-            print("En conteneur, c'est presque toujours l'identifiant du")
-            print("proprietaire : l'image tourne sous 1000:1000.")
-            print("    chown -R 1000:1000 <le dossier de l'hote>")
-            print("ou adapte `user:` dans docker-compose.yml a ton identifiant")
-            print("(`id -u` / `id -g`). Un volume nomme evite la question.")
-        sys.exit(1)
-    # Le depot, lui, est un CONFORT : on le signale, on ne s'arrete pas. La
-    # ludotheque peut etre en lecture seule et le reste du service rester
-    # parfaitement utile.
+def serve(open_browser=True):
+    # Le dossier de donnees a deja ete valide par `cli._verifier_racine()`.
+    # Le depot, lui, est un CONFORT : la ludotheque peut etre en lecture seule
+    # et le reste du service rester parfaitement utile. On signale, on ne
+    # s'arrete pas.
     try:
         config.IMPORT.mkdir(exist_ok=True)
     except OSError as exc:
         JOB.log("Depot indisponible (%s) : %s" % (config.IMPORT, exc), "warn")
-
-
-def serve(open_browser=True):
-    _verifier_ecriture()
     # Les comptes crees avant l'existence des roles n'en portent aucun :
     # sans cette reprise, une installation existante se retrouverait sans
     # administrateur apres la mise a jour.
