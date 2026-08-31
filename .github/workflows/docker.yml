@@ -180,9 +180,26 @@ jobs:
           docker logs romule
           exit 1
 
+      # `/api/health` n'est PAS public : un service joignable par le reseau le
+      # refuse sans jeton, et c'est voulu — il annonce la version, le mode
+      # d'authentification, le nombre de comptes et l'emplacement des cles.
+      # La sonde Docker, elle, interroge la boucle locale a l'INTERIEUR du
+      # conteneur, donc elle passe. C'est ce test qui affirmait le contraire.
+      - name: Sans jeton, la sante est refusee depuis le reseau
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8787/api/health)
+          echo "sans jeton : HTTP $code"
+          [ "$code" = "403" ] || { echo "::error::attendu 403, obtenu $code"; exit 1; }
+
       - name: Le service repond, et il repond du bon
         run: |
-          curl -fsS http://127.0.0.1:8787/api/health | tee sante.json
+          jeton=$(docker logs romule 2>&1 | grep -o 'token=[A-Za-z0-9_-]*' | head -1 | cut -d= -f2)
+          if [ -z "$jeton" ]; then
+            echo "::error::aucun jeton d'acces dans le journal du conteneur"
+            docker logs romule
+            exit 1
+          fi
+          curl -fsS "http://127.0.0.1:8787/api/health?token=$jeton" | tee sante.json
           python3 - <<'PY'
           import json, sys
           d = json.load(open("sante.json"))
