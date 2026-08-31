@@ -1121,8 +1121,10 @@ function renderLib() {
 
   const lib = $('lib');
   if (!DATA.files.length && !tous.length) {
-    lib.innerHTML = '<div class="empty">Aucun fichier Switch dans ce dossier.<br>' +
-      'Dépose des jeux avec le bouton <b>+</b>, en bas à droite.</div>';
+    lib.innerHTML = '<div class="empty">' +
+      esc(t('Aucun fichier Switch dans ce dossier.')) + '<br>' +
+      phrase('Dépose des jeux avec le bouton %s, en bas à droite.', '+') +
+      '</div>';
     $('pager').innerHTML = ''; renderActionBar(); return;
   }
   if (!list.length) {
@@ -1734,7 +1736,7 @@ function openGameHtml(g) {
     envoyer:  ['conv', phrase('%d fichier(s) à envoyer sur la console', e.aEnvoyer.length)],
     importer: ['conv', 'Sur la console seulement — à importer vers le serveur'],
     convert:  ['conv', 'À convertir avant envoi'],
-    probleme: ['orph', e.casses.length ? 'Fichier incomplet — à retélécharger'
+    probleme: ['orph', e.casses.length ? 'Fichier incomplet — à remplacer'
                                        : 'Le jeu de base est absent'],
     local:    ['dlc',  'Sur le serveur — branche la console pour en savoir plus'],
   };
@@ -2054,7 +2056,12 @@ function renderConn(d) {
   } else {
     el.className = 'conn off';
     el.innerHTML = '<span class="cdot off"></span>' +
-      '<span class="cnom">Aucune console</span>' +
+      // `cnom` porte le NOM de la console, une donnee : il est dans
+      // CLASSES_DONNEES pour n'etre jamais traduit. Le libelle « aucune
+      // console », lui, doit l'etre — et il portait la meme classe, donc il
+      // restait en francais dans une interface anglaise. Meme defaut que la
+      // classe `tid`, qui servait a la fois de marqueur et de style.
+      '<span class="cvide">Aucune console</span>' +
       '<span class="cfaits">' +
         '<button class="lien" onclick="app.detect()">Détecter</button><i>·</i>' +
         '<button class="lien" onclick="app.togglePair()">sans câble</button>' +
@@ -2078,15 +2085,17 @@ function renderBarreConsole(info) {
         ? '<button class="ghost" onclick="app.wifiSwitch()">Passer en Wi-Fi</button>'
         : '<button class="ghost" onclick="app.wifiForget()">Oublier ce lien</button>')
     : '<button class="go" onclick="app.detect()">Détecter la console</button>' +
-      '<button class="ghost" onclick="app.togglePair()">Connecter sans câble</button>';
+      '<button class="ghost" onclick="app.togglePair()">' +
+        esc(t('Connecter sans câble')) + '</button>';
 }
 
 function renderDeviceCard(info, volumes) {
   renderBarreConsole(info);
   const el = $('device');
   if (!info.connected) {
-    el.innerHTML = '<div class="empty">Aucune console prête.<br>' +
-      'Branche le handheld en USB, autorise le debogage, puis clique « Detecter ».</div>';
+    el.innerHTML = '<div class="empty">' + esc(t('Aucune console prête.')) + '<br>' +
+      esc(t('Branche la console en USB, autorise le débogage, puis clique sur « Détecter ».')) +
+      '</div>';
     return;
   }
   const vols = (volumes || []).map(v => {
@@ -2633,7 +2642,7 @@ function etatDuJeu(g, nmap) {
   }
   if (cassesBase.length) {
     etat = 'probleme';
-    raison = pretty(cassesBase[0].name) + ' est incomplet — à retélécharger';
+    raison = pretty(cassesBase[0].name) + ' est incomplet — à remplacer';
   } else if (!jouables.length) {
     etat = g.needsConvert ? 'convert' : 'probleme';
     if (etat === 'probleme') raison = 'Aucun fichier jouable (.nsp ou .xci)';
@@ -4090,7 +4099,9 @@ const app = {
     $('pairfound').innerHTML = found.length
       ? '<div class="card">' + found.map(a => '<div class="row"><span class="grow">' + esc(a) +
           '</span><button class="go" onclick="app.wifiConnect(\'' + jsq(a) + '\')">Connecter</button></div>').join('') + '</div>'
-      : '<div class="mono" style="margin-top:8px">Aucune console visible. Vérifie que le débogage sans fil est activé et que vous êtes sur le même réseau.</div>';
+      : '<div class="mono" style="margin-top:8px">' +
+        esc(t('Aucune console visible. Vérifie que le débogage sans fil est activé '
+              + 'et que la console est sur le même réseau.')) + '</div>';
   },
   async wifiConnect(addr) {
     say('Connexion…');
@@ -4340,7 +4351,7 @@ const app = {
   },
 
   async detect() {
-    say('Détection de la console...');
+    say(t('Détection de la console...'));
     const d = await api('/api/device');
     renderConn(d); this.refreshInstall();
     renderDeviceCard(d.info || {}, d.volumes || []);
@@ -4348,7 +4359,8 @@ const app = {
       annonce('Console détectée : ' + d.info.name, 'ok');
       await this.chargerConsole();
     } else {
-      annonce('Aucune console prête (' + (d.state || 'non connectée') + ').', 'warn');
+      // Assemblee, la phrase n'etait traduisible par aucun catalogue.
+      annonce(phrase('Aucune console prête (%s).', d.state || t('non connectée')), 'warn');
     }
   },
 
@@ -5286,7 +5298,7 @@ function renderManifest(r) {
     const items = groups[folder].map(it => {
       if (it.broken) return '<div class="mfitem bad"><span>&#9888; ' + esc(it.name) +
         '<br><span class="mono">fichier incomplet : ' + esc(it.broken) +
-        ' — à retélécharger</span></span><span>non envoyé</span></div>';
+        ' — à remplacer</span></span><span>non envoyé</span></div>';
       return '<div class="mfitem"><span>' + (it.skip ? '&check; ' : '') + esc(it.name) + '</span><span>' +
         (it.skip ? 'déjà sur la console' : fmt(it.size)) + '</span></div>';
     }).join('');

@@ -334,7 +334,6 @@
   "Sources de la base de versions, essayées dans l'ordre (une par ligne).": "Sources de la base de versions, essayées dans l'ordre (une par ligne).",
   "Tout est enregistré au fur et à mesure : aucun bouton « valider ».": "Tout est enregistré au fur et à mesure : aucun bouton « valider ».",
   "Sauvegardes de jeu": "Sauvegardes de jeu",
-  "Tes progressions sont irremplaçables : un jeu se re-télécharge, pas 200 h de partie. Chaque sauvegarde est datée, rien n'est jamais écrasé.": "Tes progressions sont irremplaçables : un jeu se re-télécharge, pas 200 h de partie. Chaque sauvegarde est datée, rien n'est jamais écrasé.",
   "Voir les sauvegardes": "Voir les sauvegardes",
   "Tâche en cours": "Tâche en cours",
   "Pause": "Pause",
@@ -722,5 +721,15 @@
   "Ludothèque actuelle": "Ludothèque actuelle",
   "Données du service": "Données du service",
   "Dossier personnel": "Dossier personnel",
-  "Racine": "Racine"
+  "Racine": "Racine",
+  "Aucune console prête.": "Aucune console prête.",
+  "Branche la console en USB, autorise le débogage, puis clique sur « Détecter ».": "Branche la console en USB, autorise le débogage, puis clique sur « Détecter ».",
+  "non connectée": "non connectée",
+  "Aucune console visible. Vérifie que le débogage sans fil est activé et que la console est sur le même réseau.": "Aucune console visible. Vérifie que le débogage sans fil est activé et que la console est sur le même réseau.",
+  "Tes progressions sont irremplaçables : un jeu se réinstalle, pas 200 h de partie. Chaque sauvegarde est datée, rien n'est jamais écrasé.": "Tes progressions sont irremplaçables : un jeu se réinstalle, pas 200 h de partie. Chaque sauvegarde est datée, rien n'est jamais écrasé.",
+  "Sur le serveur": "Sur le serveur",
+  "Aucun fichier Switch dans ce dossier.": "Aucun fichier Switch dans ce dossier.",
+  "Dépose des jeux avec le bouton %s, en bas à droite.": "Dépose des jeux avec le bouton %s, en bas à droite.",
+  "Connecter sans câble": "Connecter sans câble",
+  "Détection de la console...": "Détection de la console..."
 }

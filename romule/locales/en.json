@@ -334,7 +334,6 @@
   "Sources de la base de versions, essayées dans l'ordre (une par ligne).": "Sources for the version database, tried in order (one per line).",
   "Tout est enregistré au fur et à mesure : aucun bouton « valider ».": "Everything is saved as you go: there is no “save” button.",
   "Sauvegardes de jeu": "Game saves",
-  "Tes progressions sont irremplaçables : un jeu se re-télécharge, pas 200 h de partie. Chaque sauvegarde est datée, rien n'est jamais écrasé.": "Your progress is irreplaceable: a game can be downloaded again, 200 hours of play cannot. Every backup is dated, nothing is ever overwritten.",
   "Voir les sauvegardes": "See the backups",
   "Tâche en cours": "Task running",
   "Pause": "Pause",
@@ -722,5 +721,15 @@
   "Ludothèque actuelle": "Current library",
   "Données du service": "Service data",
   "Dossier personnel": "Home folder",
-  "Racine": "Root"
+  "Racine": "Root",
+  "Aucune console prête.": "No console ready.",
+  "Branche la console en USB, autorise le débogage, puis clique sur « Détecter ».": "Plug the console in over USB, allow debugging, then click “Detect”.",
+  "non connectée": "not connected",
+  "Aucune console visible. Vérifie que le débogage sans fil est activé et que la console est sur le même réseau.": "No console visible. Check that wireless debugging is on and that the console is on the same network.",
+  "Tes progressions sont irremplaçables : un jeu se réinstalle, pas 200 h de partie. Chaque sauvegarde est datée, rien n'est jamais écrasé.": "Your progress is irreplaceable: a game can be reinstalled, 200 hours of play cannot. Every backup is dated, nothing is ever overwritten.",
+  "Sur le serveur": "On the server",
+  "Aucun fichier Switch dans ce dossier.": "No Switch file in this folder.",
+  "Dépose des jeux avec le bouton %s, en bas à droite.": "Drop games in with the %s button, bottom right.",
+  "Connecter sans câble": "Connect without a cable",
+  "Détection de la console...": "Detecting the console…"
 }

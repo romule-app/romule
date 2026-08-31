@@ -32,6 +32,22 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 - The Docker image now exposes `/data` (named volume) alongside `/library`, so
   Romule's own state is no longer written among your games.
 
+### Changed
+
+- **The README screenshot was the author's own library** — fifteen real Switch
+  titles, their publisher cover art, their file sizes and the console's name.
+  A screenshot should show the software. It is now generated from a synthetic
+  library: invented titles, no third-party artwork, no console.
+- The legal section now states plainly that Romule bundles no emulator, never
+  ships or helps obtain console keys, and that decryption is delegated to a
+  separate tool you install yourself. It also carries the trademark notice that
+  was missing: every console, publisher and emulator name belongs to its owner,
+  and Romule is affiliated with none of them.
+- Wording that implied games are obtained by download — "a game can be
+  downloaded again", "incomplete file — download it again" — now says
+  "reinstalled" and "replace it". Romule takes no position on where your files
+  came from, and its interface should not either.
+
 ### Security
 
 - **Stored XSS through filenames.** Values interpolated into inline event
@@ -52,6 +68,13 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Fixed
 
+- **Five strings stayed in French in an English interface**, all on the path a
+  brand-new user takes: the "no console" header, its two hints, the empty
+  library, and the state shown on **every** card when no console is connected.
+  They were never caught because the test machine always had a console
+  attached, so those branches never rendered. One was the same structural
+  fault as an earlier one: the `cnom` class marked "never translate" because it
+  carries the console's name, reused for a literal label that must be.
 - **The service died at startup on an unwritable data folder**, on a raw
   traceback from `mkdir`. That is the most common containerised deployment
   mistake — a host folder bind-mounted into the container belongs to the host
