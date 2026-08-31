@@ -1,10 +1,10 @@
 """Ligne de commande minimale, adossee au meme moteur que l'interface web.
 
-    python3 switch.py                 lance l'interface web (defaut)
-    python3 switch.py scan            affiche l'inventaire
-    python3 switch.py convert [--only MOTIF] [--dry-run]
-    python3 switch.py push [--only MOTIF]     envoie vers le handheld adb
-    python3 switch.py test            joue les tests unitaires
+    python3 -m romule                 lance l'interface web (defaut)
+    python3 -m romule scan            affiche l'inventaire
+    python3 -m romule convert [--only MOTIF] [--dry-run]
+    python3 -m romule push [--only MOTIF]     envoie vers le handheld adb
+    python3 -m romule test            joue les tests unitaires
 """
 
 import argparse
@@ -156,7 +156,7 @@ def _verifier_racine():
     print("La ludotheque designe %s :" % souci)
     print("    %s" % config.ROOT)
     print("Indique un dossier de donnees explicite :")
-    print("    ROMULE_ROOT=/chemin/vers/ta/ludotheque python3 switch.py")
+    print("    ROMULE_ROOT=/chemin/vers/ta/ludotheque python3 -m romule")
     sys.exit(1)
 
 
@@ -224,15 +224,25 @@ def _verifier_jeton():
     mefie pas.
     """
     if config.TOKEN and config.TOKEN.strip().lower() in config.JETONS_INTERDITS:
-        print("SWITCH_TOKEN vaut encore une valeur d'exemple : %r" % config.TOKEN)
+        print("ROMULE_TOKEN vaut encore une valeur d'exemple : %r" % config.TOKEN)
         print("Genere le tien :")
         print("    python3 -c \"import secrets; print(secrets.token_urlsafe(32))\"")
         sys.exit(1)
 
 
+def _signaler_anciennes_variables():
+    """Les noms SWITCH_* marchent encore, mais ils ne sont plus les bons."""
+    if not config.ANCIENNES_UTILISEES:
+        return
+    noms = sorted(set(config.ANCIENNES_UTILISEES))
+    print("Variables d'environnement a renommer : %s" % ", ".join(noms))
+    print("     %s" % ", ".join(n.replace("SWITCH_", "ROMULE_") for n in noms))
+
+
 def main(argv):
     _verifier_racine()
     _verifier_jeton()
+    _signaler_anciennes_variables()
     _signaler_outils()
     parser = argparse.ArgumentParser(
         prog="romule",

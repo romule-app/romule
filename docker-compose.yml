@@ -20,8 +20,8 @@ services:
 
     environment:
       # Emplacement de la ludotheque DANS le conteneur (ne pas changer).
-      SWITCH_ROOT: /library
-      SWITCH_WEB_PORT: "8787"
+      ROMULE_ROOT: /library
+      ROMULE_WEB_PORT: "8787"
 
       # Service accessible 24/7 : protege-le par un jeton.
       #
@@ -30,14 +30,14 @@ services:
       # ouverte pour quiconque a lu le README. Genere le tien :
       #     python3 -c "import secrets; print(secrets.token_urlsafe(32))"
       # puis decommente la ligne suivante en y collant le resultat.
-      # SWITCH_TOKEN: ""
+      # ROMULE_TOKEN: ""
       #
       # L'adresse a ouvrir devient http://<serveur>:8787/?token=<ton-jeton>
       # (le navigateur le memorise ensuite).
 
-      # Sans jeton, mets plutot SWITCH_LAN=1 pour ouvrir l'acces au reseau
+      # Sans jeton, mets plutot ROMULE_LAN=1 pour ouvrir l'acces au reseau
       # local — a reserver a un reseau de confiance.
-      # SWITCH_LAN: "1"
+      # ROMULE_LAN: "1"
 
       TZ: Europe/Paris
 

@@ -25,9 +25,29 @@ def _racine_par_defaut():
     return Path(base or (Path.home() / ".local" / "share")) / "romule"
 
 
-ROOT = Path(os.environ.get("ROMULE_ROOT")
-            or os.environ.get("SWITCH_ROOT")
-            or _racine_par_defaut()).expanduser().resolve()
+# Les variables du projet s'appellent ROMULE_*. Les anciennes, SWITCH_*, sont
+# encore lues : quelqu'un qui met a jour ne doit pas voir son service s'arreter
+# parce qu'un nom a change. Elles sont signalees une fois au demarrage.
+ANCIENNES_UTILISEES = []
+
+
+def env(nom, defaut=""):
+    """Valeur de ROMULE_<nom>, ou de SWITCH_<nom> si elle seule est posee."""
+    v = os.environ.get("ROMULE_" + nom)
+    if v is not None:
+        return v
+    v = os.environ.get("SWITCH_" + nom)
+    if v is not None:
+        ANCIENNES_UTILISEES.append("SWITCH_" + nom)
+        return v
+    return defaut
+
+
+def env_bool(nom):
+    return env(nom, "").strip().lower() in ("1", "true", "yes", "on")
+
+
+ROOT = Path(env("ROOT") or _racine_par_defaut()).expanduser().resolve()
 
 
 def racine_douteuse(chemin=None):
@@ -65,14 +85,14 @@ PLAYABLE = {".nsp", ".xci"}
 # Dossiers a ne jamais parcourir pendant le scan de la ludotheque.
 IGNORE_DIRS = {"_corbeille", "_import", "_covers", "_saves", "romule", ".git"}
 
-PORT = int(os.environ.get("SWITCH_WEB_PORT", "8787"))
+PORT = int(env("WEB_PORT", "8787"))
 
 # Deploiement en service (NAS, Docker) : regles fixees par l'environnement.
-#   SWITCH_LAN=1     autorise les appareils du reseau des le demarrage
-#   SWITCH_TOKEN=... exige ce jeton pour tout acces distant (recommande 24/7)
-#   SWITCH_ROOT=...  emplacement de la ludotheque
-ENV_LAN = os.environ.get("SWITCH_LAN", "").strip().lower() in ("1", "true", "yes", "on")
-TOKEN = os.environ.get("SWITCH_TOKEN", "").strip()
+#   ROMULE_LAN=1     autorise les appareils du reseau des le demarrage
+#   ROMULE_TOKEN=... exige ce jeton pour tout acces distant (recommande 24/7)
+#   ROMULE_ROOT=...  emplacement de la ludotheque
+ENV_LAN = env_bool("LAN")
+TOKEN = env("TOKEN").strip()
 
 # Adresses des reverse proxys autorises a parler au nom de leurs clients.
 # Sans cette declaration, un en-tete `X-Forwarded-For` ne prouve rien :
@@ -82,31 +102,34 @@ TOKEN = os.environ.get("SWITCH_TOKEN", "").strip()
 # Plafond d'un fichier depose par le navigateur. Genereux : une image Switch
 # depasse couramment 15 Gio. Mais un plafond genereux reste un plafond — sans
 # lui, tout appareil autorise pouvait remplir le disque de l'hote.
-TELEVERSEMENT_MAX = int(os.environ.get("ROMULE_UPLOAD_MAX", 64 * 2 ** 30))
+TELEVERSEMENT_MAX = int(env("UPLOAD_MAX", 64 * 2 ** 30))
 # On refuse aussi d'ecrire si le disque tomberait sous ce seuil.
-DISQUE_MARGE = int(os.environ.get("ROMULE_DISK_MARGIN", 2 * 2 ** 30))
+DISQUE_MARGE = int(env("DISK_MARGIN", 2 * 2 ** 30))
 
 # Jetons d'exemple : les laisser en place revient a n'avoir aucun jeton, et
 # c'est le defaut que prend quiconque copie le fichier compose sans le lire.
 # Emplacement de prod.keys. Il etait fige a ~/.switch/prod.keys, ce qui ne
 # survit ni a un conteneur tournant sous un autre utilisateur, ni a quelqu'un
 # qui range ses cles ailleurs.
-CLES = Path(os.environ.get("ROMULE_KEYS")
-            or os.environ.get("SWITCH_KEYS")
-            or (Path.home() / ".switch" / "prod.keys")).expanduser()
+def _cles_par_defaut():
+    """~/.romule/prod.keys, ou l'ancien ~/.switch/prod.keys s'il existe encore.
+
+    Changer un emplacement par defaut sans regarder l'ancien, c'est casser
+    l'installation de ceux qui mettent a jour.
+    """
+    neuf = Path.home() / ".romule" / "prod.keys"
+    ancien = Path.home() / ".switch" / "prod.keys"
+    return ancien if (ancien.exists() and not neuf.exists()) else neuf
+
+
+CLES = Path(env("KEYS") or _cles_par_defaut()).expanduser()
 
 # fuite:ok cette liste EST le garde-fou contre ces valeurs : elle doit les citer
 JETONS_INTERDITS = {"change-moi", "changeme", "change-me", "secret", "token",
                     "colle-le-ici", "a-changer", "tondejeton"}
 
-PROXYS_CONFIANCE = {a.strip() for a in
-                    (os.environ.get("ROMULE_TRUSTED_PROXIES")
-                     or os.environ.get("SWITCH_TRUSTED_PROXIES", "")).split(",")
+PROXYS_CONFIANCE = {a.strip() for a in env("TRUSTED_PROXIES").split(",")
                     if a.strip()}
-
-
-def _bool_env(name):
-    return os.environ.get(name, "").strip().lower() in ("1", "true", "yes", "on")
 
 # titledb : liste ordonnee, on essaie chaque miroir jusqu'au premier qui repond.
 VERSIONS_URLS = [

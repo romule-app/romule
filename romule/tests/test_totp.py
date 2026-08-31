@@ -27,8 +27,8 @@ def _port_libre():
 RACINE = tempfile.mkdtemp(prefix="ludo-totp-")
 PORT = os.environ.get("LUDO_PORT_TOTP") or _port_libre()
 BASE = "http://127.0.0.1:" + PORT
-srv = subprocess.Popen([sys.executable, "switch.py"], cwd=RACINE_PROJET,
-                       env=dict(os.environ, SWITCH_ROOT=RACINE, SWITCH_WEB_PORT=PORT, SWITCH_NO_BROWSER="1"),
+srv = subprocess.Popen([sys.executable, "-m", "romule", "serve"], cwd=RACINE_PROJET,
+                       env=dict(os.environ, ROMULE_ROOT=RACINE, ROMULE_WEB_PORT=PORT, ROMULE_NO_BROWSER="1"),
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 pot = http.cookiejar.CookieJar()
 op = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(pot))

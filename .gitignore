@@ -1,7 +1,7 @@
 # ============================================================================
 # Ce depot ne contient QUE du code. Les donnees d'une ludotheque — jeux,
 # jaquettes, sauvegardes, comptes, cles de console — vivent ailleurs, dans le
-# dossier designe par ROMULE_ROOT / SWITCH_ROOT.
+# dossier designe par ROMULE_ROOT.
 #
 # Les motifs sont volontairement LARGES et places en tete : ce fichier existe
 # pour qu'un fichier personnel ne puisse pas se glisser dans un commit, pas

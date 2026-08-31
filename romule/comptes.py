@@ -176,7 +176,7 @@ def _normaliser(mdp):
 # Deux a la fois : assez pour ne pas ralentir un usage normal, assez peu pour
 # que le pire cas reste borne.
 _PLACES_SCRYPT = threading.BoundedSemaphore(
-    int(os.environ.get("ROMULE_SCRYPT_PARALLELE", "2")))
+    int(config.env("SCRYPT_PARALLELE", "2")))
 
 
 def hacher(mdp):

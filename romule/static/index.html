@@ -245,6 +245,16 @@
         <h3 class="sectitre">Ta console</h3>
         <p class="sectxt">Comment l'outil la rejoint, et où elle range ses jeux.</p>
 
+      <!-- Le profil d'emulateur decide de TOUS les chemins sur la console :
+           il vient donc avant le reste de la section, et non enfoui plus bas. -->
+      <div class="setgroup">
+        <div class="setgt">Émulateur</div>
+        <p class="lead" style="margin:0 0 10px">Il détermine où l'outil dépose les
+          jeux et où il lit les sauvegardes. Seul Eden est vérifié sur matériel
+          réel ; les autres profils sont fournis tels quels.</p>
+        <div id="choixemulateur" class="bar"></div>
+      </div>
+
       <div class="setgroup">
         <div class="setgt">Ma console</div>
         <p class="lead" style="margin:0 0 10px">À régler une fois : comment l'outil rejoint
