@@ -2,13 +2,26 @@
 
 Two layers. **Environment variables** cover what must be known before Romule
 starts. Everything else lives in the interface and is stored in
-`_romule-config.json` inside your library folder.
+`_romule-config.json` inside the service data folder.
+
+Romule keeps two folders apart, and the distinction runs through this whole
+page:
+
+- the **data folder** belongs to the service — settings, accounts, cover art,
+  logs, backups. It is fixed by your deployment and has no reason to move.
+- the **library** belongs to you — your games. It usually lives on another
+  disk, and you pick it **from the interface**, not from a compose file.
+
+By default the library *is* the data folder, so a single-folder install keeps
+working exactly as before.
 
 ## Environment variables
 
 | Variable | Default | What it does |
 |---|---|---|
-| `ROMULE_ROOT` | `~/.local/share/romule` | Your library folder. **Set this.** |
+| `ROMULE_ROOT` | `~/.local/share/romule` | Service data folder: settings, accounts, artwork, logs |
+| `ROMULE_LIBRARY` | — | Pins the games folder and **locks it** — the interface can no longer change it |
+| `ROMULE_BASES` | — | Folders the interface may browse, separated like a `PATH`. Unset means everything the process can see. |
 | `ROMULE_WEB_PORT` | `8787` | Port to listen on |
 | `ROMULE_BIND` | see below | Interface to bind to |
 | `ROMULE_TOKEN` | — | Access token; overrides the generated one |
@@ -25,6 +38,14 @@ starts. Everything else lives in the interface and is stored in
 
 `ROMULE_BIND` defaults to `127.0.0.1`, except in a container or once network
 access is enabled — otherwise a published port would reach nothing.
+
+`ROMULE_BASES` is not a sandbox and is not set by default. In a container the
+real boundary is the `volumes:` list, applied by the kernel; on a bare install
+it is the Unix account the service runs as. Jellyfin, Sonarr and qBittorrent
+all work this way. Set `ROMULE_BASES` when you run natively under a broad
+account and want to narrow the browser anyway. When it is set, it bounds both
+what you can browse **and** what you can select — typing a path is not a way
+around it.
 
 !!! info "Old names still work"
     `SWITCH_*` variables are still read, and Romule prints their replacement at
@@ -65,6 +86,7 @@ All of these are edited from the interface. The names are the keys stored in
 
 | Key | Default | Meaning |
 |---|---|---|
+| `library_path` | — | The folder scanned for games. Empty means the data folder. Set from **Settings → Your library → Location**, not by hand. |
 | `local_layout` | `type` | Same idea, on the server side |
 | `systemes_perso` | `[]` | Extra platforms you define yourself |
 | `system_dirs` | `{}` | Folder overrides per platform |
@@ -96,7 +118,10 @@ All of these are edited from the interface. The names are the keys stored in
 
 ## Where the files live
 
-Everything Romule writes sits in the library folder, prefixed with `_`:
+Everything Romule writes is prefixed with `_`, and lands in one of the two
+folders.
+
+In the **data folder** (`ROMULE_ROOT`):
 
 | File | What it holds |
 |---|---|
@@ -105,9 +130,18 @@ Everything Romule writes sits in the library folder, prefixed with `_`:
 | `_romule-lib.log` | Activity log, rotated at 2 MiB, 3 files kept |
 | `_romule-acces.log` | Access log |
 | `_covers/` | Cached cover art |
+| `_sauvegardes/` | Automatic config and account backups |
+
+Next to your **games** (`library_path`):
+
+| File | What it holds |
+|---|---|
 | `_import/` | Drop files here to import them |
 | `_corbeille/` | Trash |
-| `_sauvegardes/` | Automatic config and account backups |
+
+These two follow the games rather than the service on purpose. Setting a game
+aside has to stay a rename: across two filesystems `shutil.move` copies
+instead, which turns discarding one title into several gigabytes of I/O.
 
 !!! warning "Back these up"
     `_romule-config.json` and `_romule-comptes.json` are your settings and your

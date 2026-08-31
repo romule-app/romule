@@ -24,7 +24,13 @@ WORKDIR /app
 COPY romule ./romule
 COPY LICENSE README.md ./
 
-ENV ROMULE_ROOT=/library \
+# /data    : ce qui appartient au SERVICE — configuration, comptes, jaquettes,
+#            journaux, sauvegardes. Volume nomme : jamais melange aux jeux.
+# /library : ce qui appartient a l'UTILISATEUR — ses jeux. Le dossier exact se
+#            choisit dans l'interface ; `ROMULE_BASES` dit seulement ou l'on a
+#            le droit d'aller le chercher.
+ENV ROMULE_ROOT=/data \
+    ROMULE_BASES=/library \
     ROMULE_WEB_PORT=8787 \
     ROMULE_KEYS=/keys/prod.keys \
     PYTHONUNBUFFERED=1
@@ -34,12 +40,13 @@ ENV ROMULE_ROOT=/library \
 # fichiers deposes dans la ludotheque appartiendront donc a l'utilisateur, et
 # non a root sur son propre NAS.
 RUN useradd --uid 1000 --create-home --shell /usr/sbin/nologin romule \
- && mkdir -p /library /keys \
- && chown -R romule:romule /library /keys /app
+ && mkdir -p /data /library /keys \
+ && chown -R romule:romule /data /library /keys /app
 
-# /library : la ludotheque (jeux, _import, _corbeille, _saves...)
+# /data    : etat du service (configuration, comptes, jaquettes, journaux)
+# /library : la ludotheque (jeux, et a cote d'eux _import et _corbeille)
 # /keys    : prod.keys (lecture seule suffit)
-VOLUME ["/library", "/keys"]
+VOLUME ["/data", "/library", "/keys"]
 
 USER romule
 

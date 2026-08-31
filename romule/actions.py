@@ -308,7 +308,7 @@ def import_files(lib, cfg, job, convert_after=True):
     for item in pending:
         src = Path(item["path"])
         dest_sub = _destination_for(item["tid"], src.name, lib.files, cfg)
-        outdir = config.ROOT / dest_sub
+        outdir = config.LUDO / dest_sub
         outdir.mkdir(parents=True, exist_ok=True)
         dest = outdir / src.name
         if dest.exists():
@@ -722,9 +722,9 @@ def install_nand(lib, cfg, job, paths):
 
 def _clean_empty_dirs():
     keep = set(config.LAYOUT_FOLDER.values())
-    dirs = [p for p in config.ROOT.rglob("*") if p.is_dir()]
+    dirs = [p for p in config.LUDO.rglob("*") if p.is_dir()]
     for d in sorted(dirs, key=lambda p: len(p.parts), reverse=True):
-        rel = d.relative_to(config.ROOT)
+        rel = d.relative_to(config.LUDO)
         if rel.parts[0] in config.IGNORE_DIRS or d.name in keep:
             continue
         try:
@@ -743,7 +743,7 @@ def reorganize_local(lib, cfg, job):
     for f in list(lib.files):
         folder = config.LAYOUT_FOLDER.get(f["type"], "GAMES")
         src = Path(f["path"])
-        dst = config.ROOT / folder / src.name
+        dst = config.LUDO / folder / src.name
         if src.resolve() == dst.resolve():
             job.tick()
             continue

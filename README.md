@@ -44,8 +44,12 @@ point Romule at your library. Nothing else needs configuring.
 ```sh
 git clone https://github.com/romule-app/romule
 cd romule
-ROMULE_ROOT=/path/to/your/library python3 -m romule
+python3 -m romule
 ```
+
+Romule starts on `~/.local/share/romule` and asks you where your games are —
+you pick the folder from the interface. Pass `ROMULE_ROOT` to put its own
+data (settings, accounts, artwork) somewhere else.
 
 Python 3.10 or newer. No install step, no virtualenv, no build — Romule uses
 the standard library only.
@@ -101,7 +105,9 @@ must be known before it starts.
 
 | Variable | Default | What it does |
 |---|---|---|
-| `ROMULE_ROOT` | `~/.local/share/romule` | Your library folder. **Set this.** |
+| `ROMULE_ROOT` | `~/.local/share/romule` | Service data folder: settings, accounts, artwork, logs |
+| `ROMULE_LIBRARY` | — | Pins the games folder and locks it against changes from the interface |
+| `ROMULE_BASES` | — | Folders the interface may browse, separated like a `PATH` |
 | `ROMULE_WEB_PORT` | `8787` | Port to listen on |
 | `ROMULE_BIND` | see below | Interface to bind to |
 | `ROMULE_TOKEN` | — | Access token; overrides the generated one |

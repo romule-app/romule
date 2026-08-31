@@ -34,10 +34,10 @@ class Library:
     def scan(self, deep=True, log=lambda m, n=None: None):
         files = []
         deep = deep and nsztool.available()
-        for p in sorted(config.ROOT.rglob("*")):
+        for p in sorted(config.LUDO.rglob("*")):
             if not p.is_file() or p.suffix.lower() not in config.EXTS:
                 continue
-            rel = p.relative_to(config.ROOT)
+            rel = p.relative_to(config.LUDO)
             if rel.parts and rel.parts[0] in config.IGNORE_DIRS:
                 continue
             tid = titleid.from_name(p.name)
@@ -63,7 +63,7 @@ class Library:
             files.append({
                 "path": str(p),
                 "rel": str(rel),
-                "dir": str(p.parent.relative_to(config.ROOT)),
+                "dir": str(p.parent.relative_to(config.LUDO)),
                 "name": titleid.pretty_name(p.name),
                 "ext": p.suffix.lower().lstrip("."),
                 "tid": tid,

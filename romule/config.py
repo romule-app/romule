@@ -66,8 +66,110 @@ def racine_douteuse(chemin=None):
         return "un depot de code (le code et les jeux doivent rester separes)"
     return ""
 
-TRASH = ROOT / "_corbeille"
-IMPORT = ROOT / "_import"
+# ------------------------------------------------------------- LA LUDOTHEQUE
+# `ROOT` melangeait deux choses qui n'ont pas la meme nature.
+#
+#   * L'ESPACE DE TRAVAIL DU SERVICE — configuration, comptes, journaux,
+#     jaquettes, caches, sauvegardes. Il est fixe par le deploiement : un
+#     volume dans un conteneur, un dossier XDG en natif. Le deplacer, c'est
+#     changer d'installation.
+#   * LA LUDOTHEQUE — les jeux. C'est une donnee d'utilisateur. Elle vit
+#     souvent sur un autre disque, et c'est elle qu'on veut pouvoir designer
+#     depuis l'interface sans editer un fichier compose.
+#
+# Les melanger obligeait a choisir son dossier de jeux par variable
+# d'environnement, et changer d'avis faisait perdre ses comptes au passage.
+# Les outils auto-heberges separent tous les deux : le dossier de donnees vient
+# du deploiement, les bibliotheques s'ajoutent depuis l'ecran de reglages.
+#
+# Par defaut la ludotheque EST la racine : une installation existante ne voit
+# aucune difference, et rien ne se deplace tout seul.
+LUDO_IMPOSEE = bool(env("LIBRARY").strip())
+LUDO = Path(env("LIBRARY").strip() or ROOT).expanduser().resolve()
+
+# Dossiers ou l'interface a le droit d'aller, separes comme un PATH.
+# Vide — le defaut — signifie « tout ce que le processus voit », ce qui est le
+# comportement des outils auto-heberges : en conteneur, la frontiere est le
+# `volumes:` applique par le noyau ; en natif, c'est le compte Unix du service.
+# La declaration reste utile a qui installe en natif sous un compte large.
+#
+# Ce controle vit ICI, et pas dans le module de navigation, parce qu'il ne
+# suffit pas de brider la fenetre qui parcourt : sans lui, il restait possible
+# de SAISIR un chemin hors des bases et de s'y installer. Toutes les
+# operations sur les fichiers suivaient alors la ludotheque en dehors du
+# perimetre declare, et le confinement n'etait qu'une gene a l'affichage.
+BASES = [Path(b).expanduser().resolve()
+         for b in env("BASES").split(os.pathsep) if b.strip()]
+
+
+def dans_les_bases(chemin):
+    """Le chemin est-il dans les bases declarees ? Vrai si aucune ne l'est."""
+    if not BASES:
+        return True
+    c = Path(chemin).resolve()
+    return any(c == b or b in c.parents for b in BASES)
+
+# Problemes rencontres en lisant la configuration, signales au demarrage.
+# Ils ne justifient pas de refuser de demarrer : un chemin devenu invalide —
+# un disque externe debranche — doit laisser le service accessible, sans quoi
+# on ne peut meme plus se connecter pour le corriger.
+PROBLEMES = []
+
+
+def _chemins_ludotheque():
+    """Recalcule ce qui doit suivre les jeux plutot que l'etat du service.
+
+    La corbeille et le dossier d'import vivent A COTE des jeux, pas a cote de
+    la configuration. Sur un autre systeme de fichiers, `shutil.move` cesse
+    d'etre un renommage et recopie : quinze gigaoctets pour ecarter un titre.
+    """
+    global TRASH, IMPORT
+    TRASH = LUDO / "_corbeille"
+    IMPORT = LUDO / "_import"
+
+
+def definir_ludotheque(chemin, creer=False):
+    """Change le dossier scanne. Renvoie "" ou la raison du refus.
+
+    Le refus est toujours motive : ce chemin est saisi par un humain dans une
+    fenetre de reglages, et « echec » sans raison le laisse sans recours.
+    """
+    global LUDO
+    if LUDO_IMPOSEE:
+        return "la ludotheque est imposee par ROMULE_LIBRARY"
+    brut = str(chemin or "").strip()
+    if not brut:
+        # Revenir au defaut est une operation legitime, pas une erreur.
+        LUDO = ROOT
+        _chemins_ludotheque()
+        return ""
+    c = Path(brut).expanduser()
+    if not c.is_absolute():
+        return "il faut un chemin absolu"
+    if creer and not c.exists():
+        try:
+            c.mkdir(parents=True)
+        except OSError as exc:
+            return "creation impossible : %s" % exc
+    if not c.is_dir():
+        return "ce dossier n'existe pas"
+    c = c.resolve()
+    douteux = racine_douteuse(c)
+    if douteux:
+        return "emplacement refuse : %s" % douteux
+    if not dans_les_bases(c):
+        return "hors des dossiers autorises (ROMULE_BASES)"
+    # Romule deplace et convertit des fichiers. Accepter un dossier en lecture
+    # seule, c'est promettre un service qui echouera a la premiere action.
+    if not os.access(c, os.W_OK):
+        return "dossier en lecture seule"
+    LUDO = c
+    _chemins_ludotheque()
+    return ""
+
+
+TRASH = LUDO / "_corbeille"
+IMPORT = LUDO / "_import"
 VCACHE = ROOT / "_cache_versions.txt"
 # Title IDs deja lus a l'interieur des conteneurs. Chaque lecture lance `nsz`,
 # soit un quart de seconde par fichier mal nomme — et ce cout etait paye a
@@ -193,6 +295,9 @@ DEFAULTS = {
     "trash_days": 0,                              # purge auto de la corbeille (0 = jamais)
     "system_dirs": {},                            # nom de dossier par plateforme, si different
     "systemes_perso": [],                         # plateformes ajoutees a la main
+    # Dossier scanne. Vide = la racine du service, c'est-a-dire le comportement
+    # d'avant : personne ne voit son inventaire changer en mettant a jour.
+    "library_path": "",
     # --- authentification : "aucun" (defaut) ou "oidc" (SSO)
     "auth_mode": "aucun",
     "oidc_issuer": "",                            # ex. https://auth.exemple.fr/application/o/ludo/
@@ -226,6 +331,23 @@ def load_config():
     # En service, l'environnement a le dernier mot sur l'ouverture reseau.
     if ENV_LAN or TOKEN:
         cfg["lan_access"] = True
+    # Le dossier des jeux est relu ICI, et pas seulement au demarrage : la
+    # restauration d'une sauvegarde recharge la configuration, et la
+    # ludotheque doit suivre.
+    if not LUDO_IMPOSEE:
+        souci = definir_ludotheque(cfg.get("library_path", ""))
+        if souci:
+            # Le repli doit etre EXPLICITE. Sans lui, un chemin refuse laisse
+            # `LUDO` sur sa valeur precedente : le service continuerait de
+            # travailler sur l'ancienne ludotheque en annoncant la nouvelle.
+            definir_ludotheque("")
+            # On garde la valeur en configuration : l'effacer ferait croire a
+            # l'utilisateur qu'il n'a jamais rien choisi, alors que son disque
+            # est peut-etre simplement debranche.
+            avis = ("Ludotheque « %s » inutilisable (%s) — les jeux sont "
+                    "cherches dans %s" % (cfg.get("library_path", ""), souci, ROOT))
+            if avis not in PROBLEMES:      # `load_config` est appele plusieurs fois
+                PROBLEMES.append(avis)
     return cfg
 
 
