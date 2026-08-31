@@ -14,7 +14,7 @@ import urllib.request
 from pathlib import Path
 
 ICI = Path(__file__).resolve().parent
-os.environ.setdefault("SWITCH_ROOT", tempfile.mkdtemp())
+os.environ.setdefault("ROMULE_ROOT", tempfile.mkdtemp())
 sys.path.insert(0, str(ICI.parent.parent))
 
 PORT = int(os.environ.get("LUDO_PORT_IGDB", "9911"))

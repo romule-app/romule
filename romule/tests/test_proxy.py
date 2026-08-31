@@ -38,9 +38,9 @@ def demarrer(**env):
     racine = tempfile.mkdtemp(prefix="ludo-proxy-")
     port = libre()
     srv = subprocess.Popen(
-        [sys.executable, "switch.py"], cwd=RACINE_PROJET,
-        env=dict(os.environ, SWITCH_ROOT=racine, SWITCH_WEB_PORT=port,
-                 SWITCH_NO_BROWSER="1", **env),
+        [sys.executable, "-m", "romule", "serve"], cwd=RACINE_PROJET,
+        env=dict(os.environ, ROMULE_ROOT=racine, ROMULE_WEB_PORT=port,
+                 ROMULE_NO_BROWSER="1", **env),
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     base = "http://127.0.0.1:" + port
     for _ in range(60):
@@ -89,7 +89,7 @@ try:
     srv.terminate(); srv = None
 
     print("   -- proxy declare de confiance --")
-    autre, base2 = demarrer(SWITCH_TRUSTED_PROXIES="127.0.0.1")
+    autre, base2 = demarrer(ROMULE_TRUSTED_PROXIES="127.0.0.1")
     t("le proxy annonce un client local : accepte",
       appel(base2, "/api/job", {"X-Forwarded-For": "127.0.0.1"}) == 200)
     t("le proxy annonce un client distant : refuse",

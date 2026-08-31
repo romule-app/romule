@@ -348,7 +348,7 @@ function messageLisible(chemin, err) {
   const e = String(err).toLowerCase();
   if (e.includes('route inconnue'))
     return "Cette fonction n'existe pas sur le serveur. Il tourne probablement " +
-           "sur une version plus ancienne : arrête-le et relance python3 switch.py.";
+           "sur une version plus ancienne : arrête-le et relance python3 -m romule.";
   if (e.includes('reseau') || e.includes('failed to fetch'))
     return 'Le serveur ne répond plus. Vérifie qu\'il tourne toujours.';
   if (e.includes('tache est deja en cours'))
@@ -1974,8 +1974,10 @@ function renderConn(d) {
   renderLib();
   const el = $('conn');
   const i = CONN_INFO || {};
-  const vers = (DATA.stats && DATA.stats.versions_age)
-    ? 'base des versions ' + DATA.stats.versions_age : '';
+  const h = DATA.stats ? DATA.stats.versions_h : null;
+  const vers = h == null ? ''
+    : h < 1 ? t('base des versions à l\'instant')
+            : t('base des versions il y a %d h').replace('%d', h);
 
   if (c.kind) {
     const faits = [c.kind === 'usb' ? 'USB' : 'Wi-Fi'];
@@ -3315,6 +3317,33 @@ function fillSettings() {
 }
 
 // ---------------------------------------------------------------- app
+// Les profils viennent de /api/health : le serveur seul sait lesquels sont
+// livres, et lequel est actif.
+function nomEmulateur(cle) {
+  const p = ((HEALTH && HEALTH.profils) || []).find(x => x.cle === cle);
+  return p ? p.nom : (cle || '');
+}
+
+function renderChoixEmulateur() {
+  const el = $('choixemulateur');
+  if (!el || !HEALTH) return;
+  const profils = HEALTH.profils || [];
+  if (!profils.length) { el.innerHTML = ''; return; }
+  const actif = (HEALTH.checks || {}).emulateur || '';
+  // Un `<option>` ne contient que du texte : on ne peut pas y isoler le nom du
+  // profil de sa mention « non verifie ». La phrase est donc assemblee DEJA
+  // traduite, sinon le parcours du DOM cherche « Eden — not verified » comme
+  // une seule cle, qu'aucun catalogue ne contiendra jamais.
+  el.innerHTML = '<select id="selemulateur" onchange="app.choisirEmulateur(this.value)">' +
+    profils.map(x => {
+      const nom = t(x.nom);
+      return '<option value="' + esc(x.cle) + '"' +
+        (x.cle === actif ? ' selected' : '') + '>' +
+        esc(x.verifie ? nom : t('%s (non vérifié)').replace('%s', nom)) +
+        '</option>';
+    }).join('') + '</select>';
+}
+
 const app = {
   tab(name) {
     // On note ou en etait la lecture avant de changer d'onglet : revenir des
@@ -3947,6 +3976,7 @@ const app = {
     // signifierait mentir des que l'hebergeur le change.
     TELEVERSEMENT_MAX = ((HEALTH || {}).checks || {}).televersement_max || 0;
     const vu = localStorage.getItem('onboard-vu') === '1';
+    renderChoixEmulateur();
     if (force || (HEALTH.first_run && !vu)) renderOnboard();
     return HEALTH;
   },
@@ -3966,6 +3996,126 @@ const app = {
     // Le nom du paquet Android differe d'une version a l'autre : on demande a
     // la console lequel est reellement installe, plutot que de le deviner.
     try { await api('/api/emulateur-detecter', {}); } catch (e) { /* console absente */ }
+    await this.checkHealth(true);
+  },
+
+  // ---- assistant de premier demarrage ------------------------------------
+  onbPrec() { onbAller(ONB.i - 1); },
+  onbSuiv() { onbAller(ONB.i + 1); },
+  onbAller(i) { onbAller(i); },
+
+  // Compter les jeux par plateforme, c'est la seule facon de savoir si le
+  // dossier indique est le bon. Un chemin accepte sans rien dedans est un
+  // chemin faux qu'on ne decouvre qu'une heure plus tard.
+  async onbScanner() {
+    ONB.occupe = true; renderOnboard();
+    let lib = {}, sys = {};
+    try {
+      [lib, sys] = await Promise.all([api('/api/scan'), api('/api/systems')]);
+    } finally {
+      ONB.occupe = false;
+    }
+    const stats = lib.stats || {};
+    const plateformes = [];
+    let total = 0;
+    (sys.systems || []).forEach(x => {
+      // Les jeux Switch ne sont pas comptes par `systems` : ils viennent de
+      // l'inventaire, seul a savoir distinguer un jeu de sa mise a jour.
+      const n = x.engine === 'switch' ? (stats.base || 0) : (x.count || 0);
+      if (n > 0) { plateformes.push({nom: x.name, n: n}); total += n; }
+    });
+    plateformes.sort((a, b) => b.n - a.n);
+    ONB.resultatScan = {
+      total: total, plateformes: plateformes,
+      extensions: (sys.extensions || []).length,
+    };
+    if (total) {
+      DATA = lib; GAMES = groupGames(); renderLib();
+    }
+    renderOnboard();
+  },
+
+  async onbCreerCompte() {
+    const mail = ($('onb-mail').value || '').trim();
+    const mdp = $('onb-mdp').value || '';
+    const msg = $('onb-mdp-msg');
+    if (!mail || !mdp) {
+      msg.textContent = t('Renseigne une adresse et un mot de passe.');
+      return;
+    }
+    const r = await api('/api/compte-creer', {email: mail, mdp: mdp}, true);
+    if (r.error) { msg.textContent = r.error; return; }
+    toast('Compte administrateur créé.', 'ok');
+    await this.checkHealth(true);
+  },
+
+  // Enregistrer sans verifier, c'est laisser l'utilisateur decouvrir dans un
+  // mois que sa cle etait mal collee. On demande donc une jaquette tout de
+  // suite, sur un jeu qu'il vient de scanner.
+  async onbTesterFiches() {
+    const sgdb = ($('onb-sgdb').value || '').trim();
+    const cid = ($('onb-igdb-id').value || '').trim();
+    const sec = ($('onb-igdb-secret').value || '').trim();
+    ONB.testJaquettes = t('Vérification…');
+    const msg = $('onb-fiches-msg');
+    if (msg) msg.textContent = ONB.testJaquettes;
+    if (sgdb) {
+      await this.saveField('steamgriddb_key', sgdb);
+      await this.saveField('cover_provider', 'steamgriddb');
+    }
+    if (cid) await this.saveField('igdb_client_id', cid);
+    if (sec) await this.saveField('igdb_client_secret', sec);
+    const dits = [];
+    if (sgdb) {
+      const r = await api('/api/sgdb-test', {}, true);
+      dits.push('SteamGridDB : ' + (r.message || (r.ok ? t('clé acceptée') : t('refusée'))));
+    }
+    if (cid && sec) {
+      const r = await api('/api/igdb-test', {}, true);
+      dits.push('IGDB : ' + (r.ok ? t('accès accepté') : (r.message || t('refusé'))));
+    }
+    ONB.testJaquettes = dits.length ? dits.join(' — ')
+      : t('Rien à vérifier : les deux champs sont vides.');
+    renderOnboard();
+  },
+
+  // La connexion sans fil a deja son assistant complet dans les reglages : le
+  // refaire ici en plus petit ne servirait qu'a en avoir deux a maintenir.
+  // « Ce que la console contient deja » est la premiere question qu'on se pose
+  // une fois branche, et la seule qui evite de reimporter ce qui y est deja.
+  async onbScannerConsole() {
+    ONB.occupe = true; renderOnboard();
+    try {
+      ONB.consoleScan = await api('/api/device-games', {});
+    } finally {
+      ONB.occupe = false;
+    }
+    renderOnboard();
+  },
+
+  async onbChercherConsole() {
+    ONB.occupe = true; renderOnboard();
+    let etat = {};
+    try {
+      etat = await api('/api/device');
+      if (etat.state !== 'ok') {
+        const dec = await api('/api/wifi-discover');
+        const trouve = (dec.found || [])[0];
+        if (trouve) await api('/api/wifi-connect', {addr: trouve});
+      }
+      etat = await api('/api/device');
+      if (etat.state === 'ok') await api('/api/device-detect-dir', {});
+    } finally {
+      ONB.occupe = false;
+    }
+    if (etat.state === 'ok') toast('Console trouvée.', 'ok');
+    else {
+      this.closeOnboard();
+      this.tab('settings');
+      voirSectionReglages('sec-console');
+      this.togglePair();
+      return;
+    }
     await this.checkHealth(true);
   },
 
@@ -4927,134 +5077,219 @@ function renderManifest(r) {
 // l'utilisateur qu'il lui manque quelque chose qu'il a deja fait.
 let HEALTH = null;
 
-function onboardSteps(h) {
-  const c = h.checks || {};
-  const etapes = [];
+/* ============================================================================
+   PREMIER DEMARRAGE
+   ----------------------------------------------------------------------------
+   Un parcours, pas une liste de controles. La version precedente affichait sept
+   diagnostics d'un bloc : l'utilisateur les lisait tous, n'en comprenait aucun,
+   et n'avait rien a faire dessus.
 
-  // --- 1. l'acces, avant tout le reste --------------------------------------
-  // Un service joignable par le reseau et sans authentification est le defaut
-  // le plus grave qu'une installation neuve puisse avoir, et c'est aussi celui
-  // qu'on ne remarque pas : tout fonctionne. Il passe donc en tete, et il est
-  // le seul a etre annonce comme grave.
-  if (c.expose) {
-    const protege = c.auth_mode !== 'aucun' || c.token;
-    etapes.push({
-      grave: !protege, ok: protege, titre: 'Accès protégé',
-      bon: c.token ? 'Un jeton est exigé pour les accès distants.'
-                   : 'L\'authentification est active.',
-      ko: 'Ce serveur écoute sur le réseau et n\'importe qui peut l\'utiliser.',
-      aide: 'Crée un compte : le premier créé devient administrateur. '
-          + 'Ou lance le service avec un jeton (SWITCH_TOKEN).',
-      action: c.comptes ? null
-            : {libelle: 'Créer un compte', faire: 'app.allerComptes()'},
-    });
-  }
+   Ici, une etape a la fois, chacune avec une action reelle et un statut :
+   OBLIGATOIRE ou FACULTATIF. Ce qui est propre a une console — emulateur,
+   cles de dechiffrement, dossiers distants — n'y figure pas : cela se regle
+   plus tard, quand on sait de quoi il s'agit. Ce qui compte au premier
+   lancement, c'est ou sont les jeux, qui a le droit d'entrer, et de quoi
+   remplir les jaquettes.
+   ========================================================================== */
+let ONB = {i: 0, sens: 1, occupe: false, resultatScan: null,
+           consoleScan: null, testJaquettes: ''};
 
-  // --- 2. l'emulateur : c'est lui qui dicte tous les chemins -----------------
-  const profil = (h.profils || []).find(p => p.cle === c.emulateur)
-              || {nom: c.emulateur || '?', verifie: false};
-  etapes.push({
-    ok: true, titre: 'Émulateur',
-    bon: (traduit(profil.nom) || profil.nom)
-       + (profil.verifie ? ''
-          : ' — ' + (traduit('profil non vérifié sur matériel réel')
-                     || 'profil non vérifié sur matériel réel')),
-    ko: '', aide: '',
-    choix: {
-      valeurs: (h.profils || []).map(p => ({
-        // Le suffixe est une chaine a part : colle au nom du profil, il
-        // formait une phrase absente du catalogue et restait en francais.
-        // Nom ET suffixe traduits separement, puis assembles : la traduction
-        // porte sur un noeud de texte entier, et « Autre émulateur (not
-        // verified) » n'est une entree d'aucun catalogue.
-        v: p.cle,
-        t: (traduit(p.nom) || p.nom)
-           + (p.verifie ? '' : ' (' + (traduit('non vérifié') || 'non vérifié') + ')')})),
-      actuel: c.emulateur, faire: 'app.choisirEmulateur(this.value)',
+function onbEtapes(h) {
+  const c = (h && h.checks) || {};
+  return [
+    {
+      cle: 'bienvenue', titre: 'Bienvenue dans Romule', requis: null,
+      sous: 'Trois minutes pour mettre ta ludothèque en route.',
+      corps: () =>
+        '<p class="onbp">Romule range et transfère une bibliothèque de jeux que ' +
+        'tu possèdes déjà. Il ne télécharge aucun jeu et ne fournit aucune clé.</p>' +
+        '<ul class="onbliste">' +
+        '<li><b>Ta bibliothèque</b><span class="onbdesc">Où sont tes fichiers, ' +
+          'et ce qu\'on y trouve.</span></li>' +
+        '<li><b>Ton accès</b><span class="onbdesc">Qui a le droit d\'ouvrir ' +
+          'cette page.</span></li>' +
+        '<li><b>Les jaquettes</b><span class="onbdesc">Facultatif, mais c\'est ' +
+          'ce qui rend la grille lisible.</span></li>' +
+        '<li><b>Ta console</b><span class="onbdesc">Facultatif, et faisable ' +
+          'plus tard.</span></li>' +
+        '</ul>',
     },
-  });
+    {
+      cle: 'biblio', titre: 'Ta bibliothèque', requis: true,
+      sous: 'Le dossier qui contient tous tes jeux, toutes plateformes confondues.',
+      corps: () => {
+        const r = ONB.resultatScan;
+        return '<p class="onbp">Romule lit ce dossier :</p>' +
+          '<div class="onbchemin">' + esc(h.root || '') + '</div>' +
+          '<p class="onbnote">Pour en désigner un autre, relance le service avec ' +
+          'cette variable d\'environnement :</p>' +
+          '<div class="onbchemin" data-i18n-skip>ROMULE_ROOT=/chemin/vers/ta/ludotheque</div>' +
+          '<p class="onbnote">Le dossier reste à toi : Romule n\'y écrit que ses ' +
+          'propres fichiers, tous préfixés d\'un tiret bas.</p>' +
+          '<button class="go" onclick="app.onbScanner()"' + (ONB.occupe ? ' disabled' : '') +
+          '>' + (ONB.occupe ? 'Lecture…' : 'Analyser le dossier') + '</button>' +
+          (r ? renduScanOnboard(r) : '');
+      },
+      valide: () => !!(ONB.resultatScan && ONB.resultatScan.total > 0),
+      manque: 'Analyse le dossier pour vérifier que tes jeux sont bien vus.',
+    },
+    {
+      cle: 'compte', titre: 'Ton accès', requis: !!c.expose,
+      sous: c.expose
+        ? 'Ce serveur écoute sur le réseau : il lui faut un compte.'
+        : 'Un compte protège l\'accès si tu ouvres un jour Romule au réseau.',
+      corps: () => c.comptes
+        ? '<p class="onbok">Un compte administrateur existe déjà.</p>'
+        : '<p class="onbp">Le premier compte créé devient administrateur : lui ' +
+          'seul pourra changer les réglages et gérer les autres comptes.</p>' +
+          '<div class="onbchamps">' +
+          '<label>Adresse e-mail<input type="email" id="onb-mail" ' +
+            'autocomplete="username" placeholder="toi@exemple.fr"></label>' +
+          '<label>Mot de passe<input type="password" id="onb-mdp" ' +
+            'autocomplete="new-password" placeholder="12 caractères minimum"></label>' +
+          '</div>' +
+          '<button class="go" onclick="app.onbCreerCompte()">Créer le compte</button>' +
+          '<p class="onbnote" id="onb-mdp-msg"></p>',
+      valide: () => !c.expose || c.comptes > 0,
+      manque: 'Crée un compte : sans lui, n\'importe quel appareil du réseau peut tout faire.',
+    },
+    {
+      cle: 'fiches', titre: 'Jaquettes et fiches', requis: false,
+      sous: 'Deux services gratuits remplissent les pochettes et les résumés.',
+      corps: () =>
+        '<p class="onbp">Sans eux, la bibliothèque fonctionne, mais elle ' +
+        'n\'affiche que des noms de fichiers.</p>' +
+        '<div class="onbchamps">' +
+        '<label>Clé SteamGridDB <span class="onbaide">jaquettes — ' +
+          'steamgriddb.com/profile/preferences/api</span>' +
+          '<input type="text" id="onb-sgdb" autocomplete="off"></label>' +
+        '<label>IGDB — Client ID <span class="onbaide">résumés, année, éditeur — ' +
+          'dev.twitch.tv/console/apps</span>' +
+          '<input type="text" id="onb-igdb-id" autocomplete="off"></label>' +
+        '<label>IGDB — Client Secret' +
+          '<input type="password" id="onb-igdb-secret" autocomplete="off"></label>' +
+        '</div>' +
+        '<button class="go" onclick="app.onbTesterFiches()">Enregistrer et tester</button>' +
+        '<p class="onbnote" id="onb-fiches-msg">' + esc(ONB.testJaquettes) + '</p>',
+    },
+    {
+      cle: 'console', titre: 'Ta console', requis: false,
+      sous: 'Facultatif, et faisable à tout moment depuis les réglages.',
+      corps: () => c.device
+        ? '<p class="onbok">' + t('Console reliée en %s.')
+            .replace('%s', c.device === 'wifi' ? 'Wi-Fi' : 'USB') + '</p>' +
+          '<p class="onbnote">Le dossier de jeux repéré sur la console :</p>' +
+          '<div class="onbchemin" data-i18n-skip>' + esc(c.device_dir || '') + '</div>' +
+          '<button class="ghost" onclick="app.onbScannerConsole()"' +
+            (ONB.occupe ? ' disabled' : '') + '>' +
+            (ONB.occupe ? 'Lecture…' : 'Recenser les jeux de la console') + '</button>' +
+          (ONB.consoleScan ? renduScanConsole(ONB.consoleScan) : '')
+        : '<p class="onbp">Romule transfère les jeux vers une console Android par ' +
+          'adb. Branche-la en USB, ou active le débogage sans fil et indique son ' +
+          'adresse.</p>' +
+          (c.adb ? '' : '<p class="onbnote">adb n\'est pas installé sur cette ' +
+             'machine. Pour l\'ajouter :</p>' +
+             '<div class="onbchemin" data-i18n-skip>' + esc(c.remede_adb || '') +
+             '</div>') +
+          '<button class="ghost" onclick="app.onbChercherConsole()"' +
+            (c.adb ? '' : ' disabled') + '>Chercher une console</button>',
+    },
+    {
+      cle: 'fin', titre: 'C\'est prêt', requis: null,
+      sous: 'Le reste se règle depuis les réglages, quand le besoin se présente.',
+      corps: () =>
+        '<ul class="onbliste">' +
+        '<li><b>Jeux compressés</b>' +
+          '<span class="onbdesc">' + (c.nsz
+            ? 'L\'outil nsz est installé : les .nsz et .xcz seront convertis.'
+            : 'Les .nsz et .xcz demandent l\'outil nsz et un fichier prod.keys, ' +
+              'à fournir dans les réglages.') + '</span></li>' +
+        '<li><b>Émulateur</b>' +
+          '<span class="onbdesc">' + t('Romule vise %s par défaut. Réglages → Ta console.')
+            .replace('%s', esc(nomEmulateur(c.emulateur))) + '</span></li>' +
+        '<li><b>Accès à distance</b>' +
+          '<span class="onbdesc">Ouvrir la ludothèque depuis le téléphone ou ' +
+          'l\'extérieur se règle dans Réglages → Accès.</span></li>' +
+        '</ul>',
+    },
+  ];
+}
 
-  // --- 3. la ludotheque ------------------------------------------------------
-  etapes.push({
-    ok: c.library > 0, titre: 'Ta ludothèque',
-    bon: c.library + ' fichier(s) dans ' + h.root,
-    ko: 'Aucun jeu dans ' + h.root,
-    aide: 'Dépose tes jeux dans _import, puis « Ranger et convertir ». '
-        + 'Pour ranger ta ludothèque ailleurs, lance le service avec '
-        + 'ROMULE_ROOT=/chemin/vers/ta/ludotheque.',
-  });
-
-  // --- 4. les outils externes ------------------------------------------------
-  etapes.push({
-    ok: c.nsz, titre: 'Outil de conversion',
-    bon: 'nsz est installé.',
-    ko: 'nsz est absent : les jeux compressés (.nsz, .xcz) ne pourront pas être '
-      + 'convertis. Tout le reste fonctionne.',
-    aide: c.remede_nsz || 'pipx install nsz',
-  });
-  etapes.push({
-    ok: c.adb, titre: 'Lien avec la console',
-    bon: 'adb est disponible.',
-    ko: 'adb est absent : la console ne pourra pas être pilotée.',
-    aide: c.remede_adb || 'installe les platform-tools d\'Android',
-  });
-
-  // --- 5. les cles, seulement si la conversion est possible ------------------
-  // Les annoncer alors que nsz manque donnerait deux alertes pour un seul
-  // probleme, et la seconde ne serait pas actionnable.
-  if (c.nsz) {
-    etapes.push({
-      ok: c.keys, titre: 'Clés de la console',
-      bon: 'prod.keys trouvé.',
-      ko: 'prod.keys est absent : les conversions échoueront.',
-      aide: 'Place le fichier ici : ' + (c.keys_path || '')
-          + '  (ou indique son emplacement avec ROMULE_KEYS)',
-    });
+function renduScanOnboard(r) {
+  if (!r.total) {
+    return '<div class="onbresultat vide"><b>Aucun jeu trouvé.</b>' +
+      '<p class="onbnote">Dépose tes fichiers dans ce dossier, puis relance ' +
+      'l\'analyse.</p><p class="onbnote">' +
+      t('Romule reconnaît %d extensions de fichier.')
+        .replace('%d', r.extensions || 0) + '</p></div>';
   }
+  return '<div class="onbresultat"><b>' +
+    t('%d jeux répartis sur %d plateformes')
+      .replace('%d', r.total).replace('%d', r.plateformes.length) + '</b>' +
+    '<div class="onbpf">' + r.plateformes.map(p =>
+      '<span class="onbpuce"><b>' + p.n + '</b> ' + esc(p.nom) + '</span>').join('') +
+    '</div></div>';
+}
 
-  etapes.push({
-    ok: !!c.device, titre: 'Console connectée',
-    bon: 'Console reliée (' + (c.device === 'wifi' ? 'Wi-Fi' : 'USB') + ').',
-    // le catalogue porte « Console reliée (%s). » : le gabarit couvre les deux
-    // valeurs sans avoir a les enumerer
-    ko: 'Aucune console connectée pour l\'instant.',
-    aide: 'Branche-la en USB, ou connecte-la sans fil depuis les réglages. '
-        + 'Tu peux aussi le faire plus tard.',
-  });
-  return etapes;
+function renduScanConsole(r) {
+  if (!r.total) {
+    return '<div class="onbresultat vide"><b>Aucun jeu sur la console.</b></div>';
+  }
+  return '<div class="onbresultat"><b>' +
+    t('%d jeux sur la console').replace('%d', r.total) + '</b>' +
+    '<p class="onbnote">' + (r.new
+      ? t('%d ne sont pas encore dans ta bibliothèque.').replace('%d', r.new)
+      : 'Tous sont déjà dans ta bibliothèque.') + '</p></div>';
+}
+
+function onbAller(i) {
+  const etapes = onbEtapes(HEALTH);
+  const cible = Math.max(0, Math.min(etapes.length - 1, i));
+  ONB.sens = cible >= ONB.i ? 1 : -1;
+  ONB.i = cible;
+  renderOnboard();
 }
 
 function renderOnboard() {
   const el = $('onboard');
   if (!HEALTH) { el.classList.remove('open'); return; }
-  const steps = onboardSteps(HEALTH);
-  const graves = steps.filter(s => s.grave).length;
-  const restants = steps.filter(s => !s.ok && !s.choix).length;
-  const intro = graves
-    ? 'Un point demande ton attention avant d\'aller plus loin.'
-    : (restants ? 'Il reste ' + restants + ' point(s) à regarder — rien de bloquant '
-                + 'pour explorer.'
-                : 'Tout est prêt, bonne partie !');
-  el.innerHTML = '<div class="obox">' +
-    '<h2 class="obt">Bienvenue dans Romule</h2>' +
-    '<p class="lead">' + esc(intro) + '</p>' +
-    '<ol class="osteps">' + steps.map((s, i) =>
-      '<div class="ostep ' + (s.grave ? 'grave' : (s.ok ? 'ok' : 'ko')) +
-        '" style="animation-delay:' + (i * 60) + 'ms">' +
-      '<span class="omark">' + (s.grave ? '!' : (s.ok ? '✓' : '!')) + '</span>' +
-      '<div><b>' + esc(s.titre) + '</b>' +
-      '<div class="odesc">' + esc(s.ok ? s.bon : s.ko) + '</div>' +
-      (s.ok || !s.aide ? '' : '<div class="oaide">' + esc(s.aide) + '</div>') +
-      (s.choix ? '<select class="ochoix" onchange="' + s.choix.faire + '">' +
-        s.choix.valeurs.map(o => '<option value="' + esc(o.v) + '"' +
-          (o.v === s.choix.actuel ? ' selected' : '') + '>' + esc(o.t) +
-          '</option>').join('') + '</select>' : '') +
-      (s.action ? '<button class="go omini" onclick="' + s.action.faire + '">' +
-        esc(s.action.libelle) + '</button>' : '') +
-      '</div></div>').join('') +
-    '</ol><div class="bar" style="justify-content:flex-end;margin:0">' +
-    '<button class="ghost" onclick="app.closeOnboard()">Passer</button>' +
-    '<button class="go" onclick="app.closeOnboard()">Commencer</button></div></div>';
+  const etapes = onbEtapes(HEALTH);
+  ONB.i = Math.max(0, Math.min(etapes.length - 1, ONB.i));
+  const e = etapes[ONB.i];
+  const dernier = ONB.i === etapes.length - 1;
+  const bloque = e.requis && e.valide && !e.valide();
+
+  el.innerHTML = '<div class="obox onbcarte">' +
+    '<div class="onbtete">' +
+      '<span class="onbrang">' + t('Étape %d sur %d')
+        .replace('%d', ONB.i + 1).replace('%d', etapes.length) + '</span>' +
+      // `null` : une etape qui n'attend aucune action ne peut etre ni
+      // obligatoire ni facultative — la dire « facultative » suggere a tort
+      // qu'il y aurait quelque chose a y faire.
+      '<span class="onbbadge ' +
+        (e.requis === null ? 'nul' : e.requis ? 'req' : 'opt') + '">' +
+        (e.requis === null ? 'Pour info' : e.requis ? 'Obligatoire' : 'Facultatif') +
+        '</span>' +
+    '</div>' +
+    '<h2 class="obt">' + esc(e.titre) + '</h2>' +
+    '<p class="lead">' + esc(e.sous) + '</p>' +
+    '<div class="onbcorps" data-sens="' + ONB.sens + '">' + e.corps() + '</div>' +
+    (bloque ? '<p class="onbmanque">' + esc(e.manque || '') + '</p>' : '') +
+    '<div class="onbpied">' +
+      '<button class="ghost" onclick="app.onbPrec()"' +
+        (ONB.i === 0 ? ' disabled' : '') + '>Précédent</button>' +
+      '<div class="onbpoints">' + etapes.map((x, i) =>
+        '<button class="onbpoint' + (i === ONB.i ? ' on' : '') +
+          (i < ONB.i ? ' fait' : '') + '" title="' + esc(x.titre) +
+          '" aria-label="' + esc(x.titre) + '" onclick="app.onbAller(' + i + ')">' +
+        '</button>').join('') + '</div>' +
+      (dernier
+        ? '<button class="go" onclick="app.closeOnboard()">Terminer</button>'
+        : '<button class="go" onclick="app.onbSuiv()"' + (bloque ? ' disabled' : '') +
+          '>Suivant</button>') +
+    '</div>' +
+    '<button class="onbpasser" onclick="app.closeOnboard()">Passer l\'assistant</button>' +
+    '</div>';
   traduireDOM(el);
   el.classList.add('open');
 }

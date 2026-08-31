@@ -179,10 +179,12 @@ class Library:
 
     def stats(self):
         f = self.files
-        age = None
+        # Un age en heures, pas une phrase : la phrase se traduit du cote de
+        # l'interface. Envoyee toute faite, elle restait en francais dans une
+        # interface anglaise, et personne ne pouvait la traduire.
+        heures = None
         if self.versions_at:
-            h = (time.time() - self.versions_at) / 3600
-            age = "il y a %d h" % h if h >= 1 else "a l'instant"
+            heures = int((time.time() - self.versions_at) / 3600)
         return {
             "total": len(f),
             "base": sum(1 for x in f if x["type"] == "BASE"),
@@ -199,7 +201,7 @@ class Library:
             "missing_dlc": sum(len(x.get("missing_dlc", [])) for x in f),
             "bytes": sum(x["size"] for x in f),
             "maxkey": self.maxkey,
-            "versions_age": age,
+            "versions_h": heures,
         }
 
 

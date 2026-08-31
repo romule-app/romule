@@ -5,12 +5,12 @@ import urllib.error, urllib.parse, urllib.request
 RACINE = tempfile.mkdtemp(prefix="ludo-test-")
 PORT = "8811"
 BASE = "http://127.0.0.1:" + PORT
-env = dict(os.environ, SWITCH_ROOT=RACINE, SWITCH_WEB_PORT=PORT, SWITCH_NO_BROWSER="1")
+env = dict(os.environ, ROMULE_ROOT=RACINE, ROMULE_WEB_PORT=PORT, ROMULE_NO_BROWSER="1")
 subprocess.run(["bash", "-c",
                 "lsof -nP -iTCP:%s -sTCP:LISTEN 2>/dev/null | tail -n +2 "
                 "| awk '{print }' | xargs -r kill -9" % PORT])
 time.sleep(0.5)
-srv = subprocess.Popen([sys.executable, "switch.py"], env=env,
+srv = subprocess.Popen([sys.executable, "-m", "romule", "serve"], env=env,
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 atexit.register(lambda: srv.kill())

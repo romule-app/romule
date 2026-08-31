@@ -21,11 +21,10 @@ RUN apt-get update \
 RUN pip install --no-cache-dir nsz
 
 WORKDIR /app
-COPY switch.py ./
 COPY romule ./romule
 
-ENV SWITCH_ROOT=/library \
-    SWITCH_WEB_PORT=8787 \
+ENV ROMULE_ROOT=/library \
+    ROMULE_WEB_PORT=8787 \
     ROMULE_KEYS=/keys/prod.keys \
     PYTHONUNBUFFERED=1
 
@@ -48,8 +47,8 @@ EXPOSE 8787
 # Sonde de sante : le service repond-il ? (interroge en local, donc sans jeton)
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD python3 -c "import os,urllib.request;\
-urllib.request.urlopen('http://127.0.0.1:%s/api/health' % os.environ.get('SWITCH_WEB_PORT','8787'),timeout=4)" \
+urllib.request.urlopen('http://127.0.0.1:%s/api/health' % os.environ.get('ROMULE_WEB_PORT','8787'),timeout=4)" \
   || exit 1
 
 # Le mode service est detecte automatiquement : aucun navigateur n'est ouvert.
-CMD ["python3", "switch.py", "serve"]
+CMD ["python3", "-m", "romule", "serve"]

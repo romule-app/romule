@@ -94,7 +94,7 @@ def serveur():
 def syntaxe():
     titre("syntaxe")
     ok = subprocess.run([sys.executable, "-m", "compileall", "-q",
-                         "romule", "switch.py"], cwd=str(RACINE)).returncode == 0
+                         "romule"], cwd=str(RACINE)).returncode == 0
     print("   Python : %s" % ("OK" if ok else "ECHEC"))
     if _node_present():
         for f in ("app.js", "reactive.js"):
@@ -119,9 +119,9 @@ def _demarrer_serveur():
     """Serveur de test, sur la ludotheque reelle : les tests navigateur ne font
     que LIRE l'interface. Rien n'est ecrit."""
     proc = subprocess.Popen(
-        [sys.executable, "switch.py"], cwd=str(RACINE),
-        env=dict(os.environ, SWITCH_WEB_PORT=str(PORT_NAV),
-                 SWITCH_NO_BROWSER="1"),
+        [sys.executable, "-m", "romule", "serve"], cwd=str(RACINE),
+        env=dict(os.environ, ROMULE_WEB_PORT=str(PORT_NAV),
+                 ROMULE_NO_BROWSER="1"),
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     url = "http://127.0.0.1:%d/" % PORT_NAV
     for _ in range(90):
