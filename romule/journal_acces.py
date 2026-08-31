@@ -16,7 +16,7 @@ from pathlib import Path
 
 from . import config
 
-FICHIER = config.ROOT / "_switch-acces.log"
+FICHIER = config.fichier_etat("_romule-acces.log", "_switch-acces.log")
 TAILLE_MAX = 1 << 20            # 1 Mio, puis rotation
 ARCHIVES = 3
 

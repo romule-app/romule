@@ -1,0 +1,65 @@
+# Changelog
+
+All notable changes to Romule are documented here.
+
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+Romule is at `0.x`: the HTTP API is **not** stable yet, and a minor release may
+change it. Breaking changes are always listed under **Changed** with the reason.
+
+## [Unreleased]
+
+## [0.1.0] — unreleased
+
+First public release. Everything below is new by definition; the list covers
+what the release actually contains rather than how it was built.
+
+### Added
+
+- **Library.** Inventory of a folder you already own, across Nintendo Switch
+  (title IDs, base/update/DLC relationships, missing updates and orphaned DLC)
+  and 22 retro platforms identified per file.
+- **Transfer to an Android handheld** over adb, by USB or Wi-Fi, with pairing
+  assistant, resumable transfers and free-space checks.
+- **Emulator profiles** (`romule/profils/*.json`) for Eden, Yuzu, Sudachi,
+  Citron, Ryujinx and a generic folder-only profile. Only Eden is verified on
+  real hardware; the others are provided as-is and labelled as such.
+- **First-run wizard**: six steps covering the library path with a scan that
+  reports the platforms found, the first account, SteamGridDB and IGDB
+  credentials tested on the spot, and optional console pairing.
+- **Cover art and metadata** from SteamGridDB and IGDB, cached on disk so the
+  grid never waits on the network.
+- **Authentication**: internal accounts (scrypt), TOTP two-factor, and OIDC
+  single sign-on. The first account created becomes the administrator.
+- **Two interface languages**, English and French, switchable at runtime.
+- **Themes** (light, dark, automatic), three cover animations, and a reduced
+  motion setting honoured throughout.
+- **Built-in security audit** (`python3 -m romule.audit`) reporting on the
+  running configuration.
+- **Docker image** with adb, nsz, unar and 7z included, running as a non-root
+  user, plus a `docker-compose.yml`.
+- **Zero runtime dependencies**: Python standard library only, enforced by the
+  test suite.
+
+### Security
+
+- The service binds to `127.0.0.1` unless network access is explicitly enabled.
+- `X-Forwarded-For` and `X-Real-IP` grant nothing unless the operator names
+  their proxies in `ROMULE_TRUSTED_PROXIES`.
+- Account creation and deletion require an administrator; the very first
+  account can only be created from the machine hosting the library.
+- Upload size cap, free-space check, socket timeouts, connection cap and a
+  request rate limiter.
+- Path containment on custom platform folders, file extensions and title IDs.
+
+### Known limitations
+
+- `script-src` still allows `'unsafe-inline'`: 124 inline event handlers
+  depend on it. Documented, and slated for a later release.
+- **No built-in TLS.** Exposing Romule to the internet requires a reverse
+  proxy that terminates HTTPS.
+- Emulator profiles other than Eden are untested on real hardware.
+
+[Unreleased]: https://github.com/romule-app/romule/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/romule-app/romule/releases/tag/v0.1.0

@@ -660,5 +660,7 @@
   "Crée un compte : le premier créé devient administrateur. Ou lance le service avec un jeton (ROMULE_TOKEN).": "Create an account: the first one becomes the administrator. Or start the service with a token (ROMULE_TOKEN).",
   "%s (non vérifié)": "%s (not verified)",
   "base des versions à l'instant": "version database just now",
-  "base des versions il y a %d h": "version database %d h ago"
+  "base des versions il y a %d h": "version database %d h ago",
+  "Code source": "Source code",
+  "Bêta": "Beta"
 }

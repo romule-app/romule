@@ -38,7 +38,7 @@ import unicodedata
 
 from . import config
 
-FICHIER = config.ROOT / "_switch-comptes.json"
+FICHIER = config.fichier_etat("_romule-comptes.json", "_switch-comptes.json")
 PHOTOS = config.ROOT / "_comptes"
 
 # Parametres recommandes par l'OWASP (Password Storage Cheat Sheet) : N=2^17,

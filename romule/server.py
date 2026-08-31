@@ -27,6 +27,7 @@ from . import (actions, audit, auth, comptes, config, covers, device, edenconf,
                sauvegarde, saves,
                scan, systems, titleid, transferts, trash, versions, profils)
 from . import cli
+from . import LICENCE, SOURCE_URL, __version__
 from .jobs import JobRunner
 
 LIB = scan.Library()
@@ -1533,6 +1534,12 @@ def _health():
     conn = device.connection()
     return {
         "ok": True,
+        # La licence AGPL demande qu'un utilisateur qui atteint le service par
+        # le reseau puisse en obtenir le code. Le dire ici le rend lisible par
+        # un outil autant que par l'interface.
+        "version": __version__,
+        "licence": LICENCE,
+        "source": SOURCE_URL,
         "first_run": not config.CONFIG_FILE.exists(),
         "root": str(config.ROOT),
         "checks": {
