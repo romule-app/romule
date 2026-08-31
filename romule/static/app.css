@@ -97,7 +97,14 @@ input[type=radio]{accent-color:var(--amber);cursor:pointer}
 .grow{flex:1;min-width:0}
 .fname{font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* signature : le title ID segmente montre POURQUOI le fichier est classe ainsi */
-.tid{font-family:var(--mono);font-size:11px;color:var(--mute);letter-spacing:.04em}
+/* Deux classes, une seule apparence, deux sens.
+   `.tid` porte une DONNEE — un title ID — que traduire n'aurait aucun sens ;
+   elle figure a ce titre dans CLASSES_DONNEES cote JavaScript.
+   `.mono` porte du TEXTE en petites capitales grises. La confusion entre les
+   deux tenait 49 phrases hors de portee du controle de traduction : elles
+   restaient en francais dans une interface anglaise, sans que rien ne le
+   signale. */
+.tid,.mono{font-family:var(--mono);font-size:11px;color:var(--mute);letter-spacing:.04em}
 .tid b{color:var(--amber);font-weight:700;background:var(--primary-doux);padding:0 2px;border-radius:2px}
 .tag{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.09em;
   padding:2px 6px;border-radius:3px;border:1px solid currentColor;white-space:nowrap}
@@ -329,10 +336,20 @@ select{cursor:pointer}
 .dlg.d-ok{border-color:var(--success-trait)}
 @media (max-width:640px){.dlg .dhead{padding:16px 16px 6px}.dlg .ddet{margin:10px 16px 0}}
 
-/* --------------------------------------------- EmuReady (beta) */
-.beta{display:inline-block;font-family:var(--body);font-size:9.5px;font-weight:700;
-  text-transform:uppercase;letter-spacing:.08em;padding:2px 6px;border-radius:4px;
-  background:var(--info-doux);color:var(--indigo);vertical-align:middle;margin-left:6px}
+/* ------------------------------------------------- PASTILLES DE SECTION
+   Deux pastilles, deux messages qu'il ne faut pas confondre :
+
+     .portee  « ceci ne concerne que telle plateforme » — une information ;
+     .beta    « ceci peut mal se comporter » — une mise en garde.
+
+   Elles partageaient la meme classe. Une portee et un avertissement rendus
+   identiques, c'est apprendre a l'utilisateur a ignorer les deux. */
+.portee,.beta{display:inline-block;font-family:var(--body);font-size:9.5px;
+  font-weight:700;text-transform:uppercase;letter-spacing:.08em;padding:2px 6px;
+  border-radius:4px;vertical-align:middle;margin-left:6px}
+.portee{background:var(--info-doux);color:var(--indigo)}
+.beta{background:var(--primary-doux);color:var(--amber);
+  border:1px solid var(--primary-halo)}
 /* pastille de compatibilite, en bas a droite de la jaquette */
 .erbadge{position:absolute;right:8px;bottom:8px;font-size:10px;font-weight:600;
   padding:3px 8px;border-radius:20px;backdrop-filter:blur(4px);background:var(--capot)}

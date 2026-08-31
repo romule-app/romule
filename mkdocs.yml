@@ -1,0 +1,64 @@
+# Site de documentation, publie sur GitHub Pages par .github/workflows/docs.yml.
+#
+# MkDocs n'est PAS une dependance de Romule : il n'est installe que dans le
+# job de publication. La propriete « zero dependance » porte sur l'execution.
+site_name: Romule
+site_description: Self-hosted manager for the game library you already own
+site_url: https://romule-app.github.io/romule/
+repo_url: https://github.com/romule-app/romule
+repo_name: romule-app/romule
+edit_uri: edit/main/docs/
+copyright: AGPL-3.0-or-later
+
+theme:
+  name: material
+  language: en
+  icon:
+    repo: fontawesome/brands/github
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - search.highlight
+  palette:
+    # Le site suit le theme du lecteur, comme l'application elle-meme.
+    - media: "(prefers-color-scheme)"
+      toggle: { icon: material/brightness-auto, name: Follow system }
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: amber
+      accent: amber
+      toggle: { icon: material/brightness-7, name: Switch to dark }
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: amber
+      accent: amber
+      toggle: { icon: material/brightness-4, name: Switch to light }
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - tables
+  - toc: { permalink: true }
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed: { alternate_style: true }
+
+nav:
+  - Home: index.md
+  - Getting started:
+      - Installation: installation.md
+      - First run: premier-demarrage.md
+      - Your console: console.md
+  - Reference:
+      - Configuration: configuration.md
+      - Emulator profiles: profils.md
+      - Security and exposure: securite.md
+  - Help:
+      - Troubleshooting: depannage.md
+      - Beta features: beta.md
+      - Contributing: contribuer.md
+
+not_in_nav: |
+  images/

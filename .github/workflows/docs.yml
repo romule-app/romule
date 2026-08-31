@@ -1,0 +1,88 @@
+# Site de documentation, publie sur GitHub Pages.
+#
+# Il est CONSTRUIT sur chaque pull request et seulement PUBLIE depuis `main` :
+# un lien casse doit se voir avant la fusion, pas apres.
+#
+# `--strict` transforme tout avertissement de MkDocs en echec. Sans lui, un
+# lien interne mort passe en silence et se decouvre par un lecteur.
+#
+# MkDocs et Material sont epingles A LA VERSION, et pas seulement au majeur :
+# l'equipe de Material annonce que MkDocs 2.0 supprimera le systeme de
+# greffons, sans chemin de migration. Une construction non epinglee casserait
+# le jour de cette publication.
+name: Documentation
+
+on:
+  push:
+    branches: [main]
+    paths: ["docs/**", "mkdocs.yml", ".github/workflows/docs.yml"]
+  pull_request:
+    paths: ["docs/**", "mkdocs.yml", ".github/workflows/docs.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  construire:
+    name: Construction (stricte)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with: { python-version: "3.12" }
+
+      - name: Installation
+        run: pip install --quiet mkdocs==1.6.1 mkdocs-material==9.7.7
+
+      - name: Construction
+        run: mkdocs build --strict
+
+      # Verifier que la reference de configuration decrit bien les cles qui
+      # existent : une documentation qui derive du code est pire qu'absente.
+      - name: La reference correspond-elle au code ?
+        run: |
+          python - <<'PY'
+          import re, sys, pathlib
+          sys.path.insert(0, ".")
+          from romule import config
+          doc = pathlib.Path("docs/configuration.md").read_text()
+          cites = set(re.findall(r"`([a-z][a-z_]+)`", doc))
+          manquantes = sorted(set(config.DEFAULTS) - cites)
+          for k in manquantes:
+              print("::error title=Reglage non documente::%s existe dans le code "
+                    "mais pas dans docs/configuration.md" % k)
+          print("%d reglages, %d documentes." %
+                (len(config.DEFAULTS), len(config.DEFAULTS) - len(manquantes)))
+          sys.exit(1 if manquantes else 0)
+          PY
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with: { name: site, path: site/ }
+
+  publier:
+    name: Publication sur GitHub Pages
+    needs: construire
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.pages.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with: { python-version: "3.12" }
+      - run: pip install --quiet mkdocs==1.6.1 mkdocs-material==9.7.7
+      - run: mkdocs build --strict
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d  # v6.0.0
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9  # v5.0.0
+        with: { path: site/ }
+      - id: pages
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128  # v5.0.0

@@ -25,9 +25,17 @@ let SCONSOLE_TITRES = {};       // titre officiel par chemin, quand il est connu
 let SALL = [];                  // toutes les plateformes, pour la vue d'ensemble
 
 const $ = id => document.getElementById(id);
+// Les unites binaires ne s'ecrivent pas pareil partout : « Gio » en francais,
+// « GiB » en anglais. Elles apparaissent sur CHAQUE jaquette — c'etait le
+// francais le plus visible de toute l'interface anglaise.
+const UNITES = {
+  fr: ['o', 'Kio', 'Mio', 'Gio', 'Tio'],
+  en: ['B', 'KiB', 'MiB', 'GiB', 'TiB'],
+};
 const fmt = b => {
   if (b == null) return '?';
-  const u = ['o', 'Kio', 'Mio', 'Gio', 'Tio']; let i = 0;
+  const u = UNITES[LANGUE] || UNITES.en;
+  let i = 0;
   while (b >= 1024 && i < 4) { b /= 1024; i++; }
   return (i ? b.toFixed(1) : b) + ' ' + u[i];
 };
@@ -239,6 +247,22 @@ function traduit(texte) {
     }
   }
   return null;
+}
+
+// Un nombre suivi de son unite : « 15 jeu(x) ». Ecrit `n + ' jeu(x)'`, cela
+// formait une chaine dont le NOMBRE fait partie — donc introuvable dans un
+// catalogue, donc jamais traduite. Le nombre reste dehors, l'unite seule est
+// une cle.
+function nb(n, unite) {
+  return n + ' ' + t(unite);
+}
+
+// Une phrase entiere ou le nombre est au milieu. `%d` est remplace dans
+// l'ordre par chaque valeur donnee.
+function phrase(modele, ...valeurs) {
+  let sortie = t(modele);
+  valeurs.forEach(v => { sortie = sortie.replace('%d', v); });
+  return sortie;
 }
 
 function t(texte, defaut) {
@@ -1418,7 +1442,8 @@ function carteOverlay({g, e}) {
     bouts.push('<span class="ov ovlangue" title="' + esc(lg.long) +
       '" aria-label="' + esc(lg.long) + '">' + esc(lg.court) + '</span>');
   }
-  if (g.updCount) bouts.push('<span class="ov">' + (g.updCount > 1 ? g.updCount + '&nbsp;MAJ' : 'MAJ') + '</span>');
+  if (g.updCount) bouts.push('<span class="ov">'
+    + (g.updCount > 1 ? g.updCount + '&nbsp;' + t('MAJ') : t('MAJ')) + '</span>');
   if (g.dlcCount) bouts.push('<span class="ov">' + g.dlcCount + '&nbsp;DLC</span>');
   return '<span class="ovtaille">' + esc(fmt(g.size)) + '</span>' +
          (bouts.length ? '<span class="ovdroite">' + bouts.join('') + '</span>' : '');
@@ -1552,7 +1577,7 @@ function renderToolbar(tous) {
   if (pop) pop.innerHTML = Object.entries(FAVANCES).map(([k, [lib, fn]]) =>
     '<label class="favrow"><input type="checkbox" ' + (FAV.has(k) ? 'checked ' : '') +
     'onchange="app.toggleFav(\'' + k + '\')"><span class="grow">' + esc(lib) + '</span>' +
-    '<span class="tid">' + tous.filter(fn).length + '</span></label>').join('');
+    '<span class="mono">' + tous.filter(fn).length + '</span></label>').join('');
   const b = $('favbtn');
   if (b) { b.classList.toggle('on', FAV.size > 0);
            b.textContent = FAV.size ? 'Filtres (' + FAV.size + ')' : 'Plus de filtres'; }
@@ -1561,13 +1586,13 @@ function renderToolbar(tous) {
 function renderPager(total, pages, parPage) {
   const el = $('pager');
   if (pages <= 1) {
-    el.innerHTML = '<span class="tid">' + total + ' jeu(x)</span>';
+    el.innerHTML = '<span class="mono">' + nb(total, 'jeu(x)') + '</span>';
     return;
   }
   const de = PAGE * parPage + 1, a = Math.min(total, (PAGE + 1) * parPage);
   el.innerHTML =
     '<button class="ghost" ' + (PAGE ? '' : 'disabled') + ' onclick="app.page(-1)">‹ Précédent</button>' +
-    '<span class="tid">' + de + '–' + a + ' sur ' + total + '</span>' +
+    '<span class="mono">' + de + '–' + a + ' sur ' + total + '</span>' +
     '<button class="ghost" ' + (PAGE < pages - 1 ? '' : 'disabled') + ' onclick="app.page(1)">Suivant ›</button>';
 }
 
@@ -1588,17 +1613,17 @@ function renderActionBar() {
     boutons.push(['go', 'appliquer', 'Envoyer vers la console',
                   c.envoyer.length ? fmt(c.poids) : c.activer.length + ' MAJ/DLC']);
   if (c.importer.length)
-    boutons.push(['go', 'appliquer', 'Copier vers le serveur', c.importer.length + ' fichier(s)']);
+    boutons.push(['go', 'appliquer', 'Copier vers le serveur', nb(c.importer.length, 'fichier(s)')]);
   if (surConsole)
-    boutons.push(['warn', 'supprimerConsole', 'Retirer de la console', surConsole + ' fichier(s)']);
+    boutons.push(['warn', 'supprimerConsole', 'Retirer de la console', nb(surConsole, 'fichier(s)')]);
   if (c.local.length)
-    boutons.push(['', 'corbeilleSelection', 'Mettre à la corbeille', c.local.length + ' fichier(s)']);
+    boutons.push(['', 'corbeilleSelection', 'Mettre à la corbeille', nb(c.local.length, 'fichier(s)')]);
 
   // Le compteur est ecrit UNE fois puis mis a jour en place : le reconstruire
   // a chaque clic remplacerait le <b>, et le chiffre sauterait au lieu de
   // defiler.
   const som = $('deploysum');
-  if (!som.firstElementChild) som.innerHTML = '<b>0</b> jeu(x) sélectionné(s)';
+  if (!som.firstElementChild) som.innerHTML = t('<b>0</b> jeu(x) sélectionné(s)');
   chiffreAnime(som.firstElementChild, dsel2.size);
 
   // « Tout cocher » disparait quand tout est deja coche : un bouton qui ne
@@ -1611,8 +1636,8 @@ function renderActionBar() {
   }
   $('actions').innerHTML = boutons.map(([cls, fn, lib, det]) =>
     '<button class="' + cls + '" onclick="app.' + fn + '()">' + esc(lib) +
-    '<span class="tid"> · ' + esc(det) + '</span></button>').join('') ||
-    '<span class="tid">Rien à faire sur cette sélection.</span>';
+    '<span class="mono"> · ' + esc(det) + '</span></button>').join('') ||
+    '<span class="mono">Rien à faire sur cette sélection.</span>';
 }
 
 // ---------------------------------------------------------------- detail jeu
@@ -1673,7 +1698,7 @@ function openGameHtml(g) {
   const libelles = {
     pret:     ['ok',   'Prêt à jouer sur la console'],
     activer:  ['upd',  'Sur la console — voir « Mises à jour » ci-dessous'],
-    envoyer:  ['conv', e.aEnvoyer.length + ' fichier(s) à envoyer sur la console'],
+    envoyer:  ['conv', phrase('%d fichier(s) à envoyer sur la console', e.aEnvoyer.length)],
     importer: ['conv', 'Sur la console seulement — à importer vers le serveur'],
     convert:  ['conv', 'À convertir avant envoi'],
     probleme: ['orph', e.casses.length ? 'Fichier incomplet — à retélécharger'
@@ -1690,7 +1715,7 @@ function openGameHtml(g) {
   const frows = files.map(f =>
     '<div class="frow"><span class="tag t-' + f.type + '">' + f.type + '</span>' +
     '<span class="grow"><div class="fname">' + esc(pretty(f.name)) +
-    (f.version != null ? ' <span class="tid">v' + f.version + '</span>' : '') + '</div></span>' +
+    (f.version != null ? ' <span class="mono">v' + f.version + '</span>' : '') + '</div></span>' +
     (f.converted ? '<span class="flag f-done">converti</span>' : '') +
     '<span class="size">' + fmt(f.size) + '</span>' +
     '<button class="iconbtn" onclick="event.stopPropagation();app.trashFile(\'' + esc(f.path) + '\')">corbeille</button></div>').join('');
@@ -1750,7 +1775,7 @@ function openGameHtml(g) {
     '</div>' +
     majSection(g, e) +
     erSection(g) +
-    '<div class="ssect">Fichiers <span class="tid">' + g.files.length + '</span></div>' +
+    '<div class="ssect">Fichiers <span class="mono">' + g.files.length + '</span></div>' +
     frows + '</div>' +
     '<div class="acts">' + acts.join('') + '</div></div>';
 }
@@ -1782,7 +1807,7 @@ function renderImport(items) {
       '<b>Glisse tes jeux ici</b>' +
       '<span>Switch, GBA, PS2, SNES… l\'outil reconnaît la plateforme et range ' +
       'chaque fichier au bon endroit.</span>' +
-      '<span class="tid">Archives .zip / .7z / .rar acceptées : elles sont décompressées.</span>' +
+      '<span class="mono">Archives .zip / .7z / .rar acceptées : elles sont décompressées.</span>' +
       '</div>';
     if (btn) { btn.disabled = true; btn.textContent = 'Importer'; }
     if (info) info.textContent = '';
@@ -1802,7 +1827,7 @@ function renderImport(items) {
   });
   d.innerHTML = [...groupes.entries()].map(([nom, lot]) =>
     '<div class="dgroupe"><div class="dgtete">' + esc(nom) +
-      '<span class="tid">' + lot.length + ' fichier(s) · ' +
+      '<span class="mono">' + nb(lot.length, 'fichier(s)') + ' · ' +
       fmt(lot.reduce((s, i) => s + (i.size || 0), 0)) + '</span></div>' +
     lot.map(i =>
       '<div class="drow' + (i.type === 'AMBIGU' ? ' aclasser' : '') + '"><span class="tag t-' +
@@ -1858,7 +1883,7 @@ function renduDoublons(r) {
   ]);
   if (r.identiques.length) {
     h += '<h4 class="entretien-t">Fichiers rigoureusement identiques</h4>'
-      + '<p class="tid">Même empreinte : en supprimer un ne perd rien.</p>'
+      + '<p class="mono">Même empreinte : en supprimer un ne perd rien.</p>'
       + '<ul class="entretien-l">' + r.identiques.map(x =>
         '<li>' + fmt(x.taille) + ' × ' + x.fichiers.length + '<br>'
         + x.fichiers.map(f => '<code>' + esc(f) + '</code>').join('<br>') + '</li>').join('')
@@ -1866,7 +1891,7 @@ function renduDoublons(r) {
   }
   if (r.regions.length) {
     h += '<h4 class="entretien-t">Mêmes titres, régions ou révisions</h4>'
-      + '<p class="tid">Souvent involontaire — mais parfois voulu. À toi de voir.</p>'
+      + '<p class="mono">Souvent involontaire — mais parfois voulu. À toi de voir.</p>'
       + '<ul class="entretien-l">' + r.regions.map(x =>
         '<li><b>' + esc(x.titre) + '</b> — ' + x.entrees.length + ' exemplaires, '
         + fmt(x.octets) + ' en trop<br>'
@@ -1891,7 +1916,7 @@ function renduIntegrite(r) {
     ['Jamais vérifiés', s.sans_empreinte || 0],
     ['Vérification la plus ancienne', esc(s.plus_ancienne || '—')],
   ])
-  + '<p class="tid">Une empreinte différente à taille ET date identiques signale '
+  + '<p class="mono">Une empreinte différente à taille ET date identiques signale '
   + 'une corruption silencieuse du disque.</p>'
   + '<div class="bar" style="margin-top:10px">'
   + '<button class="go" onclick="app.verify(false, 20)">Vérifier 20 Go</button>'
@@ -1900,14 +1925,14 @@ function renduIntegrite(r) {
 
 function renduSauvegardes(r) {
   const lots = r.lots || [];
-  return '<p class="tid">Réglages et comptes uniquement — jamais les jeux. '
+  return '<p class="mono">Réglages et comptes uniquement — jamais les jeux. '
     + 'Une sauvegarde est prise automatiquement à chaque changement, au plus '
     + 'une par heure.</p>'
     + '<div class="bar" style="margin:10px 0">'
     + '<button class="go" onclick="app.sauvegarder()">Sauvegarder maintenant</button></div>'
     + (lots.length ? '<ul class="entretien-l">' + lots.map(l =>
-        '<li><b>' + esc(l.date || l.lot) + '</b> <span class="tid">' + esc(l.motif || '')
-        + ' · ' + (l.fichiers || []).length + ' fichier(s)</span>'
+        '<li><b>' + esc(l.date || l.lot) + '</b> <span class="mono">' + esc(l.motif || '')
+        + ' · ' + nb((l.fichiers || []).length, 'fichier(s)') + '</span>'
         + ' <button class="ghost mini" onclick="app.restaurerSauvegarde(\''
         + esc(l.lot) + '\')">Restaurer</button></li>').join('') + '</ul>'
       : '<p class="lead">Aucune sauvegarde pour l\'instant.</p>');
@@ -1924,10 +1949,10 @@ function renduAcces(r) {
     ['Dernière connexion', esc((s.derniere_connexion || {}).t || '—')],
   ])
   + (ev.length ? '<ul class="entretien-l entretien-acces">' + ev.slice(0, 40).map(e =>
-      '<li class="ac-' + esc(e.e) + '"><span class="tid">' + esc(e.t) + '</span> '
+      '<li class="ac-' + esc(e.e) + '"><span class="mono">' + esc(e.t) + '</span> '
       + esc(nom[e.e] || e.e) + (e.email ? ' — ' + esc(e.email) : '')
-      + (e.ip ? ' <span class="tid">' + esc(e.ip) + '</span>' : '')
-      + (e.detail ? '<br><span class="tid">' + esc(e.detail) + '</span>' : '')
+      + (e.ip ? ' <span class="mono">' + esc(e.ip) + '</span>' : '')
+      + (e.detail ? '<br><span class="mono">' + esc(e.detail) + '</span>' : '')
       + '</li>').join('') + '</ul>'
     : '<p class="lead">Aucun événement — l\'authentification n\'est pas active.</p>');
 }
@@ -1941,6 +1966,8 @@ function renduTransfert(r) {
     ['Destination', '<code>' + esc(t.destination) + '</code>'],
     ['Interrompu depuis', duree(t.depuis)],
   ])
+  + '<p class="lead"><span class="beta">bêta</span> La reprise repart du dernier '
+  + 'fichier confirmé. En cas de doute, abandonner puis renvoyer reste plus sûr.</p>'
   + '<div class="bar" style="margin-top:10px">'
   + '<button class="go" onclick="app.reprendreTransfert()">Reprendre</button>'
   + '<button class="ghost" onclick="app.oublierTransfert()">Abandonner</button></div>';
@@ -2034,12 +2061,12 @@ function renderDeviceCard(info, volumes) {
     const spc = v.free != null ? fmt(v.free) + ' libre / ' + fmt(v.total) : 'espace inconnu';
     return '<div class="vol" onclick="app.setDpath(\'' + esc(v.path) + '\')" title="Explorer ce volume">' +
       '<span class="tag t-' + (v.kind === 'SD' ? 'DLC' : 'BASE') + '">' + esc(v.kind) + '</span>' +
-      '<span class="grow"><div>' + esc(v.label) + '</div><span class="tid">' + esc(v.path) + '</span></span>' +
+      '<span class="grow"><div>' + esc(v.label) + '</div><span class="mono">' + esc(v.path) + '</span></span>' +
       '<span class="meter' + (used > 0.9 ? ' tight' : '') + '"><i style="width:' + Math.round(used * 100) + '%"></i></span>' +
       '<span class="size" style="width:auto">' + spc + '</span></div>';
-  }).join('') || '<div class="vol"><span class="tid">aucun volume detecte</span></div>';
+  }).join('') || '<div class="vol"><span class="mono">aucun volume detecte</span></div>';
   el.innerHTML = '<div class="card"><div class="ghead"><span class="gname">' + esc(info.name) +
-    '</span><span class="tid">Android ' + esc(info.android || '?') + ' &middot; ' + esc(info.serial || '') +
+    '</span><span class="mono">Android ' + esc(info.android || '?') + ' &middot; ' + esc(info.serial || '') +
     '</span></div>' + vols + '</div>';
 }
 function renderCrumb(path) {
@@ -2131,13 +2158,13 @@ function renderPlateformes(r) {
   const el = $('plateformes');
   if (!el) return;
   if (!r || !r.connectee) {
-    el.innerHTML = '<div class="tid">Branche la console, puis lance la détection : ' +
+    el.innerHTML = '<div class="mono">Branche la console, puis lance la détection : ' +
       'l\'outil listera les plateformes qu\'elle héberge.</div>';
     return;
   }
   const p = r.plateformes || [];
   if (!p.length) {
-    el.innerHTML = '<div class="tid">Aucun jeu trouvé sous <code>' + esc(r.racine || '') +
+    el.innerHTML = '<div class="mono">Aucun jeu trouvé sous <code>' + esc(r.racine || '') +
       '</code>. Vérifie le dossier des ROMs juste au-dessus.</div>';
     return;
   }
@@ -2151,8 +2178,8 @@ function renderPlateformes(r) {
       '<span class="pftaille">' + fmt(s.bytes) + '</span>' +
       '<span class="pfdir">' + esc(s.folder) + '/</span>' +
     '</button>').join('') + '</div>' +
-    '<div class="tid" style="margin-top:8px">' + p.length + ' plateforme(s) sous <code>' +
-    esc(r.racine) + '</code> · ' + p.reduce((n, s) => n + s.count, 0) + ' jeu(x) au total</div>';
+    '<div class="mono" style="margin-top:8px">' + p.length + ' plateforme(s) sous <code>' +
+    esc(r.racine) + '</code> · ' + phrase('%d jeu(x) au total', p.reduce((n, s) => n + s.count, 0)) + '</div>';
   // Le detail d'une plateforme vit desormais dans « Console et émulateur » :
   // cliquer une carte y conduit, plutot que d'ouvrir un second editeur ici.
 }
@@ -2223,7 +2250,8 @@ function renderPfCommun(sys) {
     ['Moteur', esc(moteurLisible(sys.engine))],
     ['Dossier local', '<code>' + esc(sys.folder) + '/</code>'],
   ];
-  if (vu) lignes.push(['Sur la console', vu.count + ' jeu(x)  ·  ' + fmt(vu.bytes)]);
+  if (vu) lignes.push(['Sur la console',
+                     nb(vu.count, 'jeu(x)') + '  ·  ' + fmt(vu.bytes)]);
 
   el.innerHTML =
     '<div class="majbloc">' +
@@ -2255,7 +2283,7 @@ function renderTreeDans(id) {
   el.innerHTML = noms.map(f => TREE[f] === true
     ? '<span class="tok">' + f + '</span>'
     : TREE[f] === false ? '<span class="tko">' + f + ' manquant</span>'
-    : '<span class="tid">' + f + ' ?</span>').join(' ');
+    : '<span class="mono">' + f + ' ?</span>').join(' ');
 }
 
 function renderTree() {
@@ -2270,7 +2298,7 @@ function renderTree() {
     const st = TREE[f];
     const mark = st === true ? '<span class="tok">✓ existe</span>'
       : st === false ? '<span class="tko">✗ sera créé</span>'
-      : '<span class="tid">à vérifier</span>';
+      : '<span class="mono">à vérifier</span>';
     return '<div class="trow">📁 <b>' + f + '/</b> ' + mark + '</div>';
   }).join('');
   el.innerHTML = '<div class="treebox">' +
@@ -2331,7 +2359,7 @@ function renderEcProfiles(profils) {
   el.innerHTML = '<h3 style="margin:16px 0 8px;font-size:13.5px">Profils enregistrés</h3>' +
     '<div class="card">' + profils.map(p =>
       '<div class="row"><span class="grow"><div class="fname">' + esc(p.nom) + '</div>' +
-      '<span class="tid">' + p.reglages + ' réglage(s) · ' + esc(p.portee) + '</span></span>' +
+      '<span class="mono">' + p.reglages + ' réglage(s) · ' + esc(p.portee) + '</span></span>' +
       '<button class="go" onclick="app.ecApplyProfile(\'' + esc(p.nom) + '\')">Appliquer ici</button></div>'
     ).join('') + '</div>' +
     '<p class="lead" style="margin-top:8px">Les profils sont des fichiers JSON dans ' +
@@ -2373,7 +2401,7 @@ function erBadge(tid) {
 // un reglage a poser.
 function erSection(g) {
   if (!ER.actif || (g.systeme && g.systeme !== 'switch')) return '';
-  const tete = '<div class="ssect">Réglages communautaires <span class="tid">EmuReady</span></div>';
+  const tete = '<div class="ssect">Réglages communautaires <span class="mono">EmuReady</span></div>';
   const e = (ER.jeux[(g.tid || '').toLowerCase()]) || null;
 
   if (!e || e.etat === 'absent')
@@ -3217,14 +3245,14 @@ function ouvrirChoixPlateforme(items) {
         + esc(it.extension) + '.';
     return '<div class="classer-l">'
       + '<div class="classer-n"><b>' + esc(it.nom) + '</b>'
-      + '<span class="tid">' + fmt(it.taille) + '  ·  ' + esc(pourquoi) + '</span></div>'
+      + '<span class="mono">' + fmt(it.taille) + '  ·  ' + esc(pourquoi) + '</span></div>'
       + '<select data-chemin="' + esc(it.chemin) + '">'
       + '<option value="">— laisser dans le dépôt —</option>' + opts + '</select></div>';
   };
   el.innerHTML = '<div class="sheet dlg d-info" onclick="event.stopPropagation()">'
     + '<div class="dhead"><span class="dico">📦</span><div>'
     + '<h3>Sur quelle plateforme ?</h3>'
-    + '<p class="dmsg">' + items.length + ' fichier(s) portent une extension que '
+    + '<p class="dmsg">' + phrase('%d fichier(s) portent une extension que ', items.length)
     + 'plusieurs plateformes utilisent. Choisis, ou laisse-les dans le dépôt.</p>'
     + '</div></div>'
     + '<div class="classer">' + items.map(ligne).join('') + '</div>'
@@ -3439,7 +3467,7 @@ const app = {
     if (!g.tid) {
       const sys = SYSTEMS.find(x => x.key === (g.systeme || SYS));
       const bits = [sys && sys.name,
-                    g.files.length + ' fichier(s)',
+                    nb(g.files.length, 'fichier(s)'),
                     ((g.files[0] || {}).ext || '').toUpperCase()].filter(Boolean);
       if (info) info.textContent = bits.join('  ·  ');
       return;
@@ -3492,7 +3520,7 @@ const app = {
     const paths = DATA.files.filter(f => f.needs_convert).map(f => f.path);
     if (!paths.length) return toast('Rien à convertir.', 'warn');
     const r = await api('/api/convert', {paths});
-    r.error || (toast('Conversion de ' + paths.length + ' fichier(s) lancée.', 'ok'), this.poll());
+    r.error || (toast(phrase('Conversion de %d fichier(s) lancée.', paths.length), 'ok'), this.poll());
   },
   // L'envoi depend de la plateforme : la Switch passe par le rangement
   // GAMES/UPDATE/DLC et n'accepte que des conteneurs decompresses ; les autres
@@ -3628,11 +3656,11 @@ const app = {
   async loadSaves() {
     const r = await api('/api/saves-list');
     const dirs = (r.dirs || []).length
-      ? '<div class="tid" style="margin-bottom:8px">Source sur la console : ' +
+      ? '<div class="mono" style="margin-bottom:8px">Source sur la console : ' +
         (r.dirs || []).map(esc).join('<br>') + '</div>' : '';
     $('saves').innerHTML = dirs + ((r.items || []).length
       ? '<div class="card">' + r.items.map(i => '<div class="row"><span class="grow">' +
-          esc(i.name) + '</span><span class="tid">' + i.count + ' fichier(s)</span>' +
+          esc(i.name) + '</span><span class="mono">' + nb(i.count, 'fichier(s)') + '</span>' +
           '<span class="size">' + fmt(i.size) + '</span></div>').join('') + '</div>'
       : '<div class="empty">Aucune sauvegarde enregistrée pour l\'instant.</div>');
   },
@@ -3658,7 +3686,7 @@ const app = {
   },
   async versions(force) { say('Vérification des versions...'); DATA = await api('/api/versions', {force: !!force}); render(); toast('Mises à jour vérifiées.', 'ok'); },
   async doImport() { const r = await api('/api/import', {convert: true}); r.error || (toast('Import lancé.', 'ok'), this.poll()); },
-  async reloadImport() { const r = await api('/api/import-list'); renderImport(r.items); toast(r.items.length + ' element(s) dans le depot.'); },
+  async reloadImport() { const r = await api('/api/import-list'); renderImport(r.items); toast(phrase('%d élément(s) dans le dépôt.', r.items.length)); },
   copyShop() {
     navigator.clipboard.writeText(DATA.shop_text || '')
       .then(() => toast('Liste copiee.', 'ok')).catch(() => toast('Copie impossible, selectionne le texte.', 'warn'));
@@ -3705,8 +3733,9 @@ const app = {
       ? 'Active EmuReady pour analyser ta ludothèque.'
       : !Object.keys(ER.jeux).length
         ? 'Jamais analysé — clique « Actualiser » pour interroger EmuReady.'
-        : n + ' jeu(x) reconnus' + (absents ? ', ' + absents + ' absent(s) de leur base' : '') +
-          '. Les badges apparaissent sur les jaquettes.';
+        : phrase('%d jeu(x) reconnus', n)
+          + (absents ? phrase(', %d absent(s) de leur base', absents) : '')
+          + t('. Les badges apparaissent sur les jaquettes.');
     renderLib();
   },
   async erDevices() {
@@ -3790,7 +3819,7 @@ const app = {
     const r = await api('/api/eden-backups', {tid});
     const items = r.items || [];
     if (!items.length) { el.innerHTML = ''; return; }
-    el.innerHTML = '<div class="tid" style="margin:10px 0 4px">Revenir en arrière :</div>' +
+    el.innerHTML = '<div class="mono" style="margin:10px 0 4px">Revenir en arrière :</div>' +
       items.slice(0, 4).map(b =>
         '<div class="errow"><span class="grow">' + esc(b.quand) + ' · ' +
         (b.vide ? 'aucune configuration' : b.sections + ' section(s), ' + b.surcharges + ' réglage(s)') +
@@ -3949,7 +3978,7 @@ const app = {
     $('pairfound').innerHTML = found.length
       ? '<div class="card">' + found.map(a => '<div class="row"><span class="grow">' + esc(a) +
           '</span><button class="go" onclick="app.wifiConnect(\'' + esc(a) + '\')">Connecter</button></div>').join('') + '</div>'
-      : '<div class="tid" style="margin-top:8px">Aucune console visible. Vérifie que le débogage sans fil est activé et que vous êtes sur le même réseau.</div>';
+      : '<div class="mono" style="margin-top:8px">Aucune console visible. Vérifie que le débogage sans fil est activé et que vous êtes sur le même réseau.</div>';
   },
   async wifiConnect(addr) {
     say('Connexion…');
@@ -4312,7 +4341,8 @@ const app = {
     if (r.error) return;
     DGAMES = r.games || []; buildConset();
     renderLib(); this.checkTree();
-    annonce(r.total + ' fichier(s) sur la console, ' + r.new + ' absent(s) du serveur.',
+    annonce(phrase('%d fichier(s) sur la console, %d absent(s) du serveur.',
+               r.total, r.new),
             r.total ? 'ok' : 'warn');
   },
   async checkTree() {
@@ -4373,7 +4403,7 @@ const app = {
     const {supprConsole} = deployCibles();
     if (!supprConsole.length) return toast('Rien à retirer de la console.', 'warn');
     dialogue({
-      titre: 'Retirer ' + supprConsole.length + ' fichier(s) de la console ?',
+      titre: phrase('Retirer %d fichier(s) de la console ?', supprConsole.length),
       niveau: 'warn',
       message: 'Ces fichiers seront supprimés de la console. Tes copies sur le serveur ne sont pas touchées.',
       detail: supprConsole.slice(0, 20).map(p => p.split('/').pop()).join('\n') +
@@ -4390,7 +4420,7 @@ const app = {
     const {local} = deployCibles();
     if (!local.length) return toast('Rien à mettre à la corbeille.', 'warn');
     dialogue({
-      titre: 'Mettre ' + local.length + ' fichier(s) à la corbeille ?',
+      titre: phrase('Mettre %d fichier(s) à la corbeille ?', local.length),
       niveau: 'warn',
       message: 'Ils quittent la bibliothèque mais restent dans _corbeille/, restaurables à tout moment.',
       detail: local.slice(0, 20).map(p => p.split('/').pop()).join('\n') +
@@ -4415,7 +4445,7 @@ const app = {
     el.innerHTML =
       '<div class="sheet dlg d-info" onclick="event.stopPropagation()">' +
         '<div class="dlghead"><h3>' + esc(titre) + '</h3>' +
-          '<span class="tid">' + membres.length + ' versions</span></div>' +
+          '<span class="mono">' + membres.length + ' versions</span></div>' +
         '<div class="versions">' + membres.map(x => ligneVersion(x)).join('') +
         '</div>' +
         '<div class="acts"><button class="ghost" onclick="app.closeDialog()">' +
@@ -4502,21 +4532,23 @@ const app = {
     const options = [];
     if (importer.length) options.push({id: 'importer', coche: true,
       libelle: 'Copier vers le serveur les jeux qui n\'y sont pas',
-      detail: importer.length + ' fichier(s) depuis la console'});
+      detail: phrase('%d fichier(s) depuis la console', importer.length)});
     if (envoyer.length) options.push({id: 'fichiers', coche: true,
       libelle: 'Copier les fichiers de jeu',
-      detail: envoyer.length + ' fichier(s) · ' + fmt(poids)});
+      detail: nb(envoyer.length, 'fichier(s)') + ' · ' + fmt(poids)});
     if (activer.length) options.push({id: 'activer', coche: true,
       libelle: 'Activer les mises à jour et DLC dans Eden',
       detail: activer.length + ' élément(s) — sans ça ils resteraient inactifs'});
     if (configs.length) options.push({id: 'config', coche: false,
       libelle: 'Appliquer les réglages recommandés (EmuReady)',
-      detail: configs.length + ' jeu(x) : ' + configs.slice(0, 2).map(c => c.jeu + ' (' + c.note + ')').join(', ') +
-              (configs.length > 2 ? '…' : '') + ' — remplace leur configuration actuelle'});
+      detail: phrase('%d jeu(x) :', configs.length) + ' '
+              + configs.slice(0, 2).map(c => c.jeu + ' (' + c.note + ')').join(', ')
+              + (configs.length > 2 ? '…' : '')
+              + t(' — remplace leur configuration actuelle')});
     if (!options.length) return toast('Rien à faire sur ces jeux.', 'warn');
 
     dialogue({
-      titre: 'Traiter ' + dsel2.size + ' jeu(x)',
+      titre: phrase('Traiter %d jeu(x)', dsel2.size),
       niveau: 'info',
       message: 'Choisis ce que l\'outil doit faire. Tout est sauvegardé avant écriture.',
       options,
@@ -4725,7 +4757,8 @@ const app = {
         + '</div></div>').join('')
       + '</div>';
     const n = r.resume.grave + r.resume.alerte;
-    toast(n ? n + ' point(s) à regarder.' : 'Rien à signaler.', n ? 'warn' : 'ok');
+    toast(n ? phrase('%d point(s) à regarder.', n) : t('Rien à signaler.'),
+          n ? 'warn' : 'ok');
   },
 
   // Gestion des comptes internes : les fonctions vivent plus haut, avec le
@@ -4942,15 +4975,17 @@ const app = {
     const r = t.resume || {lots: 0, fichiers: 0, octets: 0, plus_vieux: 0};
     const s = $('trashsum');
     if (s) s.innerHTML = r.lots
-      ? '<b>' + r.lots + '</b> lot(s) &middot; <b>' + r.fichiers + '</b> fichier(s) &middot; ' +
-        '<b>' + fmt(r.octets) + '</b> récupérables' +
-        (r.plus_vieux ? ' <span class="tid">— le plus ancien a ' + r.plus_vieux + ' jour(s)</span>' : '')
-      : '<span class="tid">Corbeille vide.</span>';
+      ? '<b>' + r.lots + '</b> ' + t('lot(s)') + ' &middot; <b>' + r.fichiers
+        + '</b> ' + t('fichier(s)') + ' &middot; <b>' + fmt(r.octets) + '</b> '
+        + t('récupérables')
+        + (r.plus_vieux ? ' <span class="mono">'
+           + phrase('— le plus ancien a %d jour(s)', r.plus_vieux) + '</span>' : '')
+      : '<span class="mono">Corbeille vide.</span>';
     const sel = $('s-trashdays');
     if (sel && t.jours != null) sel.value = String(t.jours);
     $('trash').innerHTML = t.items.length
       ? '<div class="card">' + t.items.map(i => '<div class="row"><span class="grow">' +
-          esc(i.name) + '</span><span class="tid">' + i.count + ' fichier(s) · ' +
+          esc(i.name) + '</span><span class="mono">' + nb(i.count, 'fichier(s)') + ' · ' +
           fmt(i.size || 0) + '</span>' +
           '<button onclick="app.restore(\'' + esc(i.name) + '\')">Restaurer</button></div>').join('') + '</div>'
       : '<div class="empty">Rien en corbeille.</div>';
@@ -4968,7 +5003,7 @@ const app = {
       titre: 'Vider la corbeille ?',
       niveau: 'warn',
       message: jours
-        ? 'Les lots de plus de ' + jours + ' jour(s) seront supprimés définitivement.'
+        ? phrase('Les lots de plus de %d jour(s) seront supprimés définitivement.', jours)
         : 'Aucun délai n\'est configuré : choisis d\'abord « Vider automatiquement », '
           + 'ou confirme pour tout supprimer maintenant.',
       detail: 'C\'est la seule opération de l\'outil qui efface réellement des fichiers.',
@@ -5069,18 +5104,20 @@ function renderManifest(r) {
   const body = Object.keys(groups).sort().map(folder => {
     const items = groups[folder].map(it => {
       if (it.broken) return '<div class="mfitem bad"><span>&#9888; ' + esc(it.name) +
-        '<br><span class="tid">fichier incomplet : ' + esc(it.broken) +
+        '<br><span class="mono">fichier incomplet : ' + esc(it.broken) +
         ' — à retélécharger</span></span><span>non envoyé</span></div>';
       return '<div class="mfitem"><span>' + (it.skip ? '&check; ' : '') + esc(it.name) + '</span><span>' +
         (it.skip ? 'déjà sur la console' : fmt(it.size)) + '</span></div>';
     }).join('');
     return '<div class="mfgroup"><div class="mflabel"><span class="arrow">&rarr;</span>' +
-      esc(folder) + ' <span class="tid">(' + groups[folder].length + ')</span></div>' + items + '</div>';
+      esc(folder) + ' <span class="mono">(' + groups[folder].length + ')</span></div>' + items + '</div>';
   }).join('');
   $('manifest').innerHTML = '<div class="manifest"><div class="mfhead">' +
     '<span><b>' + fmt(r.to_send) + '</b> à envoyer vers ' + esc(r.device_dir) +
-    (r.skipped ? ' <span class="tid">(' + r.skipped + ' déjà sur la console)</span>' : '') +
-    (r.broken ? ' <span class="bad">— ' + r.broken + ' fichier(s) incomplet(s) bloqué(s)</span>' : '') + '</span>' +
+    (r.skipped ? ' <span class="mono">('
+      + phrase('%d déjà sur la console', r.skipped) + ')</span>' : '') +
+    (r.broken ? ' <span class="bad">'
+      + phrase('— %d fichier(s) incomplet(s) bloqué(s)', r.broken) + '</span>' : '') + '</span>' +
     '<span class="' + (tight ? 'bad' : '') + '">' +
     (r.free != null ? 'libre : ' + fmt(r.free) + (tight ? ' — insuffisant !' : '') : 'espace inconnu') +
     '</span></div>' + body + '</div>';
@@ -5348,12 +5385,12 @@ function renderA2HS() {
     : 'ouvre le menu <b>⋮</b> du navigateur puis <b>Ajouter à l\'écran d\'accueil</b>';
   const action = INSTALL_EVT
     ? '<button class="go" onclick="app.installApp()">Installer l\'application</button>'
-    : '<span class="tid">' + how + '</span>';
+    : '<span class="mono">' + how + '</span>';
 
   el.style.display = '';
   el.innerHTML = '<span class="a2icon">📲</span>' +
     '<span class="grow"><b>Ajoute la ludothèque à ton écran d\'accueil</b>' +
-    '<div class="tid">Elle s\'ouvrira en plein écran, comme une vraie application.</div></span>' +
+    '<div class="mono">Elle s\'ouvrira en plein écran, comme une vraie application.</div></span>' +
     action + '<button class="ghost" onclick="app.dismissA2HS()">Plus tard</button>';
 }
 
@@ -5401,7 +5438,7 @@ function uploadFiles(files) {
     return toast('Aucun fichier reconnu. ' + EXTS_ACCEPTEES.length
                  + ' formats acceptés — voir « Ajouter des jeux ».', 'warn');
   }
-  if (rejetes) journal(rejetes + ' fichier(s) ignoré(s) : type non géré.', 'warn');
+  if (rejetes) journal(phrase('%d fichier(s) ignoré(s) : type non géré.', rejetes), 'warn');
 
   // Le plafond est verifie ICI, avant d'ouvrir la moindre connexion. Le
   // serveur le fait aussi — c'est lui qui fait autorite — mais il ne peut
@@ -5413,7 +5450,8 @@ function uploadFiles(files) {
     if (trop.length) {
       trop.forEach(f => journal('Trop volumineux : ' + f.name + ' (' + fmt(f.size)
                                 + ', maximum ' + fmt(plafond) + ')', 'error'));
-      toast(trop.length + ' fichier(s) dépassent ' + fmt(plafond) + '.', 'warn');
+      toast(phrase('%d fichier(s) dépassent %s.', trop.length)
+        .replace('%s', fmt(plafond)), 'warn');
       list = list.filter(f => f.size <= plafond);
       if (!list.length) return;
     }
@@ -5449,7 +5487,7 @@ function uploadFiles(files) {
       ACT_ENVOI = null;
       majFab();
       $('bar').style.width = '0';
-      toast(list.length + ' fichier(s) déposé(s).', 'ok');
+      toast(phrase('%d fichier(s) déposé(s).', list.length), 'ok');
       // Le depot etant desormais possible n'importe ou, l'utilisateur n'a pas
       // forcement le panneau sous les yeux : on l'ouvre sur la liste fraiche,
       // pour que l'etape suivante soit la ou il regarde.
