@@ -12,7 +12,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-os.environ.setdefault("SWITCH_ROOT", tempfile.mkdtemp(prefix="ludo-import-"))
+os.environ.setdefault("ROMULE_ROOT", tempfile.mkdtemp(prefix="ludo-import-"))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from romule import actions, config, systems  # noqa: E402

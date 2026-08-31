@@ -235,25 +235,15 @@ select{cursor:pointer}
 
 /* ------------------------------------------------- parcours de premier lancement */
 .onboard{position:fixed;inset:0;z-index:60;background:var(--rideau);backdrop-filter:blur(4px);
-  display:none;align-items:center;justify-content:center;padding:24px 16px;overflow:auto}
+  display:none;align-items:flex-start;justify-content:center;padding:24px 16px;overflow:auto}
+.onboard>.obox{margin:auto}
 .onboard.open{display:flex;animation:enter .3s var(--ease)}
 .obox{background:var(--panel);border:1px solid var(--rule);border-radius:14px;
   max-width:560px;width:100%;padding:24px}
 .obt{font-family:var(--disp);text-transform:uppercase;letter-spacing:.12em;font-size:15px;
   margin:0 0 6px;color:var(--amber)}
 .obox>.lead{margin-bottom:16px}
-.osteps{list-style:none;margin:0 0 18px;padding:0;display:flex;flex-direction:column;gap:9px}
-.ostep{display:flex;gap:12px;align-items:flex-start;padding:12px 13px;border-radius:9px;
-  border:1px solid var(--rule);background:var(--panel2);
-  animation:slidein .35s var(--ease) both}
-@keyframes slidein{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:none}}
-.ostep.ok{border-color:var(--success-trait)}
-.ostep.ko{border-color:var(--primary-halo)}
-.omark{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;
-  justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
-.ostep.ok .omark{background:var(--success-doux);color:var(--green)}
-.ostep.ko .omark{background:var(--primary-doux);color:var(--amber)}
-.ostep b{font-size:13px}
+/* Utilisees par la liste d'audit, qui a survecu a l'ancien assistant. */
 .odesc{font-size:12px;color:var(--mute);margin-top:2px;line-height:1.5}
 .oaide{font-family:var(--mono);font-size:11px;color:var(--amber);margin-top:6px;
   background:var(--puits);border-radius:6px;padding:7px 9px;word-break:break-word}
@@ -2877,14 +2867,116 @@ body.compact .filters{margin-bottom:2px}
   --btn-texte:var(--on-primary)}
 @media (pointer:coarse){.segment button{padding:10px 14px}}
 
-/* ------------------------------------------------------- ASSISTANT (suite)
-   Un point grave se distingue d'un point a regarder : le second est une
-   invitation, le premier une mise en garde. Les confondre, c'est apprendre a
-   l'utilisateur a ignorer les deux. */
-.ostep.grave{border-color:var(--danger-trait);background:var(--danger-voile)}
-.ostep.grave .omark{background:var(--danger-doux);color:var(--danger)}
-.ostep.grave .odesc{color:var(--text)}
+/* ===========================================================================
+   ASSISTANT DE PREMIER DEMARRAGE
+   ---------------------------------------------------------------------------
+   Une etape a la fois. La carte garde une hauteur minimale : sans elle, passer
+   d'une etape courte a une etape longue faisait sauter le pied de page sous le
+   curseur, et l'utilisateur cliquait « Suivant » deux fois.
+   ========================================================================= */
+.onbcarte{max-width:600px;display:flex;flex-direction:column;gap:0}
+.onbtete{display:flex;align-items:center;justify-content:space-between;
+  gap:12px;margin-bottom:14px}
+.onbrang{font-family:var(--mono);font-size:11px;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--mute)}
+.onbbadge{font-family:var(--mono);font-size:10.5px;letter-spacing:.09em;
+  text-transform:uppercase;padding:4px 9px;border-radius:999px;
+  border:1px solid transparent;white-space:nowrap}
+.onbbadge.req{background:var(--primary-doux);color:var(--amber);
+  border-color:var(--primary-halo)}
+.onbbadge.opt{background:var(--panel2);color:var(--mute);border-color:var(--rule)}
+.onbbadge.nul{background:transparent;color:var(--mute);opacity:.55}
 
-/* L'assistant ne fait plus que constater : il agit. */
-.ostep .omini{margin-top:9px;padding:7px 13px;font-size:12.5px}
-.ostep .ochoix{margin-top:9px;width:100%;max-width:320px}
+.onbcorps{min-height:212px;animation:onbentre .34s var(--ease) both}
+.onbcorps[data-sens="-1"]{animation-name:onbentre-g}
+@keyframes onbentre{from{opacity:0;transform:translateX(22px)}to{opacity:1;transform:none}}
+@keyframes onbentre-g{from{opacity:0;transform:translateX(-22px)}to{opacity:1;transform:none}}
+
+.onbp{font-size:13.5px;line-height:1.6;margin:0 0 12px;color:var(--text)}
+.onbnote{font-size:12px;line-height:1.55;color:var(--mute);margin:10px 0 0}
+.onbnote code,.onbp code{font-family:var(--mono);font-size:11.5px;
+  background:var(--puits);border-radius:5px;padding:2px 5px}
+.onbok{font-size:13.5px;color:var(--green);margin:0}
+.onbmanque{font-size:12px;color:var(--amber);margin:12px 0 0;
+  animation:enter .25s var(--ease)}
+
+.onbliste{list-style:none;margin:0;padding:0;display:flex;
+  flex-direction:column;gap:10px}
+.onbliste li{font-size:13px;line-height:1.55;color:var(--mute);
+  padding-left:16px;position:relative;
+  animation:onbpuce .4s var(--ease) both}
+.onbliste li::before{content:"";position:absolute;left:0;top:8px;width:6px;
+  height:6px;border-radius:50%;background:var(--amber);opacity:.7}
+.onbliste li b{color:var(--text);display:block;margin-bottom:2px}
+.onbdesc{display:block;font-size:12.5px;color:var(--mute);line-height:1.55}
+.onbliste li:nth-child(2){animation-delay:.06s}
+.onbliste li:nth-child(3){animation-delay:.12s}
+.onbliste li:nth-child(4){animation-delay:.18s}
+@keyframes onbpuce{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+
+.onbcorps>.go,.onbcorps>.ghost{margin-top:14px}
+.onbchemin{font-family:var(--mono);font-size:12px;color:var(--text);
+  background:var(--puits);border:1px solid var(--rule);border-radius:8px;
+  padding:11px 13px;word-break:break-all;margin-bottom:4px}
+
+.onbchamps{display:flex;flex-direction:column;gap:12px;margin:0 0 14px}
+.onbchamps label{display:flex;flex-direction:column;gap:5px;font-size:12.5px;
+  color:var(--text)}
+/* La regle globale donne `flex:1 1 260px` aux champs texte, pensee pour une
+   rangee horizontale. Dans une colonne, cette base de 260 px devient une
+   HAUTEUR : les champs faisaient 260 px de haut et la carte debordait. */
+.onbchamps input{flex:0 0 auto;width:100%}
+.onbaide{font-family:var(--mono);font-size:10.5px;color:var(--mute);
+  letter-spacing:.02em;word-break:break-all}
+
+/* Resultat du scan : c'est la seule preuve que le dossier indique est le bon. */
+.onbresultat{margin-top:14px;padding:13px 14px;border-radius:9px;
+  border:1px solid var(--success-trait);background:var(--success-voile);
+  font-size:13px;animation:enter .3s var(--ease)}
+.onbresultat.vide{border-color:var(--primary-halo);background:var(--primary-doux)}
+.onbpf{display:flex;flex-wrap:wrap;gap:7px;margin-top:11px}
+.onbpuce{font-size:11.5px;padding:4px 9px;border-radius:999px;
+  background:var(--panel);border:1px solid var(--rule);color:var(--mute);
+  animation:onbpuce .35s var(--ease) both}
+.onbpuce b{color:var(--text);font-family:var(--mono)}
+.onbpuce:nth-child(2){animation-delay:.04s}
+.onbpuce:nth-child(3){animation-delay:.08s}
+.onbpuce:nth-child(4){animation-delay:.12s}
+.onbpuce:nth-child(5){animation-delay:.16s}
+.onbpuce:nth-child(n+6){animation-delay:.2s}
+
+.onbpied{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  margin-top:20px;padding-top:16px;border-top:1px solid var(--rule)}
+.onbpied button:disabled{opacity:.35;cursor:not-allowed}
+.onbpoints{display:flex;gap:14px;align-items:center;
+  padding:16px 4px;margin:-16px 0}
+/* `min-height:44px` s'applique a tous les boutons pour le tactile : sur une
+   pastille de 8 px, il la transformait en ellipse haute de 44 px. */
+.onbpoint{width:8px;height:8px;min-width:0;min-height:0;padding:0;flex:0 0 auto;
+  border-radius:50%;border:0;background:var(--rule);cursor:pointer;
+  transition:width .28s var(--ease),background .28s var(--ease)}
+.onbpoint.fait{background:var(--mute)}
+.onbpoint.on{width:22px;border-radius:999px;background:var(--amber)}
+.onbpoint:hover{background:var(--amber);opacity:.75}
+
+.onbpasser{background:none;border:0;color:var(--mute);font-size:11.5px;
+  text-decoration:underline;cursor:pointer;padding:10px 0 0;align-self:center;
+  margin:0 auto}
+.onbpasser:hover{color:var(--text)}
+
+@media (max-width:640px){
+  .obox{padding:18px}
+  .onbcorps{min-height:0}
+  .onbpied{flex-wrap:wrap;justify-content:center}
+  .onbpoints{order:-1;width:100%;justify-content:center;margin:-16px 0 4px}
+  /* `>` obligatoire : sans lui, `flex:1` s'appliquait AUSSI aux pastilles,
+     qui redevenaient des ellipses etirees sur toute la largeur. */
+  .onbpied>button{flex:1}
+}
+
+/* Mouvement reduit : les etapes se remplacent, elles ne glissent plus. */
+[data-mvt="off"] .onbcorps,
+[data-mvt="off"] .onbliste li,
+[data-mvt="off"] .onbpuce,
+[data-mvt="off"] .onbresultat{animation:none}
+[data-mvt="off"] .onbpoint{transition:none}

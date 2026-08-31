@@ -64,7 +64,7 @@ def _acces(cfg):
                       "authentification n'est active : n'importe quel appareil "
                       "du reseau peut tout piloter.",
                       "Active les comptes internes ou le SSO, ou definis "
-                      "SWITCH_TOKEN, ou coupe l'acces reseau."))
+                      "ROMULE_TOKEN, ou coupe l'acces reseau."))
     elif not actif:
         out.append(_c("info", "Acces local uniquement",
                       "Aucune authentification, mais rien n'est expose : seul "
@@ -127,7 +127,7 @@ def _secrets(cfg):
                       "%d caracteres aleatoires." % len(s)))
 
     if config.TOKEN and len(config.TOKEN) < 20:
-        out.append(_c("alerte", "SWITCH_TOKEN court",
+        out.append(_c("alerte", "ROMULE_TOKEN court",
                       "%d caracteres : cassable par essais repetes."
                       % len(config.TOKEN),
                       "Utilise au moins 24 caracteres aleatoires."))

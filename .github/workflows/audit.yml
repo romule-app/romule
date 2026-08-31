@@ -28,7 +28,7 @@ jobs:
           python-version: "3.12"
 
       - name: Compilation de tous les modules
-        run: python -m compileall -q romule switch.py
+        run: python -m compileall -q romule
 
       - name: Audit interne (posture, code, dependances, version de Python)
         run: |

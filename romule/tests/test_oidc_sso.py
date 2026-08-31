@@ -9,8 +9,8 @@ for p in (PORT, FP):
     subprocess.run(["bash","-c","lsof -nP -iTCP:%s -sTCP:LISTEN 2>/dev/null|tail -n +2|awk '{print $2}'|xargs -r kill -9"%p])
 fp = subprocess.Popen([sys.executable, os.path.join(S,"faux_oidc.py"), FP],
                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-srv = subprocess.Popen([sys.executable,"switch.py"],
-                       env=dict(os.environ, SWITCH_ROOT=RACINE, SWITCH_WEB_PORT=PORT, SWITCH_NO_BROWSER="1"),
+srv = subprocess.Popen([sys.executable, "-m", "romule", "serve"],
+                       env=dict(os.environ, ROMULE_ROOT=RACINE, ROMULE_WEB_PORT=PORT, ROMULE_NO_BROWSER="1"),
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 atexit.register(lambda: (fp.kill(), srv.kill()))
 pot = http.cookiejar.CookieJar()

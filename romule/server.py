@@ -1,7 +1,7 @@
 """Serveur web (bibliotheque standard seule).
 
 Ecoute sur 127.0.0.1 par defaut. Il ne s'ouvre au reseau que si son
-proprietaire l'a demande : reglage `lan_access`, SWITCH_LAN, SWITCH_TOKEN,
+proprietaire l'a demande : reglage `lan_access`, ROMULE_LAN, ROMULE_TOKEN,
 ou execution en conteneur — ou la publication de port fait office de
 decision explicite. La docstring precedente affirmait n'ecouter que sur
 127.0.0.1 alors que le socket etait lie a 0.0.0.0 depuis toujours.
@@ -144,9 +144,9 @@ def _taille(n):
 # Un serveur qui accepte tout finit par tomber sur le premier venu qui insiste.
 # Trois limites, toutes reglables, toutes larges : elles ne genent pas un usage
 # normal et rendent le pire cas fini.
-DELAI_SOCKET = int(os.environ.get("ROMULE_TIMEOUT", "300"))       # secondes
-CONNEXIONS_MAX = int(os.environ.get("ROMULE_MAX_CONN", "64"))
-APPELS_PAR_MINUTE = int(os.environ.get("ROMULE_RATE", "600"))
+DELAI_SOCKET = int(config.env("TIMEOUT", "300"))       # secondes
+CONNEXIONS_MAX = int(config.env("MAX_CONN", "64"))
+APPELS_PAR_MINUTE = int(config.env("RATE", "600"))
 
 _PLACES = threading.BoundedSemaphore(CONNEXIONS_MAX)
 
@@ -1022,6 +1022,10 @@ class Handler(BaseHTTPRequestHandler):
             comptes.photo_effacer(u["id"])
             self._json({"message": "Photo retiree."})
 
+        elif p == "/api/sgdb-test":
+            ok, msg = covers.tester_cle(CFG)
+            self._json({"ok": ok, "message": msg})
+
         elif p == "/api/igdb-test":
             try:
                 self._json({"ok": True, "infos": igdb.tester(CFG)})
@@ -1576,8 +1580,8 @@ def _adresse_ecoute():
     est prise par celui qui publie le port : y rester sur 127.0.0.1 rendrait
     l'application injoignable.
     """
-    if os.environ.get("ROMULE_BIND", "").strip():
-        return os.environ["ROMULE_BIND"].strip()
+    if config.env("BIND", "").strip():
+        return config.env("BIND").strip()
     ouvert = (CFG.get("lan_access") or config.ENV_LAN or config.TOKEN
               or _in_container())
     return "0.0.0.0" if ouvert else "127.0.0.1"
@@ -1655,10 +1659,10 @@ def serve(open_browser=True):
     LIB.scan(log=JOB.log)
     versions.load(LIB, log=JOB.log)
     url = "http://127.0.0.1:%d" % config.PORT
-    # SWITCH_NO_BROWSER : la ludotheque lancee par launchd a chaque ouverture
+    # ROMULE_NO_BROWSER : la ludotheque lancee par launchd a chaque ouverture
     # de session ne doit pas ouvrir un navigateur sans qu'on lui demande.
     service = (_in_container() or config.ENV_LAN or config.TOKEN
-               or os.environ.get("SWITCH_NO_BROWSER", "").strip() not in ("", "0"))
+               or config.env("NO_BROWSER", "").strip() not in ("", "0"))
     _audit_demarrage()
     print("Ludotheque : %s" % config.ROOT)
     print("Depot      : %s  (glisse tes fichiers ici)" % config.IMPORT)
@@ -1676,7 +1680,7 @@ def serve(open_browser=True):
         # plus prendre effet a chaud, et le dire faussement enverrait
         # l'utilisateur chercher une panne qui n'existe pas.
         print("Reseau     : desactive — pour ouvrir : ROMULE_BIND=0.0.0.0, "
-              "SWITCH_LAN=1 ou un jeton, puis redemarrer")
+              "ROMULE_LAN=1 ou un jeton, puis redemarrer")
     if not adb_hint():
         print("adb        : absent — la console ne pourra pas etre pilotee")
     if open_browser and not service:

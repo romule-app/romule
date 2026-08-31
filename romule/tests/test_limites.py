@@ -56,9 +56,9 @@ JETON = secrets.token_urlsafe(24)
 RACINE = tempfile.mkdtemp(prefix="ludo-limites-"); PORT = libre()
 BASE = "http://127.0.0.1:" + PORT
 srv = subprocess.Popen(
-    [sys.executable, "switch.py"], cwd=RACINE_PROJET,
-    env=dict(os.environ, SWITCH_ROOT=RACINE, SWITCH_WEB_PORT=PORT,
-             SWITCH_NO_BROWSER="1", SWITCH_TOKEN=JETON,
+    [sys.executable, "-m", "romule", "serve"], cwd=RACINE_PROJET,
+    env=dict(os.environ, ROMULE_ROOT=RACINE, ROMULE_WEB_PORT=PORT,
+             ROMULE_NO_BROWSER="1", ROMULE_TOKEN=JETON,
              ROMULE_UPLOAD_MAX="1048576"),
     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 

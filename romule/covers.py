@@ -14,6 +14,7 @@ import json as _json
 import re
 import threading
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 
@@ -182,6 +183,30 @@ def sgdb_infos(name, key):
         return infos
     except Exception:
         return None
+
+
+def tester_cle(cfg):
+    """Verifie une cle SteamGridDB et renvoie (ok, message).
+
+    `sgdb_infos` avale toutes les erreurs : c'est le bon comportement quand on
+    cherche une jaquette parmi des centaines, mais l'assistant a besoin de
+    savoir POURQUOI ca n'a pas marche. Une cle mal collee et un jeu introuvable
+    ne se corrigent pas de la meme facon.
+    """
+    key = (cfg.get("steamgriddb_key") or "").strip()
+    if not key:
+        return (False, "Aucune cle renseignee.")
+    url = ("https://www.steamgriddb.com/api/v2/search/autocomplete/"
+           + urllib.parse.quote("zelda"))
+    try:
+        _download(url, {"Authorization": "Bearer " + key, "User-Agent": "romule"})
+        return (True, "Cle acceptee.")
+    except urllib.error.HTTPError as exc:
+        if exc.code in (401, 403):
+            return (False, "Cle refusee par SteamGridDB.")
+        return (False, "SteamGridDB repond %d." % exc.code)
+    except Exception as exc:
+        return (False, "Contact impossible : %s" % exc)
 
 
 def _sgdb_url(name, key):

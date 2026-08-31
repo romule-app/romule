@@ -23,7 +23,7 @@ python3 outils/verifier-fuite.py   # refuses personal data in the git index
 The library lives **outside** this repository. Point the app at it explicitly:
 
 ```sh
-ROMULE_ROOT=/path/to/your/library python3 switch.py
+ROMULE_ROOT=/path/to/your/library python3 -m romule
 ```
 
 Source comments and docstrings are written in French, deliberately: they carry
