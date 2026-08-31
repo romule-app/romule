@@ -111,6 +111,29 @@ try:
                  {"ancien": "encore un mot long", "nouveau": "son nouveau mot long"})
     t("il change SON mot de passe", c == 200, (c, js(b)))
 
+    print("   -- ni lancer les actions destructives --")
+    # Le modele de roles annoncait trois reserves : la configuration, les
+    # comptes, et les actions destructives. Les deux premieres etaient tenues,
+    # la troisieme ne l'etait pas. La plus grave : restaurer une sauvegarde
+    # remet en place le FICHIER DES COMPTES, donc rend l'administration a qui
+    # l'avait perdue. Les deux autres effacent les traces.
+    for route, corps, quoi in (
+            ("/api/sauvegarde-restaurer", {"lot": "x"}, "restaurer une sauvegarde"),
+            ("/api/journal-clear", {}, "effacer le journal"),
+            ("/api/acces", {}, "lire le journal des acces"),
+            ("/api/trash-purge", {}, "vider la corbeille"),
+            ("/api/reorganize-local", {}, "reorganiser la ludotheque"),
+            ("/api/wifi-forget", {}, "oublier la console"),
+            ("/api/audit", {}, "lancer l'audit de securite"),
+    ):
+        c, b = appel(lambda_, route, corps)
+        t("il ne peut pas %s" % quoi, c == 403, (c, js(b)))
+
+    # Et il garde ce qui releve de l'usage normal : sans cela, la reserve
+    # transformerait un compte ordinaire en spectateur.
+    c, b = appel(lambda_, "/api/push-plan", {"paths": []})
+    t("il peut toujours preparer un envoi", c == 200, (c, js(b)))
+
     print("   -- l'administrateur, lui, peut --")
     chefnav = navigateur()
     c, b = appel(chefnav, "/auth/connexion",
@@ -119,8 +142,17 @@ try:
     t("connexion de l'administrateur", c == 200, (c, js(b)))
     c, b = appel(chefnav, "/api/compte-supprimer", {"id": simple.get("id")})
     t("il supprime un autre compte", c == 200, (c, js(b)))
+    c, b = appel(chefnav, "/api/journal-clear", {})
+    t("il efface le journal", c == 200, (c, js(b)))
+    c, b = appel(chefnav, "/api/acces", {})
+    t("il lit le journal des acces", c == 200, (c, js(b)))
     c, b = appel(chefnav, "/api/config", {"auth_mode": "aucun"})
     t("il modifie les reglages", c == 200, (c, js(b)))
+
+    # Authentification eteinte : il n'existe plus d'identite a distinguer, et
+    # la reserve ne doit pas transformer le mode le plus courant en impasse.
+    c, b = appel(chefnav, "/api/journal-clear", {})
+    t("sans authentification, la reserve ne bloque plus", c == 200, (c, js(b)))
 finally:
     srv.terminate()
 print("   ------------------------------------------------")

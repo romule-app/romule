@@ -884,11 +884,64 @@ class Handler(BaseHTTPRequestHandler):
         except (ValueError, OSError) as exc:
             JOB.log("Requete invalide sur %s : %s" % (p, exc))
             return self._json({"error": "requete invalide"}, 400)
+        refus = self._reserve_admin(p)
+        if refus:
+            JOB.log("%s refuse : %s" % (p, refus), "warn")
+            return self._json({"error": refus}, 403)
         try:
             self._route_post(p, d)
         except Exception as exc:
             JOB.log("Erreur serveur sur %s : %s" % (p, exc))
             self._json({"error": "%s : %s" % (p, exc)}, 500)
+
+    # Le modele de roles disait « seul un administrateur modifie la
+    # configuration, gere les comptes ET lance les actions destructives ».
+    # Les deux premiers points etaient tenus route par route ; le troisieme ne
+    # l'etait pas. Concretement, tout compte non-administrateur pouvait
+    # restaurer une sauvegarde — qui contient le fichier des comptes, donc
+    # rendre le role d'administrateur a qui l'avait perdu —, effacer le
+    # journal, ou lire le journal des acces.
+    #
+    # Une liste a un seul endroit plutot qu'un appel repete dans trente
+    # branches : une garde qu'on doit se souvenir d'ajouter est une garde qu'on
+    # oublie. En mode sans authentification, `_admin_requis()` laisse passer :
+    # il n'y a pas d'identite a distinguer, et `_allowed()` a deja tranche.
+    RESERVE_ADMIN = frozenset({
+        # --- effacent ou remettent en place des donnees
+        "/api/sauvegarde-restaurer",   # contient le fichier des comptes
+        "/api/sauvegarde-creer",
+        "/api/trash-purge",
+        "/api/restore",
+        "/api/covers-clear",
+        "/api/meta-oublier",
+        "/api/journal-clear",          # ce qu'on efface d'abord pour se cacher
+        "/api/emuready-clear",
+        # --- deplacent des fichiers en masse
+        "/api/reorganize-local",
+        "/api/device-organize",
+        "/api/device-mktree",
+        # --- ecrivent dans les fichiers d'un logiciel tiers
+        "/api/eden-apply",
+        "/api/eden-restore",
+        "/api/eden-profile-save",
+        "/api/eden-profile-apply",
+        "/api/emuready-apply",
+        "/api/nand-install",
+        "/api/nand-write",
+        # --- changent la liaison a la console
+        "/api/wifi-pair",
+        "/api/wifi-connect",
+        "/api/wifi-switch",
+        "/api/wifi-forget",
+        # --- renseignent sur qui se connecte, et sur la posture de securite
+        "/api/acces",
+        "/api/audit",
+        "/api/auth-test",
+    })
+
+    def _reserve_admin(self, p):
+        """Raison de refus si la route demande le role d'administrateur."""
+        return self._admin_requis() if p in self.RESERVE_ADMIN else ""
 
     def _route_post(self, p, d):
         if p == "/api/versions":
