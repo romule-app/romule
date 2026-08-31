@@ -77,24 +77,60 @@ try {
 t('esc() seul executait le code injecte', execute,
   'si ce controle echoue, le scenario a change et la regle est a revoir');
 
-console.log('   -- 3. aucun gestionnaire en ligne n\'interpole sans jsq() --');
-// Toute valeur inseree dans une chaine JavaScript d'attribut est precedee du
-// delimiteur `\'' +`. Ce qui suit doit etre `jsq(`, sans exception.
-const motif = /\\'' \+\s*([A-Za-z_$][\w$]*)\s*\(/g;
-const fautifs = [];
-let m;
-while ((m = motif.exec(src)) !== null) {
-  if (m[1] === 'jsq') continue;
-  fautifs.push(src.slice(0, m.index).split('\n').length + ' : ' + m[1] + '(');
+console.log('   -- 3. le detecteur voit-il ce qu\'il pretend voir ? --');
+// Une regle qui annonce un invariant sans qu'on ait verifie qu'elle DETECTE
+// quelque chose ne vaut rien. La premiere version de ce test exigeait une
+// espace avant le `+` : elle a laissse passer un site ou la ligne etait coupee
+// juste apres le litteral, et le `+` ouvrait la ligne suivante. Le detecteur
+// est donc mis a l'epreuve avant d'etre applique.
+function fautifs(texte) {
+  const out = [];
+  let m;
+  // Une valeur entrant dans une chaine JavaScript d'attribut est precedee du
+  // delimiteur `\''` puis d'une concatenation. N'importe quelle blancheur peut
+  // entourer le `+`, saut de ligne compris.
+  const appel = /\\''\s*\+\s*([A-Za-z_$][\w$]*)\s*\(/g;
+  while ((m = appel.exec(texte)) !== null) {
+    if (m[1] === 'jsq') continue;
+    out.push(texte.slice(0, m.index).split('\n').length + ' : ' + m[1] + '(');
+  }
+  // Et la forme sans le moindre encodage : `\'' + variable +`
+  const nu = /\\''\s*\+\s*([A-Za-z_$][\w$.]*)\s*\+/g;
+  while ((m = nu.exec(texte)) !== null) {
+    out.push(texte.slice(0, m.index).split('\n').length + ' : ' + m[1] +
+             ' (aucun encodage)');
+  }
+  return out;
 }
-// Et la forme sans aucun appel : `\'' + variable +`
-const nu = /\\'' \+\s*([A-Za-z_$][\w$.]*)\s*\+/g;
-while ((m = nu.exec(src)) !== null) {
-  fautifs.push(src.slice(0, m.index).split('\n').length + ' : ' + m[1] + ' (aucun encodage)');
-}
-t('tous les sites passent par jsq()', fautifs.length === 0, fautifs.join(' | '));
 
-const total = /\\'' \+\s*jsq\(/g;
+const epreuves = [
+  ["meme ligne, non protege",
+   "'<b onclick=\"f(\\'' + esc(v) + '\\')\">'", true],
+  ["ligne coupee AVANT le +, non protege",
+   "'<b onclick=\"f(\\''\n  + esc(v) + '\\')\">'", true],
+  ["ligne coupee APRES le +, non protege",
+   "'<b onclick=\"f(\\'' +\n  esc(v) + '\\')\">'", true],
+  ["aucun encodage du tout",
+   "'<b onclick=\"f(\\'' + v + '\\')\">'", true],
+  ["deuxieme argument non protege",
+   "'<b onclick=\"f(\\'' + jsq(a) + '\\',\\'' + esc(b) + '\\')\">'", true],
+  ["meme ligne, protege",
+   "'<b onclick=\"f(\\'' + jsq(v) + '\\')\">'", false],
+  ["ligne coupee, protege",
+   "'<b onclick=\"f(\\''\n  + jsq(v) + '\\')\">'", false],
+  ["hors gestionnaire, sans rapport",
+   "const s = 'a' + esc(v) + 'b';", false],
+];
+for (const [nom, extrait, attendu] of epreuves) {
+  const vu = fautifs(extrait).length > 0;
+  t(nom + (attendu ? ' -> detecte' : ' -> ignore'), vu === attendu,
+    'detecte=' + vu);
+}
+
+console.log('   -- 4. et le fichier livre le respecte --');
+const restants = fautifs(src);
+t('tous les sites passent par jsq()', restants.length === 0, restants.join(' | '));
+const total = /\\''\s*\+\s*jsq\(/g;
 console.log('      (' + (src.match(total) || []).length + ' sites proteges)');
 
 console.log('      ------------------------------------------------');
