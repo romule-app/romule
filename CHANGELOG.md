@@ -74,7 +74,28 @@ what the release actually contains rather than how it was built.
   account can only be created from the machine hosting the library.
 - Upload size cap, free-space check, socket timeouts, connection cap and a
   request rate limiter.
-- Path containment on custom platform folders, file extensions and title IDs.
+- Path containment on custom platform folders, file extensions and title IDs —
+  enforced both when reading *and* when writing, so a hostile value never even
+  reaches the configuration file.
+- **Twenty tests forge OpenID Connect identity tokens**, one per known attack:
+  `alg: none`, RS256/HS256 confusion, a foreign signing key, an unknown `kid`,
+  a tampered signature, a swapped payload keeping the original signature, wrong
+  issuer, wrong audience, expired, dated from the future, mismatched nonce, and
+  malformed input. All refused; a control test checks a valid token still
+  passes.
+- **Intrusion scenarios run against a live server**: path traversal and command
+  injection through a custom platform, token brute force against the rate
+  limiter, oversized upload, and a connection that opens and never finishes.
+
+### Verified before release
+
+- 302 checks across five suites, green on Python 3.10 through 3.13.
+- Built as a wheel, installed into a clean virtualenv: no dependencies pulled,
+  the `romule` command works, static files and locales ship with it.
+- Dry run from a fresh `git clone` on an empty library: starts, serves, and
+  passes its own suites. This is what caught `romule/__main__.py` never being
+  committed — `.gitignore` excluded it, so the README's first command failed
+  for everyone but the author.
 
 ### Known limitations
 
