@@ -3011,3 +3011,23 @@ body.compact .filters{margin-bottom:2px}
 .pied-beta{border:1px solid var(--primary-halo);color:var(--amber);
   border-radius:999px;padding:2px 8px;font-size:10px;letter-spacing:.08em;
   text-transform:uppercase}
+
+/* ---- choix du dossier des jeux (navigateur du SERVEUR)
+   Deux ecrans partagent ce navigateur : le bloc « Emplacement » des reglages,
+   et l'etape « ta bibliotheque » de l'assistant. Dans l'assistant la carte a
+   une hauteur limitee, d'ou la liste qui defile chez elle plutot que de
+   pousser les boutons hors de l'ecran. */
+.ludopick{margin-top:10px}
+.ludopick .crumb{margin:8px 0}
+.ludopick .card{max-height:min(38vh,300px);overflow:auto}
+#ludowrap #ludobrowser .card{max-height:min(46vh,420px);overflow:auto}
+/* Un dossier qu'on n'a pas le droit de lire reste visible — le masquer ferait
+   croire qu'il n'existe pas — mais il annonce qu'il ne mene nulle part. */
+.brow.dir.muet{opacity:.5}
+.brow.dir.muet .ic{color:var(--mute)}
+/* Le chemin courant, dans une ligne de reglages. Il ne doit ni deborder ni
+   pousser le bouton hors de la ligne — mais le tronquer par des points de
+   suspension le rendait illisible : « /private/var/folders… » ne dit rien.
+   Un chemin est une information qu'on lit en entier, il s'enroule donc. */
+.setctl>#s-ludo{flex:1 1 auto;min-width:0;margin-right:8px;
+  white-space:normal;word-break:break-all}

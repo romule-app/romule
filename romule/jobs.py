@@ -49,7 +49,7 @@ def _devine_niveau(texte):
     return "info"
 
 
-def notify(message, title="Ludotheque Switch"):
+def notify(message, title="Romule"):
     """Notification macOS de fin de tache (ignoree ailleurs)."""
     if not shutil.which("osascript"):
         return

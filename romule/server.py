@@ -25,7 +25,7 @@ from urllib.parse import parse_qs, unquote
 
 from . import (actions, audit, auth, comptes, config, covers, device, edenconf,
                doublons, emuready, igdb, integrity, journal_acces, meta, nand,
-               sauvegarde, saves,
+               parcourir, sauvegarde, saves,
                scan, systems, titleid, transferts, trash, versions, profils)
 from . import cli
 from . import LICENCE, SOURCE_URL, __version__
@@ -933,6 +933,9 @@ class Handler(BaseHTTPRequestHandler):
         "/api/wifi-connect",
         "/api/wifi-switch",
         "/api/wifi-forget",
+        # --- designent ou le service lit et ecrit sur la machine hote
+        "/api/parcourir",             # revele l'arborescence de l'hote
+        "/api/ludotheque",
         # --- renseignent sur qui se connecte, et sur la posture de securite
         "/api/acces",
         "/api/audit",
@@ -1215,6 +1218,31 @@ class Handler(BaseHTTPRequestHandler):
 
         elif p == "/api/device-browse":
             self._json({"items": device.list_dir(d.get("path", CFG["device_dir"]))})
+
+        # ---- ou sont les jeux, sur la machine qui heberge le service
+        elif p == "/api/parcourir":
+            self._json(parcourir.lister(d.get("chemin", ""), CFG))
+
+        elif p == "/api/ludotheque":
+            # Un travail en cours tient des chemins absolus deja calcules :
+            # deplacer la ludotheque sous ses pieds ferait ecrire une
+            # conversion dans l'ancien dossier, ou echouer un deplacement a
+            # mi-parcours. On refuse, on ne met pas en file.
+            if JOB.running:
+                return self._json(
+                    {"error": "un travail est en cours — reessaie apres"}, 409)
+            souci = config.definir_ludotheque(d.get("chemin", ""),
+                                              creer=bool(d.get("creer")))
+            if souci:
+                return self._json({"error": souci}, 400)
+            # Vide quand le choix retombe sur le dossier du service : la
+            # configuration dit alors « par defaut », et suivra le jour ou le
+            # deploiement changera ce dossier.
+            CFG["library_path"] = ("" if config.LUDO == config.ROOT
+                                   else str(config.LUDO))
+            config.save_config(CFG)
+            JOB.log("Ludotheque : %s" % config.LUDO)
+            self._json(_lib_response())
 
         elif p == "/api/device-games":
             games = device.find_games(d.get("root", CFG["device_dir"]))
@@ -1603,6 +1631,11 @@ def _health():
         "source": SOURCE_URL,
         "first_run": not config.CONFIG_FILE.exists(),
         "root": str(config.ROOT),
+        # La ludotheque est distincte de la racine du service : c'est elle que
+        # l'assistant et les reglages proposent de choisir.
+        "ludotheque": str(config.LUDO),
+        "ludotheque_imposee": config.LUDO_IMPOSEE,
+        "problemes": list(config.PROBLEMES),
         "checks": {
             "nsz": bool(shutil.which("nsz")),
             "adb": device.adb_available(),
@@ -1767,8 +1800,14 @@ def serve(open_browser=True):
     service = (_in_container() or config.ENV_LAN or config.TOKEN
                or config.env("NO_BROWSER", "").strip() not in ("", "0"))
     _audit_demarrage()
-    print("Ludotheque : %s" % config.ROOT)
+    print("Ludotheque : %s" % config.LUDO)
+    # Les deux dossiers sont affiches separement des qu'ils different : sinon
+    # on cherche sa configuration dans le dossier des jeux, ou l'inverse.
+    if config.LUDO != config.ROOT:
+        print("Donnees    : %s  (configuration, comptes, jaquettes)" % config.ROOT)
     print("Depot      : %s  (glisse tes fichiers ici)" % config.IMPORT)
+    for souci in config.PROBLEMES:
+        print("Attention  : %s" % souci)
     print("Interface  : %s   (Ctrl+C pour arreter)" % url)
     ip = _lan_ip()
     if CFG.get("lan_access"):

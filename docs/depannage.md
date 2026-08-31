@@ -12,11 +12,20 @@ docker compose logs romule
 Open the address it prints, token included. See
 [the first-access token](securite.md#the-first-access-token).
 
-## Romule refuses to start on my library folder
+## Romule refuses the folder I picked
 
-It refuses roots that are clearly wrong — the disk root, your home folder, or a
-code repository — because it moves files and creates folders there. Point
-`ROMULE_ROOT` at a folder that holds only your games.
+It refuses locations that are clearly wrong — the disk root, your home folder,
+a code repository, anything read-only — because it moves files and creates
+folders there. Pick a folder that holds only your games.
+
+The same rule applies to `ROMULE_ROOT` at startup, and there the service stops
+rather than writing into the wrong place.
+
+## The folder picker says "outside the allowed folders"
+
+`ROMULE_BASES` is set and the path is outside it. In Docker this usually means
+the folder is not mounted at all: add it to `volumes:`. Nothing the interface
+can do reaches a path the container cannot see.
 
 ## The scan finds nothing
 

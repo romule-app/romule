@@ -21,11 +21,17 @@ This is the only proof the folder you pointed at is the right one. A path
 accepted with nothing in it is a wrong path you discover an hour later, so the
 step will not let you continue until the scan finds something.
 
-To use a different folder, restart the service with `ROMULE_ROOT`.
+To use a different folder, click **Choose another folder…** and browse to it.
+Nothing to restart, and no file to edit — the same picker is in
+**Settings → Your library → Location** afterwards.
+
+If the button is missing, the folder was pinned by your deployment with
+`ROMULE_LIBRARY`; change it in your compose file.
 
 !!! note "Your folder stays yours"
-    Romule only writes its own files there, all prefixed with an underscore:
-    `_romule-config.json`, `_covers/`, `_import/`, `_corbeille/`.
+    Romule writes only `_import/` and `_corbeille/` next to your games. Its
+    settings, your accounts and the cover art live in the service data folder,
+    and do not follow the games when you move them.
 
 ## 3. Your access — required when reachable
 

@@ -50,7 +50,7 @@ def move(paths, reason, log=lambda m: None):
             if not src.is_file():
                 continue
             try:
-                rp = src.relative_to(config.ROOT)
+                rp = src.relative_to(config.LUDO)
             except ValueError:
                 log("Hors ludotheque, ignore : %s" % src)
                 continue
@@ -63,7 +63,7 @@ def move(paths, reason, log=lambda m: None):
                 moved += 1
             except OSError as exc:
                 log("Deplacement impossible (%s) : %s" % (rp, exc))
-    return moved, str(d.relative_to(config.ROOT))
+    return moved, str(d.relative_to(config.LUDO))
 
 
 def _taille(d):

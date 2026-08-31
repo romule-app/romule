@@ -16,10 +16,26 @@ nothing else needs installing.
 
 | Container path | What goes there |
 |---|---|
-| `/library` | Your library. Romule only writes its own files here, all prefixed `_`. |
+| `/data` | Romule's own state: settings, accounts, artwork, logs. A named volume — leave it alone. |
+| `/library` | Your games. Romule writes only `_import/` and `_corbeille/` alongside them. |
 | `/keys` | The folder holding `prod.keys`, read-only. Optional. |
 
-Edit the two `volumes:` lines in `docker-compose.yml` to point at your folders.
+Edit the `volumes:` lines in `docker-compose.yml` to point at your folders.
+
+You are **not** required to mount the games folder exactly. Mount whatever
+contains it — a whole disk, a share, a parent folder — and pick the right one
+from the interface on first run. That is what `ROMULE_BASES: /library` in the
+compose file means: browse anywhere under the mount, and nowhere else.
+
+```yaml
+    environment:
+      ROMULE_BASES: /library
+    volumes:
+      - /mnt/nas:/library      # then choose /library/switch in the interface
+```
+
+To fix the folder instead and stop anyone changing it from the interface, set
+`ROMULE_LIBRARY: /library`.
 
 ### Networking
 
@@ -65,7 +81,7 @@ Python 3.10 or newer. No install step, no virtualenv, no build.
 ```sh
 git clone https://github.com/romule-app/romule
 cd romule
-ROMULE_ROOT=/path/to/your/library python3 -m romule
+ROMULE_ROOT=/path/to/romule-data python3 -m romule
 ```
 
 Romule refuses to start on a library root that is clearly wrong — the disk
@@ -88,7 +104,7 @@ tells you what is missing and how to install it on your platform.
 
 ```sh
 pip install romule
-ROMULE_ROOT=/path/to/your/library romule serve
+ROMULE_ROOT=/path/to/romule-data romule serve
 ```
 
 It pulls no dependencies — the standard library is all it uses.
