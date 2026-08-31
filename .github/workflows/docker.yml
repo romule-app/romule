@@ -122,11 +122,34 @@ jobs:
 
       - name: Demarrage sur une ludotheque vide
         run: |
-          mkdir -p /tmp/donnees /tmp/ludo /tmp/cles
+          mkdir -p /tmp/ludo /tmp/cles
+          # Volume NOMME pour /data, comme le fichier compose : Docker le cree
+          # avec le proprietaire de l'image. Un dossier de l'hote monte a la
+          # place appartient a l'UID de l'hote, et l'image tourne sous 1000 —
+          # c'est le piege que l'etape suivante verifie explicitement.
+          docker volume create romule-donnees
           docker run -d --name romule \
             -p 8787:8787 \
-            -v /tmp/donnees:/data -v /tmp/ludo:/library -v /tmp/cles:/keys \
+            -v romule-donnees:/data -v /tmp/ludo:/library -v /tmp/cles:/keys \
             romule:fumee
+
+      # Le premier passage de ce test a fait tomber le service sur une trace de
+      # pile : `mkdir` du depot sans filet, sur un montage appartenant a un
+      # autre UID. Un operateur y lisait « Permission denied » sans savoir de
+      # qui ni sur quoi. Le message doit nommer le remede.
+      - name: Un dossier non inscriptible explique au lieu de planter
+        run: |
+          mkdir -p /tmp/interdit && chmod 500 /tmp/interdit
+          sortie=$(docker run --rm -v /tmp/interdit:/data romule:fumee 2>&1 || true)
+          echo "$sortie"
+          if echo "$sortie" | grep -q "Traceback"; then
+            echo "::error::le service meurt sur une trace de pile au lieu d'expliquer"
+            exit 1
+          fi
+          echo "$sortie" | grep -q "n'est pas inscriptible" \
+            || { echo "::error::pas de message explicite"; exit 1; }
+          echo "$sortie" | grep -q "1000:1000" \
+            || { echo "::error::le remede n'est pas nomme"; exit 1; }
 
       - name: La sonde de sante passe-t-elle au vert ?
         run: |
