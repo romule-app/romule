@@ -34,6 +34,11 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Changed
 
+- **Summaries taken from Wikipedia are now credited**, with a link to the
+  article and the CC BY-SA licence — that licence requires attribution, and the
+  source was recorded but never shown. The Wikimedia request now identifies the
+  project and gives a contact URL, as their User-Agent policy asks; it claimed
+  to be a "personal library" with no way to reach anyone.
 - **The README screenshot was the author's own library** — fifteen real Switch
   titles, their publisher cover art, their file sizes and the console's name.
   A screenshot should show the software. It is now generated from a synthetic
@@ -47,6 +52,13 @@ change it. Breaking changes are always listed under **Changed** with the reason.
   downloaded again", "incomplete file — download it again" — now says
   "reinstalled" and "replace it". Romule takes no position on where your files
   came from, and its interface should not either.
+
+### Added
+
+- **The journal button can be dragged up and down** the right edge, and stays
+  where you put it. It used to hang at mid-height, which on some pages is
+  exactly over what you are reading. Shift + arrow keys do the same thing, so
+  the handle exists for people who do not use a mouse.
 
 ### Security
 
@@ -68,6 +80,21 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Fixed
 
+- **A game sheet opened from the versions list stayed behind it.** Both windows
+  sit on the same layer, and at equal depth the DOM order decides — the
+  versions list comes last. The sheet was drawn, just invisible. The last
+  window opened now comes to the front, and closing it hands back to the one
+  underneath.
+- **The cover preview in the appearance settings was empty.** It borrows a real
+  cover from your library, and when that image failed to load — the ordinary
+  case on a fresh install — the code *removed* the image instead of falling
+  back, so the seven effects had nothing left to show and no reload helped.
+  There is now a generic cover, drawn inline, used both when no cover exists
+  and when one fails to load.
+- `en` was missing from the list of language markers used to group versions of
+  the same game, while `fr`, `de`, `es`, `it`, `nl`, `pt`, `ru`, `kr` and `cn`
+  were all there. `Game (EN)` and `Game (FR)` were not recognised as the same
+  title.
 - **Five strings stayed in French in an English interface**, all on the path a
   brand-new user takes: the "no console" header, its two hints, the empty
   library, and the state shown on **every** card when no console is connected.

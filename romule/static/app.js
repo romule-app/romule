@@ -104,6 +104,21 @@ function nomJeu(g) {
   if (t) return t;
   return nomLisible(pretty((g && g.name) || ''));
 }
+// Provenance du resume affiche. Aujourd'hui une seule source demande d'etre
+// citee — Wikipedia, sous CC BY-SA — mais la forme se prete a d'autres.
+function creditResume(g) {
+  const f = (g && (g.files && g.files[0])) || g || {};
+  const src = String(f.source_resume || g.source_resume || '');
+  if (!src.startsWith('wikipedia:')) return '';
+  const url = f.url_resume || g.url_resume || '';
+  const nom = t('Wikipédia');
+  const lien = url
+    ? '<a href="' + esc(url) + '" target="_blank" rel="noopener noreferrer">' +
+      esc(nom) + '</a>'
+    : esc(nom);
+  return phrase('Résumé issu de %s, sous licence CC BY-SA.', lien);
+}
+
 function resumeJeu(g) {
   const m = g && g.tid && META[String(g.tid).toLowerCase()];
   if (m && m.resume) return m.resume;
@@ -1496,6 +1511,14 @@ function sansFiche(g) {
 
 // Une ligne de la fenetre des versions : de quoi choisir sans ouvrir chaque
 // fiche — la langue, la taille, l'etat, et ou se trouve le fichier.
+// La derniere fenetre ouverte passe devant, et elle seule. On ne fait pas
+// grimper un compteur : les couches au-dessus (assistant, loupe, voile de
+// depot) doivent rester au-dessus, quoi qu'il arrive.
+function auPremierPlan(el) {
+  document.querySelectorAll('.modal').forEach(m => m.classList.remove('devant'));
+  el.classList.add('devant');
+}
+
 function ligneVersion(x) {
   const {g, e} = x;
   const lg = etiquetteLangues(g);
@@ -1798,6 +1821,9 @@ function openGameHtml(g) {
     '</div></div></div>' +
     '<div class="body">' +
     '<p class="gdesc" id="gm-desc"></p>' +
+    // Le texte de Wikipedia est sous CC BY-SA : cette licence demande de citer
+    // la source. La ligne reste vide quand le resume vient d'ailleurs.
+    '<p class="gcredit" id="gm-credit">' + creditResume(g) + '</p>' +
     '<div class="chiffres">' +
       '<div><b>' + fmt(g.size) + '</b><span>total</span></div>' +
       '<div class="pres"><b class="' + (e.presence.mac ? 'p-oui' : 'p-non') + '">' +
@@ -2924,7 +2950,7 @@ const LANGUES_REGIONS = new Set((
   'german english spanish french italian japanese korean chinese dutch ' +
   'portuguese russian polish swedish danish norwegian finnish brazilian ' +
   'deutsch francais italiano espanol japonais nederlands portugues ' +
-  'usa europe eur jpn jap japan world us eu jp fr de es it nl pt ru kr cn ' +
+  'usa europe eur jpn jap japan world us eu jp en fr de es it nl pt ru kr cn ' +
   'multi multi3 multi5 pal ntsc intl international rev').split(' '));
 // Mots de decor : ils accompagnent le marqueur sans le caracteriser.
 const MOTS_DECOR = new Set(['ver', 'version', 'edition', 'ed', 'v']);
@@ -3578,6 +3604,7 @@ const app = {
       // differe de `fermerVoile` viderait la fenetre qu'on vient d'ouvrir.
       $('modal').classList.remove('ferme');
       $('modal').classList.add('open');
+      auPremierPlan($('modal'));
     });
     const info = $('gm-info'), desc = $('gm-desc');
 
@@ -4646,6 +4673,7 @@ const app = {
       '</div>';
     el.classList.remove('ferme');
     el.classList.add('open');
+    auPremierPlan(el);
     traduireDOM(el);
   },
 
@@ -6037,7 +6065,17 @@ function construireChoixCartes() {
     // La source arrive plus tard : au moment ou ce bloc se construit, la
     // ludotheque n'est pas encore lue. En attendant, le degrade tient lieu
     // de jaquette.
-    img.onerror = function () { this.remove(); };
+    //
+    // Si elle echoue — et elle echoue des que le jeu choisi n'a pas encore de
+    // pochette en cache, ce qui est le cas courant d'une installation neuve —
+    // on retombe sur la pochette generique AU LIEU de retirer l'image. La
+    // retirer laissait l'apercu vide pour de bon : les trois effets a comparer
+    // n'avaient plus rien a habiller, et aucun rechargement n'y changeait rien.
+    img.onerror = function () {
+      if (this.dataset.repli) { this.remove(); return; }   // meme le repli a echoue
+      this.dataset.repli = '1';
+      this.src = JAQUETTE_EXEMPLE;
+    };
     vue.appendChild(img);
     const bandeau = document.createElement('span');
     bandeau.className = 'apbandeau';
@@ -6062,9 +6100,31 @@ function construireChoixCartes() {
 // ludotheque qui en a une, plutot qu'une image livree avec l'outil — celle-ci
 // aurait vieilli a part, et n'aurait rien dit du rendu sur les jaquettes de
 // l'utilisateur.
+// Aucune pochette disponible — installation neuve, aucune fiche en cache, ou
+// simplement une ludotheque sans jeu Switch. L'apercu restait alors vide, et
+// les trois effets a comparer n'avaient rien a habiller : on reglait a
+// l'aveugle. On dessine donc une pochette generique. Elle ne represente aucun
+// jeu, ce qui est exactement ce qu'on veut ici — et elle est en `data:`, donc
+// servie par la page elle-meme, sans requete ni exception a la CSP.
+const JAQUETTE_EXEMPLE = 'data:image/svg+xml,' + encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 450">' +
+    '<defs><linearGradient id="f" x1="0" y1="0" x2="0.4" y2="1">' +
+      '<stop offset="0" stop-color="#33344180"/>' +
+      '<stop offset="1" stop-color="#15161d"/></linearGradient></defs>' +
+    '<rect width="300" height="450" fill="#1b1c24"/>' +
+    '<rect width="300" height="450" fill="url(#f)"/>' +
+    // La silhouette d'une cartouche, la meme que sur une carte sans jaquette :
+    // l'apercu doit ressembler a ce que l'utilisateur verra vraiment.
+    '<rect x="110" y="146" width="80" height="126" rx="13" fill="#40425200"' +
+      ' stroke="#5a5d70" stroke-width="3"/>' +
+    '<rect x="132" y="240" width="36" height="13" rx="4" fill="#5a5d70"/>' +
+  '</svg>');
+
 function jaquetteExemple() {
   let liste = [];
-  try { liste = jeuxUnifies() || []; } catch (e) { return ''; }
+  // Meme en cas d'echec, on rend la pochette generique : un apercu vide ne
+  // dit rien, et l'echec ici n'a rien a voir avec le reglage qu'on regarde.
+  try { liste = jeuxUnifies() || []; } catch (e) { return JAQUETTE_EXEMPLE; }
   const v = (DATA && DATA.covers_v) || 0;
   for (const x of liste) {
     const g = (x && x.g) || x;
@@ -6073,7 +6133,7 @@ function jaquetteExemple() {
     return '/cover/' + (g.tid || '') + '?v=' + v +
            '&name=' + encodeURIComponent(g.name || '');
   }
-  return '';
+  return JAQUETTE_EXEMPLE;
 }
 
 function majApercuJaquette() {
@@ -6678,4 +6738,88 @@ majApparence();
   // Les compteurs du selecteur dependent de ce que porte la console : on la lit
   // une fois, en arriere-plan, plutot que d'afficher des zeros trompeurs.
   if (CONN.kind) app.detecterPlateformes(true);
+})();
+
+/* ------------------------------------------------- bouton du journal mobile
+   Le bouton pend au milieu du bord droit. Selon la page et la taille de
+   l'ecran, il tombe pile sur ce qu'on veut lire — et il n'y avait aucun moyen
+   de le pousser. On le rend glissable de haut en bas, et sa position tient
+   d'une session a l'autre.
+
+   Trois details qui font la difference entre « glissable » et « utilisable » :
+
+   * un glissement ne doit pas ouvrir le journal. On distingue le clic du
+     glissement par un seuil de quelques pixels, et on annule le clic qui suit
+     un vrai deplacement — en phase de CAPTURE, pour passer avant le
+     gestionnaire en ligne du bouton ;
+   * la position est bornee a l'ecran et re-bornee au redimensionnement, sinon
+     un bouton range en bas d'un grand ecran devient injoignable sur un petit ;
+   * le clavier fait la meme chose. Une poignee qui n'obeit qu'a la souris
+     n'existe pas pour qui n'en utilise pas. */
+(function boutonJournalDeplacable() {
+  const btn = $('journalbtn');
+  if (!btn) return;
+  const MARGE = 8, CLE = 'jfab-y', SEUIL = 4;
+
+  function borner(y) {
+    const h = btn.offsetHeight || 120;
+    return Math.max(MARGE, Math.min(y, window.innerHeight - h - MARGE));
+  }
+  function poser(y, garder) {
+    const v = borner(y);
+    btn.style.top = v + 'px';
+    btn.style.transform = 'none';
+    if (garder) localStorage.setItem(CLE, String(v));
+    return v;
+  }
+  const enregistre = parseInt(localStorage.getItem(CLE), 10);
+  if (!isNaN(enregistre)) poser(enregistre, false);
+
+  let depart = 0, origine = 0, bouge = false, actif = false, finGlisse = 0;
+  btn.addEventListener('pointerdown', e => {
+    if (e.button !== undefined && e.button !== 0) return;
+    actif = true; bouge = false;
+    depart = e.clientY;
+    origine = btn.getBoundingClientRect().top;
+    btn.setPointerCapture(e.pointerId);
+  });
+  btn.addEventListener('pointermove', e => {
+    if (!actif) return;
+    const delta = e.clientY - depart;
+    if (!bouge && Math.abs(delta) < SEUIL) return;
+    bouge = true;
+    btn.classList.add('glisse');
+    poser(origine + delta, false);
+  });
+  btn.addEventListener('pointerup', e => {
+    if (!actif) return;
+    actif = false;
+    btn.classList.remove('glisse');
+    try { btn.releasePointerCapture(e.pointerId); } catch (_) { /* deja relache */ }
+    if (bouge) { poser(btn.getBoundingClientRect().top, true); finGlisse = performance.now(); }
+  });
+  btn.addEventListener('pointercancel', () => {
+    actif = false; bouge = false; btn.classList.remove('glisse');
+  });
+  // Capture : le gestionnaire en ligne du bouton est en phase de bulle, donc
+  // il passe apres celui-ci. C'est ce qui permet d'annuler le clic.
+  btn.addEventListener('click', e => {
+    // Fenetre courte plutot que drapeau persistant : un glissement qui ne
+    // produit aucun clic — pointeur relache ailleurs, geste tactile annule —
+    // laissait le drapeau leve, et c'est le clic suivant qui etait mange.
+    if (performance.now() - finGlisse > 300) return;
+    e.stopPropagation();
+    e.preventDefault();
+  }, true);
+
+  btn.addEventListener('keydown', e => {
+    if (!e.shiftKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
+    e.preventDefault();
+    poser(btn.getBoundingClientRect().top + (e.key === 'ArrowUp' ? -24 : 24), true);
+  });
+
+  window.addEventListener('resize', () => {
+    const y = parseInt(localStorage.getItem(CLE), 10);
+    if (!isNaN(y)) poser(y, false);
+  });
 })();
