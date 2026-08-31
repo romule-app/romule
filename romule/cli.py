@@ -8,6 +8,7 @@
 """
 
 import argparse
+import os
 import shutil
 import sys
 from pathlib import Path
@@ -141,17 +142,35 @@ def _verifier_racine():
     n'est pas une gene : c'est une perte de donnees. Mieux vaut refuser de
     demarrer que de ranger des jeux dans `~`.
     """
-    souci = config.racine_douteuse()
-    if not souci:
-        # La racine par defaut n'existe pas a la premiere ouverture, et son
-        # parent non plus : sans cette creation, tout nouvel utilisateur
-        # tombait sur un FileNotFoundError des le lancement.
+    # L'ordre compte, et il a ete appris a la dure. L'heuristique passait en
+    # premier : elle regarde DANS le dossier, donc elle levait avant tout le
+    # reste des que le processus n'avait pas le droit d'y entrer. On etablit
+    # donc d'abord que le dossier existe et nous appartient, ensuite seulement
+    # on se demande s'il ressemble a une ludotheque.
+    #
+    # La racine par defaut n'existe pas a la premiere ouverture, et son parent
+    # non plus : sans cette creation, tout nouvel utilisateur tombait sur un
+    # FileNotFoundError des le lancement.
+    if not os.path.isdir(config.ROOT):
         try:
             config.ROOT.mkdir(parents=True, exist_ok=True)
         except OSError as exc:
             print("Impossible de creer le dossier de donnees : %s" % exc)
             print("    %s" % config.ROOT)
             sys.exit(1)
+    if not os.access(config.ROOT, os.W_OK):
+        print("Le dossier de donnees n'est pas inscriptible :")
+        print("    %s" % config.ROOT)
+        print("Romule y ecrit sa configuration, ses comptes et ses journaux.")
+        if config.en_conteneur():
+            print("En conteneur, c'est presque toujours l'identifiant du")
+            print("proprietaire : l'image tourne sous 1000:1000.")
+            print("    chown -R 1000:1000 <le dossier de l'hote>")
+            print("ou adapte `user:` dans docker-compose.yml a ton identifiant")
+            print("(`id -u` / `id -g`). Un volume nomme evite la question.")
+        sys.exit(1)
+    souci = config.racine_douteuse()
+    if not souci:
         return
     print("Le dossier de donnees designe %s :" % souci)
     print("    %s" % config.ROOT)
