@@ -52,6 +52,13 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Fixed
 
+- **The service died at startup on an unwritable data folder**, on a raw
+  traceback from `mkdir`. That is the most common containerised deployment
+  mistake — a host folder bind-mounted into the container belongs to the host
+  UID while the image runs as 1000 — and `Permission denied` alone says
+  nothing about whose permission, or how to fix it. Startup now checks and
+  names the remedy, and the import folder being unavailable is a warning
+  rather than a fatal error.
 - The onboarding step for the library sent you off to restart the service with
   an environment variable — on a NAS, that meant opening a terminal in the
   middle of the wizard.
