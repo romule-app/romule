@@ -261,6 +261,61 @@ jobs:
           echo "utilisateur du conteneur : $qui"
           [ "$qui" = "romule" ] || { echo "::error::le conteneur tourne en $qui"; exit 1; }
 
+      # `docker compose up` est la PREMIERE commande du README, et elle
+      # n'etait testee nulle part : les etapes precedentes utilisent
+      # `docker run`. Le fichier compose a sa propre forme — volume nomme pour
+      # /data, montage pour les jeux, `ROMULE_BASES` — et rien ne garantissait
+      # qu'elle tienne.
+      - name: La pile compose monte, et le navigateur reste dans le montage
+        run: |
+          docker rm -f romule                    # le compose reclame ce nom
+          mkdir -p library keys
+          # On epingle l'image deja construite et on interdit la
+          # reconstruction : `build: !reset null` marcherait aussi, mais il
+          # demande une version recente du format. `--no-build` est compris
+          # partout, et l'intention est plus lisible.
+          cat > /tmp/epingle.yml <<'YML'
+          services:
+            romule:
+              image: romule:fumee
+          YML
+          docker compose -p fumee -f docker-compose.yml -f /tmp/epingle.yml \
+            up -d --no-build
+          for i in $(seq 1 60); do
+            etat=$(docker inspect -f '{{.State.Health.Status}}' romule 2>/dev/null || echo absent)
+            [ "$etat" = "healthy" ] && break
+            sleep 1
+          done
+          if [ "$etat" != "healthy" ]; then
+            echo "::error::la pile compose n'est jamais devenue saine ($etat)"
+            docker compose -p fumee logs
+            exit 1
+          fi
+          jeton=$(docker compose -p fumee logs romule 2>&1 \
+                  | grep -o 'token=[A-Za-z0-9_-]*' | head -1 | cut -d= -f2)
+          curl -s -c /tmp/pot -o /dev/null "http://127.0.0.1:8787/?token=$jeton"
+          curl -s -b /tmp/pot -H "Origin: http://127.0.0.1:8787" \
+               -H "Content-Type: application/json" -d '{}' \
+               http://127.0.0.1:8787/api/parcourir -o parcours.json
+          python3 - <<'PY'
+          import json, sys
+          d = json.load(open("parcours.json"))
+          erreurs = []
+          # Le point de depart : la ludotheque vaut /data par defaut, hors des
+          # bases. Sans le repli, ouvrir la fenetre repondrait « hors des
+          # dossiers autorises » a quelqu'un qui n'a rien demande.
+          if d.get("chemin") != "/library":
+              erreurs.append("depart attendu /library, recu %r" % (d.get("chemin") or d.get("error")))
+          hors = [x["chemin"] for x in d.get("raccourcis", [])
+                  if not x["chemin"].startswith("/library")]
+          if hors:
+              erreurs.append("raccourcis hors du montage : %r" % hors)
+          for e in erreurs:
+              print("::error title=Compose::%s" % e)
+          sys.exit(1 if erreurs else 0)
+          PY
+          docker compose -p fumee down -v
+
       - name: Journal du conteneur
         if: always()
         run: docker logs romule || true
