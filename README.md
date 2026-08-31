@@ -29,3 +29,24 @@ ROMULE_ROOT=/path/to/your/library python3 -m romule
 Source comments and docstrings are written in French, deliberately: they carry
 the reasoning behind the code. User-facing text, documentation and issues are
 in English.
+
+## Project documents
+
+| Document | What it covers |
+|---|---|
+| [CHANGELOG.md](CHANGELOG.md) | What changed, release by release |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Zero-dependency rule, house style, how to run the suites |
+| [SECURITY.md](SECURITY.md) | How to report a vulnerability, and what is in scope |
+| [LICENSE](LICENSE) | GNU AGPL-3.0-or-later |
+
+## Licence
+
+Romule is free software under the
+[GNU Affero General Public License v3.0 or later](LICENSE).
+
+The AGPL was chosen deliberately: Romule is a **network service**, and the
+AGPL is what keeps a hosted fork open. If you run a modified Romule and let
+others reach it over a network, section 13 requires you to offer them your
+source. The interface footer carries that offer — it links to the source and
+shows the running version, and `/api/health` reports both as well. Keep it
+working if you fork.

@@ -3324,6 +3324,19 @@ function nomEmulateur(cle) {
   return p ? p.nom : (cle || '');
 }
 
+// Le pied de page tient l'offre de code source exigee par l'AGPL. Les valeurs
+// viennent du serveur : une version ecrite en dur dans la page finit toujours
+// par mentir apres une mise a jour.
+function renderPied() {
+  if (!HEALTH) return;
+  const v = $('pied-version');
+  if (v && HEALTH.version) v.textContent = 'Romule ' + HEALTH.version;
+  const l = $('pied-licence');
+  if (l && HEALTH.licence) l.textContent = HEALTH.licence.replace('-or-later', '');
+  const a = $('pied-source');
+  if (a && HEALTH.source) a.href = HEALTH.source;
+}
+
 function renderChoixEmulateur() {
   const el = $('choixemulateur');
   if (!el || !HEALTH) return;
@@ -3977,6 +3990,7 @@ const app = {
     TELEVERSEMENT_MAX = ((HEALTH || {}).checks || {}).televersement_max || 0;
     const vu = localStorage.getItem('onboard-vu') === '1';
     renderChoixEmulateur();
+    renderPied();
     if (force || (HEALTH.first_run && !vu)) renderOnboard();
     return HEALTH;
   },

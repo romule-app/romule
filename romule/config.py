@@ -75,8 +75,30 @@ VCACHE = ROOT / "_cache_versions.txt"
 # le fichier ne change pas.
 TIDCACHE = ROOT / "_cache_conteneurs.json"
 NAND_LIST = ROOT / "_a_installer_dans_NAND.txt"
-LOGFILE = ROOT / "_switch-lib.log"
-CONFIG_FILE = ROOT / "_switch-config.json"
+
+
+def fichier_etat(nom, ancien_nom):
+    """Chemin d'un fichier d'etat, en recuperant l'ancien nom s'il existe.
+
+    Les fichiers d'etat portaient le nom du projet precedent. Se contenter du
+    nouveau nom, c'est faire perdre sa configuration et ses comptes a qui met a
+    jour : le service repartirait sur une installation vierge sans le dire.
+    Le renommage n'a lieu qu'une fois, et son echec n'est pas une panne — on
+    continue simplement de lire la ou les donnees sont.
+    """
+    neuf = ROOT / nom
+    ancien = ROOT / ancien_nom
+    if neuf.exists() or not ancien.exists():
+        return neuf
+    try:
+        ancien.rename(neuf)
+        return neuf
+    except OSError:
+        return ancien
+
+
+LOGFILE = fichier_etat("_romule-lib.log", "_switch-lib.log")
+CONFIG_FILE = fichier_etat("_romule-config.json", "_switch-config.json")
 
 EXTS = {".nsz", ".xcz", ".nsp", ".xci"}
 COMPRESSED = {".nsz", ".xcz"}

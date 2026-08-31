@@ -12,7 +12,7 @@ import shutil
 import sys
 from pathlib import Path
 
-from . import config, convert, device, scan, versions
+from . import __version__, config, convert, device, scan, versions
 from .jobs import JobRunner
 
 
@@ -247,6 +247,8 @@ def main(argv):
     parser = argparse.ArgumentParser(
         prog="romule",
         description="Romule — ludotheque de jeux auto-hebergee")
+    parser.add_argument("--version", action="version",
+                        version="romule %s" % __version__)
     sub = parser.add_subparsers(dest="cmd")
 
     sub.add_parser("serve", help="interface web (defaut)")

@@ -102,7 +102,7 @@ t("auth_secret absent", "auth_secret" not in cfg, list(cfg)[:3])
 t("client_secret masque", cfg.get("oidc_client_secret") == "•" * 8, cfg.get("oidc_client_secret"))
 appel("/api/config", {"oidc_client_secret": "•" * 8})
 import pathlib
-reel = json.loads(pathlib.Path(RACINE, "_switch-config.json").read_text())
+reel = json.loads(pathlib.Path(RACINE, "_romule-config.json").read_text())
 t("secret conserve apres renvoi du masque", reel.get("oidc_client_secret") == "tres-secret", reel.get("oidc_client_secret"))
 
 print("   -- 8. changement de mot de passe --")
@@ -131,7 +131,7 @@ t("fichier non-image refuse", c == 400, js(b))
 uid = js(appel("/api/comptes", {})[1])["moi"]
 c, b, _ = appel("/photo/" + uid)
 t("photo servie", c == 200 and b == png, c)
-c, b, _ = appel("/photo/../_switch-comptes.json")
+c, b, _ = appel("/photo/../_romule-comptes.json")
 t("traversee de chemin bloquee", c == 404, c)
 
 print("   -- 10. suppression et roles --")
@@ -152,7 +152,7 @@ c, b, _ = appel("/api/compte-supprimer", {"id": uid})
 t("le dernier administrateur n'est pas supprimable", c == 400, js(b))
 
 print("   -- 11. le fichier des comptes ne contient aucun mot de passe --")
-brut = pathlib.Path(RACINE, "_switch-comptes.json").read_text()
+brut = pathlib.Path(RACINE, "_romule-comptes.json").read_text()
 t("mot de passe absent du disque", "petite lune verte" not in brut and "encore un mot long" not in brut)
 # fuite:ok ce test garantit justement qu'aucun mot de passe n'est stocke en clair
 t("empreinte scrypt", "scrypt$131072$8$1$" in brut, brut[:80])
