@@ -103,6 +103,17 @@ it. Removing them means converting every one to delegated events — a project i
 itself. Until then the CSP cannot forbid inline scripts without making every
 button inert. Documented rather than quietly dropped.
 
+Because those handlers stay, any value interpolated into one goes through
+`jsq()` rather than `esc()`. The distinction matters and it is not obvious: a
+value inside `onclick="app.do('HERE')"` crosses **two** parsers. The HTML
+parser decodes entities first, then the JavaScript engine compiles what is
+left — so `esc()`'s `&#39;` becomes an apostrophe *before* the script is read,
+closing the string and turning the rest of the value into code. A filename is
+enough to build one, and a card's key is the file's path. `jsq()` escapes for
+the JavaScript context first and the HTML context second. A test asserts that
+no inline handler in `app.js` interpolates without it, so the rule holds for
+handlers added later too.
+
 **No TLS**, as above.
 
 **[Beta features](beta.md)** carry their own risks, listed there. The most

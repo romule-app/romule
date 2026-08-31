@@ -32,6 +32,23 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 - The Docker image now exposes `/data` (named volume) alongside `/library`, so
   Romule's own state is no longer written among your games.
 
+### Security
+
+- **Stored XSS through filenames.** Values interpolated into inline event
+  handlers were escaped for the HTML context only. A value inside
+  `onclick="app.do('HERE')"` crosses two parsers: the HTML parser decodes
+  `&#39;` back to an apostrophe *before* the JavaScript engine compiles the
+  handler, so the string closed and the rest of the value ran as code. A card's
+  key is the file's path, and nothing forbids an apostrophe in a filename —
+  `x',alert(1),'.gba` uploaded through `/api/upload` was enough, and it ran in
+  the session of whoever clicked the card, including an administrator. All 25
+  interpolation points now use a JavaScript-context encoder, and a test asserts
+  no handler can be added without one.
+- Custom platform keys were only lowercased, never filtered, while the name and
+  folder were. The key is an identifier everywhere — platform index,
+  `system_dirs`, interface handlers. It is now normalised rather than rejected,
+  so no already-declared platform disappears.
+
 ### Fixed
 
 - The onboarding step for the library sent you off to restart the service with

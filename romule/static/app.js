@@ -41,6 +41,35 @@ const fmt = b => {
 };
 const esc = s => String(s).replace(/[&<>"']/g,
   c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+
+// Une valeur qui entre dans une CHAINE JavaScript a l'interieur d'un attribut
+// de gestionnaire — `onclick="app.faire('ICI')"` — traverse DEUX analyseurs :
+// l'analyseur HTML decode d'abord les entites, puis le moteur JavaScript
+// compile ce qu'il en reste.
+//
+// `esc()` ne repond qu'au premier, et c'est ce qui rendait le trou invisible :
+// il transforme bien l'apostrophe en `&#39;`, mais l'analyseur HTML la rend
+// AVANT que le JavaScript ne soit lu. La chaine se referme, et la suite de la
+// valeur devient du code.
+//
+// Il n'y a rien d'exotique a fabriquer une telle valeur : la cle d'une carte
+// EST le chemin du fichier, et rien n'interdit l'apostrophe dans un nom de
+// fichier. `x',alert(1),'.gba` suffit.
+//
+// On echappe donc pour le contexte JavaScript D'ABORD, pour le contexte HTML
+// ensuite. L'ordre compte : l'inverse laisserait `esc` reintroduire des
+// entites que le moteur JavaScript ne sait pas relire.
+//
+// Le vrai remede reste de sortir ces valeurs des attributs — `data-grp` le
+// fait deja pour la cle de groupe. Tant que les gestionnaires en ligne sont
+// la, c'est cet encodage qui tient.
+const jsq = v => esc(JSON.stringify(String(v == null ? '' : v))
+  .slice(1, -1)                    // JSON rend une chaine entre guillemets
+  .replace(/'/g, "\\'")            // que JSON, lui, n'echappe pas
+  // JSON laisse passer U+2028/2029 bruts ; le moteur JavaScript les a longtemps
+  // lus comme des fins de ligne, donc comme une chaine non terminee.
+  .replace(/\u2028/g, '\\u2028')
+  .replace(/\u2029/g, '\\u2029'));
 // Titre officiel dans la langue choisie, quand la fiche est en cache ; sinon le
 // nom du fichier. Un nom de fichier dit « [Game] Pokemon Sword [0100ABF...] » la
 // ou l'editeur dit « Pokémon Épée ».
@@ -1478,7 +1507,7 @@ function ligneVersion(x) {
     '<span class="vtaille">' + esc(fmt(g.size)) + '</span>' +
     (etat ? '<span class="vetat ' + etat[0] + '">' +
             esc(ETAT_COURT[e.etat] || etat[1]) + '</span>' : '') +
-    '<button class="ghost" onclick="app.openGame(\'' + esc(g.key) + '\')">' +
+    '<button class="ghost" onclick="app.openGame(\'' + jsq(g.key) + '\')">' +
       'Détails</button>' +
   '</div>';
 }
@@ -1497,7 +1526,7 @@ function carteHtml(x) {
     '" data-lettre="' + esc(lettreDe(g)) +
     '" data-key="' + esc(g.key) + '"' + attrsTeinte(g) +
     ' tabindex="0" role="button" aria-label="' + esc(nomJeu(g)) + '"' +
-    ' onclick="app.cardClick(event,\'' + esc(g.key) + '\')">' +
+    ' onclick="app.cardClick(event,\'' + jsq(g.key) + '\')">' +
     '<div class="art">' + coverImg(g) +
     // Sans jaquette, la silhouette du support dit au moins de quoi il s'agit.
     // Une initiale geante ne disait rien : deux jeux sur trois commencent par
@@ -1517,7 +1546,7 @@ function carteHtml(x) {
        '" onclick="event.stopPropagation();app.voirVersions(this.dataset.grp)">' +
        g.groupeN + ' versions…</button>' : '') +
     '<button class="pinfo" onclick="event.stopPropagation();app.openGame(\'' +
-    esc(g.key) + '\')">Détails</button></div></div>';
+    jsq(g.key) + '\')">Détails</button></div></div>';
 }
 
 // Met a jour une carte deja presente. Chaque ecriture est conditionnelle : rien
@@ -1580,7 +1609,7 @@ function renderToolbar(tous) {
   const pop = $('favlist');
   if (pop) pop.innerHTML = Object.entries(FAVANCES).map(([k, [lib, fn]]) =>
     '<label class="favrow"><input type="checkbox" ' + (FAV.has(k) ? 'checked ' : '') +
-    'onchange="app.toggleFav(\'' + k + '\')"><span class="grow">' + esc(lib) + '</span>' +
+    'onchange="app.toggleFav(\'' + jsq(k) + '\')"><span class="grow">' + esc(lib) + '</span>' +
     '<span class="mono">' + tous.filter(fn).length + '</span></label>').join('');
   const b = $('favbtn');
   if (b) { b.classList.toggle('on', FAV.size > 0);
@@ -1675,7 +1704,7 @@ function majSection(g, e) {
     l.push('<div class="majrow act"><span>À activer dans Eden</span>' +
       '<b class="p-partiel">' + e.aActiver.length + ' élément(s)</b>' +
       '<button class="go" ' + (CONN.kind ? '' : 'disabled title="Console non connectée"') +
-      ' onclick="app.activerJeu(\'' + esc(g.key) + '\')">Activer</button></div>');
+      ' onclick="app.activerJeu(\'' + jsq(g.key) + '\')">Activer</button></div>');
   }
   drapeaux.forEach(([code, txt]) => l.push(
     '<div class="majrow"><span>' +
@@ -1722,17 +1751,17 @@ function openGameHtml(g) {
     (f.version != null ? ' <span class="mono">v' + f.version + '</span>' : '') + '</div></span>' +
     (f.converted ? '<span class="flag f-done">converti</span>' : '') +
     '<span class="size">' + fmt(f.size) + '</span>' +
-    '<button class="iconbtn" onclick="event.stopPropagation();app.trashFile(\'' + esc(f.path) + '\')">corbeille</button></div>').join('');
+    '<button class="iconbtn" onclick="event.stopPropagation();app.trashFile(\'' + jsq(f.path) + '\')">corbeille</button></div>').join('');
 
   // Les actions proposees dependent de l'etat : proposer « Envoyer vers la
   // console » a un jeu qui n'existe QUE sur la console n'a aucun sens.
   const acts = [];
   if (g.needsConvert)
-    acts.push('<button class="go" onclick="app.convertGame(\'' + esc(g.key) + '\')">Convertir ce jeu</button>');
+    acts.push('<button class="go" onclick="app.convertGame(\'' + jsq(g.key) + '\')">Convertir ce jeu</button>');
   if (g.console)
-    acts.push('<button class="go" onclick="app.importerJeu(\'' + esc(g.key) + '\')">Copier vers le serveur</button>');
+    acts.push('<button class="go" onclick="app.importerJeu(\'' + jsq(g.key) + '\')">Copier vers le serveur</button>');
   else if (e.aEnvoyer.length)
-    acts.push('<button class="go" onclick="app.sendGame(\'' + esc(g.key) + '\')">Envoyer vers la console</button>');
+    acts.push('<button class="go" onclick="app.sendGame(\'' + jsq(g.key) + '\')">Envoyer vers la console</button>');
   acts.push('<button class="ghost" onclick="app.closeGame()">Fermer</button>');
 
   return '<div class="sheet"' + attrsTeinte(g) + ' onclick="event.stopPropagation()">' +
@@ -2063,7 +2092,7 @@ function renderDeviceCard(info, volumes) {
   const vols = (volumes || []).map(v => {
     const used = (v.total && v.free != null) ? (v.total - v.free) / v.total : 0;
     const spc = v.free != null ? fmt(v.free) + ' libre / ' + fmt(v.total) : 'espace inconnu';
-    return '<div class="vol" onclick="app.setDpath(\'' + esc(v.path) + '\')" title="Explorer ce volume">' +
+    return '<div class="vol" onclick="app.setDpath(\'' + jsq(v.path) + '\')" title="Explorer ce volume">' +
       '<span class="tag t-' + (v.kind === 'SD' ? 'DLC' : 'BASE') + '">' + esc(v.kind) + '</span>' +
       '<span class="grow"><div>' + esc(v.label) + '</div><span class="mono">' + esc(v.path) + '</span></span>' +
       '<span class="meter' + (used > 0.9 ? ' tight' : '') + '"><i style="width:' + Math.round(used * 100) + '%"></i></span>' +
@@ -2254,7 +2283,7 @@ function renderPlateformes(r) {
   PLATEFORMES = p;
   el.innerHTML = '<div class="pfgrille">' + p.map(s =>
     '<button class="pfcarte' + (s.key === PF_OUVERTE ? ' on' : '') +
-    '" onclick="app.ouvrirPlateforme(\'' + esc(s.key) + '\')" ' +
+    '" onclick="app.ouvrirPlateforme(\'' + jsq(s.key) + '\')" ' +
     'title="Détail de ' + esc(s.name) + '">' +
       '<span class="pfnom">' + esc(s.name) + '</span>' +
       '<span class="pfn">' + s.count + '</span>' +
@@ -2340,15 +2369,15 @@ function renderPfCommun(sys) {
     '<div class="majbloc">' +
       '<div class="majrow act"><span>Dossier sur la console</span>' +
         '<b><code class="pfchemin">' + esc(perso || sys.device_dir || '—') + '</code></b>' +
-        '<button class="ghost" onclick="app.parcourir(\'' + esc(sys.key) + '\',\'' +
-          esc(sys.device_dir || '') + '\')">Parcourir…</button>' +
-        (perso ? '<button class="ghost" onclick="app.oublierDossier(\'' + esc(sys.key) +
+        '<button class="ghost" onclick="app.parcourir(\'' + jsq(sys.key) + '\',\'' +
+          jsq(sys.device_dir || '') + '\')">Parcourir…</button>' +
+        (perso ? '<button class="ghost" onclick="app.oublierDossier(\'' + jsq(sys.key) +
                  '\')">Par défaut</button>' : '') +
       '</div>' +
       lignes.map(([k, v]) => '<div class="majrow"><span>' + k + '</span><b>' + v + '</b></div>').join('') +
     '</div>' +
     '<div class="bar" style="margin-top:10px">' +
-      '<button class="ghost" onclick="app.allerSysteme(\'' + esc(sys.key) + '\')">' +
+      '<button class="ghost" onclick="app.allerSysteme(\'' + jsq(sys.key) + '\')">' +
         'Voir ses jeux</button>' +
       (sys.engine === 'switch'
         ? '<button class="ghost" onclick="app.mkTree()">Créer GAMES / UPDATE / DLC</button>' +
@@ -2443,7 +2472,7 @@ function renderEcProfiles(profils) {
     '<div class="card">' + profils.map(p =>
       '<div class="row"><span class="grow"><div class="fname">' + esc(p.nom) + '</div>' +
       '<span class="mono">' + p.reglages + ' réglage(s) · ' + esc(p.portee) + '</span></span>' +
-      '<button class="go" onclick="app.ecApplyProfile(\'' + esc(p.nom) + '\')">Appliquer ici</button></div>'
+      '<button class="go" onclick="app.ecApplyProfile(\'' + jsq(p.nom) + '\')">Appliquer ici</button></div>'
     ).join('') + '</div>' +
     '<p class="lead" style="margin-top:8px">Les profils sont des fichiers JSON dans ' +
     '<code>_profils-eden/</code> : tu peux les partager ou en déposer d\'autres.</p>';
@@ -2517,9 +2546,9 @@ function erSection(g) {
     return '<div class="errow' + (mien ? ' mien' : '') + '">' +
       '<span class="note ' + ER_CLS[cls] + '"><i></i>' + esc(txt) + '</span>' +
       '<span class="grow">' + esc(r.appareil) + (mien ? ' · ta console' : '') + '</span>' +
-      '<button class="ghost" onclick="app.erPreview(\'' + r.id + '\',\'' + esc(g.tid || '') +
-      '\',\'' + esc(r.appareil) + '\')">Voir</button>' +
-      '<button class="ghost" onclick="app.erApply(\'' + r.id + '\',\'' + esc(g.tid || '') +
+      '<button class="ghost" onclick="app.erPreview(\'' + jsq(r.id) + '\',\'' + jsq(g.tid || '') +
+      '\',\'' + jsq(r.appareil) + '\')">Voir</button>' +
+      '<button class="ghost" onclick="app.erApply(\'' + jsq(r.id) + '\',\'' + jsq(g.tid || '') +
       '\')">Appliquer</button></div>';
   };
 
@@ -3906,8 +3935,8 @@ const app = {
       items.slice(0, 4).map(b =>
         '<div class="errow"><span class="grow">' + esc(b.quand) + ' · ' +
         (b.vide ? 'aucune configuration' : b.sections + ' section(s), ' + b.surcharges + ' réglage(s)') +
-        '</span><button class="ghost" onclick="app.edenRestore(\'' + esc(tid) + '\',\'' +
-        esc(b.fichier) + '\')">Restaurer</button></div>').join('');
+        '</span><button class="ghost" onclick="app.edenRestore(\'' + jsq(tid) + '\',\'' +
+        jsq(b.fichier) + '\')">Restaurer</button></div>').join('');
   },
   async edenRestore(tid, fichier) {
     if (!CONN.kind) return toast('Connecte d\'abord la console.', 'warn');
@@ -4060,7 +4089,7 @@ const app = {
     const found = r.found || [];
     $('pairfound').innerHTML = found.length
       ? '<div class="card">' + found.map(a => '<div class="row"><span class="grow">' + esc(a) +
-          '</span><button class="go" onclick="app.wifiConnect(\'' + esc(a) + '\')">Connecter</button></div>').join('') + '</div>'
+          '</span><button class="go" onclick="app.wifiConnect(\'' + jsq(a) + '\')">Connecter</button></div>').join('') + '</div>'
       : '<div class="mono" style="margin-top:8px">Aucune console visible. Vérifie que le débogage sans fil est activé et que vous êtes sur le même réseau.</div>';
   },
   async wifiConnect(addr) {
@@ -5139,7 +5168,7 @@ const app = {
       ? '<div class="card">' + t.items.map(i => '<div class="row"><span class="grow">' +
           esc(i.name) + '</span><span class="mono">' + nb(i.count, 'fichier(s)') + ' · ' +
           fmt(i.size || 0) + '</span>' +
-          '<button onclick="app.restore(\'' + esc(i.name) + '\')">Restaurer</button></div>').join('') + '</div>'
+          '<button onclick="app.restore(\'' + jsq(i.name) + '\')">Restaurer</button></div>').join('') + '</div>'
       : '<div class="empty">Rien en corbeille.</div>';
   },
   toggleTrashList(e) {
