@@ -19,8 +19,19 @@ services:
       - "8787:8787"
 
     environment:
-      # Emplacement de la ludotheque DANS le conteneur (ne pas changer).
-      ROMULE_ROOT: /library
+      # Etat du service dans le conteneur (ne pas changer) : configuration,
+      # comptes, jaquettes, journaux. Il vit dans le volume nomme ci-dessous.
+      ROMULE_ROOT: /data
+      # Ou l'interface a le droit d'aller chercher des jeux. Le dossier exact
+      # se DESIGNE DEPUIS L'INTERFACE, a la premiere ouverture : c'est la
+      # seule information que le fichier compose ne peut pas connaitre.
+      #
+      # Tu ranges tes plateformes dans plusieurs dossiers d'un meme disque ?
+      # Monte le parent (voir `volumes:`) et choisis a l'interieur.
+      ROMULE_BASES: /library
+      # Deploiement gere, ou plusieurs administrateurs : figer le dossier des
+      # jeux et interdire d'en changer depuis l'interface.
+      # ROMULE_LIBRARY: /library
       ROMULE_WEB_PORT: "8787"
 
       # RIEN N'EST A REGLER ICI POUR DEMARRER.
@@ -42,7 +53,12 @@ services:
       TZ: Europe/Paris
 
     volumes:
-      # Ta ludotheque sur le NAS  ->  /library
+      # L'etat du service. Un volume nomme, et pas un dossier de l'hote : ces
+      # fichiers ne sont pas les tiens au meme titre que tes jeux, et ils n'ont
+      # rien a faire au milieu d'eux. Les supprimer, c'est repartir a neuf.
+      - romule-donnees:/data
+      # Tes jeux  ->  /library. Monte le dossier qui les contient, ou leur
+      # dossier PARENT si tu veux choisir plus finement depuis l'interface.
       - ./library:/library
       # Le dossier contenant prod.keys  ->  /keys (lecture seule)
       - ./keys:/keys:ro
@@ -56,3 +72,6 @@ services:
     # conteneur — a n'activer qu'en connaissance de cause) :
     # devices:
     #   - /dev/bus/usb:/dev/bus/usb
+
+volumes:
+  romule-donnees:

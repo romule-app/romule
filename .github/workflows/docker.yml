@@ -122,10 +122,10 @@ jobs:
 
       - name: Demarrage sur une ludotheque vide
         run: |
-          mkdir -p /tmp/ludo /tmp/cles
+          mkdir -p /tmp/donnees /tmp/ludo /tmp/cles
           docker run -d --name romule \
             -p 8787:8787 \
-            -v /tmp/ludo:/library -v /tmp/cles:/keys \
+            -v /tmp/donnees:/data -v /tmp/ludo:/library -v /tmp/cles:/keys \
             romule:fumee
 
       - name: La sonde de sante passe-t-elle au vert ?
@@ -151,8 +151,15 @@ jobs:
               erreurs.append("/api/health ne dit pas ok")
           if d.get("version", "").count(".") != 2:
               erreurs.append("version absente ou malformee : %r" % d.get("version"))
-          if d["root"] != "/library":
-              erreurs.append("racine inattendue : %r" % d["root"])
+          # L'etat du service et les jeux ne partagent plus le meme dossier :
+          # une image qui les remelangerait ferait reapparaitre la
+          # configuration et les comptes au milieu de la ludotheque.
+          if d["root"] != "/data":
+              erreurs.append("racine de service inattendue : %r" % d["root"])
+          if d["ludotheque"] != "/data":
+              erreurs.append("ludotheque par defaut inattendue : %r" % d["ludotheque"])
+          if d.get("ludotheque_imposee"):
+              erreurs.append("la ludotheque ne doit pas etre verrouillee par defaut")
           if not d["checks"]["adb"]:
               erreurs.append("adb absent de l'image")
           if not d["checks"]["nsz"]:
@@ -161,8 +168,9 @@ jobs:
               erreurs.append("le conteneur ne se reconnait pas comme tel")
           for e in erreurs:
               print("::error title=Fumee::%s" % e)
-          print("version %s, racine %s, adb %s, nsz %s"
-                % (d.get("version"), d["root"], d["checks"]["adb"], d["checks"]["nsz"]))
+          print("version %s, donnees %s, ludotheque %s, adb %s, nsz %s"
+                % (d.get("version"), d["root"], d["ludotheque"],
+                   d["checks"]["adb"], d["checks"]["nsz"]))
           sys.exit(1 if erreurs else 0)
           PY
 

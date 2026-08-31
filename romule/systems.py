@@ -161,7 +161,7 @@ def liste(cfg=None):
     return out
 
 
-# Un nom de dossier venu de la configuration finit en `config.ROOT / folder`,
+# Un nom de dossier venu de la configuration finit en `config.LUDO / folder`,
 # et l'outil DEPLACE des fichiers dedans. « ../.. » y suffisait donc a ranger
 # des ROMs n'importe ou sur la machine hote. On n'accepte qu'un nom simple.
 _NOM_DOSSIER = re.compile(r"^[^/\\:\x00]{1,64}$")
@@ -234,11 +234,11 @@ def local_dir(sys_key, cfg=None):
     """
     s = get_cfg(sys_key, cfg) if cfg else get(sys_key)
     if s["engine"] == "switch":
-        return config.ROOT
-    chemin = (config.ROOT / s["folder"]).resolve()
+        return config.LUDO
+    chemin = (config.LUDO / s["folder"]).resolve()
     # Ceinture ET bretelles : meme si un nom passait le filtre, le chemin
     # construit ne doit jamais sortir de la ludotheque.
-    if not str(chemin).startswith(str(config.ROOT.resolve())):
+    if not str(chemin).startswith(str(config.LUDO.resolve())):
         raise ValueError("Dossier hors de la ludotheque : %s" % s["folder"])
     return chemin
 
@@ -360,7 +360,7 @@ def scan_local(sys_key, cfg=None):
         fiche = meta.fiche_nom(p.name, cfg, reseau=False)   # cache seul : jamais de reseau ici
         out.append({
             "path": str(p),
-            "rel": str(p.relative_to(config.ROOT)),
+            "rel": str(p.relative_to(config.LUDO)),
             "name": pretty_name(p.name),
             **_fiche_legere(fiche),
             "file": p.name,

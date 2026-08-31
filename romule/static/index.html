@@ -483,7 +483,42 @@
 
       <section class="setsection" id="sec-biblio">
         <h3 class="sectitre">Ta bibliothèque</h3>
-        <p class="sectxt">Ce qui part vers la console, comment c'est rangé, et d'où viennent les jaquettes.</p>
+        <p class="sectxt">Où sont les jeux, ce qui part vers la console, comment c'est rangé, et d'où viennent les jaquettes.</p>
+
+      <!-- Le dossier des jeux se choisissait par variable d'environnement : sur
+           un NAS, cela voulait dire ouvrir un terminal et redemarrer un
+           conteneur pour une information dont l'interface est le seul endroit
+           naturel. Il est distinct du dossier de DONNEES du service, qui lui
+           reste fixe par le deploiement. -->
+      <div class="setgroup">
+        <div class="setgt">Emplacement <span class="mono">sur le serveur</span></div>
+        <div class="setrow">
+          <div class="setlab"><b>Dossier des jeux</b>
+            <span id="d-ludo">Le dossier que Romule analyse. La configuration, les
+              comptes et les jaquettes restent dans le dossier de données du
+              service, et ne bougent pas avec lui.</span></div>
+          <div class="setctl">
+            <div class="onbchemin mono" id="s-ludo">—</div>
+            <button class="ghost" id="b-ludo" onclick="app.ludoOuvrir()">Changer…</button>
+          </div>
+        </div>
+        <!-- L'ordre de lecture est celui de la decision : on va quelque part,
+             on regarde ce qu'on y trouve, PUIS on valide. Les boutons places
+             au-dessus de la liste demandaient de valider avant d'avoir vu ou
+             l'on etait. -->
+        <div id="ludowrap" hidden>
+          <p class="lead">Navigue jusqu'au dossier qui contient tes jeux, puis valide.</p>
+          <div id="ludoraccourcis" class="bar"></div>
+          <div id="ludocrumb" class="crumb"></div>
+          <div id="ludoetat" class="onbnote"></div>
+          <div id="ludobrowser"></div>
+          <div class="bar">
+            <button class="go" onclick="app.ludoValider()">Utiliser ce dossier</button>
+            <button class="ghost" onclick="app.ludoNouveau()">Nouveau dossier…</button>
+            <button class="ghost" onclick="app.ludoFermer()">Annuler</button>
+          </div>
+        </div>
+      </div>
 
       <div class="setgroup">
         <div class="setgt">Transferts <span class="mono">toutes plateformes</span></div>

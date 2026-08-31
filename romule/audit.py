@@ -386,7 +386,8 @@ SYMBOLE = {"grave": "[GRAVE ]", "alerte": "[ALERTE]",
 
 
 def texte(rapport):
-    lignes = ["Audit de securite — %s" % config.ROOT, ""]
+    lignes = ["Audit de securite — %s" % config.ROOT,
+              "Ludotheque — %s" % config.LUDO, ""]
     for c in sorted(rapport["controles"], key=lambda x: -NIVEAUX[x["niveau"]]):
         lignes.append("%s %s" % (SYMBOLE[c["niveau"]], c["titre"]))
         lignes.append("         %s" % c["constat"])

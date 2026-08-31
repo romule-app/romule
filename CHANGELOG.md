@@ -10,6 +10,36 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ## [Unreleased]
 
+### Added
+
+- **The games folder is chosen from the interface.** A folder picker in
+  **Settings → Your library → Location**, and in the first-run wizard, browses
+  the machine hosting the service. Administrator-only, folders only, with a
+  count of recognised games so you can tell you are in the right place.
+- `ROMULE_LIBRARY` pins that folder and locks the picker, for managed
+  deployments. `ROMULE_BASES` bounds where the picker may go — and, equally,
+  where a typed path may point.
+
+### Changed
+
+- **`ROMULE_ROOT` no longer means "your library".** It is now the service data
+  folder: settings, accounts, cover art, logs, backups. The games live wherever
+  `library_path` says, and default to the same folder — so an existing install
+  sees no difference until it chooses otherwise.
+- `_import/` and `_corbeille/` follow the **games** rather than the service.
+  Setting a title aside has to stay a rename; across two filesystems
+  `shutil.move` copies instead, turning a discard into gigabytes of I/O.
+- The Docker image now exposes `/data` (named volume) alongside `/library`, so
+  Romule's own state is no longer written among your games.
+
+### Fixed
+
+- The onboarding step for the library sent you off to restart the service with
+  an environment variable — on a NAS, that meant opening a terminal in the
+  middle of the wizard.
+- `phrase()` in the interface substituted only `%d`, leaving a raw `%s` on
+  screen as soon as a path or a name entered a translated sentence.
+
 ## [0.1.0] — unreleased
 
 First public release. Everything below is new by definition; the list covers

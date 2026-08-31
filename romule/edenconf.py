@@ -117,7 +117,7 @@ def _lire(chemin):
 
 
 def _ecrire(chemin, texte, job):
-    tmp = config.ROOT / "_import" / "_eden.ini"
+    tmp = config.IMPORT / "_eden.ini"
     tmp.parent.mkdir(parents=True, exist_ok=True)
     tmp.write_text(texte, encoding="utf-8")
     device._shell("mkdir -p %s" % device._q(chemin.rsplit("/", 1)[0]))

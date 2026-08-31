@@ -149,14 +149,15 @@ def _verifier_racine():
         try:
             config.ROOT.mkdir(parents=True, exist_ok=True)
         except OSError as exc:
-            print("Impossible de creer la ludotheque : %s" % exc)
+            print("Impossible de creer le dossier de donnees : %s" % exc)
             print("    %s" % config.ROOT)
             sys.exit(1)
         return
-    print("La ludotheque designe %s :" % souci)
+    print("Le dossier de donnees designe %s :" % souci)
     print("    %s" % config.ROOT)
     print("Indique un dossier de donnees explicite :")
-    print("    ROMULE_ROOT=/chemin/vers/ta/ludotheque python3 -m romule")
+    print("    ROMULE_ROOT=/chemin/vers/les/donnees python3 -m romule")
+    print("Le dossier des JEUX, lui, se choisit dans l'interface.")
     sys.exit(1)
 
 

@@ -260,8 +260,12 @@ function nb(n, unite) {
 // Une phrase entiere ou le nombre est au milieu. `%d` est remplace dans
 // l'ordre par chaque valeur donnee.
 function phrase(modele, ...valeurs) {
+  // Les deux marqueurs sont remplaces DANS L'ORDRE, et non par type : une
+  // traduction peut les inverser, mais elle garde leur nombre. Ne connaitre
+  // que %d laissait un « %s » brut a l'ecran des qu'un chemin ou un nom
+  // entrait dans une phrase.
   let sortie = t(modele);
-  valeurs.forEach(v => { sortie = sortie.replace('%d', v); });
+  valeurs.forEach(v => { sortie = sortie.replace(/%[sd]/, v); });
   return sortie;
 }
 
@@ -2093,6 +2097,85 @@ function renderBrowser(path, items) {
   $('browser').innerHTML = '<div class="card">' + up + (dirs.concat(files).join('') ||
     '<div class="brow"><span class="fn">Dossier vide.</span></div>') + '</div>';
 }
+// ---- navigateur du SERVEUR (a ne pas confondre avec celui de la console)
+// Celui-ci ne rend que des dossiers : le serveur ne renvoie aucun nom de
+// fichier. Le seul chiffre affiche est le nombre de jeux reconnus, parce que
+// c'est ce qui permet de reconnaitre sa ludotheque sans ouvrir un terminal.
+// `cible` dit lequel des deux ecrans affiche le navigateur. L'assistant se
+// redessine en entier a chaque changement d'etat : y injecter le resultat d'un
+// appel asynchrone serait efface au rendu suivant. Il lit donc `LUDO.etat`.
+let LUDO = {chemin: '', etat: null, cible: 'set'};
+
+function htmlLudo(r) {
+  const parts = String(r.chemin || '').split('/').filter(Boolean);
+  let acc = '';
+  const segs = ['<a data-lpath="/">' + esc(t('racine')) + '</a>'];
+  parts.forEach(p => { acc += '/' + p; segs.push('<a data-lpath="' + esc(acc) + '">' + esc(p) + '</a>'); });
+  const bouts = [nb(r.jeux || 0, 'jeu(x) reconnu(s)')];
+  if (!r.ecrivable) bouts.push(t('lecture seule'));
+  if (r.douteux) bouts.push(t('emplacement déconseillé'));
+  const up = r.parent
+    ? '<div class="brow dir up" data-lpath="' + esc(r.parent) + '"><span class="ic">&uarr;</span>' +
+      '<span class="fn">' + esc(t('.. (dossier parent)')) + '</span></div>'
+    : '';
+  const dirs = (r.dossiers || []).map(d =>
+    '<div class="brow dir' + (d.lisible ? '' : ' muet') + '" data-lpath="' + esc(d.chemin) + '">' +
+    '<span class="ic">&#128193;</span><span class="fn">' + esc(d.nom) + '</span></div>');
+  return {
+    crumb: segs.join('<span class="sep">&rsaquo;</span>'),
+    raccourcis: (r.raccourcis || []).map(x =>
+      '<button class="ghost" data-lpath="' + esc(x.chemin) + '">' + esc(t(x.nom)) +
+      '</button>').join(''),
+    etat: bouts.join(' · '),
+    browser: '<div class="card">' + up + (dirs.join('') ||
+      '<div class="brow"><span class="fn">' + esc(t('Aucun sous-dossier.')) +
+      '</span></div>') + '</div>',
+  };
+}
+
+function renderLudo(r) {
+  LUDO.etat = r;
+  LUDO.chemin = r.chemin || '';
+  const h = htmlLudo(r);
+  $('ludocrumb').innerHTML = h.crumb;
+  $('ludoraccourcis').innerHTML = h.raccourcis;
+  $('ludoetat').textContent = h.etat;
+  $('ludobrowser').innerHTML = h.browser;
+}
+
+// Le meme navigateur, en chaine, pour l'etape « ta bibliotheque ».
+function renduLudoOnboard() {
+  if (!LUDO.etat) return '';
+  const h = htmlLudo(LUDO.etat);
+  return '<div class="ludopick">' +
+    '<div class="bar">' + h.raccourcis + '</div>' +
+    '<div class="crumb">' + h.crumb + '</div>' +
+    '<div class="onbnote">' + esc(h.etat) + '</div>' +
+    h.browser +
+    '<div class="bar">' +
+      '<button class="go" onclick="app.ludoValider()">' +
+        esc(t('Utiliser ce dossier')) + '</button>' +
+      '<button class="ghost" onclick="app.ludoAnnulerOnb()">' +
+        esc(t('Annuler')) + '</button>' +
+    '</div></div>';
+}
+
+// Le chemin affiche dans les reglages, et le bouton qui va avec. Une
+// ludotheque imposee par ROMULE_LIBRARY doit se voir : sans cela on clique sur
+// « Changer » et on ne comprend pas le refus.
+function majLudotheque() {
+  const el = $('s-ludo'), b = $('b-ludo');
+  if (!el || !HEALTH) return;
+  el.textContent = HEALTH.ludotheque || HEALTH.root || '';
+  el.title = el.textContent;
+  if (b) {
+    b.disabled = !!HEALTH.ludotheque_imposee;
+    b.title = HEALTH.ludotheque_imposee
+      ? t('Imposé par la variable ROMULE_LIBRARY.') : '';
+  }
+  (HEALTH.problemes || []).forEach(p => annonce(p, 'warn'));
+}
+
 // Nom de fichier nu, seul repere fiable quand le title ID du nom est absent
 // ou mensonger : c'est ce nom qu'adb a ecrit sur la console.
 
@@ -4020,6 +4103,7 @@ const app = {
     const vu = localStorage.getItem('onboard-vu') === '1';
     renderChoixEmulateur();
     renderPied();
+    majLudotheque();
     if (force || (HEALTH.first_run && !vu)) renderOnboard();
     return HEALTH;
   },
@@ -4333,6 +4417,74 @@ const app = {
     this.detecterPlateformes();
   },
   setDpath(p) { BROWSE_PATH = p; this.tab('settings'); $('browserwrap').style.display = ''; this.browse(p); },
+
+  // ---- ou sont les jeux, sur la machine qui heberge le service
+  ludoOuvrir(depart) {
+    if (HEALTH && HEALTH.ludotheque_imposee) {
+      return toast(t('Imposé par la variable ROMULE_LIBRARY.'), 'warn');
+    }
+    LUDO.cible = 'set';
+    const w = $('ludowrap');
+    w.hidden = false;
+    this.ludoAller(depart || (HEALTH && HEALTH.ludotheque) || '');
+    w.scrollIntoView({block: 'center', behavior: 'smooth'});
+  },
+  ludoFermer() { $('ludowrap').hidden = true; },
+  async ludoAller(chemin) {
+    const r = await api('/api/parcourir', {chemin: chemin || ''}, true);
+    if (r.error) {
+      // Discret volontairement : se heurter a un dossier interdit en navigant
+      // est banal, et ouvrir une fenetre d'erreur a chaque clic serait pire
+      // que le probleme.
+      if (LUDO.cible === 'onb') return toast(r.error, 'warn');
+      $('ludoetat').textContent = r.error;
+      return;
+    }
+    if (LUDO.cible === 'onb') {
+      LUDO.etat = r; LUDO.chemin = r.chemin || '';
+      return renderOnboard();
+    }
+    renderLudo(r);
+  },
+  onbChoisirDossier() {
+    LUDO.cible = 'onb';
+    this.ludoAller((HEALTH && HEALTH.ludotheque) || '');
+  },
+  ludoAnnulerOnb() { LUDO.cible = 'set'; LUDO.etat = null; renderOnboard(); },
+  async ludoValider(creer) {
+    if (!LUDO.chemin) return toast(t('Ouvre d\'abord un dossier.'), 'warn');
+    const r = await api('/api/ludotheque', {chemin: LUDO.chemin, creer: !!creer});
+    if (r.error) return;
+    HEALTH = await api('/api/health', {});
+    majLudotheque();
+    this.ludoFermer();
+    // La reponse PORTE deja l'inventaire du nouveau dossier : relancer
+    // `/api/scan` ici, c'est parcourir deux fois une arborescence qui peut
+    // faire plusieurs teraoctets.
+    DATA = r;
+    render();
+    this.loadTrash();
+    await this.loadSystems();
+    annonce(phrase('Ludothèque : %s — %d jeu(x).', LUDO.chemin,
+                   (r.files || []).length), 'ok');
+    if (LUDO.cible === 'onb') {
+      // Le resultat d'analyse portait sur l'ANCIEN dossier : le garder
+      // validerait l'etape avec un chiffre qui ne correspond plus a rien.
+      LUDO.cible = 'set'; LUDO.etat = null; ONB.resultatScan = null;
+      renderOnboard();
+    }
+  },
+  async ludoNouveau() {
+    if (!LUDO.chemin) return toast(t('Ouvre d\'abord un dossier.'), 'warn');
+    const nom = prompt(t('Nom du nouveau dossier :'), 'Romule');
+    if (!nom) return;
+    // Un nom, pas un chemin : la saisie ne doit pas servir a remonter
+    // l'arborescence. Le serveur refuserait, mais autant ne pas le proposer.
+    const propre = String(nom).replace(/[\\/]/g, '').trim();
+    if (!propre) return;
+    LUDO.chemin = LUDO.chemin.replace(/\/+$/, '') + '/' + propre;
+    await this.ludoValider(true);
+  },
   async explore() {
     const root = (DATA.config && DATA.config.device_dir) || '';
     if (!root) return toast('Le dossier des jeux n\'est pas defini (bouton « changer le dossier »).', 'warn');
@@ -5170,13 +5322,20 @@ function onbEtapes(h) {
       sous: 'Le dossier qui contient tous tes jeux, toutes plateformes confondues.',
       corps: () => {
         const r = ONB.resultatScan;
-        return '<p class="onbp">Romule lit ce dossier :</p>' +
-          '<div class="onbchemin">' + esc(h.root || '') + '</div>' +
-          '<p class="onbnote">Pour en désigner un autre, relance le service avec ' +
-          'cette variable d\'environnement :</p>' +
-          '<div class="onbchemin" data-i18n-skip>ROMULE_ROOT=/chemin/vers/ta/ludotheque</div>' +
+        // Choisir le dossier depuis ici, plutot que de renvoyer vers une
+        // variable d'environnement : sur un NAS, cela voulait dire ouvrir un
+        // terminal et redemarrer un conteneur au beau milieu de l'assistant.
+        if (LUDO.cible === 'onb') return renduLudoOnboard();
+        return '<p class="onbp">Romule analyse ce dossier :</p>' +
+          '<div class="onbchemin">' + esc(h.ludotheque || h.root || '') + '</div>' +
+          (h.ludotheque_imposee
+            ? '<p class="onbnote">Il est fixé par le déploiement (variable ' +
+              'ROMULE_LIBRARY) : pour en changer, modifie ton fichier compose.</p>'
+            : '<button class="ghost" onclick="app.onbChoisirDossier()">' +
+              'Choisir un autre dossier…</button>') +
           '<p class="onbnote">Le dossier reste à toi : Romule n\'y écrit que ses ' +
-          'propres fichiers, tous préfixés d\'un tiret bas.</p>' +
+          'propres fichiers, tous préfixés d\'un tiret bas. Sa configuration et ' +
+          'tes comptes, eux, vivent ailleurs et ne suivent pas ce dossier.</p>' +
           '<button class="go" onclick="app.onbScanner()"' + (ONB.occupe ? ' disabled' : '') +
           '>' + (ONB.occupe ? 'Lecture…' : 'Analyser le dossier') + '</button>' +
           (r ? renduScanOnboard(r) : '');
@@ -5670,6 +5829,15 @@ function voirSectionReglages(id, memoriser) {
 })();
 $('browser').addEventListener('click', e => { const el = e.target.closest('.brow.dir'); if (el && el.dataset.path) app.browse(el.dataset.path); });
 $('crumb').addEventListener('click', e => { const a = e.target.closest('a'); if (a && a.dataset.path) app.browse(a.dataset.path); });
+// Un seul attribut pour le navigateur du serveur — `data-lpath` — et une
+// delegation par conteneur. L'assistant est redessine en entier a chaque
+// etape : ecouter sur `#onboard` survit a ses rendus.
+['ludowrap', 'onboard'].forEach(id => {
+  $(id).addEventListener('click', e => {
+    const el = e.target.closest('[data-lpath]');
+    if (el) app.ludoAller(el.dataset.lpath);
+  });
+});
 // --- Depot : la fenetre entiere accepte les fichiers.
 // Le petit rectangle en pointilles restait a trouver, et n'etait visible qu'une
 // fois le panneau ouvert. Deposer n'importe ou est le geste attendu ; le

@@ -23,7 +23,6 @@ tout ne prouve rien.
 import base64
 import hashlib
 import json
-import os
 import subprocess
 import sys
 import time

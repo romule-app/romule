@@ -730,7 +730,7 @@ def _target_folder(path, layout, type_connu=None):
     if layout == "flat":
         return ""
     if layout == "game":  # miroir : le dossier de jeu source (parent)
-        return str(path.parent.relative_to(config.ROOT))
+        return str(path.parent.relative_to(config.LUDO))
     if type_connu in config.LAYOUT_FOLDER:
         return config.LAYOUT_FOLDER[type_connu]
     tid = titleid.from_name(path.name)  # dernier recours : le nom

@@ -199,7 +199,7 @@ def install(paths, job):
     backup_state(job)
     device._shell("mkdir -p %s" % device._q(registered()))
     deja = installed_ids()
-    tmp = Path(config.ROOT) / "_import" / "_nand_tmp"
+    tmp = config.IMPORT / "_nand_tmp"
     tmp.mkdir(parents=True, exist_ok=True)
 
     job.set_total(len(paths))
@@ -289,7 +289,7 @@ def _merge_title_keys(nouvelles, job):
     if not ajout:
         job.log("Cles de titre : rien de nouveau.")
         return
-    local = config.ROOT / "_import" / "_title.keys"
+    local = config.IMPORT / "_title.keys"
     local.write_text("\n".join([l for l in lignes if l.strip()]) + "\n", encoding="utf-8")
     device._shell("mkdir -p %s" % device._q(dossier() + "/keys"))
     device._run(["push", str(local), title_keys()], timeout=120)

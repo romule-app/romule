@@ -66,6 +66,24 @@ Romule listens on `127.0.0.1` only.
 - There is never zero administrator: the last one cannot be deleted.
 - Passwords use scrypt (N=2¹⁷). TOTP two-factor is available per account.
 
+## Browsing the host filesystem
+
+The library picker lists folders on the machine running Romule. That is a
+disclosure primitive, and it is treated as one:
+
+- it is **administrator-only**, like every destructive route;
+- it returns **folders only** — no filenames ever leave the server. The one
+  extra number is a count of recognised games, because that is what lets you
+  tell your library from a folder that merely looks like it;
+- selecting a folder is bound by the same rule as browsing it, so typing a
+  path is not a way around `ROMULE_BASES`.
+
+`ROMULE_BASES` is unset by default. That is deliberate: in a container the
+boundary is the `volumes:` list, enforced by the kernel rather than by
+application code, and on a bare install it is the Unix account the service runs
+as. An application-level allowlist on top would mostly give the impression of
+one. Set `ROMULE_BASES` when you run natively under a broad account.
+
 ## Limits enforced
 
 | Limit | Default | Why |
@@ -76,6 +94,7 @@ Romule listens on `127.0.0.1` only.
 | Connections | 64 | Bounded concurrency |
 | Requests | 600/min per client | Rate limiting on all of `/api/*` |
 | Path containment | — | Custom platform folders, extensions and title IDs are validated |
+| Library location | — | Refused if read-only, or if it is your home folder, a disk root or a code repository |
 
 ## Known weaknesses
 
