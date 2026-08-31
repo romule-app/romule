@@ -72,6 +72,16 @@ what the release actually contains rather than how it was built.
   their proxies in `ROMULE_TRUSTED_PROXIES`.
 - Account creation and deletion require an administrator; the very first
   account can only be created from the machine hosting the library.
+- **Destructive actions require an administrator too.** Restoring a backup
+  (which contains the accounts file, so it can hand administration back to
+  whoever lost it), clearing the activity log, reading the access log, purging
+  the trash, reorganising the library, writing into the emulator's own
+  configuration, changing the console pairing, and running the security audit
+  are all reserved. Ordinary accounts keep normal library use.
+- The configuration file is written **atomically and with 0600 set before it
+  takes its final name**. It previously appeared with the default umask for a
+  moment while holding the session signing key, the API keys and the access
+  token — and a crash mid-write truncated it, losing every setting.
 - Upload size cap, free-space check, socket timeouts, connection cap and a
   request rate limiter.
 - Path containment on custom platform folders, file extensions and title IDs —

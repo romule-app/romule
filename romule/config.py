@@ -242,12 +242,27 @@ def save_config(cfg):
                 cfg = dict(cfg, auth_secret=ancien)
         except (ValueError, OSError):
             pass
+    # Ecriture atomique, et permissions posees AVANT que le fichier ne porte
+    # son nom definitif. Deux defauts que le motif precedent laissait passer :
+    #
+    #   * `write_text` cree le fichier avec l'umask courant — souvent 0644 —
+    #     et le `chmod` ne venait qu'apres. Entre les deux, la cle de signature
+    #     des sessions, les cles d'API et le jeton d'acces etaient lisibles par
+    #     tous les comptes de la machine ;
+    #   * une coupure en pleine ecriture laissait un fichier tronque. On y perd
+    #     `auth_secret` — donc toutes les sessions — et tous les reglages.
+    #
+    # `comptes.py` procedait deja ainsi pour les empreintes de mots de passe.
+    tmp = CONFIG_FILE.with_suffix(".tmp")
     try:
-        CONFIG_FILE.write_text(json.dumps(cfg, indent=2, ensure_ascii=False) + "\n")
-        # Le fichier porte la cle de signature des sessions et les cles d'API :
-        # il n'a aucune raison d'etre lisible par les autres comptes de la
-        # machine.
-        os.chmod(CONFIG_FILE, 0o600)
+        tmp.write_text(json.dumps(cfg, indent=2, ensure_ascii=False) + "\n",
+                       encoding="utf-8")
+        os.chmod(tmp, 0o600)
+        os.replace(tmp, CONFIG_FILE)
         return True
     except OSError:
+        try:
+            tmp.unlink()
+        except OSError:
+            pass          # rien a nettoyer, ou plus de droits : sans importance
         return False
