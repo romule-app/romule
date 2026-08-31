@@ -136,10 +136,11 @@ def autotest():
     cas = [
         ("keys/prod.keys", b"peu importe", True),
         ("jeu.nsp", b"peu importe", True),
-        ("_switch-config.json", b"{}", True),
+        ("_romule-config.json", b"{}", True),
+        ("_romule-comptes.json", b"{}", True),
         ("a.py", b'client_secret = "5atv8sim2f34pabfoik2o07ie62csa"', True),
         ("b.json", b'"mdp": "scrypt$131072$8$1$sel$empreinte"', True),
-        ("c.yml", b'SWITCH_TOKEN: "CHANGE-MOI"', True),
+        ("c.yml", b'ROMULE_TOKEN: "CHANGE-MOI"', True),
         ("g.txt", b"otpauth://totp/App:moi?secret=JBSWY3DPEHPK3PXP", True),
         ("h.py", b'return "otpauth://totp/%s?%s" % (label, params)', False),
         ("d.js", b"const s = 'a' + '\x00' + 'b';", True),

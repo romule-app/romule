@@ -1,0 +1,70 @@
+# Romule — ludotheque de jeux auto-hebergee.
+#
+# Le paquet n'a AUCUNE dependance d'execution, et c'est une propriete tenue :
+# `lancer_tests.py` echoue si un import hors bibliotheque standard apparait.
+# Les outils externes (adb, nsz, unar, 7z) sont des binaires facultatifs, pas
+# des paquets Python : leur absence desactive une fonction, elle n'empeche
+# jamais le service de demarrer.
+
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "romule"
+# Numero tenu dans romule/__init__.py : deux endroits a mettre a jour, c'est
+# un endroit qu'on oublie.
+dynamic = ["version"]
+description = "Self-hosted library manager for the games you own, with transfer to an Android handheld over adb"
+readme = "README.md"
+license = "AGPL-3.0-or-later"
+license-files = ["LICENSE"]
+# 3.10 est le plancher reel : `sys.stdlib_module_names`, utilise par l'audit,
+# n'existe pas avant. Rien dans le code ne demande davantage.
+requires-python = ">=3.10"
+keywords = ["self-hosted", "game-library", "roms", "adb", "emulation", "homelab"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Web Environment",
+  "Intended Audience :: End Users/Desktop",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Topic :: Games/Entertainment",
+  "Topic :: System :: Archiving",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/romule-app/romule"
+Documentation = "https://romule-app.github.io/romule/"
+Source = "https://github.com/romule-app/romule"
+Issues = "https://github.com/romule-app/romule/issues"
+Changelog = "https://github.com/romule-app/romule/blob/main/CHANGELOG.md"
+
+[project.scripts]
+romule = "romule.__main__:main"
+
+[tool.setuptools.dynamic]
+version = {attr = "romule.__version__"}
+
+[tool.setuptools]
+# Les listes sont explicites : `find` embarquerait `romule/tests`, dont on ne
+# veut pas dans une roue publiee.
+packages = ["romule"]
+
+[tool.setuptools.package-data]
+romule = ["static/*", "locales/*.json", "profils/*.json"]
+
+# ruff ne sert qu'au developpement : la propriete « zero dependance » porte sur
+# l'execution, pas sur l'outillage.
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B", "UP"]
+ignore = [
+  "E501",   # la longueur est deja tenue a la main, et les URL ne se coupent pas
+  "UP031",  # le formatage par % est la convention du projet, uniformement
+]

@@ -2980,3 +2980,17 @@ body.compact .filters{margin-bottom:2px}
 [data-mvt="off"] .onbpuce,
 [data-mvt="off"] .onbresultat{animation:none}
 [data-mvt="off"] .onbpoint{transition:none}
+
+/* ---------------------------------------------------------------- PIED
+   Discret, mais present sur toutes les pages : l'offre de code source de
+   l'AGPL ne vaut que si elle est atteignable depuis le service lui-meme. */
+#pied{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;
+  gap:9px;padding:26px 16px 34px;font-family:var(--mono);font-size:11px;
+  color:var(--mute);opacity:.7;transition:opacity .2s var(--ease)}
+#pied:hover{opacity:1}
+#pied a{color:var(--mute);text-decoration:underline;text-underline-offset:3px}
+#pied a:hover{color:var(--amber)}
+.pied-sep{opacity:.4}
+.pied-beta{border:1px solid var(--primary-halo);color:var(--amber);
+  border-radius:999px;padding:2px 8px;font-size:10px;letter-spacing:.08em;
+  text-transform:uppercase}

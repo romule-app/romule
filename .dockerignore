@@ -1,18 +1,42 @@
-# On ne copie que le code dans l'image : les jeux arrivent par un volume.
+# Seul le code entre dans l'image : les jeux arrivent par un volume.
+#
+# Les motifs sont larges a dessein. Un `docker build` envoie TOUT le contexte
+# au demon avant meme de lire le Dockerfile : une ludotheque oubliee ici, ce
+# sont des dizaines de gigaoctets transferes pour rien.
+
+# --- tout ce que l'application ecrit commence par « _ »
+_*
+!**/__init__.py
+
+# --- donnees et cles
 library/
 keys/
-_import/
-_corbeille/
-_covers/
-_saves/
-_cache_versions.txt
-_integrity.json
-_switch-config.json
-_switch-lib.log
-_a_installer_dans_NAND.txt
+data/
+ludotheque/
+*.keys
+Keys*/
+
+# --- jeux
+*.nsp
+*.nsz
+*.xci
+*.xcz
+*.iso
+*.chd
+*.wbfs
+*.rvz
+
+# --- inutile dans l'image
+.git/
+.github/
+.gitignore
+.dockerignore
 **/__pycache__/
 *.pyc
 .DS_Store
-.git/
-switch-lib.sh
-switch-web.py
+lancer_tests.py
+outils/
+romule/tests/
+CONTRIBUTING.md
+SECURITY.md
+CHANGELOG.md
