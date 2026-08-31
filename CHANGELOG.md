@@ -41,9 +41,10 @@ change it. Breaking changes are always listed under **Changed** with the reason.
   handler, so the string closed and the rest of the value ran as code. A card's
   key is the file's path, and nothing forbids an apostrophe in a filename —
   `x',alert(1),'.gba` uploaded through `/api/upload` was enough, and it ran in
-  the session of whoever clicked the card, including an administrator. All 25
+  the session of whoever clicked the card, including an administrator. All 26
   interpolation points now use a JavaScript-context encoder, and a test asserts
-  no handler can be added without one.
+  no handler can be added without one — a test that first proves it detects the
+  violation shapes it claims to, line-wrapped ones included.
 - Custom platform keys were only lowercased, never filtered, while the name and
   folder were. The key is an identifier everywhere — platform index,
   `system_dirs`, interface handlers. It is now normalised rather than rejected,

@@ -1967,7 +1967,7 @@ function renduSauvegardes(r) {
         '<li><b>' + esc(l.date || l.lot) + '</b> <span class="mono">' + esc(l.motif || '')
         + ' · ' + nb((l.fichiers || []).length, 'fichier(s)') + '</span>'
         + ' <button class="ghost mini" onclick="app.restaurerSauvegarde(\''
-        + esc(l.lot) + '\')">Restaurer</button></li>').join('') + '</ul>'
+        + jsq(l.lot) + '\')">Restaurer</button></li>').join('') + '</ul>'
       : '<p class="lead">Aucune sauvegarde pour l\'instant.</p>');
 }
 
