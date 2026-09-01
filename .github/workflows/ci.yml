@@ -165,6 +165,20 @@ jobs:
         run: |
           node --check romule/static/app.js
           node --check romule/static/reactive.js
+      # Le controle qui manquait. Celui d'en dessous compare fr.json a en.json —
+      # parite parfaite, donc vert quoi qu'il arrive. Personne ne comparait le
+      # CODE au catalogue, et 309 phrases francaises ont pu s'y accumuler sans
+      # que rien ne rougisse.
+      #
+      # En avertissement tant que la dette n'est pas resorbee : le rendre
+      # bloquant aujourd'hui arreterait tout pour un etat de fait connu. Il le
+      # deviendra quand le compteur atteindra zero.
+      - name: Le code n'a pas de phrase hors catalogue (avertissement)
+        continue-on-error: true
+        run: |
+          python3 outils/verifier-traduction.py --autotest
+          python3 outils/verifier-traduction.py --liste
+
       - name: Les deux catalogues de traduction ont les memes cles
         run: |
           python3 - <<'PY'
