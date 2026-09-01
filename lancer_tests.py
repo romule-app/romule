@@ -137,9 +137,34 @@ def _demarrer_serveur():
 
 
 def navigateur():
+    """Suites qui pilotent un vrai Chrome.
+
+    La garde cherchait `/Applications/Google Chrome.app` — un chemin macOS.
+    Sur un runner Linux il n'existe pas, la famille se sautait donc, et le job
+    rendait 0. Resultat : les six suites navigateur n'ont JAMAIS tourne en
+    integration continue, y compris l'invariant anti-injection. Un test qui ne
+    s'execute nulle part est pire qu'absent : il donne une assurance.
+
+    `cdp.trouver_chrome()` sait deja chercher sur les trois systemes et
+    respecte ROMULE_CHROME. On lui demande, plutot que de deviner.
+
+    Et surtout : quand ROMULE_CHROME est pose — donc quand quelqu'un a installe
+    Chrome EXPRES pour ces tests — ne pas trouver Chrome est un ECHEC, pas une
+    permission de passer son chemin. C'est ce qui empeche le silence de
+    revenir.
+    """
     titre("navigateur (Chrome sans tete)")
-    if not Path("/Applications/Google Chrome.app").exists():
+    sys.path.insert(0, str(TESTS / "navigateur"))
+    try:
+        from cdp import trouver_chrome
+        trouver_chrome()
+    except Exception as exc:
+        if os.environ.get("ROMULE_CHROME", "").strip():
+            print("   ECHEC : ROMULE_CHROME est pose mais Chrome est inutilisable")
+            print("   %s" % exc)
+            return False
         print("   Chrome introuvable : famille ignoree")
+        print("   (pose ROMULE_CHROME pour en faire un echec)")
         return None
     proc, url = _demarrer_serveur()
     os.environ["LUDO_URL"] = url
