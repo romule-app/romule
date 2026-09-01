@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="fr"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Ma ludothèque</title>
+<title>Romule</title>
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#0d1016">
 <meta name="mobile-web-app-capable" content="yes">
@@ -14,7 +14,13 @@
 </head><body>
 <header>
   <div class="head-in">
-    <div class="brand">Ma <span>ludothèque</span></div>
+    <!-- Le nom du produit ne se traduit pas : `data-i18n-skip` l'exclut du
+         balayage, sans quoi le controle de traduction et le test navigateur
+         le traiteraient comme une phrase oubliee.
+         La coupure « ROM | ULE » n'est pas arbitraire : les trois premieres
+         lettres sont le domaine de l'outil, et la CSS existante colore deja
+         la seconde moitie. -->
+    <div class="brand" data-i18n-skip>Rom<span>ule</span></div>
     <nav class="tabs" id="tabs">
       <button data-tab="jeux" class="active" data-i18n="tab.jeux">Jeux</button>
       <button data-tab="settings" data-i18n="tab.settings">Réglages</button>

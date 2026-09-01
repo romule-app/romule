@@ -248,6 +248,37 @@ const masques = masquages(src);
 t('aucune fonction ne masque t() puis l\'appelle', masques.length === 0,
   'lignes : ' + masques.join(', '));
 
+console.log('   -- 6. les libelles de tache cotes client et serveur concordent --');
+// Ce fichier s'appelle « injection » et il est devenu le gardien des
+// INVARIANTS DE SOURCE d'app.js : plus de gestionnaire en ligne, `esc()` sur
+// les valeurs interpolees, aucun masquage de `t()`. En voici un de plus.
+//
+// `TACHES_FICHES` contient des noms de FONCTION Python : `JobRunner.start()`
+// pose `fn.__name__` comme libelle, et le client compare cette chaine pour
+// savoir si une recherche de fiches tourne. Rien ne relie les deux fichiers.
+// Renommer `actions.sync_meta` casserait le bandeau « Recherche des infos… »
+// en silence, et dans les DEUX sens : soit il ne s'afficherait plus jamais,
+// soit il ne s'effacerait plus.
+const blocTaches = (src.match(/const TACHES_FICHES = \[([^\]]*)\]/) || [])[1];
+t('app.js declare TACHES_FICHES', !!blocTaches, 'introuvable');
+const attendus = blocTaches
+  ? [...blocTaches.matchAll(/'([^']+)'/g)].map(m => m[1]) : [];
+
+const serveur = fs.readFileSync(path.join(RACINE, 'romule', 'server.py'), 'utf8');
+const route = serveur.match(
+  /"\/api\/meta-sync":\s*\n\s*self\._job\(actions\.(\w+)/);
+const appele = route ? route[1] : null;
+t('la route /api/meta-sync lance bien une tache', !!appele,
+  'motif introuvable dans server.py');
+t('le libelle du serveur figure dans la liste du client',
+  !!appele && attendus.includes(appele),
+  'serveur=' + appele + '  client=' + JSON.stringify(attendus));
+
+// Et la fonction doit exister, sans quoi la concordance ne prouve rien.
+const actions = fs.readFileSync(path.join(RACINE, 'romule', 'actions.py'), 'utf8');
+t('la fonction existe dans actions.py',
+  !!appele && new RegExp('^def ' + appele + '\\(', 'm').test(actions), appele);
+
 console.log('      ------------------------------------------------');
 console.log('      ' + ok + ' controles OK, ' + ko + ' echec(s)');
 process.exit(ko ? 1 : 0);

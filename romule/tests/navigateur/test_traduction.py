@@ -160,7 +160,11 @@ def main():
         basculer("en")
         t("onglet traduit",
           n.js("document.querySelector('#tabs button').textContent") == "Games")
-        t("titre de la page traduit", n.js("document.title") == "My library")
+        # Le titre est le NOM DU PRODUIT : il ne se traduit pas, et il ne
+        # doit pas bouger d'une langue a l'autre. C'est l'inverse du
+        # controle precedent, et c'est aussi important.
+        t("le titre reste le nom du produit",
+          n.js("document.title") == "Romule", n.js("document.title"))
 
         # gabarit : une phrase construite a l'execution
         n.js("app.tab('settings')")

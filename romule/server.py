@@ -58,8 +58,8 @@ def _langues():
     return out
 
 MANIFEST = {
-    "name": "Ma ludotheque",
-    "short_name": "Ludotheque",
+    "name": "Romule",
+    "short_name": "Romule",
     "start_url": "/",
     "display": "standalone",
     "background_color": "#0d1016",
