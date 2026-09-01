@@ -248,8 +248,21 @@ let LANGUE = 'en';
 // Ce qu'on ne traduit JAMAIS : du code, des chemins, et surtout les donnees de
 // l'utilisateur (noms de jeux, adresses email, chemins de fichiers).
 const NON_TRADUIT = new Set(['CODE', 'PRE', 'SCRIPT', 'STYLE', 'TEXTAREA']);
-const CLASSES_DONNEES = ['gname', 'compte-mail', 'pfchemin', 'tid', 'jline',
-                         'hostchip', 'cnom', 'brow', 'crumb'];
+// Ces classes marquent des noeuds dont TOUT le contenu est une donnee : un
+// titre de jeu, une adresse, un chemin. Elles ne doivent jamais servir aussi de
+// selecteur de style pour du texte d'interface — c'est le defaut qui a fige
+// `tid`, puis `cnom`, puis le journal entier.
+//
+// `jline`, `brow` et `crumb` en sont sorties : elles enveloppent un MELANGE.
+// Une ligne de journal contient l'horodatage, le niveau et le message ; seul
+// le message est une donnee. Les envelopper entierement gelait « Dossier
+// vide. », « .. (dossier parent) » et tout le journal, qui restait donc en
+// francais dans une interface anglaise.
+//
+// La donnee porte desormais `data-i18n-skip`, l'attribut que `traduisible()`
+// lit deja : il marque le noeud exact, pas son voisinage.
+const CLASSES_DONNEES = ['gname', 'compte-mail', 'pfchemin', 'tid',
+                         'hostchip', 'cnom'];
 
 // Les phrases du HTML sont reparties sur plusieurs lignes : le noeud de texte
 // contient des retours a la ligne et des indentations que la cle n'a pas. On
@@ -546,9 +559,11 @@ function renderJournal() {
   const el = $('log');
   el.innerHTML = vues.length
     ? vues.map(e => '<div class="jline j-' + e.n + '">' +
-        '<span class="jt">' + e.t + '</span>' +
-        '<span class="jn">' + e.n + '</span>' +
-        '<span class="jm">' + esc(e.m) + '</span></div>').join('')
+        '<span class="jt" data-i18n-skip>' + e.t + '</span>' +
+        // Niveau machine (error, warn, info, ok) et message tel que le serveur
+        // l'a ecrit : deux donnees, pas des libelles.
+        '<span class="jn" data-i18n-skip>' + e.n + '</span>' +
+        '<span class="jm" data-i18n-skip>' + esc(e.m) + '</span></div>').join('')
     : '<div class="jempty">Aucun événement' + (q ? ' pour « ' + esc(q) + ' »' : '') + '.</div>';
 
   // Comme un terminal : seules les lignes qui viennent d'arriver s'animent.
@@ -2141,7 +2156,8 @@ function renderCrumb(path) {
   const parts = path.split('/').filter(Boolean);
   let acc = '';
   const segs = ['<a data-path="/">racine</a>'];
-  parts.forEach(p => { acc += '/' + p; segs.push('<a data-path="' + esc(acc) + '">' + esc(p) + '</a>'); });
+  parts.forEach(p => { acc += '/' + p; segs.push('<a data-path="' + esc(acc) +
+      '" data-i18n-skip>' + esc(p) + '</a>'); });
   $('crumb').innerHTML = segs.join('<span class="sep">&rsaquo;</span>');
 }
 function renderBrowser(path, items) {
@@ -2154,10 +2170,10 @@ function renderBrowser(path, items) {
     '<span class="fn">.. (dossier parent)</span></div>';
   const dirs = items.filter(i => i.is_dir).map(i =>
     '<div class="brow dir" data-path="' + esc(join(i.name)) + '"><span class="ic">&#128193;</span>' +
-    '<span class="fn">' + esc(i.name) + '</span></div>');
+    '<span class="fn" data-i18n-skip>' + esc(i.name) + '</span></div>');
   const files = items.filter(i => !i.is_dir).map(i =>
     '<div class="brow file' + (isGame(i.name) ? ' game' : '') + '"><span class="ic">' +
-    (isGame(i.name) ? '&#9679;' : '&middot;') + '</span><span class="fn">' + esc(i.name) + '</span></div>');
+    (isGame(i.name) ? '&#9679;' : '&middot;') + '</span><span class="fn" data-i18n-skip>' + esc(i.name) + '</span></div>');
   $('browser').innerHTML = '<div class="card">' + up + (dirs.concat(files).join('') ||
     '<div class="brow"><span class="fn">Dossier vide.</span></div>') + '</div>';
 }
@@ -2174,7 +2190,8 @@ function htmlLudo(r) {
   const parts = String(r.chemin || '').split('/').filter(Boolean);
   let acc = '';
   const segs = ['<a data-lpath="/">' + esc(t('racine')) + '</a>'];
-  parts.forEach(p => { acc += '/' + p; segs.push('<a data-lpath="' + esc(acc) + '">' + esc(p) + '</a>'); });
+  parts.forEach(p => { acc += '/' + p; segs.push('<a data-lpath="' + esc(acc) +
+      '" data-i18n-skip>' + esc(p) + '</a>'); });
   const bouts = [nb(r.jeux || 0, 'jeu(x) reconnu(s)')];
   if (!r.ecrivable) bouts.push(t('lecture seule'));
   if (r.douteux) bouts.push(t('emplacement déconseillé'));
@@ -2184,7 +2201,7 @@ function htmlLudo(r) {
     : '';
   const dirs = (r.dossiers || []).map(d =>
     '<div class="brow dir' + (d.lisible ? '' : ' muet') + '" data-lpath="' + esc(d.chemin) + '">' +
-    '<span class="ic">&#128193;</span><span class="fn">' + esc(d.nom) + '</span></div>');
+    '<span class="ic">&#128193;</span><span class="fn" data-i18n-skip>' + esc(d.nom) + '</span></div>');
   return {
     crumb: segs.join('<span class="sep">&rsaquo;</span>'),
     raccourcis: (r.raccourcis || []).map(x =>
