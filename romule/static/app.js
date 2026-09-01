@@ -2555,7 +2555,7 @@ function renderEcProfiles(profils) {
       '<span class="mono">' + nb(p.reglages, 'réglage(s)') + ' · ' +
       esc(p.portee) + '</span></span>' +
       '<button class="go" onclick="app.ecApplyProfile(\'' + jsq(p.nom) + '\')">Appliquer ici</button></div>'
-    ).join('') + '</div>' +
+    ).join('') + '</div>' +  // i18n:ok - nom de dossier
     '<p class="lead" style="margin-top:8px">Les profils sont des fichiers JSON dans ' +
     '<code>_profils-eden/</code> : tu peux les partager ou en déposer d\'autres.</p>';
 }
@@ -3313,7 +3313,7 @@ function dessinerComptes() {
   if (moi.photo) {
     // `?v=` : sans lui, le navigateur reafficherait l'ancienne photo apres
     // un changement, la reponse etant mise en cache.
-    av.style.backgroundImage = "url('/photo/" + moi.id + "?v=" + Date.now() + "')";
+    av.style.backgroundImage = "url('/photo/" + moi.id + "?v=" + Date.now() + "')";  // i18n:ok - URL CSS
   } else {
     av.textContent = (moi.nom || moi.email).slice(0, 1).toUpperCase();
   }
@@ -3510,8 +3510,23 @@ function syncSetDesc() {
   const prov = $('s-coverprov').value;
   const marquer = (row, actif, quand) => {
     $(row).classList.toggle('inactive', !actif);
-    const note = $(row).querySelector('.setlab span');
-    if (note) note.dataset.note = actif ? '' : 'utilisée seulement avec « ' + quand + ' »';
+    // Ce texte etait rendu par `content: attr(data-note)` en CSS : il n'est
+    // alors JAMAIS un noeud de texte, donc ni l'observateur ni aucun outil ne
+    // peut le voir — et il ne pouvait pas etre traduit. Il devient un vrai
+    // element, rempli par `textContent`.
+    const cible = $(row).querySelector('.setlab span');
+    let note = cible && cible.querySelector('.setnote');
+    if (cible && !note) {
+      note = document.createElement('span');
+      note.className = 'setnote';
+      cible.appendChild(note);
+    }
+    if (note) {
+      note.textContent = actif ? ''
+        // `quand` est lui-meme un libelle : le laisser brut affichait
+        // « — used only with “URL personnalisée” », a moitie traduit.
+        : phrase('— utilisée seulement avec « %s »', t(quand));
+    }
   };
   marquer('row-sgkey', prov === 'steamgriddb', 'SteamGridDB');
   marquer('row-coverurl', prov === 'custom', 'URL personnalisée');
@@ -3859,7 +3874,7 @@ const app = {
   async loadSaves() {
     const r = await api('/api/saves-list');
     const dirs = (r.dirs || []).length
-      ? '<div class="mono" style="margin-bottom:8px">Source sur la console : ' +
+      ? '<div class="mono" style="margin-bottom:8px">' + t('Source sur la console :') + ' ' +
         (r.dirs || []).map(esc).join('<br>') + '</div>' : '';
     $('saves').innerHTML = dirs + ((r.items || []).length
       ? '<div class="card">' + r.items.map(i => '<div class="row"><span class="grow">' +
@@ -6358,6 +6373,8 @@ function loupeOuverte() {
 // « sombre » doit tomber sur le theme meme si le libelle dit « Thème sombre ».
 function commandesDisponibles() {
   const c = [
+    // i18n:ok - les seconds champs sont des mots-cles de recherche,
+    // jamais affiches ; seuls les libelles le sont.
     ['Aller à la bibliothèque', 'jeux grille', () => app.tab('jeux')],
     ['Ouvrir les réglages', 'settings options', () => app.tab('settings')],
     ['Actualiser la bibliothèque', 'refresh relire', () => app.actualiser()],
