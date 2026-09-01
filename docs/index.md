@@ -4,13 +4,13 @@
 your files, fills in the cover art, and pushes titles to an Android handheld
 over adb.
 
-![The Romule library view](images/bibliotheque.png)
+![The Romule library view](images/bibliotheque.jpg)
 
 !!! warning "Beta"
-    This is Romule's first public release. It works and is used daily, but the
-    HTTP API will change, and several features are labelled beta in the
-    interface. Read [Security and exposure](securite.md) before putting it on
-    the internet.
+    Romule works and is used daily, but it is young, and several features are
+    labelled beta in the interface. The public [HTTP API](api.md) **is** stable;
+    the routes the interface uses for itself are not. Read
+    [Security and exposure](securite.md) before putting it on the internet.
 
 ## Where to start
 
@@ -20,6 +20,7 @@ over adb.
 - **[First run](premier-demarrage.md)** — the six-step wizard, one at a time
 - **[Your console](console.md)** — pairing over Wi-Fi or USB
 - **[Configuration](configuration.md)** — every setting and environment variable
+- **[HTTP API](api.md)** — query your library from a dashboard or a script
 
 </div>
 
