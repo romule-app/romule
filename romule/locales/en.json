@@ -1081,5 +1081,7 @@
   "Appliquer %s réglage(s) %s ?\n\nL'ancienne version est sauvegardée dans _eden-backup.": "Apply %s setting(s) %s?\n\nThe previous version is saved in _eden-backup.",
   "Appliquer le profil « %s » %s ?": "Apply the profile “%s” %s?",
   "globalement": "globally",
-  "%s erreur(s) et %s alerte(s). Le reste s'est bien déroulé.": "%s error(s) and %s warning(s). The rest went fine."
+  "%s erreur(s) et %s alerte(s). Le reste s'est bien déroulé.": "%s error(s) and %s warning(s). The rest went fine.",
+  "%s — %s": "%s — %s",
+  "Voir la jaquette en grand": "See the cover full size"
 }

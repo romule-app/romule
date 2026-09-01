@@ -344,6 +344,39 @@ function t(texte, defaut) {
   return traduit(texte) || defaut || texte;
 }
 
+// Un attribut pose AVANT que le catalogue ne soit lu reste dans la langue du
+// premier passage : l'observateur n'ecoute que `childList`, et sa valeur —
+// souvent assemblee — n'est la cle de rien. On garde donc la ou les cles SUR
+// l'element, et on recalcule les attributs a chaque changement de langue.
+//
+//   poserAttr(el, 'title', 'Une phrase.')
+//   poserAttr(el, 'aria-label', '%s — %s', nom, aide)
+//
+// Les valeurs interpolees repassent elles aussi par `t()` au recalcul : ce
+// sont des libelles ici, et `t()` rend son entree telle quelle quand aucune
+// cle ne correspond, donc un chemin ou un nom de fichier n'y risque rien.
+function poserAttr(el, attribut, cle, ...valeurs) {
+  if (!el) return;
+  const table = JSON.parse(el.dataset.i18nAttrs || '{}');
+  table[attribut] = [cle, ...valeurs];
+  el.dataset.i18nAttrs = JSON.stringify(table);
+  appliquerAttrs(el);
+}
+
+function appliquerAttrs(el) {
+  const table = JSON.parse(el.dataset.i18nAttrs || '{}');
+  for (const [attribut, [cle, ...vals]] of Object.entries(table)) {
+    el.setAttribute(attribut, vals.length
+      ? phrase(cle, ...vals.map(v => t(String(v))))
+      : t(cle));
+  }
+}
+
+function retraduireAttributs(racine) {
+  (racine || document).querySelectorAll('[data-i18n-attrs]')
+    .forEach(appliquerAttrs);
+}
+
 function traduisible(noeud) {
   for (let n = noeud.parentElement; n; n = n.parentElement) {
     if (NON_TRADUIT.has(n.tagName)) return false;
@@ -426,6 +459,7 @@ async function chargerLangue(code) {
     _compilerGabarits();
     if (I18N['Ma ludothèque']) document.title = I18N['Ma ludothèque'];
     traduireDOM(document.body);
+    retraduireAttributs();
     OBSERVATEUR.observe(document.body, {childList: true, subtree: true});
   } catch (e) { /* on garde les libelles francais */ }
 }
@@ -613,8 +647,8 @@ function majBoutonSuivi() {
   if (!b) return;
   R.classe(b, 'on', JSUIVI);
   R.texte(b, JSUIVI ? 'Suivi auto' : 'Suivi arrêté');
-  b.title = JSUIVI ? 'Le journal descend avec les nouvelles lignes.'
-                   : 'Le journal reste où tu l\'as laissé.';
+  poserAttr(b, 'title', JSUIVI ? 'Le journal descend avec les nouvelles lignes.'
+                               : 'Le journal reste où tu l\'as laissé.');
 }
 
 // ------------------------------------------------------------ dialogue
@@ -1384,7 +1418,7 @@ const ETAT_COURT = {
 function carteEtiquette({e}) {
   const p = e.presence || {mac: true, console: 'inconnu'};
   const tMac = p.mac ? 'Présent sur le serveur' : 'Absent du serveur';
-  const tCons = TITRE_PRESENCE[p.console];
+  const tCons = t(TITRE_PRESENCE[p.console] || '');
   // Pastilles muettes : la couleur porte l'information, l'infobulle la nomme.
   // Les mots « MAC » et « CONSOLE » mangeaient les deux tiers de la largeur
   // pour repeter un ordre qui ne change jamais (le serveur d'abord).
@@ -1395,7 +1429,9 @@ function carteEtiquette({e}) {
       '<i class="tem ' + (p.mac ? 'p-oui' : 'p-non') + '" title="' + esc(tMac) +
         '" aria-label="' + esc(tMac) + '"></i>' +
     '</span>' +
-    '<span class="etatmot ' + ETATS[e.etat][0] + '" title="' + esc(e.txt) + '">' +
+    // `e.txt` est un libelle d'etat pris dans `ETATS` : il doit passer par le
+    // catalogue comme le texte visible juste a cote.
+    '<span class="etatmot ' + ETATS[e.etat][0] + '" title="' + esc(t(e.txt)) + '">' +
       esc(ETAT_COURT[e.etat] || e.txt) + '</span>';
 }
 const TITRE_PRESENCE = {
@@ -1509,8 +1545,8 @@ function carteOverlay({g, e}) {
   const p = (e && e.presence) || {};
   if (p.console && p.console !== 'inconnu') {
     bouts.push('<span class="ov ovconsole p-' + p.console + '" title="' +
-      esc(TITRE_PRESENCE[p.console] || '') + '" aria-label="' +
-      esc(TITRE_PRESENCE[p.console] || '') + '">' + GLYPHE_CONSOLE + '</span>');
+      esc(t(TITRE_PRESENCE[p.console] || '')) + '" aria-label="' +
+      esc(t(TITRE_PRESENCE[p.console] || '')) + '">' + GLYPHE_CONSOLE + '</span>');
   }
   // Le nom de la plateforme, indispensable des que plusieurs se melangent, et
   // utile ailleurs pour lever toute ambiguite sur ce qu'on regarde.
@@ -1833,7 +1869,8 @@ function openGameHtml(g) {
     // leur carte en affichait une. `coverImg` sait chercher par nom — c'est
     // deja ce qu'il fait dans la grille.
     '<div class="top">' + (coverImg(g, 'cover',
-        'role="button" tabindex="0" title="Voir la jaquette en grand"' +
+        'role="button" tabindex="0" title="' +
+        esc(t('Voir la jaquette en grand')) + '"' +
         ' onclick="app.loupeJaquette(this)"' +
         ' onkeydown="if(event.key===\'Enter\'||event.key===\' \')' +
                     '{event.preventDefault();app.loupeJaquette(this)}"') ||
@@ -2131,7 +2168,7 @@ function renderConn(d) {
         '<button class="lien" onclick="app.togglePair()">sans câble</button>' +
         (vers ? '<i>·</i>' + esc(vers) : '') +
       '</span>';
-    el.title = 'Branche le câble USB, ou connecte la console sans fil.';
+    el.title = t('Branche le câble USB, ou connecte la console sans fil.');
   }
 }
 
@@ -6145,8 +6182,12 @@ function construireChoixCartes() {
     b.className = 'animopt';
     b.type = 'button';
     b.dataset.apercu = cle;
-    b.title = aide;
-    b.setAttribute('aria-label', nom + ' — ' + aide);
+    // Ces deux attributs sont poses au chargement du module, donc AVANT que
+    // le catalogue ne soit lu — et leur valeur est assemblee, donc cle de
+    // rien. Deux raisons independantes de rester en francais, qu'aucun
+    // controle sur le source ne pouvait reveler.
+    poserAttr(b, 'title', aide);
+    poserAttr(b, 'aria-label', '%s — %s', nom, aide);
     // La vignette imite une carte de jeu — un rectangle de jaquette surmonte
     // d'un bandeau d'etat — sans porter de vraie pochette : une image de jeu
     // ici laisserait croire que le reglage ne concerne que ce jeu-la. Un
