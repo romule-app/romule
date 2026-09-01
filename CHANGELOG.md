@@ -55,6 +55,11 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Added
 
+- **The interface is fully translated.** 462 French phrases had no catalogue
+  entry; the count is now zero, and the check that measures it blocks the
+  build. Along the way, 62 sentences glued to a runtime value were rewritten
+  as templates — a sentence assembled at runtime is nobody's key, and English
+  cannot reorder what is already joined.
 - **270 interface strings translated**, and the checker taught to stop
   over-reporting: a sentence too long for one line is written as two literals
   joined by `+`, and at runtime they are a single text node, so the key is the

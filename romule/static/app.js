@@ -2615,8 +2615,8 @@ function erSection(g) {
     intro = phrase('%s réglage(s) testé(s) sur ta %s.',
                    miens.length, esc(ER.appareil_nom));
   else
-    intro = 'Rien de testé sur ta ' + esc(ER.appareil_nom) + '. Voici d\'autres appareils, '
-          + 'à titre indicatif.';
+    intro = phrase('Rien de testé sur ta %s. Voici d\'autres appareils, '
+                   + 'à titre indicatif.', esc(ER.appareil_nom));
 
   // Le titre trouve ne s'affiche que s'il y a un doute : sinon c'est du bruit.
   const doute = e.confiance === 'incertain'
@@ -2718,7 +2718,7 @@ function etatDuJeu(g, nmap) {
   }
   if (cassesBase.length) {
     etat = 'probleme';
-    raison = pretty(cassesBase[0].name) + ' est incomplet — à remplacer';
+    raison = phrase('%s est incomplet — à remplacer', pretty(cassesBase[0].name));
   } else if (!jouables.length) {
     etat = g.needsConvert ? 'convert' : 'probleme';
     if (etat === 'probleme') raison = 'Aucun fichier jouable (.nsp ou .xci)';
@@ -3752,7 +3752,8 @@ const app = {
     if (sys !== 'switch') {
       const paths = locaux.map(f => f.path);
       if (!paths.length) {
-        return toast('« ' + nomJeu(g) + ' » n\'est pas sur le serveur : rien à envoyer.',
+        return toast(phrase('« %s » n\'est pas sur le serveur : rien à envoyer.',
+                            nomJeu(g)),
                      'warn');
       }
       this.closeGame();
@@ -4101,9 +4102,10 @@ const app = {
     const n = Object.values(ch).reduce((s, o) => s + Object.keys(o).length, 0);
     if (!n) return toast('Aucune modification à appliquer.', 'warn');
     if (!CONN.kind) return toast('Connecte d\'abord la console.', 'warn');
-    if (!confirm('Appliquer ' + n + ' réglage(s) ' +
-                 (ECTID ? 'à ce jeu' : 'à la configuration globale') +
-                 ' ?\n\nL\'ancienne version est sauvegardée dans _eden-backup.')) return;
+    if (!confirm(phrase(
+          'Appliquer %s réglage(s) %s ?\n\n'
+          + 'L\'ancienne version est sauvegardée dans _eden-backup.',
+          n, t(ECTID ? 'à ce jeu' : 'à la configuration globale')))) return;
     const r = await api('/api/eden-apply', {tid: ECTID, changements: ch});
     r.error || (toast('Application en cours…', 'ok'), this.poll());
   },
@@ -4118,8 +4120,8 @@ const app = {
   },
   async ecApplyProfile(nom) {
     if (!CONN.kind) return toast('Connecte d\'abord la console.', 'warn');
-    if (!confirm('Appliquer le profil « ' + nom + ' » ' +
-                 (ECTID ? 'à ce jeu' : 'globalement') + ' ?')) return;
+    if (!confirm(phrase('Appliquer le profil « %s » %s ?',
+                        nom, t(ECTID ? 'à ce jeu' : 'globalement')))) return;
     const r = await api('/api/eden-profile-apply', {nom, tid: ECTID});
     r.error || (toast('Profil appliqué.', 'ok'), this.poll());
   },
@@ -4165,7 +4167,10 @@ const app = {
     const okAddr = /^\d{1,3}(\.\d{1,3}){3}:\d{2,5}$/.test(addr);
     const okCode = /^\d{6}$/.test(code);
     const msgs = [];
-    if (addr && !okAddr) msgs.push('L\'adresse doit ressembler à <code>192.168.1.42:37105</code>, port compris.');
+    if (addr && !okAddr) {
+      msgs.push(phrase('L\'adresse doit ressembler à %s, port compris.',
+                       '<code>192.168.1.42:37105</code>'));
+    }
     if (code && !okCode) msgs.push('Le code fait exactement 6 chiffres.');
     const m = $('wizmsg');
     if (m) { m.innerHTML = msgs.join('<br>'); m.classList.toggle('on', msgs.length > 0); }
@@ -4233,7 +4238,7 @@ const app = {
       ? 'Active « Accès depuis le téléphone » dans les Réglages pour piloter l\'outil depuis la console.'
       : !r.url
         ? 'Adresse réseau introuvable : vérifie la connexion Wi-Fi du serveur.'
-        : 'Ouvrir cette interface sur l\'écran de la console (' + r.url + ')';
+        : phrase('Ouvrir cette interface sur l\'écran de la console (%s)', r.url);
   },
   // ---- premier lancement
   async checkHealth(force) {
@@ -4504,7 +4509,7 @@ const app = {
         titre: 'Changer le dossier des jeux ?',
         niveau: 'warn',
         message: 'La détection propose un autre dossier que celui enregistré.',
-        detail: 'actuel   : ' + actuel + '\ntrouvé   : ' + r.dir,
+        detail: phrase('actuel : %s\ntrouvé : %s', actuel, r.dir),
         fermer: 'Garder l\'actuel',
         actions: [{libelle: 'Utiliser celui trouvé', principal: true, faire: async () => {
           await this.saveConfig({device_dir: r.dir});
@@ -4836,7 +4841,8 @@ const app = {
       detail: nb(envoyer.length, 'fichier(s)') + ' · ' + fmt(poids)});
     if (activer.length) options.push({id: 'activer', coche: true,
       libelle: 'Activer les mises à jour et DLC dans Eden',
-      detail: activer.length + ' élément(s) — sans ça ils resteraient inactifs'});
+      detail: phrase('%s élément(s) — sans ça ils resteraient inactifs',
+                     activer.length)});
     if (configs.length) options.push({id: 'config', coche: false,
       libelle: 'Appliquer les réglages recommandés (EmuReady)',
       detail: phrase('%d jeu(x) :', configs.length) + ' '
@@ -5017,7 +5023,7 @@ const app = {
         if (liste.some(x => x.key === cle)) return toast('Cette plateforme existe déjà.', 'warn');
         liste.push({key: cle, name: nom, folder: dossier, exts});
         await this.saveField('systemes_perso', liste);
-        toast(nom + ' ajoutée.', 'ok');
+        toast(phrase('%s ajoutée.', nom), 'ok');
         await this.loadSystems();
         this.detecterPlateformes();
       }}],
@@ -5032,7 +5038,7 @@ const app = {
     renderSysSelect();                 // les compteurs en dependent
     if (silencieux) return;
     if (r.plateformes && r.plateformes.length)
-      annonce(r.plateformes.length + ' plateforme(s) trouvée(s).', 'ok');
+      annonce(phrase('%s plateforme(s) trouvée(s).', r.plateformes.length), 'ok');
     else annonce('Aucune plateforme trouvée sous ce dossier.', 'warn');
     this.loadSystems();
   },
@@ -5073,7 +5079,8 @@ const app = {
       return;
     }
     R.classe(b, 'avert', false);
-    R.texte(b, 'Identifiants valides — exemple retrouvé : ' + r.infos.exemple);
+    R.texte(b, phrase('Identifiants valides — exemple retrouvé : %s',
+                      r.infos.exemple));
   },
 
   // Entretien : chaque volet repond a UNE question, et n'agit jamais tout
@@ -5236,7 +5243,8 @@ const app = {
     el.innerHTML = '<p class="erdit">Interrogation du fournisseur…</p>';
     const r = await api('/api/auth-test', {});
     if (!r.ok) {
-      el.innerHTML = '<p class="erdit alerte">Échec : ' + esc(r.message || 'inconnu') + '</p>' +
+      el.innerHTML = '<p class="erdit alerte">' +
+        phrase('Échec : %s', esc(r.message || t('inconnu'))) + '</p>' +
         '<p class="erdit petit">Adresse de retour à déclarer chez le fournisseur : <code>' +
         esc(r.retour || '') + '</code></p>';
       return;
@@ -5384,8 +5392,8 @@ const app = {
         dialogue({
           titre: 'Tâche terminée avec des erreurs',
           niveau: 'error',
-          message: soucis.length + ' erreur(s) et ' + alertes.length +
-                   ' alerte(s). Le reste s\'est bien déroulé.',
+          message: phrase('%s erreur(s) et %s alerte(s). Le reste s\'est bien '
+                          + 'déroulé.', soucis.length, alertes.length),
           detail: soucis.slice(-12).map(e => e.t + '  ' + e.m).join('\n'),
           actions: [{libelle: 'Voir le journal', principal: true,
                      faire: () => { if (!$('jdrawer').classList.contains('open')) app.toggleJournal();
@@ -5406,8 +5414,9 @@ function renderManifest(r) {
   const body = Object.keys(groups).sort().map(folder => {
     const items = groups[folder].map(it => {
       if (it.broken) return '<div class="mfitem bad"><span>&#9888; ' + esc(it.name) +
-        '<br><span class="mono">fichier incomplet : ' + esc(it.broken) +
-        ' — à remplacer</span></span><span>non envoyé</span></div>';
+        '<br><span class="mono">' +
+        phrase('fichier incomplet : %s — à remplacer', esc(it.broken)) +
+        '</span></span><span>' + t('non envoyé') + '</span></div>';
       return '<div class="mfitem"><span>' + (it.skip ? '&check; ' : '') + esc(it.name) + '</span><span>' +
         (it.skip ? 'déjà sur la console' : fmt(it.size)) + '</span></div>';
     }).join('');
@@ -5415,7 +5424,8 @@ function renderManifest(r) {
       esc(folder) + ' <span class="mono">(' + groups[folder].length + ')</span></div>' + items + '</div>';
   }).join('');
   $('manifest').innerHTML = '<div class="manifest"><div class="mfhead">' +
-    '<span><b>' + fmt(r.to_send) + '</b> à envoyer vers ' + esc(r.device_dir) +
+    '<span><b>' + fmt(r.to_send) + '</b> ' +
+    phrase('à envoyer vers %s', esc(r.device_dir)) +
     (r.skipped ? ' <span class="mono">('
       + phrase('%d déjà sur la console', r.skipped) + ')</span>' : '') +
     (r.broken ? ' <span class="bad">'
@@ -5744,8 +5754,9 @@ function uploadFiles(files) {
   let list = [...files].filter(f => extensionAcceptee(f.name));
   const rejetes = [...files].length - list.length;
   if (!list.length) {
-    return toast('Aucun fichier reconnu. ' + EXTS_ACCEPTEES.length
-                 + ' formats acceptés — voir « Ajouter des jeux ».', 'warn');
+    return toast(t('Aucun fichier reconnu.') + ' ' +
+                 phrase('%s formats acceptés — voir « Ajouter des jeux ».',
+                        EXTS_ACCEPTEES.length), 'warn');
   }
   if (rejetes) journal(phrase('%d fichier(s) ignoré(s) : type non géré.', rejetes), 'warn');
 
@@ -5806,16 +5817,18 @@ function uploadFiles(files) {
       return;
     }
     const file = list[i++];
-    say('Envoi de ' + file.name + '...');
+    say(phrase('Envoi de %s…', file.name));
     avancer(0, file.name);
     const xhr = new XMLHttpRequest();
     xhr.open('POST', '/api/upload');
     xhr.setRequestHeader('X-Filename', encodeURIComponent(file.name));
     xhr.upload.onprogress = e => { if (e.lengthComputable) avancer(e.loaded, file.name); };
-    xhr.onload = () => { envoyes += file.size; journal('Reçu : ' + file.name, 'ok'); next(); };
+    xhr.onload = () => {
+      envoyes += file.size; journal(phrase('Reçu : %s', file.name), 'ok'); next();
+    };
     xhr.onerror = () => {
       envoyes += file.size;
-      toast('Échec de l\'envoi : ' + file.name, 'warn');
+      toast(phrase('Échec de l\'envoi : %s', file.name), 'warn');
       next();
     };
     xhr.send(file);
@@ -6375,20 +6388,20 @@ function commandesDisponibles() {
   const c = [
     // i18n:ok - les seconds champs sont des mots-cles de recherche,
     // jamais affiches ; seuls les libelles le sont.
-    ['Aller à la bibliothèque', 'jeux grille', () => app.tab('jeux')],
-    ['Ouvrir les réglages', 'settings options', () => app.tab('settings')],
-    ['Actualiser la bibliothèque', 'refresh relire', () => app.actualiser()],
-    ['Chercher les fiches manquantes', 'jaquettes resume metadata', () => app.actualiserFiches()],
-    ['Importer des jeux', 'ajouter deposer fichiers', () => app.toggleDrop(true)],
-    ['Ouvrir le journal', 'log evenements terminal', () => app.toggleJournal()],
-    ['Tout cocher', 'selection tous', () => app.deployPick(1)],
-    ['Tout décocher', 'selection aucune annuler', () => app.deployPick(0)],
-    ['Thème sombre', 'apparence nuit', () => app.setTheme('sombre')],
-    ['Thème clair', 'apparence jour blanc', () => app.setTheme('clair')],
-    ['Thème automatique', 'apparence systeme', () => app.setTheme('auto')],
-    ['Couper les animations', 'mouvement aucun repos', () => app.setMouvement('aucun')],
-    ['Rétablir les animations', 'mouvement complet', () => app.setMouvement('complet')],
-    ['Voir l\'état de l\'installation', 'diagnostic sante', () => app.showOnboard()],
+    ['Aller à la bibliothèque', 'jeux grille', () => app.tab('jeux')],  // i18n:ok - 2e champ : mot-cle de recherche
+    ['Ouvrir les réglages', 'settings options', () => app.tab('settings')],  // i18n:ok - 2e champ : mot-cle de recherche
+    ['Actualiser la bibliothèque', 'refresh relire', () => app.actualiser()],  // i18n:ok - 2e champ : mot-cle de recherche
+    ['Chercher les fiches manquantes', 'jaquettes resume metadata', () => app.actualiserFiches()],  // i18n:ok - 2e champ : mot-cle de recherche
+    ['Importer des jeux', 'ajouter deposer fichiers', () => app.toggleDrop(true)],  // i18n:ok - 2e champ : mot-cle de recherche
+    ['Ouvrir le journal', 'log evenements terminal', () => app.toggleJournal()],  // i18n:ok - 2e champ : mot-cle de recherche
+    ['Tout cocher', 'selection tous', () => app.deployPick(1)],  // i18n:ok - 2e champ : mot-cle de recherche
+    ['Tout décocher', 'selection aucune annuler', () => app.deployPick(0)],  // i18n:ok - 2e champ : mot-cle de recherche
+    ['Thème sombre', 'apparence nuit', () => app.setTheme('sombre')],  // i18n:ok - 2e champ : mot-cle de recherche
+    ['Thème clair', 'apparence jour blanc', () => app.setTheme('clair')],  // i18n:ok - 2e champ : mot-cle de recherche
+    ['Thème automatique', 'apparence systeme', () => app.setTheme('auto')],  // i18n:ok - 2e champ : mot-cle de recherche
+    ['Couper les animations', 'mouvement aucun repos', () => app.setMouvement('aucun')],  // i18n:ok - 2e champ : mot-cle de recherche
+    ['Rétablir les animations', 'mouvement complet', () => app.setMouvement('complet')],  // i18n:ok - 2e champ : mot-cle de recherche
+    ['Voir l\'état de l\'installation', 'diagnostic sante', () => app.showOnboard()],  // i18n:ok - 2e champ : mot-cle de recherche
   ];
   // Chaque plateforme devient une destination : c'est le menu qu'on ouvre le
   // plus souvent, et il est en haut de page, loin des mains.
