@@ -101,8 +101,10 @@ MOUCHARD = r"""
 INERTES = r"""
 (function () {
   const CLIQUABLE = 'button, [role=button], [onclick], [data-act], '
+                  + '[data-act-change], [data-act-input], '
                   + 'a[href^="#"], a:not([href])';
-  const CLES = ['act', 'tab', 'f', 'jl', 'path', 'lpath', 'di', 'i', 'a', 'grp'];
+  const CLES = ['act', 'actChange', 'actInput', 'tab', 'f', 'jl', 'path',
+                'lpath', 'di', 'i', 'a', 'grp'];
   const GESTES = ['onclick', 'onchange', 'oninput', 'onkeydown', 'onsubmit'];
   const out = [];
   const vus = new Set();
@@ -111,10 +113,13 @@ INERTES = r"""
   document.querySelectorAll('div, span, li, i, img').forEach(e => {
     if (getComputedStyle(e).cursor === 'pointer') tous.add(e);
   });
+  // `document` n'est pas un Element : la chaine des `parentElement` s'arrete a
+  // <html> et ne l'atteint jamais. Or c'est la que porte la delegation
+  // generale — sans ce cas, tout element delegue serait declare inerte.
   const ecouteAuDessus = el => {
     for (let p = el.parentElement; p; p = p.parentElement)
       if (window.__ecoute(p)) return true;
-    return false;
+    return window.__ecoute(document);
   };
   for (const el of tous) {
     // Un element cache n'est pas atteignable : le juger serait un faux positif.
@@ -156,7 +161,11 @@ RELEVE = r"""
   const enLigne = document.querySelectorAll(
     '[onclick],[onchange],[oninput],[onkeydown],[onsubmit],[onload],[onerror]');
   const actes = new Set();
-  document.querySelectorAll('[data-act]').forEach(e => actes.add(e.dataset.act));
+  for (const [sel, cle] of [['data-act', 'act'],
+                            ['data-act-change', 'actChange'],
+                            ['data-act-input', 'actInput']])
+    document.querySelectorAll('[' + sel + ']')
+            .forEach(e => actes.add(e.dataset[cle]));
   return {enLigne: enLigne.length, actes: [...actes]};
 })()
 """
@@ -236,7 +245,10 @@ def main():
             vus |= set(r.get("actes") or [])
             restants = max(restants, r.get("enLigne", 0))
 
-        blanche = set(n.js("Array.from(app.ACTES || [])") or [])
+        # Une action speciale est une entree de table, pas une methode : elle
+        # est autorisee au meme titre, et c'est la table qui la definit.
+        blanche = set(n.js("Array.from(app.ACTES || [])") or []) \
+            | set(n.js("Object.keys(app.ACTES_SPECIAUX || {})") or [])
         if vus or blanche:
             t("chaque data-act figure dans la liste blanche",
               vus <= blanche, sorted(vus - blanche)[:5])
