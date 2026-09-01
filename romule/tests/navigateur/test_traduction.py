@@ -133,10 +133,21 @@ def main():
         print("   -- les donnees restent intactes --")
         n.js("app.tab('jeux')")
         time.sleep(1.2)
+        # Cette assertion exigeait que la ludotheque contienne « Pokemon »,
+        # « Mario » ou « Animal Crossing » — c'est-a-dire les jeux de l'auteur.
+        # Elle ne testait donc rien chez quelqu'un d'autre, et elle est
+        # justement le genre de dependance que ce decor fixe supprime.
+        #
+        # Ce qu'on veut verifier est plus fort et ne suppose aucun titre : un
+        # nom de jeu ne doit pas CHANGER quand on bascule de langue.
         noms = n.js("[...document.querySelectorAll('.gname')].map(e=>e.textContent).slice(0,6)")
-        t("les noms de jeux ne sont pas traduits",
-          any("Pok" in x or "Mario" in x or "Animal" in x for x in (noms or [])),
-          (noms or [])[:3])
+        t("des noms de jeux sont affiches", bool(noms), noms)
+        basculer("fr")
+        avant = n.js("[...document.querySelectorAll('.gname')].map(e=>e.textContent).slice(0,6)")
+        basculer("en")
+        apres = n.js("[...document.querySelectorAll('.gname')].map(e=>e.textContent).slice(0,6)")
+        t("les noms de jeux ne sont pas traduits", avant == apres,
+          {"fr": (avant or [])[:3], "en": (apres or [])[:3]})
         chemin = n.js("(document.querySelector('.pfchemin')||{}).textContent") or ""
         t("les chemins ne sont pas traduits", "/" in chemin or chemin == "", chemin[:40])
 

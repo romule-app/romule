@@ -10,6 +10,36 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The browser test suites had never run in CI.** The guard looked for
+  `/Applications/Google Chrome.app` — a macOS path — on an Ubuntu runner, so
+  the whole family silently skipped and the job reported success. That included
+  the anti-injection invariant. A test that runs nowhere is worse than no test:
+  it hands out confidence. The guard now asks `cdp.trouver_chrome()`, and when
+  `ROMULE_CHROME` is set — someone installed Chrome *for* these tests — a
+  missing Chrome is a failure, not permission to move on.
+- Chrome would not start on a Linux runner. `--no-sandbox` (only when `CI` is
+  set) and `--disable-dev-shm-usage`, a 60 s wait instead of 24, and the error
+  now carries what Chrome actually said instead of just "no answer".
+- **The browser suites depended on the machine's hardware and on the author's
+  own library.** They ran against the real library with the real `adb`, so the
+  verdict changed depending on whether a console was plugged in, absent, or
+  offline — three different answers for the same code. One assertion required
+  the library to contain "Pokémon", "Mario" or "Animal Crossing". They now run
+  on a fixed stage: a disposable root, three synthetic games, and a fake `adb`
+  whose state is chosen. Same verdict in all three states, verified.
+- Eight strings stayed in French in an English interface, seven of them only
+  visible with a console connected — the branch the tests never rendered.
+- The source-code link in the footer, which carries the AGPL source offer, had
+  a 13 px tap target. It is now 44 px, the accessible minimum.
+
+### Added
+
+- `ROMULE_ADB` points at the `adb` binary to run. Its purpose is to make the
+  console's state choosable in tests, but it also serves anyone whose `adb`
+  is not on the `PATH`.
+
 ### Added
 
 - **The games folder is chosen from the interface.** A folder picker in

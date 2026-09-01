@@ -733,5 +733,13 @@
   "Connecter sans câble": "Connecter sans câble",
   "Détection de la console...": "Détection de la console...",
   "Wikipédia": "Wikipédia",
-  "Résumé issu de %s, sous licence CC BY-SA.": "Résumé issu de %s, sous licence CC BY-SA."
+  "Résumé issu de %s, sous licence CC BY-SA.": "Résumé issu de %s, sous licence CC BY-SA.",
+  "à vérifier": "à vérifier",
+  "Facultatif. Sans modèle, les notes affichées viennent d'autres appareils et sont marquées d'une astérisque.": "Facultatif. Sans modèle, les notes affichées viennent d'autres appareils et sont marquées d'une astérisque.",
+  "Aucun jeu trouvé sous %s. Vérifie le dossier des ROMs juste au-dessus.": "Aucun jeu trouvé sous %s. Vérifie le dossier des ROMs juste au-dessus.",
+  "Créer les dossiers manquants": "Créer les dossiers manquants",
+  "— hérité du réglage global": "— hérité du réglage global",
+  "✗ sera créé": "✗ sera créé",
+  "Configuration propre à ce jeu.": "Configuration propre à ce jeu.",
+  "Ce jeu n'a pas encore de configuration : elle sera créée.": "Ce jeu n'a pas encore de configuration : elle sera créée."
 }
