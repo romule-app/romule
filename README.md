@@ -7,27 +7,28 @@
 
 <p align="center">
   <a href="#licence"><img alt="Licence AGPL-3.0" src="https://img.shields.io/badge/licence-AGPL--3.0-blue"></a>
-  <img alt="Version 0.1.0" src="https://img.shields.io/badge/version-0.1.0-orange">
+  <img alt="Version 0.2.0" src="https://img.shields.io/badge/version-0.2.0-orange">
   <img alt="Python 3.10+" src="https://img.shields.io/badge/python-3.10%2B-green">
   <img alt="Zero dependencies" src="https://img.shields.io/badge/dependencies-none-brightgreen">
   <img alt="Beta" src="https://img.shields.io/badge/status-beta-yellow">
 </p>
 
-> **Beta.** Romule works and is used daily, but this is its first public
-> release. The HTTP API will change, and some features are explicitly labelled
-> beta in the interface. Read [Known limitations](#known-limitations) before
-> exposing it to the internet.
+> **Beta.** Romule works and is used daily, but it is young. Some features are
+> explicitly labelled beta in the interface. The public `/api/v1` **is** stable;
+> the routes the interface uses for itself are not, and are not documented as
+> such. Read [Known limitations](#️-known-limitations) before exposing it to the
+> internet.
 
 <p align="center">
-  <img src="docs/images/bibliotheque.png" alt="The Romule library view: a grid of
-  game cards with size, platform and update badges, and filters above. The
-  library shown is synthetic — invented titles, no real cover art."
+  <img src="docs/images/bibliotheque.jpg" alt="The Romule library view: a grid of
+  game cards showing cover art, size, platform and update badges, with filters
+  and a search box above."
   width="900">
 </p>
 
 ---
 
-## Quick start
+## 🚀 Quick start
 
 ```sh
 git clone https://github.com/romule-app/romule
@@ -56,7 +57,7 @@ Python 3.10 or newer. No install step, no virtualenv, no build — Romule uses
 the standard library only.
 </details>
 
-### Why a token, and where it comes from
+### 🔑 Why a token, and where it comes from
 
 The container is reachable from your network but has no account yet. Rather
 than open the service without a password, Romule generates an access token on
@@ -66,25 +67,28 @@ listens on `127.0.0.1` gets no token — nothing to protect it from.
 
 ---
 
-## What it does
+## 🎮 What it does
 
-- **Takes stock of your library.** Nintendo Switch in detail — title IDs,
+- 📚 **Takes stock of your library.** Nintendo Switch in detail — title IDs,
   base/update/DLC relationships, missing updates, orphaned DLC — plus 22 other
   platforms identified per file.
-- **Fills in the blanks.** Cover art from SteamGridDB, summaries, year and
+- 🖼️ **Fills in the blanks.** Cover art from SteamGridDB, summaries, year and
   publisher from IGDB, cached on disk so the grid never waits on the network.
-- **Sends games to a handheld** over adb, by USB or Wi-Fi, with a pairing
+- 📲 **Sends games to a handheld** over adb, by USB or Wi-Fi, with a pairing
   assistant, resumable transfers and free-space checks.
-- **Keeps it yours.** Romule ships no games, no console keys, and no links to
+- 🔌 **Answers to your scripts.** A small, versioned HTTP API with revocable
+  keys, so a dashboard or a cron job can query the library —
+  [documented here](https://romule-app.github.io/romule/api/).
+- 🏠 **Keeps it yours.** Romule ships no games, no console keys, and no links to
   either. It manages files you already have.
 
-### Supported platforms
+### 🕹️ Supported platforms
 
 Nintendo Switch · PlayStation 1/2/3 · PSP · PS Vita · GameCube · Wii · Wii U ·
 Nintendo 3DS · DS · 64 · SNES · NES · Game Boy Advance · Game Boy / Color ·
 Dreamcast · Saturn · Mega Drive · Arcade (MAME/FBN) · Xbox · Xbox 360 · PC
 
-### Emulator profiles
+### 🎛️ Emulator profiles
 
 The target device and emulator are profiles, not hard-coded paths.
 
@@ -99,7 +103,7 @@ Unverified profiles are labelled as such in the interface. Pick yours in
 
 ---
 
-## Configuration
+## ⚙️ Configuration
 
 Romule reads its settings from the interface; environment variables cover what
 must be known before it starts.
@@ -129,7 +133,7 @@ All 37 settings in the configuration file are edited from the interface and
 documented on the
 [documentation site](https://romule-app.github.io/romule/).
 
-### External tools
+### 🧰 External tools
 
 All optional. Missing ones disable a feature; none prevent Romule from
 starting. The Docker image ships all of them.
@@ -142,7 +146,7 @@ starting. The Docker image ships all of them.
 
 ---
 
-## Security
+## 🔒 Security
 
 **Romule has no built-in TLS.** It speaks plain HTTP and expects a reverse
 proxy in front of it for anything reachable from the internet. If you run one,
@@ -165,7 +169,7 @@ actually running, and the CI fails on anything it rates *grave*.
 
 Reporting a vulnerability: see [SECURITY.md](SECURITY.md).
 
-### Known limitations
+### ⚠️ Known limitations
 
 - **No TLS.** A reverse proxy is required for internet exposure.
 - **`style-src` allows `'unsafe-inline'`.** Inline `style=` attributes are
@@ -179,7 +183,7 @@ Reporting a vulnerability: see [SECURITY.md](SECURITY.md).
 
 ---
 
-## This application is vibe coded
+## 🤖 This application is vibe coded
 
 Said plainly, because you are about to run it on your own machine.
 
@@ -206,7 +210,7 @@ especially useful here.
 
 ---
 
-## Legal
+## ⚖️ Legal
 
 Romule is a library manager. It **does not** provide games, console keys, or
 any means of obtaining them, and it contains no links to either. It manages
@@ -216,7 +220,7 @@ Whether you may legally hold those files depends on where you live and how you
 obtained them. That question is yours, not this project's. Please do not open
 issues asking where to find games or keys; they will be closed.
 
-### Console keys
+### 🗝️ Console keys
 
 Romule never ships, generates, or helps you obtain console keys. Decrypting
 `.nsz` / `.xcz` is delegated to [`nsz`](https://github.com/nicoboss/nsz), a
@@ -227,14 +231,14 @@ Be aware that in some jurisdictions, extracting or using such keys may be
 restricted **even for content you own**. Romule takes no position on that and
 gives no guidance on it.
 
-### Emulators
+### 👾 Emulators
 
 Romule bundles no emulator and distributes none. An emulator *profile* is
 nothing more than a description of where a given third-party program keeps its
 files, so that Romule can copy games to the right place. Naming a program is
 not an endorsement, a partnership, or a claim that anyone authorised it.
 
-### Trademarks
+### ™️ Trademarks
 
 Nintendo Switch, and the names of every console, publisher and emulator
 mentioned here, are trademarks of their respective owners. Romule is an
@@ -243,16 +247,17 @@ them. Those names are used only to say what the software works with.
 
 ---
 
-## Project documents
+## 📚 Project documents
 
 | Document | What it covers |
 |---|---|
 | [Documentation site](https://romule-app.github.io/romule/) | Install, first run, console setup, full configuration reference |
+| [HTTP API](https://romule-app.github.io/romule/api/) | Keys, the fourteen routes, pagination, errors |
 | [CHANGELOG.md](CHANGELOG.md) | What changed, release by release |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Zero-dependency rule, house style, how to run the suites |
 | [SECURITY.md](SECURITY.md) | How to report a vulnerability, and what is in scope |
 
-## Development
+## 🛠️ Development
 
 ```sh
 python3 lancer_tests.py               # unit, server and audit suites
