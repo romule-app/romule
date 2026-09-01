@@ -741,5 +741,17 @@
   "— hérité du réglage global": "— hérité du réglage global",
   "✗ sera créé": "✗ sera créé",
   "Configuration propre à ce jeu.": "Configuration propre à ce jeu.",
-  "Ce jeu n'a pas encore de configuration : elle sera créée.": "Ce jeu n'a pas encore de configuration : elle sera créée."
+  "Ce jeu n'a pas encore de configuration : elle sera créée.": "Ce jeu n'a pas encore de configuration : elle sera créée.",
+  "réseau : %s": "réseau : %s",
+  "Convertir les %s restants": "Convertir les %s restants",
+  "Aucun jeu ne correspond à « %s ».": "Aucun jeu ne correspond à « %s ».",
+  "Rien dans « %s » — tout est en ordre de ce côté.": "Rien dans « %s » — tout est en ordre de ce côté.",
+  "Mot de passe (%s caractères minimum)": "Mot de passe (%s caractères minimum)",
+  "Aucun événement pour « %s ».": "Aucun événement pour « %s ».",
+  "Aucun événement.": "Aucun événement.",
+  "MAJ/DLC": "MAJ/DLC",
+  "élément(s)": "élément(s)",
+  "Importer %s élément(s)": "Importer %s élément(s)",
+  "Détail de %s": "Détail de %s",
+  "%s plateforme(s) sous %s": "%s plateforme(s) sous %s"
 }

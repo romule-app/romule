@@ -198,7 +198,7 @@ async function api(path, body, discret) {
     // brut (« Unexpected token '<' ») ne disait rien a personne.
     j = /Unexpected token '<'|not valid JSON/.test(e.message || '')
       ? {error: 'Session expirée : reconnecte-toi.', _session: true}
-      : {error: 'réseau : ' + e.message};
+      : {error: phrase('réseau : %s', e.message)};
   }
   if (j && j._session) {
     dialogue({
@@ -564,7 +564,9 @@ function renderJournal() {
         // l'a ecrit : deux donnees, pas des libelles.
         '<span class="jn" data-i18n-skip>' + e.n + '</span>' +
         '<span class="jm" data-i18n-skip>' + esc(e.m) + '</span></div>').join('')
-    : '<div class="jempty">Aucun événement' + (q ? ' pour « ' + esc(q) + ' »' : '') + '.</div>';
+    : '<div class="jempty">' + (q
+        ? phrase('Aucun événement pour « %s ».', esc(q))
+        : t('Aucun événement.')) + '</div>';
 
   // Comme un terminal : seules les lignes qui viennent d'arriver s'animent.
   // Tout le bloc est reconstruit a chaque rendu, donc sans ce reperage c'est
@@ -1140,7 +1142,7 @@ function renderLib() {
   if (ETATS_CONSOLE.includes(FILTER) && !consoleLue()) { FILTER = 'all'; majChips(); }
 
   const bulk = $('bulkconv');
-  if (n.convert) { bulk.style.display = ''; bulk.textContent = 'Convertir les ' + n.convert + ' restants'; }
+  if (n.convert) { bulk.style.display = ''; bulk.textContent = phrase('Convertir les %s restants', n.convert); }
   else bulk.style.display = 'none';
 
   const q = ($('filter').value || '').toLowerCase();
@@ -1159,8 +1161,9 @@ function renderLib() {
   }
   if (!list.length) {
     lib.innerHTML = '<div class="empty">' + (FILTER === 'all'
-      ? 'Aucun jeu ne correspond à « ' + esc($('filter').value) + ' ».'
-      : 'Rien dans « ' + ETATS[FILTER][1] + ' » — tout est en ordre de ce côté.') + '</div>';
+      ? phrase('Aucun jeu ne correspond à « %s ».', esc($('filter').value))
+      : phrase('Rien dans « %s » — tout est en ordre de ce côté.',
+              t(ETATS[FILTER][1]))) + '</div>';
     $('pager').innerHTML = ''; renderActionBar(); return;
   }
 
@@ -1293,6 +1296,7 @@ function carteLigne(x) {
 
 // Mots trop courants pour peser dans la comparaison : les garder ferait passer
 // n'importe quelle phrase pour « proche du titre ».
+// i18n:ok - liste de mots vides pour la comparaison de titres, pas de l'interface
 const VIDES = new Set(('le la les un une des du de d l a au aux et ou en dans sur '
   + 'pour par avec sans version edition the a an of and or in on for with your '
   + 'this that new').split(' '));
@@ -1624,18 +1628,23 @@ function majChips() {
 }
 
 function renderToolbar(tous) {
-  const t = $('tri');
-  if (t && !t.dataset.rempli) {
-    t.dataset.rempli = '1';
-    t.innerHTML = Object.entries(TRIS).map(([k, v]) =>
+  // Nomme `selTri` et non `t` : `t()` est la fonction de traduction, et une
+  // variable locale de ce nom la masque dans toute la fonction. L'appel
+  // devient alors « t is not a function » — au premier rendu seulement, donc
+  // un ecran blanc au demarrage et rien du tout ensuite.
+  const selTri = $('tri');
+  if (selTri && !selTri.dataset.rempli) {
+    selTri.dataset.rempli = '1';
+    selTri.innerHTML = Object.entries(TRIS).map(([k, v]) =>
       '<option value="' + k + '">' + esc(v[0]) + '</option>').join('');
   }
-  if (t) t.value = TRI;
+  if (selTri) selTri.value = TRI;
   const pp = $('parpage');
   if (pp && !pp.dataset.rempli) {
     pp.dataset.rempli = '1';
     pp.innerHTML = PAR_PAGE.map(n =>
-      '<option value="' + n + '">' + (n ? n + ' par page' : 'Tout afficher') + '</option>').join('');
+      '<option value="' + n + '">' +
+      (n ? phrase('%s par page', n) : t('Tout afficher')) + '</option>').join('');
   }
   if (pp) pp.value = String(PARPAGE);
   const s = $('sens');
@@ -1684,7 +1693,8 @@ function renderActionBar() {
     // console » et « Envoyer vers la console » designaient le meme geste, ce
     // qui oblige a verifier a chaque fois qu'il s'agit bien de la meme chose.
     boutons.push(['go', 'appliquer', 'Envoyer vers la console',
-                  c.envoyer.length ? fmt(c.poids) : c.activer.length + ' MAJ/DLC']);
+                  c.envoyer.length ? fmt(c.poids)
+                                   : nb(c.activer.length, 'MAJ/DLC')]);
   if (c.importer.length)
     boutons.push(['go', 'appliquer', 'Copier vers le serveur', nb(c.importer.length, 'fichier(s)')]);
   if (surConsole)
@@ -1742,7 +1752,7 @@ function majSection(g, e) {
   // vit ici, a cote du fait qui la justifie, plutot que dans une barre lointaine.
   if ((e.aActiver || []).length) {
     l.push('<div class="majrow act"><span>À activer dans Eden</span>' +
-      '<b class="p-partiel">' + e.aActiver.length + ' élément(s)</b>' +
+      '<b class="p-partiel">' + nb(e.aActiver.length, 'élément(s)') + '</b>' +
       '<button class="go" ' + (CONN.kind ? '' : 'disabled title="Console non connectée"') +
       ' onclick="app.activerJeu(\'' + jsq(g.key) + '\')">Activer</button></div>');
   }
@@ -1871,7 +1881,7 @@ function majBoutonClasser(n) {
   const b = $('btnclasser');
   if (!b) return;
   b.hidden = !n;
-  R.texte(b, 'À classer (' + (n || 0) + ')');
+  R.texte(b, phrase('À classer (%s)', n || 0));
 }
 
 function renderImport(items) {
@@ -1891,7 +1901,7 @@ function renderImport(items) {
   }
   if (btn) {
     btn.disabled = false;
-    btn.textContent = 'Importer ' + items.length + ' élément' + (items.length > 1 ? 's' : '');
+    btn.textContent = phrase('Importer %s élément(s)', items.length);
   }
   if (info) info.textContent = fmt(items.reduce((s, i) => s + (i.size || 0), 0)) + ' en attente';
 
@@ -2337,14 +2347,16 @@ function renderPlateformes(r) {
   el.innerHTML = '<div class="pfgrille">' + p.map(s =>
     '<button class="pfcarte' + (s.key === PF_OUVERTE ? ' on' : '') +
     '" onclick="app.ouvrirPlateforme(\'' + jsq(s.key) + '\')" ' +
-    'title="Détail de ' + esc(s.name) + '">' +
+    'title="' + esc(phrase('Détail de %s', s.name)) + '">' +
       '<span class="pfnom">' + esc(s.name) + '</span>' +
       '<span class="pfn">' + s.count + '</span>' +
       '<span class="pftaille">' + fmt(s.bytes) + '</span>' +
       '<span class="pfdir">' + esc(s.folder) + '/</span>' +
     '</button>').join('') + '</div>' +
-    '<div class="mono" style="margin-top:8px">' + p.length + ' plateforme(s) sous <code>' +
-    esc(r.racine) + '</code> · ' + phrase('%d jeu(x) au total', p.reduce((n, s) => n + s.count, 0)) + '</div>';
+    '<div class="mono" style="margin-top:8px">' +
+    phrase('%s plateforme(s) sous %s', p.length,
+           '<code>' + esc(r.racine) + '</code>') + ' · ' +
+    phrase('%d jeu(x) au total', p.reduce((n, s) => n + s.count, 0)) + '</div>';
   // Le detail d'une plateforme vit desormais dans « Console et émulateur » :
   // cliquer une carte y conduit, plutot que d'ouvrir un second editeur ici.
 }
@@ -2396,8 +2408,11 @@ function majReglagesPlateforme() {
   const d = $('d-plateforme');
   if (d) {
     R.texte(d, !sys ? 'Ses réglages et son dossier sur la console.'
-      : visibles ? sys.name + ' a ' + visibles + ' bloc(s) de réglages qui lui sont propres.'
-                 : sys.name + " n'a pas de réglage propre : seul son dossier se règle ici.");
+      : visibles
+        ? phrase('%s a %s bloc(s) de réglages qui lui sont propres.',
+                 sys.name, visibles)
+        : phrase("%s n'a pas de réglage propre : seul son dossier se règle ici.",
+                 sys.name));
   }
   renderPfCommun(sys);
 }
@@ -3314,7 +3329,8 @@ function ajouterCompte() {
     message: 'Elle pourra ouvrir la ludothèque avec ces identifiants.',
     champs: [{id: 'nom', libelle: 'Nom affiché', exemple: 'Prénom'},
              {id: 'email', libelle: 'Adresse email', exemple: 'nom@exemple.fr'},
-             {id: 'mdp', libelle: 'Mot de passe (' + MDP_MIN + ' caractères minimum)',
+             {id: 'mdp',
+              libelle: phrase('Mot de passe (%s caractères minimum)', MDP_MIN),
               type: 'password', auto: 'new-password'}],
     actions: [{libelle: 'Créer le compte', principal: true, faire: v =>
       envoiCompte('/api/compte-creer', v, () => { dessinerComptes(); majBlocAuth(); })}],
@@ -3405,7 +3421,7 @@ function ouvrirChoixPlateforme(items) {
       + (c.key === it.suggestion ? ' selected' : '') + '>'
       + esc(c.name) + (c.key === it.suggestion ? '  ✓ proposé' : '') + '</option>').join('');
     const pourquoi = it.proposes && it.proposes.length
-      ? 'Sorti sur ' + it.proposes.length + ' de ces plateformes d\'après IGDB.'
+      ? phrase('Sorti sur %s de ces plateformes d\'après IGDB.', it.proposes.length)
       : 'Aucune information : ' + it.candidats.length + ' plateformes utilisent '
         + esc(it.extension) + '.';
     return '<div class="classer-l">'
@@ -5210,8 +5226,12 @@ const app = {
   // La corbeille se lit d'abord en une phrase. Le detail, souvent long
   // (40 lots ici), reste replie tant qu'on ne le demande pas.
   async loadTrash() {
-    const t = await api('/api/trash-list');
-    const r = t.resume || {lots: 0, fichiers: 0, octets: 0, plus_vieux: 0};
+    // `rep` et non `t` : `t()` est la fonction de traduction, et la masquer ici
+    // faisait lever « t is not a function » des que la corbeille contenait un
+    // lot — le resume ne s'affichait alors jamais. Invisible tant que la
+    // corbeille reste vide, ce qui est le cas de toute ludotheque de test.
+    const rep = await api('/api/trash-list');
+    const r = rep.resume || {lots: 0, fichiers: 0, octets: 0, plus_vieux: 0};
     const s = $('trashsum');
     if (s) s.innerHTML = r.lots
       ? '<b>' + r.lots + '</b> ' + t('lot(s)') + ' &middot; <b>' + r.fichiers

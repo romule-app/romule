@@ -12,6 +12,14 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Fixed
 
+- **Two functions shadowed the translation helper.** `t()` translates; a local
+  variable named `t` hides it for the whole scope, and the call becomes
+  `t is not a function`. In `renderToolbar` it broke the *first* render, so the
+  library never appeared and console detection never ran — and it worked fine
+  on every later call, which is why nothing pointed at it. In `loadTrash` it is
+  still latent: it throws as soon as the trash holds one batch, so the summary
+  never renders — invisible on any test library, whose trash is empty. Twelve
+  functions declare a local `t`; a test now asserts none of them also calls it.
 - **`CLASSES_DONNEES` conflated a style hook with a "never translate" marker.**
   `jline`, `brow` and `crumb` wrap a *mixture*: a log line holds a timestamp, a
   level and a message, and only the message is data. Marking the wrapper froze
