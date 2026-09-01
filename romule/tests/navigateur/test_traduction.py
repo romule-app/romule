@@ -17,6 +17,7 @@ from pathlib import Path
 ICI = Path(__file__).resolve().parent
 sys.path.insert(0, str(ICI))
 from cdp import Navigateur
+from ecrans import parcourir
 
 URL = os.environ.get("LUDO_URL", "http://127.0.0.1:8799/")
 LOCALES = ICI.parent.parent / "locales"
@@ -112,29 +113,9 @@ RESTE_FR = r"""
 })()
 """
 
-# Le balayage ne voit que ce qui est affiche : il faut donc ouvrir les ecrans.
-# Huit y figuraient, sur la quinzaine que compte l'interface — l'assistant, les
-# comptes, la fiche de jeu et EmuReady n'etaient jamais rendus, et c'est
-# precisement la que se trouvait l'essentiel du francais residuel.
-ETAPES = ["app.tab('jeux')", "app.tab('settings')",
-          "app.voirEntretien('doublons')", "app.voirEntretien('integrite')",
-          "app.voirEntretien('acces')", "app.auditer(true)",
-          "app.toggleJournal()", "app.toggleDrop(true)",
-          # Les sections de reglages sont exclusives : chacune doit etre ouverte.
-          "document.querySelector(\"#setnav a[href='#sec-console']\").click()",
-          "document.querySelector(\"#setnav a[href='#sec-biblio']\").click()",
-          "document.querySelector(\"#setnav a[href='#sec-entretien']\").click()",
-          "document.querySelector(\"#setnav a[href='#sec-acces']\").click()",
-          "document.querySelector(\"#setnav a[href='#sec-interface']\").click()",
-          # Le navigateur de dossiers du serveur, jamais visite jusqu'ici.
-          "app.tab('settings'); app.ludoOuvrir()",
-          # La fiche d'un jeu : l'ecran le plus dense, et le plus exclu.
-          "app.tab('jeux'); (function(){const c=document.querySelector('#lib .gcard');"
-          "if (c) app.openGame(c.dataset.key);})()",
-          "app.closeGame(); app.openOnboard && app.openOnboard()",
-          "app.closeOnboard && app.closeOnboard()"]
-
-
+# Les ecrans sont decrits une seule fois, dans `ecrans.py` : ce test et
+# `test_gestes.py` balayent tous deux le DOM rendu, et un ecran ajoute a un
+# seul des deux serait un angle mort silencieux.
 def main():
     origine = "fr"
     n = Navigateur(port=9401, largeur=1500, hauteur=1300, dpr=1)
@@ -187,14 +168,7 @@ def main():
         d = n.js("(document.getElementById('d-plateforme')||{}).textContent") or ""
         t("phrase a variable traduite", "settings block" in d, d[:60])
 
-        reste = set()
-        for code in ETAPES:
-            try:
-                n.js(code)
-            except Exception:
-                pass
-            time.sleep(0.9)
-            reste |= set(n.js(RESTE_FR) or [])
+        reste = parcourir(n, RESTE_FR)
         # Les titres de jeux sont des donnees : ils gardent leurs accents.
         vrais = [x for x in reste if "Pok" not in x and "™" not in x]
         t("plus aucune phrase d'interface en francais", not vrais, vrais[:3])
