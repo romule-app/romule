@@ -1,0 +1,374 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Romule",
+    "version": "1",
+    "summary": "Read your library, watch a task, start a job.",
+    "description": "Stable subset of the Romule HTTP API. Within a major version no route disappears and no existing field changes name or type; new fields may appear, so ignore the ones you do not know.\n\nRomule's other `/api/...` routes exist and are **not** covered by this promise — they follow the interface and change with it.\n\nAuthenticate with an API key: `X-Api-Key: rml_...`, or `?apikey=rml_...` where a header is impractical. A key reaches `/api/v1/` and nothing else.",
+    "license": {
+      "name": "AGPL-3.0-or-later"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8787",
+      "description": "Default"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "ApiKeyHeader": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Api-Key"
+      },
+      "ApiKeyQuery": {
+        "type": "apiKey",
+        "in": "query",
+        "name": "apikey"
+      }
+    }
+  },
+  "security": [
+    {
+      "ApiKeyHeader": []
+    },
+    {
+      "ApiKeyQuery": []
+    }
+  ],
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "summary": "Liveness. The only route also used by the container probe.",
+        "responses": {
+          "200": {
+            "description": "The service is up.",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/openapi.json": {
+      "get": {
+        "summary": "This document.",
+        "responses": {
+          "200": {
+            "description": "The OpenAPI specification.",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/system": {
+      "get": {
+        "summary": "Version, licence, source, uptime.",
+        "responses": {
+          "200": {
+            "description": "Service identity.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "version": "0.2.0",
+                  "api": "v1",
+                  "uptime_s": 8412,
+                  "licence": "AGPL-3.0-or-later",
+                  "library_ready": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/stats": {
+      "get": {
+        "summary": "Counts and total size for the whole library.",
+        "responses": {
+          "200": {
+            "description": "Library statistics.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "total": 412,
+                  "base": 180,
+                  "update": 150,
+                  "dlc": 82,
+                  "bytes": 174929203200,
+                  "to_convert": 3
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/library": {
+      "get": {
+        "summary": "The inventory, paginated and sorted by name.",
+        "description": "An unreadable `page` or `limit` falls back to the default; a value outside the bounds is clamped into them.",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "BASE",
+                "UPDATE",
+                "DLC",
+                "INCONNU"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of games.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "page": 1,
+                  "limit": 50,
+                  "total": 412,
+                  "pages": 9,
+                  "items": [
+                    {
+                      "key": "GAMES/Some Game [0100ABC].nsp",
+                      "name": "Some Game",
+                      "type": "BASE",
+                      "size": 4294967296,
+                      "playable": true
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/library/{key}": {
+      "get": {
+        "summary": "One game, by its key — the path relative to the library.",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The game.",
+            "content": {
+              "application/json": {}
+            }
+          },
+          "404": {
+            "description": "No game with that key.",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/search": {
+      "get": {
+        "summary": "Search by name or title ID.",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of matches.",
+            "content": {
+              "application/json": {}
+            }
+          },
+          "400": {
+            "description": "q is missing.",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/platforms": {
+      "get": {
+        "summary": "Configured platforms and their local counts.",
+        "responses": {
+          "200": {
+            "description": "Platforms.",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/device": {
+      "get": {
+        "summary": "State of the connected handheld.",
+        "responses": {
+          "200": {
+            "description": "Device state.",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/job": {
+      "get": {
+        "summary": "The running task, if any. Romule runs one task at a time, so there is no task list.",
+        "responses": {
+          "200": {
+            "description": "Current task.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "running": true,
+                  "label": "Conversion",
+                  "done": 2,
+                  "total": 5,
+                  "detail": "Some Game.nsz"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/trash": {
+      "get": {
+        "summary": "What is in the trash and can still be restored.",
+        "responses": {
+          "200": {
+            "description": "Trash contents.",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/scan": {
+      "post": {
+        "summary": "Rescan the library.",
+        "responses": {
+          "202": {
+            "description": "Task started.",
+            "content": {
+              "application/json": {}
+            }
+          },
+          "409": {
+            "description": "Another task is running.",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/convert": {
+      "post": {
+        "summary": "Convert the remaining .nsz/.xcz files.",
+        "responses": {
+          "202": {
+            "description": "Task started.",
+            "content": {
+              "application/json": {}
+            }
+          },
+          "409": {
+            "description": "Another task is running.",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/push": {
+      "post": {
+        "summary": "Send pending games to the handheld.",
+        "responses": {
+          "202": {
+            "description": "Task started.",
+            "content": {
+              "application/json": {}
+            }
+          },
+          "409": {
+            "description": "Another task is running.",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    }
+  }
+}

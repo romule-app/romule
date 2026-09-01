@@ -53,6 +53,7 @@ nav:
       - Your console: console.md
   - Reference:
       - Configuration: configuration.md
+      - HTTP API: api.md
       - Emulator profiles: profils.md
       - Security and exposure: securite.md
   - Help:
@@ -62,3 +63,5 @@ nav:
 
 not_in_nav: |
   images/
+  openapi.json
+

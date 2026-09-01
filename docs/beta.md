@@ -57,6 +57,23 @@ When in doubt, discarding and sending again is safer.
 to a Wikipedia lookup by name. Name matching is approximate: a wrong summary on
 an obscure title is a normal outcome, not a bug.
 
+## The audit report and the login pages are English-only
+
+**Not beta — a stated limitation.** Romule's interface translates completely:
+every string lives in a catalogue, a CI check fails if one escapes it, and a
+browser test walks seventeen screens looking for leftovers.
+
+Two things fall outside that mechanism, because they are not built in the
+browser at all. The **audit report** is composed by the server and returned as
+finished sentences; the **login and access-denied pages** are served before any
+JavaScript runs, which is the whole point of them. Translating either means
+translating `romule/audit.py` and the page templates in `romule/server.py` —
+server-side i18n, which Romule does not have.
+
+They are in French, the project's source language. This is set aside knowingly
+rather than left as a red test: the browser test excludes the audit panel with
+its reason written next to the exclusion.
+
 ---
 
 ## What is *not* beta

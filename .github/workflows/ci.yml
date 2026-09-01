@@ -102,6 +102,20 @@ jobs:
       - name: Compilation de tous les modules
         run: python -m compileall -q romule outils
 
+      # Ce controle est ICI et non dans le job de documentation, qui ne se
+      # declenche que sur `docs/**` : il ne verrait donc jamais un changement
+      # de `romule/apiv1.py`, c'est-a-dire exactement celui qui compte. Ce
+      # projet a deja perdu des semaines a un filtre de chemin qui empechait
+      # une famille de tests de tourner.
+      - name: La specification OpenAPI est-elle a jour ?
+        run: |
+          python -m romule.apiv1 > /tmp/openapi-attendu.json
+          if ! diff -u docs/openapi.json /tmp/openapi-attendu.json; then
+            echo "::error title=Specification perimee::docs/openapi.json ne correspond plus a romule/apiv1.py. Regenerer : python3 -m romule.apiv1 > docs/openapi.json"
+            exit 1
+          fi
+          echo "La specification publiee correspond au code."
+
       - name: Audit interne
         run: |
           python -m romule.audit --json > audit.json || true
