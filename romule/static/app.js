@@ -3408,7 +3408,8 @@ async function activerDoubleFacteur() {
     message: "Ajoute ce compte dans ton application d'authentification "
            + '(Aegis, Ente, Bitwarden, Google Authenticator…), puis saisis le '
            + "code qu'elle affiche.",
-    detail: 'Clé à saisir manuellement :\n' + p.lisible + '\n\nAdresse otpauth :\n' + p.uri,
+    detail: phrase('Clé à saisir manuellement :\n%s\n\nAdresse otpauth :\n%s',
+                   p.lisible, p.uri),
     champs: [{id: 'code', libelle: 'Code à 6 chiffres', exemple: '123456'}],
     actions: [{libelle: 'Activer', principal: true, faire: v =>
       envoiCompte('/api/compte-totp-activer', {code: v.code}, chargerComptes)}],
@@ -3440,7 +3441,8 @@ function ouvrirChoixPlateforme(items) {
       + esc(c.name) + (c.key === it.suggestion ? '  ✓ proposé' : '') + '</option>').join('');
     const pourquoi = it.proposes && it.proposes.length
       ? phrase('Sorti sur %s de ces plateformes d\'après IGDB.', it.proposes.length)
-      : 'Aucune information : ' + it.candidats.length + ' plateformes utilisent '
+      : phrase('Aucune information : %s plateformes utilisent ',
+                 it.candidats.length)
         + esc(it.extension) + '.';
     return '<div class="classer-l">'
       + '<div class="classer-n"><b>' + esc(it.nom) + '</b>'
@@ -3695,7 +3697,7 @@ const app = {
     if (!e.aActiver.length) return toast('Rien à activer pour ce jeu.', 'warn');
     const r = await api('/api/deploy', {envoyer: [], activer: e.aActiver.map(f => f.path), configs: []});
     if (!r.error) {
-      toast('Activation de ' + e.aActiver.length + ' élément(s) lancée.', 'ok');
+      toast(phrase('Activation de %s élément(s) lancée.', e.aActiver.length), 'ok');
       this.closeGame();
       this.poll();
     }
@@ -3742,7 +3744,7 @@ const app = {
       this.basculerTaches(true);
       const r = await api('/api/system-push', {system: sys, paths});
       if (!r || r.error) return;
-      toast('Envoi de « ' + nomJeu(g) + ' » lancé.', 'ok');
+      toast(phrase('Envoi de « %s » lancé.', nomJeu(g)), 'ok');
       return this.poll();
     }
 
@@ -3750,15 +3752,16 @@ const app = {
     if (!paths.length) {
       const compresses = locaux.filter(f => ['nsz', 'xcz'].includes(f.ext));
       return toast(compresses.length
-        ? 'Ce jeu est compressé (.' + compresses[0].ext
-          + ') : convertis-le d\'abord, Eden ne lit pas ce format.'
-        : '« ' + nomJeu(g) + ' » n\'est pas sur le serveur : rien à envoyer.', 'warn');
+        ? phrase('Ce jeu est compressé (.%s) : convertis-le d\'abord, '
+                 + 'Eden ne lit pas ce format.', compresses[0].ext)
+        : phrase('« %s » n\'est pas sur le serveur : rien à envoyer.',
+                 nomJeu(g)), 'warn');
     }
     this.closeGame();
     this.basculerTaches(true);
     const r = await api('/api/push', {paths});
     if (!r || r.error) return;
-    toast('Envoi de « ' + nomJeu(g) + ' » lancé.', 'ok');
+    toast(phrase('Envoi de « %s » lancé.', nomJeu(g)), 'ok');
     this.poll();
   },
   async trashFile(path) {
@@ -3846,8 +3849,8 @@ const app = {
           + '\nAnnuler = empreintes seulement (rapide).')
       : !!approfondie;
     const r = await api('/api/verify', {deep, system: SYS, budget_go: budgetGo || null});
-    r.error || (toast(budgetGo ? 'Vérification de ' + budgetGo + ' Go lancée.'
-                               : 'Vérification lancée.', 'ok'), this.poll());
+    r.error || (toast(budgetGo ? phrase('Vérification de %s Go lancée.', budgetGo)
+                               : t('Vérification lancée.'), 'ok'), this.poll());
   },
   async backupSaves() {
     const r = await api('/api/saves-backup', {});
@@ -3950,13 +3953,13 @@ const app = {
     const h = $('erdev-help');
     if (!h) return;
     if (sug.length && r.modele_detecte) {
-      h.textContent = 'Détecté : « ' + r.modele_detecte + ' » — choisis ta variante (' +
-        sug.map(d => d.nom).join(', ') + ').';
+      h.textContent = phrase('Détecté : « %s » — choisis ta variante (%s).',
+                             r.modele_detecte, sug.map(d => d.nom).join(', '));
     } else if (!ER.appareil) {
       h.textContent = 'Facultatif. Sans modèle, les notes affichées viennent d\'autres ' +
         'appareils et sont marquées d\'une astérisque.';
     } else {
-      h.textContent = 'Notes calculées pour ' + ER.appareil_nom + '.';
+      h.textContent = phrase('Notes calculées pour %s.', ER.appareil_nom);
     }
   },
   async erPickDevice(saisie) {
@@ -4002,8 +4005,9 @@ const app = {
     dialogue({
       titre: 'Configuration proposée',
       niveau: 'info',
-      message: 'Testée sur ' + appareil + ' · ' + r.sections + ' section(s), ' +
-               r.surcharges + ' réglage(s) spécifique(s). Le reste suit tes réglages globaux.',
+      message: phrase('Testée sur %s · %s section(s), %s réglage(s) '
+                      + 'spécifique(s). Le reste suit tes réglages globaux.',
+                      appareil, r.sections, r.surcharges),
       detail: (imposes.length ? 'RÉGLAGES IMPOSÉS PAR CE RAPPORT\n' + imposes.join('\n') +
                '\n\n— fichier complet —\n' : '') + (r.contenu || ''),
       fermer: 'Fermer',
@@ -4094,7 +4098,7 @@ const app = {
     const r = await api('/api/eden-profile-save',
       {nom, tid: ECTID, portee: ECTID ? 'jeu' : 'global',
        sections: EC_CLES.map(c => c[0]).filter((v, i, a) => a.indexOf(v) === i)});
-    toast('Profil « ' + r.nom + ' » enregistré.', 'ok');
+    toast(phrase('Profil « %s » enregistré.', r.nom), 'ok');
     renderEcProfiles(r.profils || []);
   },
   async ecApplyProfile(nom) {
@@ -4157,7 +4161,10 @@ const app = {
   async wifiSwitch() {
     say('Bascule en Wi-Fi…');
     const r = await api('/api/wifi-switch', {});
-    if (r.ok) { toast('Wi-Fi activé (' + r.addr + '). Tu peux retirer le câble.', 'ok'); this.detect(); }
+    if (r.ok) {
+      toast(phrase('Wi-Fi activé (%s). Tu peux retirer le câble.', r.addr), 'ok');
+      this.detect();
+    }
     else toast(r.message || 'Bascule impossible.', 'err');
   },
   async wifiPair() {
