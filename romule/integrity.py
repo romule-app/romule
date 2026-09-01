@@ -35,7 +35,9 @@ def _save(reg):
 
 
 def sha1(path, job=None, chunk=1 << 22):
-    h = hashlib.sha1()
+    # Meme raison que `device.local_sha1` : on detecte un fichier abime, pas un
+    # fichier remplace. Le registre sert a reperer une copie qui a mal tourne.
+    h = hashlib.sha1(usedforsecurity=False)
     with open(path, "rb") as f:
         while True:
             if job is not None and not job.checkpoint():

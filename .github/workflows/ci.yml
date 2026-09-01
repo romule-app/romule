@@ -135,6 +135,20 @@ jobs:
           pip install --quiet ruff
           ruff check romule outils lancer_tests.py
 
+      # bandit analyse NOTRE code : son verdict est deterministe, donc il
+      # bloque. `pip-audit`, lui, analyse le monde exterieur et peut rougir
+      # pour un avis publie ce matin sur une dependance de `pip` — il reste
+      # dans le job d'avertissement.
+      #
+      # `romule/tests` est exclu : ce code n'est pas livre et n'est pas une
+      # surface d'attaque. Il portait 13 des 21 alertes — des serveurs de test
+      # qui ecoutent sur 0.0.0.0, des fichiers dans /tmp — et ce bruit gardait
+      # le job rouge en permanence, ce qui apprend a ignorer le rouge.
+      - name: Analyse statique du code livre (bandit)
+        run: |
+          pip install --quiet bandit
+          bandit -q -r romule -x romule/tests --severity-level medium
+
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         if: always()
         with: { name: rapport-audit, path: audit.json }
@@ -169,17 +183,13 @@ jobs:
 
   # ------------------------------------------------------------- AVERTIT
   securite:
-    name: Analyse statique (avertissement)
+    name: Avis de securite des dependances (avertissement)
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
         with: { python-version: "3.12" }
-      - name: bandit
-        run: |
-          pip install --quiet bandit
-          bandit -q -r romule -f screen --severity-level medium
       - name: pip-audit
         run: |
           pip install --quiet pip-audit

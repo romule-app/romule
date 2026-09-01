@@ -18,7 +18,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-from . import config
+from . import config, reseau
 
 NLIB = "https://api.nlib.cc/nx/{tid}/icon/256/256"
 
@@ -81,7 +81,12 @@ def cle_cache(tid, name=None):
     propre = search_name(name or "")
     if not propre:
         return None
-    return "n" + hashlib.sha1(propre.encode("utf-8")).hexdigest()[:15]
+    # Cle de cache, pas empreinte de securite : on veut un nom de fichier
+    # court et stable pour un titre donne. `usedforsecurity=False` le dit a
+    # l'API — et c'est ce qui permet a Romule de tourner sur une installation
+    # Python en mode FIPS, ou SHA-1 est refuse par defaut.
+    return "n" + hashlib.sha1(propre.encode("utf-8"),
+                              usedforsecurity=False).hexdigest()[:15]
 
 
 def fetch(tid, name=None, cfg=None):
@@ -157,7 +162,7 @@ def _resolve_url(tid, name, cfg):
 
 def _download(url, headers=None):
     req = urllib.request.Request(url, headers=headers or {"User-Agent": "romule"})
-    with urllib.request.urlopen(req, timeout=25) as r:
+    with reseau.ouvrir(req, timeout=25) as r:
         return r.read()
 
 

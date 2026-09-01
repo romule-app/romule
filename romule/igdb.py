@@ -22,7 +22,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-from . import config
+from . import config, reseau
 
 TOKEN_URL = "https://id.twitch.tv/oauth2/token"
 API_URL = "https://api.igdb.com/v4"
@@ -62,7 +62,7 @@ def jeton(cfg=None, force=False):
         }).encode()
         try:
             req = urllib.request.Request(_url_jeton(cfg), data=donnees)
-            with urllib.request.urlopen(req, timeout=15) as r:
+            with reseau.ouvrir(req, timeout=15) as r:
                 d = json.loads(r.read().decode("utf-8", "replace"))
         except Exception:
             return ""
@@ -106,7 +106,7 @@ def _requete(cfg, chemin, corps, essais=3):
                      "Authorization": "Bearer " + t,
                      "Accept": "application/json"})
         try:
-            with urllib.request.urlopen(req, timeout=20) as r:
+            with reseau.ouvrir(req, timeout=20) as r:
                 d = json.loads(r.read().decode("utf-8", "replace"))
             return d if isinstance(d, list) else []
         except urllib.error.HTTPError as exc:

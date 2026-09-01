@@ -653,7 +653,10 @@ def remote_sha1(remote):
 
 
 def local_sha1(path):
-    h = hashlib.sha1()
+    # Empreinte de CORRUPTION : elle repond a « la copie est-elle arrivee
+    # entiere ? », pas a « quelqu'un a-t-il substitue le fichier ? ». Aucune
+    # propriete cryptographique n'est attendue ici.
+    h = hashlib.sha1(usedforsecurity=False)
     with open(path, "rb") as f:
         for chunk in iter(lambda: f.read(1 << 20), b""):
             h.update(chunk)
