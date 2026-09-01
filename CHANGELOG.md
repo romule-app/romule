@@ -55,6 +55,11 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Added
 
+- **Attributes set before the catalogue loads stayed in the first language.**
+  The observer only watches `childList`, so a `title` or `aria-label` written
+  once at start-up was never revisited — and when its value was assembled from
+  two labels, it was nobody's key either. Those attributes now keep their key
+  on the element and are recomputed whenever the language changes.
 - **The interface is fully translated.** 462 French phrases had no catalogue
   entry; the count is now zero, and the check that measures it blocks the
   build. Along the way, 62 sentences glued to a runtime value were rewritten

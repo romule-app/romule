@@ -33,37 +33,106 @@ def t(nom, cond, detail=""):
         print("      ECHEC %s   %s" % (nom, detail))
 
 
-# Accents restants HORS donnees : ce qui n'aurait pas ete traduit.
+# Ce que ce test cherche a change de nature.
+#
+# `outils/verifier-traduction.py` couvre desormais 100 % du CODE : aucune
+# phrase francaise n'y echappe au catalogue, et la CI bloque si l'une
+# reapparait. Chercher ici des chaines manquantes ferait donc doublon.
+#
+# Ce que le statique ne peut PAS voir, en revanche :
+#
+#   * une phrase assemblee a l'execution — chaque morceau est au catalogue,
+#     mais le tout n'y est pas ;
+#   * un noeud qui echappe a l'observateur — insere autrement qu'en
+#     `childList`, ou porteur d'un attribut pose apres coup ;
+#   * une valeur interpolee restee en francais dans un modele traduit, comme
+#     « — used only with “URL personnalisée” » ;
+#   * une DONNEE traduite par erreur, ce qui est le defaut symetrique.
+#
+# C'est cela qu'on regarde : ce qui est reellement A L'ECRAN.
+#
+# Deux corrections par rapport a la version precedente. Elle s'aveuglait sur
+# `.gcard`, `#modal`, `.erdit`, `.sub2` et `.gdesc` — c'est-a-dire sur la fiche
+# de jeu et sur la prose d'EmuReady et du SSO, les deux ecrans les plus denses.
+# Et elle ne reconnaissait le francais qu'a ses ACCENTS, laissant passer
+# « Convertir les », « Rien dans », « Aucun jeu trouve ».
 RESTE_FR = r"""
 (function () {
   const IGNORE = new Set(['CODE','PRE','SCRIPT','STYLE','TEXTAREA']);
-  const DONNEES = ['gname','compte-mail','pfchemin','tid','jline','hostchip',
-                   'cnom','brow','crumb','pfdir','gdesc','sub2','erdit','pfnom'];
+  // Uniquement ce qui est ENTIEREMENT une donnee. `jline`, `brow` et `crumb`
+  // n'y sont plus : elles enveloppent un melange, et leurs parties de donnee
+  // portent maintenant `data-i18n-skip`. `erdit`, `sub2` et `gdesc` non plus :
+  // c'est de la prose, et les exclure revenait a ne pas la tester.
+  const DONNEES = ['gname','compte-mail','pfchemin','tid','hostchip','cnom',
+                   'pfdir','pfnom'];
   const ACCENTS = /[àâçéèêëîïôûùüÿœÀÂÇÉÈÊËÎÏÔÛÙÜŸŒ]/;
+  // Le francais ne se trahit pas que par ses accents. Deux mots-outils
+  // suffisent, comme dans l'extracteur statique.
+  const OUTILS = new Set(('le la les un une des du de au aux et ou en dans sur '
+    + 'sous pour par avec sans vers est sont ce cette ces son sa ses ton ta '
+    + 'aucun aucune rien tout toute tous chaque plus deja encore jamais que '
+    + 'qui dont si mais donc car ne pas').split(' '));
   const out = new Set();
   function ok(n) {
     for (let e = n.parentElement; e; e = e.parentElement) {
       if (IGNORE.has(e.tagName)) return false;
+      if (e.dataset && e.dataset.i18nSkip !== undefined) return false;
+      // Le rapport d'audit est redige par le SERVEUR et renvoye tel quel.
+      // L'i18n de Romule est entierement cote navigateur : ces phrases-la ne
+      // passent par aucun catalogue, et les traduire demande de traduire
+      // `romule/audit.py`, ce qui est un chantier a part et assume comme tel
+      // (voir docs/beta.md). On l'ecarte ici EN LE DISANT, plutot que de
+      // laisser le test rouge sur une limite connue.
+      if (e.id === 'auditres') return false;
       if (e.classList && DONNEES.some(c => e.classList.contains(c))) return false;
-      if (e.classList && e.classList.contains('gcard')) return false;
-      if (e.closest && e.closest('#modal')) return false;
     }
     return true;
+  }
+  function francais(s) {
+    if (ACCENTS.test(s)) return true;
+    const mots = (s.toLowerCase().match(/[a-zà-ÿ']{2,}/g) || []);
+    return mots.filter(m => OUTILS.has(m)).length >= 2;
   }
   const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
   for (let n = w.nextNode(); n; n = w.nextNode()) {
     const s = (n.nodeValue || '').trim();
     if (s.length < 4 || s.length > 220 || !ok(n)) continue;
-    if (ACCENTS.test(s)) out.add(s);
+    if (francais(s)) out.add(s);
   }
+  // Les attributs aussi : l'observateur n'ecoute que `childList`, donc un
+  // `title` pose apres l'insertion lui echappe entierement.
+  document.querySelectorAll('[title],[placeholder],[aria-label]').forEach(e => {
+    if (e.closest('[data-i18n-skip]')) return;
+    for (const a of ['title', 'placeholder', 'aria-label']) {
+      const v = (e.getAttribute(a) || '').trim();
+      if (v.length >= 4 && v.length <= 220 && francais(v)) out.add(a + '= ' + v);
+    }
+  });
   return [...out];
 })()
 """
 
+# Le balayage ne voit que ce qui est affiche : il faut donc ouvrir les ecrans.
+# Huit y figuraient, sur la quinzaine que compte l'interface — l'assistant, les
+# comptes, la fiche de jeu et EmuReady n'etaient jamais rendus, et c'est
+# precisement la que se trouvait l'essentiel du francais residuel.
 ETAPES = ["app.tab('jeux')", "app.tab('settings')",
           "app.voirEntretien('doublons')", "app.voirEntretien('integrite')",
           "app.voirEntretien('acces')", "app.auditer(true)",
-          "app.toggleJournal()", "app.toggleDrop(true)"]
+          "app.toggleJournal()", "app.toggleDrop(true)",
+          # Les sections de reglages sont exclusives : chacune doit etre ouverte.
+          "document.querySelector(\"#setnav a[href='#sec-console']\").click()",
+          "document.querySelector(\"#setnav a[href='#sec-biblio']\").click()",
+          "document.querySelector(\"#setnav a[href='#sec-entretien']\").click()",
+          "document.querySelector(\"#setnav a[href='#sec-acces']\").click()",
+          "document.querySelector(\"#setnav a[href='#sec-interface']\").click()",
+          # Le navigateur de dossiers du serveur, jamais visite jusqu'ici.
+          "app.tab('settings'); app.ludoOuvrir()",
+          # La fiche d'un jeu : l'ecran le plus dense, et le plus exclu.
+          "app.tab('jeux'); (function(){const c=document.querySelector('#lib .gcard');"
+          "if (c) app.openGame(c.dataset.key);})()",
+          "app.closeGame(); app.openOnboard && app.openOnboard()",
+          "app.closeOnboard && app.closeOnboard()"]
 
 
 def main():
