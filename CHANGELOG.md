@@ -10,6 +10,49 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ## [Unreleased]
 
+### Security
+
+- **`script-src` no longer allows `'unsafe-inline'`.** This was the project's
+  largest known weakness, listed in the README, in `SECURITY.md` and in the
+  audit report. Removing it meant removing what depended on it: 153 inline
+  event handlers, each one a reason the browser had to accept scripts written
+  into the page. They now carry their action as data (`data-act`, `data-arg`),
+  dispatched through a single delegated listener and an allow-list.
+- **The gain is one parser fewer, not a stronger escape.** A value inside
+  `onclick="app.do('HERE')"` crossed two parsers — HTML first, then JavaScript
+  — which is what made the 0.1.0 stored XSS exploitable. Inside `data-arg` it
+  crosses one, and nothing is ever compiled.
+- **`jsq()` stays**, with its round-trip tests, as the guard for the day someone
+  reintroduces an inline handler. Two stronger invariants replace its old role:
+  no `on*=` attribute is generated anywhere, and every value interpolated into a
+  `data-act`/`data-arg` goes through `esc()` — a double quote in a filename
+  would otherwise leave the attribute.
+
+### Added
+
+- **A safety net for inert buttons.** A button that stops responding is
+  invisible from the server: no request fails, nothing is logged. The test
+  walks every screen, finds every clickable element, and fails if one has no
+  handler — written *before* the first conversion, and green at every step
+  while both mechanisms coexisted. It proves itself first, on six buttons built
+  in the live page, one per form of coverage plus one genuinely inert.
+- **A check that the CSP is actually enforced.** A violation does not break the
+  page — the browser writes one console line and continues. The test listens for
+  `securitypolicyviolation`, and proves the listener works by injecting an
+  inline script and asserting the browser refuses to run it.
+- `romule/tests/navigateur/ecrans.py` — the list of screens, in one place. Two
+  tests sweep the rendered DOM; a screen added to only one of them would be a
+  silent blind spot.
+
+### Changed
+
+- The anti-flash theme bootstrap moved from an inline `<script>` in
+  `index.html` to `/theme.js`. It is still loaded blocking in `<head>`, which
+  is the whole point of it. A single inline script was enough to require the
+  CSP exception.
+- Elements with `role="button"` now respond to Enter and Space through one
+  general rule, replacing a hand-written `onkeydown` on the cover image.
+
 ### Fixed
 
 - **`tid` was the fourth class doing double duty.** It marks a title ID, which

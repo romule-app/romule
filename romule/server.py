@@ -476,17 +476,22 @@ class Handler(BaseHTTPRequestHandler):
         if self._secure():
             self.send_header("Strict-Transport-Security",
                              "max-age=15552000; includeSubDomains")
-        # `script-src` doit tolerer l'inline : l'interface repose sur des
-        # attributs `onclick`, y compris generes a la volee avec un title ID en
-        # argument. Sans cette tolerance, la quasi-totalite des boutons cesse
-        # de repondre — c'est arrive, et c'est invisible depuis le serveur.
-        # Ce qui reste bloque est l'essentiel du risque ici : aucun script ne
-        # peut etre charge depuis un autre domaine, la page ne peut etre mise
-        # en cadre, et elle ne parle qu'a sa propre origine.
+        # `script-src 'self'` sans tolerance pour l'inline. C'etait impossible
+        # tant que l'interface reposait sur 153 attributs `onclick` : les
+        # refuser aurait rendu la quasi-totalite des boutons inertes, en
+        # silence. Ils sont tous passes en `data-act` (phase 4), et un seul
+        # <script> en ligne subsistait — le theme — qui est devenu
+        # `/theme.js`. Un navigateur refuse desormais tout script qui n'a pas
+        # ete servi par cette origine, y compris celui qu'une injection
+        # reussie ecrirait dans la page.
+        #
+        # `style-src` garde 'unsafe-inline' : les attributs `style=` restent
+        # nombreux, et un style ne s'execute pas. C'est une exception d'une
+        # autre nature, et elle est documentee comme telle.
         self.send_header("Content-Security-Policy",
                          "default-src 'self'; img-src 'self' data:; "
                          "style-src 'self' 'unsafe-inline'; "
-                         "script-src 'self' 'unsafe-inline'; "
+                         "script-src 'self'; "
                          "connect-src 'self'; frame-ancestors 'none'; "
                          "base-uri 'none'; form-action 'self'")
 
@@ -717,7 +722,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._binary(_png_icon(size), "image/png")
         if p in ("/", "/index.html"):
             self._static("index.html")
-        elif p in ("/app.js", "/app.css", "/reactive.js"):
+        elif p in ("/app.js", "/app.css", "/reactive.js", "/theme.js"):
             self._static(p.lstrip("/"))
         elif p == "/api/scan":
             # `shop_text` contient la date de generation : elle change a chaque

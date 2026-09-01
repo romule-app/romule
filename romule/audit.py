@@ -266,9 +266,13 @@ def _entetes():
 
 
 def _csp():
-    """L'interface repose sur des attributs `onclick`, y compris generes a la
-    volee : `script-src` doit donc tolerer l'inline. C'est un affaiblissement
-    reel, et il ne doit pas se perdre dans les fichiers."""
+    """`script-src 'self'` sans tolerance pour l'inline, depuis la phase 4.
+
+    Le controle lit le SOURCE de `server.py` plutot que d'interroger le
+    serveur : l'en-tete depend de la requete (HSTS n'est pose qu'en TLS), et
+    un audit lance hors ligne doit pouvoir repondre. La branche « inline
+    autorise » reste ecrite : elle se rallumerait si quelqu'un remettait la
+    tolerance, et c'est exactement ce qu'on veut voir signale."""
     src = (config.PKG / "server.py").read_text(encoding="utf-8", errors="replace")
     if "Content-Security-Policy" not in src:
         return [_c("alerte", "Aucune politique de contenu",

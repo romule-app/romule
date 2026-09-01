@@ -98,21 +98,52 @@ one. Set `ROMULE_BASES` when you run natively under a broad account.
 
 ## Known weaknesses
 
-**`script-src` allows `'unsafe-inline'`.** 152 inline event handlers depend on
-it. Removing them means converting every one to delegated events — a project in
-itself. Until then the CSP cannot forbid inline scripts without making every
-button inert. Documented rather than quietly dropped.
+**`script-src` is `'self'` — no inline scripts.** This was the project's
+largest known weakness until 0.2.0, and removing it took the whole of phase 4:
+153 inline event handlers, each one a reason the browser had to accept scripts
+written into the page.
 
-Because those handlers stay, any value interpolated into one goes through
-`jsq()` rather than `esc()`. The distinction matters and it is not obvious: a
-value inside `onclick="app.do('HERE')"` crosses **two** parsers. The HTML
-parser decodes entities first, then the JavaScript engine compiles what is
-left — so `esc()`'s `&#39;` becomes an apostrophe *before* the script is read,
-closing the string and turning the rest of the value into code. A filename is
-enough to build one, and a card's key is the file's path. `jsq()` escapes for
-the JavaScript context first and the HTML context second. A test asserts that
-no inline handler in `app.js` interpolates without it, so the rule holds for
-handlers added later too.
+The order mattered. A button that stops responding is invisible from the
+server — no request fails, no line is logged — so the safety net was written
+*first*: a test that walks every screen, finds every clickable element, and
+fails if one has no handler. Writing it honestly took three corrections, each
+worth stating because each was a wrong assumption about the DOM:
+
+- a handler assigned as a **property** (`el.onclick = fn`) appears in no
+  attribute, and `querySelectorAll('[onclick]')` does not see it;
+- a `<select>` or a checkbox responds **natively** — the gesture has a visible
+  effect and the value is read at save time. Not inert, just codeless;
+- `document` is not an `Element`, so walking `parentElement` never reaches it —
+  and that is where the delegation listens.
+
+The handlers now carry their action as **data**: `data-act` names the action,
+`data-arg` its argument. `ACTES` is an allow-list, not a dynamic lookup —
+`app[el.dataset.act]()` would have been sixty lines shorter and would have let
+any attribute reach any method, including the ones that delete.
+
+The security gain is not a stronger escape, it is **one parser fewer**. A value
+inside `onclick="app.do('HERE')"` crossed **two**: the HTML parser decoded
+entities first, then the JavaScript engine compiled what was left — so
+`esc()`'s `&#39;` became an apostrophe *before* the script was read, closing the
+string and turning the rest of the value into code. A filename was enough to
+build one, and a card's key is the file's path. That was the stored XSS fixed in
+0.1.0, and `jsq()` was the correct patch for it.
+
+Inside `data-arg="HERE"` there is one parser and nothing is ever compiled.
+`esc()` is sufficient — and a test asserts it is present at all 28 sites, since
+a double quote in a filename would otherwise leave the attribute.
+
+`jsq()` stays defined, with its round-trip tests, as the guard for the day
+someone reintroduces an inline handler. Two stronger invariants replace its old
+role: no `on*=` attribute is generated anywhere, in either file, and the browser
+test listens for `securitypolicyviolation` — a CSP violation does not break the
+page, it writes one console line and continues, which is exactly the kind of
+silent failure this project keeps finding. That check is itself proven: it
+injects an inline script and asserts the browser refuses to run it.
+
+**`style-src` still allows `'unsafe-inline'`.** Inline `style=` attributes
+remain common in the generated markup. A style is not executed, so this is a
+weakness of a different nature from the one above — kept, and stated.
 
 **No TLS**, as above.
 
