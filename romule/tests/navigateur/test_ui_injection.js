@@ -131,7 +131,81 @@ console.log('   -- 4. et le fichier livre le respecte --');
 const restants = fautifs(src);
 t('tous les sites passent par jsq()', restants.length === 0, restants.join(' | '));
 const total = /\\''\s*\+\s*jsq\(/g;
-console.log('      (' + (src.match(total) || []).length + ' sites proteges)');
+const compte = (src.match(total) || []).length;
+console.log('      (' + compte + ' site(s) — 0 est le resultat attendu depuis la'
+            + ' phase 4 ; jsq() reste defini comme garde-fou)');
+
+console.log('   -- 4bis. plus aucun gestionnaire en ligne --');
+// La phase 4 a supprime les 153 attributs `on*=`. Le detecteur ci-dessus est
+// donc devenu vide de sens : il cherche une forme qui n'existe plus. On le
+// garde — il redeviendra utile le jour ou quelqu'un reintroduira un
+// gestionnaire — mais l'invariant qui protege VRAIMENT le fichier est
+// maintenant plus fort : il n'y a pas d'attribut de gestionnaire du tout.
+//
+// C'est cet invariant qui permet a la politique de securite de refuser
+// `'unsafe-inline'`. Le premier `onclick` reintroduit rendrait tous les
+// boutons de l'interface inertes, en silence.
+function enLigne(texte) {
+  const out = [];
+  texte.split('\n').forEach((l, i) => {
+    // Les lignes de commentaire en citent en exemple : ce sont des mots, pas
+    // du code. Le decoupage est grossier a dessein — un commentaire mal
+    // detecte ferait un faux positif bruyant, jamais un trou silencieux.
+    const nu = l.trim();
+    if (nu.startsWith('//') || nu.startsWith('*') || nu.startsWith('/*')) return;
+    const m = nu.match(/\son[a-z]+\s*=\s*["']/);
+    if (m) out.push((i + 1) + ' :' + m[0]);
+  });
+  return out;
+}
+const epreuvesEnLigne = [
+  ['un onclick genere -> detecte', "  x = '<b onclick=\"f()\">';", true],
+  ['un onchange genere -> detecte', "  x = '<i onchange=\"g()\">';", true],
+  ['le meme en commentaire -> ignore', "  // exemple : onclick=\"f()\"", false],
+  ['un data-act -> ignore', "  x = '<b data-act=\"f\">';", false],
+];
+for (const [nom, extrait, attendu] of epreuvesEnLigne)
+  t(nom, (enLigne(extrait).length > 0) === attendu);
+
+const html = fs.readFileSync(
+  path.join(RACINE, 'romule', 'static', 'index.html'), 'utf8');
+t('app.js ne genere aucun gestionnaire en ligne',
+  enLigne(src).length === 0, enLigne(src).join(' | '));
+t('index.html n\'en porte aucun',
+  enLigne(html).length === 0, enLigne(html).join(' | '));
+
+console.log('   -- 4ter. les valeurs entrant dans un data-* sont echappees --');
+// La valeur a quitte la chaine JavaScript pour une valeur d'attribut : un
+// SEUL analyseur la lit desormais, et `esc()` suffit — a condition qu'il soit
+// la. Sans lui, un nom de fichier contenant un guillemet double sortirait de
+// l'attribut et pourrait en ouvrir un autre.
+function sansEsc(texte) {
+  const out = [];
+  let m;
+  const re = /data-(?:act|arg\d?)="'\s*\+\s*([A-Za-z_$][\w$]*)\s*\(/g;
+  while ((m = re.exec(texte)) !== null)
+    if (m[1] !== 'esc')
+      out.push(texte.slice(0, m.index).split('\n').length + ' : ' + m[1] + '(');
+  const nu = /data-(?:act|arg\d?)="'\s*\+\s*([A-Za-z_$][\w$.]*)\s*\+/g;
+  while ((m = nu.exec(texte)) !== null)
+    out.push(texte.slice(0, m.index).split('\n').length + ' : ' + m[1] +
+             ' (aucun encodage)');
+  return out;
+}
+const epreuvesEsc = [
+  ['un data-arg non echappe -> detecte',
+   "x = '<b data-arg=\"' + jsq(v) + '\">';", true],
+  ['un data-arg nu -> detecte', "x = '<b data-arg=\"' + v + '\">';", true],
+  ['un data-arg echappe -> ignore', "x = '<b data-arg=\"' + esc(v) + '\">';", false],
+  ['un data-arg2 echappe -> ignore', "x = '<b data-arg2=\"' + esc(v) + '\">';", false],
+];
+for (const [nom, extrait, attendu] of epreuvesEsc)
+  t(nom, (sansEsc(extrait).length > 0) === attendu);
+const nonEch = sansEsc(src);
+t('toutes les valeurs interpolees passent par esc()',
+  nonEch.length === 0, nonEch.join(' | '));
+console.log('      (' + (src.match(/data-(?:act|arg\d?)="'\s*\+\s*esc\(/g) || []).length
+            + ' valeurs echappees)');
 
 console.log('   -- 5. rien ne masque la fonction de traduction --');
 // `t()` traduit. Une variable locale nommee `t` la masque dans toute la

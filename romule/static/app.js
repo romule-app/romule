@@ -1033,7 +1033,7 @@ function coverImg(g, cls, attrs) {
   const v = (DATA && DATA.covers_v) || 0;
   return '<img class="' + (cls || '') + '" src="/cover/' + (g.tid || '') + '?v=' + v +
     '&name=' + encodeURIComponent(g.name || '') + '" loading="lazy" ' +
-    'onload="app.coverVue(this)" onerror="app.coverRate(this)"' +
+    'data-cover' +
     (attrs ? ' ' + attrs : '') + '>';
 }
 
@@ -1600,7 +1600,7 @@ function ligneVersion(x) {
     '<span class="vtaille">' + esc(fmt(g.size)) + '</span>' +
     (etat ? '<span class="vetat ' + etat[0] + '">' +
             esc(ETAT_COURT[e.etat] || etat[1]) + '</span>' : '') +
-    '<button class="ghost" onclick="app.openGame(\'' + jsq(g.key) + '\')">' +
+    '<button class="ghost" data-act="openGame" data-arg="' + esc(g.key) + '">' +
       'Détails</button>' +
   '</div>';
 }
@@ -1619,7 +1619,7 @@ function carteHtml(x) {
     '" data-lettre="' + esc(lettreDe(g)) +
     '" data-key="' + esc(g.key) + '"' + attrsTeinte(g) +
     ' tabindex="0" role="button" aria-label="' + esc(nomJeu(g)) + '"' +
-    ' onclick="app.cardClick(event,\'' + jsq(g.key) + '\')">' +
+    ' data-act="cardClick" data-arg="' + esc(g.key) + '">' +
     '<div class="art">' + coverImg(g) +
     // Sans jaquette, la silhouette du support dit au moins de quoi il s'agit.
     // Une initiale geante ne disait rien : deux jeux sur trois commencent par
@@ -1636,10 +1636,9 @@ function carteHtml(x) {
     // `data-`, jamais dans la chaine JavaScript du `onclick` — une apostrophe
     // dans un titre y casserait le gestionnaire.
     (g.groupeN ? '<button class="pgrp" data-grp="' + esc(g.groupeCle) +
-       '" onclick="event.stopPropagation();app.voirVersions(this.dataset.grp)">' +
+       '" data-act="voirVersions" data-arg="' + esc(g.groupeCle) + '">' +
        g.groupeN + ' versions…</button>' : '') +
-    '<button class="pinfo" onclick="event.stopPropagation();app.openGame(\'' +
-    jsq(g.key) + '\')">Détails</button></div></div>';
+    '<button class="pinfo" data-act="openGame" data-arg="' + esc(g.key) + '">Détails</button></div></div>';
 }
 
 // Met a jour une carte deja presente. Chaque ecriture est conditionnelle : rien
@@ -1707,7 +1706,7 @@ function renderToolbar(tous) {
   const pop = $('favlist');
   if (pop) pop.innerHTML = Object.entries(FAVANCES).map(([k, [lib, fn]]) =>
     '<label class="favrow"><input type="checkbox" ' + (FAV.has(k) ? 'checked ' : '') +
-    'onchange="app.toggleFav(\'' + jsq(k) + '\')"><span class="grow">' + esc(lib) + '</span>' +
+    'data-act-change="toggleFav" data-arg="' + esc(k) + '"><span class="grow">' + esc(lib) + '</span>' +
     '<span class="mono">' + tous.filter(fn).length + '</span></label>').join('');
   const b = $('favbtn');
   if (b) { b.classList.toggle('on', FAV.size > 0);
@@ -1767,7 +1766,11 @@ function renderActionBar() {
     tout.textContent = 'Tout cocher';
   }
   $('actions').innerHTML = boutons.map(([cls, fn, lib, det]) =>
-    '<button class="' + cls + '" onclick="app.' + fn + '()">' + esc(lib) +
+    // `fn` vient de la liste `boutons` ecrite dix lignes plus haut, donc de
+    // noms litteraux. Ce qui garantit qu'il en restera ainsi n'est pas cette
+    // proximite, c'est `ACTES` : un nom absent de la liste blanche ne fait
+    // rien, et `test_gestes.py` echoue si l'un d'eux y manque.
+    '<button class="' + cls + '" data-act="' + esc(fn) + '">' + esc(lib) +
     '<span class="mono"> · ' + esc(det) + '</span></button>').join('') ||
     '<span class="mono">Rien à faire sur cette sélection.</span>';
 }
@@ -1803,7 +1806,7 @@ function majSection(g, e) {
     l.push('<div class="majrow act"><span>À activer dans Eden</span>' +
       '<b class="p-partiel">' + nb(e.aActiver.length, 'élément(s)') + '</b>' +
       '<button class="go" ' + (CONN.kind ? '' : 'disabled title="Console non connectée"') +
-      ' onclick="app.activerJeu(\'' + jsq(g.key) + '\')">Activer</button></div>');
+      ' data-act="activerJeu" data-arg="' + esc(g.key) + '">Activer</button></div>');
   }
   drapeaux.forEach(([code, txt]) => l.push(
     '<div class="majrow"><span>' +
@@ -1850,17 +1853,17 @@ function openGameHtml(g) {
     (f.version != null ? ' <span class="mono">v' + f.version + '</span>' : '') + '</div></span>' +
     (f.converted ? '<span class="flag f-done">converti</span>' : '') +
     '<span class="size">' + fmt(f.size) + '</span>' +
-    '<button class="iconbtn" onclick="event.stopPropagation();app.trashFile(\'' + jsq(f.path) + '\')">corbeille</button></div>').join('');
+    '<button class="iconbtn" data-act="trashFile" data-arg="' + esc(f.path) + '">corbeille</button></div>').join('');
 
   // Les actions proposees dependent de l'etat : proposer « Envoyer vers la
   // console » a un jeu qui n'existe QUE sur la console n'a aucun sens.
   const acts = [];
   if (g.needsConvert)
-    acts.push('<button class="go" onclick="app.convertGame(\'' + jsq(g.key) + '\')">Convertir ce jeu</button>');
+    acts.push('<button class="go" data-act="convertGame" data-arg="' + esc(g.key) + '">Convertir ce jeu</button>');
   if (g.console)
-    acts.push('<button class="go" onclick="app.importerJeu(\'' + jsq(g.key) + '\')">Copier vers le serveur</button>');
+    acts.push('<button class="go" data-act="importerJeu" data-arg="' + esc(g.key) + '">Copier vers le serveur</button>');
   else if (e.aEnvoyer.length)
-    acts.push('<button class="go" onclick="app.sendGame(\'' + jsq(g.key) + '\')">Envoyer vers la console</button>');
+    acts.push('<button class="go" data-act="sendGame" data-arg="' + esc(g.key) + '">Envoyer vers la console</button>');
   acts.push('<button class="ghost" data-act="closeGame">Fermer</button>');
 
   return '<div class="sheet"' + attrsTeinte(g) + ' data-interieur>' +
@@ -1871,9 +1874,7 @@ function openGameHtml(g) {
     '<div class="top">' + (coverImg(g, 'cover',
         'role="button" tabindex="0" title="' +
         esc(t('Voir la jaquette en grand')) + '"' +
-        ' onclick="app.loupeJaquette(this)"' +
-        ' onkeydown="if(event.key===\'Enter\'||event.key===\' \')' +
-                    '{event.preventDefault();app.loupeJaquette(this)}"') ||
+        ' data-act="loupeJaquette"') ||
       '<div class="cover"></div>') +
     '<div><h3>' + esc(nomJeu(g)) + '</h3>' +
     // Le support, en toutes lettres et en image : c'est l'information qui
@@ -2069,8 +2070,7 @@ function renduSauvegardes(r) {
     + (lots.length ? '<ul class="entretien-l">' + lots.map(l =>
         '<li><b>' + esc(l.date || l.lot) + '</b> <span class="mono">' + esc(l.motif || '')
         + ' · ' + nb((l.fichiers || []).length, 'fichier(s)') + '</span>'
-        + ' <button class="ghost mini" onclick="app.restaurerSauvegarde(\''
-        + jsq(l.lot) + '\')">Restaurer</button></li>').join('') + '</ul>'
+        + ' <button class="ghost mini" data-act="restaurerSauvegarde" data-arg="' + esc(l.lot) + '">Restaurer</button></li>').join('') + '</ul>'
       : '<p class="lead">Aucune sauvegarde pour l\'instant.</p>');
 }
 
@@ -2202,7 +2202,7 @@ function renderDeviceCard(info, volumes) {
   const vols = (volumes || []).map(v => {
     const used = (v.total && v.free != null) ? (v.total - v.free) / v.total : 0;
     const spc = v.free != null ? fmt(v.free) + ' libre / ' + fmt(v.total) : 'espace inconnu';
-    return '<div class="vol" onclick="app.setDpath(\'' + jsq(v.path) + '\')" title="Explorer ce volume">' +
+    return '<div class="vol" data-act="setDpath" data-arg="' + esc(v.path) + '" title="Explorer ce volume">' +
       '<span class="tag t-' + (v.kind === 'SD' ? 'DLC' : 'BASE') + '">' + esc(v.kind) + '</span>' +
       '<span class="grow"><div>' + esc(v.label) + '</div><span class="mono">' + esc(v.path) + '</span></span>' +
       '<span class="meter' + (used > 0.9 ? ' tight' : '') + '"><i style="width:' + Math.round(used * 100) + '%"></i></span>' +
@@ -2396,7 +2396,7 @@ function renderPlateformes(r) {
   PLATEFORMES = p;
   el.innerHTML = '<div class="pfgrille">' + p.map(s =>
     '<button class="pfcarte' + (s.key === PF_OUVERTE ? ' on' : '') +
-    '" onclick="app.ouvrirPlateforme(\'' + jsq(s.key) + '\')" ' +
+    '" data-act="ouvrirPlateforme" data-arg="' + esc(s.key) + '" ' +
     'title="' + esc(phrase('Détail de %s', s.name)) + '">' +
       '<span class="pfnom">' + esc(s.name) + '</span>' +
       '<span class="pfn">' + s.count + '</span>' +
@@ -2487,15 +2487,13 @@ function renderPfCommun(sys) {
     '<div class="majbloc">' +
       '<div class="majrow act"><span>Dossier sur la console</span>' +
         '<b><code class="pfchemin">' + esc(perso || sys.device_dir || '—') + '</code></b>' +
-        '<button class="ghost" onclick="app.parcourir(\'' + jsq(sys.key) + '\',\'' +
-          jsq(sys.device_dir || '') + '\')">Parcourir…</button>' +
-        (perso ? '<button class="ghost" onclick="app.oublierDossier(\'' + jsq(sys.key) +
-                 '\')">Par défaut</button>' : '') +
+        '<button class="ghost" data-act="parcourir" data-arg="' + esc(sys.key) + '" data-arg2="' + esc(sys.device_dir || '') + '">Parcourir…</button>' +
+        (perso ? '<button class="ghost" data-act="oublierDossier" data-arg="' + esc(sys.key) + '">Par défaut</button>' : '') +
       '</div>' +
       lignes.map(([k, v]) => '<div class="majrow"><span>' + k + '</span><b>' + v + '</b></div>').join('') +
     '</div>' +
     '<div class="bar" style="margin-top:10px">' +
-      '<button class="ghost" onclick="app.allerSysteme(\'' + jsq(sys.key) + '\')">' +
+      '<button class="ghost" data-act="allerSysteme" data-arg="' + esc(sys.key) + '">' +
         'Voir ses jeux</button>' +
       (sys.engine === 'switch'
         ? '<button class="ghost" data-act="mkTree">Créer GAMES / UPDATE / DLC</button>' +
@@ -2591,7 +2589,7 @@ function renderEcProfiles(profils) {
       '<div class="row"><span class="grow"><div class="fname">' + esc(p.nom) + '</div>' +
       '<span class="mono">' + nb(p.reglages, 'réglage(s)') + ' · ' +
       esc(p.portee) + '</span></span>' +
-      '<button class="go" onclick="app.ecApplyProfile(\'' + jsq(p.nom) + '\')">Appliquer ici</button></div>'
+      '<button class="go" data-act="ecApplyProfile" data-arg="' + esc(p.nom) + '">Appliquer ici</button></div>'
     ).join('') + '</div>' +  // i18n:ok - nom de dossier
     '<p class="lead" style="margin-top:8px">Les profils sont des fichiers JSON dans ' +
     '<code>_profils-eden/</code> : tu peux les partager ou en déposer d\'autres.</p>';
@@ -2667,10 +2665,8 @@ function erSection(g) {
     return '<div class="errow' + (mien ? ' mien' : '') + '">' +
       '<span class="note ' + ER_CLS[cls] + '"><i></i>' + esc(txt) + '</span>' +
       '<span class="grow">' + esc(r.appareil) + (mien ? ' · ta console' : '') + '</span>' +
-      '<button class="ghost" onclick="app.erPreview(\'' + jsq(r.id) + '\',\'' + jsq(g.tid || '') +
-      '\',\'' + jsq(r.appareil) + '\')">Voir</button>' +
-      '<button class="ghost" onclick="app.erApply(\'' + jsq(r.id) + '\',\'' + jsq(g.tid || '') +
-      '\')">Appliquer</button></div>';
+      '<button class="ghost" data-act="erPreview" data-arg="' + esc(r.id) + '" data-arg2="' + esc(g.tid || '') + '" data-arg3="' + esc(r.appareil) + '">Voir</button>' +
+      '<button class="ghost" data-act="erApply" data-arg="' + esc(r.id) + '" data-arg2="' + esc(g.tid || '') + '">Appliquer</button></div>';
   };
 
   return tete + doute +
@@ -4080,8 +4076,7 @@ const app = {
       items.slice(0, 4).map(b =>
         '<div class="errow"><span class="grow">' + esc(b.quand) + ' · ' +
         (b.vide ? 'aucune configuration' : b.sections + ' section(s), ' + b.surcharges + ' réglage(s)') +
-        '</span><button class="ghost" onclick="app.edenRestore(\'' + jsq(tid) + '\',\'' +
-        jsq(b.fichier) + '\')">Restaurer</button></div>').join('');
+        '</span><button class="ghost" data-act="edenRestore" data-arg="' + esc(tid) + '" data-arg2="' + esc(b.fichier) + '">Restaurer</button></div>').join('');
   },
   async edenRestore(tid, fichier) {
     if (!CONN.kind) return toast('Connecte d\'abord la console.', 'warn');
@@ -4241,7 +4236,7 @@ const app = {
     const found = r.found || [];
     $('pairfound').innerHTML = found.length
       ? '<div class="card">' + found.map(a => '<div class="row"><span class="grow">' + esc(a) +
-          '</span><button class="go" onclick="app.wifiConnect(\'' + jsq(a) + '\')">Connecter</button></div>').join('') + '</div>'
+          '</span><button class="go" data-act="wifiConnect" data-arg="' + esc(a) + '">Connecter</button></div>').join('') + '</div>'
       : '<div class="mono" style="margin-top:8px">' +
         esc(t('Aucune console visible. Vérifie que le débogage sans fil est activé '
               + 'et que la console est sur le même réseau.')) + '</div>';
@@ -5334,7 +5329,7 @@ const app = {
       ? '<div class="card">' + t.items.map(i => '<div class="row"><span class="grow">' +
           esc(i.name) + '</span><span class="mono">' + nb(i.count, 'fichier(s)') + ' · ' +
           fmt(i.size || 0) + '</span>' +
-          '<button onclick="app.restore(\'' + jsq(i.name) + '\')">Restaurer</button></div>').join('') + '</div>'
+          '<button data-act="restore" data-arg="' + esc(i.name) + '">Restaurer</button></div>').join('') + '</div>'
       : '<div class="empty">Rien en corbeille.</div>';
   },
   toggleTrashList(e) {
@@ -6130,24 +6125,32 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') { app.closeG
    qu'une coercition silencieuse transformerait en nombre.
    ------------------------------------------------------------------------- */
 const ACTES = new Set([
-  'actionFab', 'actualiser', 'actualiserFiches', 'ajouterCompte',
-  'ajouterPlateforme', 'analyseGlobale', 'auditer', 'backupSaves',
-  'basculerSuivi', 'basculerTaches', 'browse', 'cancelJob',
-  'choisirEmulateur', 'choisirFichiers', 'classerImports', 'clearCovers',
-  'clearFav', 'closeOnboard', 'convertAll', 'copierRetour', 'deployPick',
-  'detect', 'dismissA2HS', 'doImport', 'ecApply', 'ecLoad', 'ecSaveProfile',
-  'erSync', 'forcerFiches', 'installApp', 'journalClear', 'journalCopy',
-  'loadSaves', 'loadTrash', 'ludoAnnulerOnb', 'ludoFermer', 'ludoNouveau',
-  'ludoOuvrir', 'ludoValider', 'mkTree', 'onbAller', 'onbChercherConsole',
+  // Les trois premiers ne figurent dans AUCUN attribut du source : ils sont
+  // poses a l'execution depuis la liste `boutons` de `renderActions`.
+  'appliquer', 'corbeilleSelection', 'supprimerConsole',
+  'actionFab', 'activerJeu', 'actualiser', 'actualiserFiches',
+  'ajouterCompte', 'ajouterPlateforme', 'allerSysteme', 'analyseGlobale',
+  'auditer', 'backupSaves', 'basculerSuivi', 'basculerTaches', 'browse',
+  'cancelJob', 'choisirEmulateur', 'choisirFichiers', 'classerImports',
+  'clearCovers', 'clearFav', 'closeOnboard', 'convertAll', 'convertGame',
+  'copierRetour', 'deployPick', 'detect', 'dismissA2HS', 'doImport',
+  'ecApply', 'ecApplyProfile', 'ecLoad', 'ecSaveProfile', 'edenRestore',
+  'erApply', 'erPreview', 'erSync', 'forcerFiches', 'importerJeu',
+  'installApp', 'journalClear', 'journalCopy', 'loadSaves', 'loadTrash',
+  'ludoAnnulerOnb', 'ludoFermer', 'ludoNouveau', 'ludoOuvrir',
+  'ludoValider', 'mkTree', 'onbAller', 'onbChercherConsole',
   'onbChoisirDossier', 'onbCreerCompte', 'onbPrec', 'onbScanner',
-  'onbScannerConsole', 'onbSuiv', 'onbTesterFiches', 'openOnConsole',
-  'organize', 'oublierTransfert', 'page', 'purgeTrash', 'reloadImport',
+  'onbScannerConsole', 'onbSuiv', 'onbTesterFiches', 'openGame',
+  'openOnConsole', 'organize', 'oublierDossier', 'oublierTransfert',
+  'ouvrirPlateforme', 'page', 'parcourir', 'purgeTrash', 'reloadImport',
   'renderJournal', 'renderLib', 'reorganizeLocal', 'reprendreTransfert',
-  'sauvegarder', 'setMouvement', 'setParPage', 'setSens', 'setSystem',
-  'setTaille', 'setTheme', 'setTri', 'showOnboard', 'testerAuth',
-  'testerIgdb', 'toggleDrop', 'toggleJournal', 'togglePair', 'togglePause',
-  'useDir', 'verify', 'voirEntretien', 'wifiDiscover', 'wifiForget',
-  'wifiPair', 'wifiSwitch', 'wizCheck', 'wizStep',
+  'restaurerSauvegarde', 'restore', 'sauvegarder', 'sendGame', 'setDpath',
+  'setMouvement', 'setParPage', 'setSens', 'setSystem', 'setTaille',
+  'setTheme', 'setTri', 'showOnboard', 'testerAuth', 'testerIgdb',
+  'toggleDrop', 'toggleFav', 'toggleJournal', 'togglePair', 'togglePause',
+  'trashFile', 'useDir', 'verify', 'voirEntretien', 'voirVersions',
+  'wifiConnect', 'wifiDiscover', 'wifiForget', 'wifiPair', 'wifiSwitch',
+  'wizCheck', 'wizStep',
 ]);
 
 // Les cas qui ne se ramenent pas a « une methode, un argument ». Ceux-ci ont
@@ -6162,13 +6165,25 @@ const ACTES_SPECIAUX = {
   // Deux arguments : `data-val` n'en porte qu'un, et lui en faire porter une
   // liste rendrait ambigu le jour ou une action prendra un tableau.
   'verify-20': () => app.verify(false, 20),
+  // La carte entiere est cliquable, et son geste depend de l'evenement
+  // (touche enfoncee, bouton du milieu). Les boutons POSES DESSUS ont leur
+  // propre `data-act` : `closest` retient le plus proche, donc le bouton
+  // l'emporte sur la carte sans qu'on ait a arreter la propagation.
+  'cardClick': (el, ev) => app.cardClick(ev, el.dataset.arg),
+  // Prend l'element lui-meme : c'est de son image qu'on veut l'agrandissement.
+  'loupeJaquette': el => app.loupeJaquette(el),
   // Fermer le panneau des taches ET ouvrir le depot : deux appels, un geste.
   'taches-vers-depot': () => { app.basculerTaches(false); app.toggleDrop(true); },
 };
 
 function argumentDe(el) {
   if (el.dataset.val !== undefined) return [JSON.parse(el.dataset.val)];
-  if (el.dataset.arg !== undefined) return [el.dataset.arg];
+  if (el.dataset.arg !== undefined) {
+    const a = [el.dataset.arg];
+    if (el.dataset.arg2 !== undefined) a.push(el.dataset.arg2);
+    if (el.dataset.arg3 !== undefined) a.push(el.dataset.arg3);
+    return a;
+  }
   if (/^(SELECT|INPUT|TEXTAREA)$/.test(el.tagName)) return [el.value];
   return [];
 }
@@ -6192,6 +6207,30 @@ function distributeur(attribut, cle) {
 document.addEventListener('click', distributeur('data-act', 'act'));
 document.addEventListener('change', distributeur('data-act-change', 'actChange'));
 document.addEventListener('input', distributeur('data-act-input', 'actInput'));
+
+// Un element rendu cliquable par `role="button"` doit repondre au clavier. Un
+// vrai <button> le fait tout seul ; ici c'est une image, et c'est ce qu'un
+// `onkeydown` ecrit a la main faisait sur la jaquette. En le posant une fois
+// pour toutes, la regle vaut pour tout faux bouton present ou a venir.
+document.addEventListener('keydown', ev => {
+  if (ev.key !== 'Enter' && ev.key !== ' ') return;
+  const el = ev.target.closest('[data-act][role=button]');
+  if (!el) return;
+  ev.preventDefault();
+  el.click();
+});
+
+// `load` et `error` d'une image ne REMONTENT pas : aucun ecouteur sur
+// `document` ne les verrait en phase de bouillonnement. Ils passent en
+// revanche par la phase de CAPTURE, qui descend depuis document — d'ou le
+// troisieme argument. C'est la seule facon de deleguer ces deux gestes.
+for (const geste of ['load', 'error']) {
+  document.addEventListener(geste, ev => {
+    const img = ev.target;
+    if (img.tagName !== 'IMG' || img.dataset.cover === undefined) return;
+    if (geste === 'load') app.coverVue(img); else app.coverRate(img);
+  }, true);
+}
 
 app.ACTES = ACTES;
 app.ACTES_SPECIAUX = ACTES_SPECIAUX;
