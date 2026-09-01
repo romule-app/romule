@@ -24,7 +24,8 @@ from pathlib import Path
 from html import escape as html_escape
 from urllib.parse import parse_qs, unquote
 
-from . import (actions, audit, auth, comptes, config, covers, device, edenconf,
+from . import (actions, apikeys, apiv1, audit, auth, comptes, config, covers,
+               device, edenconf,
                doublons, emuready, igdb, integrity, journal_acces, meta, nand,
                parcourir, sauvegarde, saves,
                scan, systems, titleid, transferts, trash, versions, profils)
@@ -517,6 +518,23 @@ class Handler(BaseHTTPRequestHandler):
             pass
         return False
 
+    def _cle_api(self):
+        """La cle presentee, s'il y en a une.
+
+        L'en-tete est la forme normale. Le parametre existe parce que certains
+        clients — une tuile de tableau de bord qui ne prend qu'une URL, un
+        `wget` dans un cron — ne savent pas poser d'en-tete. Il est moins bon :
+        une URL se retrouve dans les journaux du proxy et dans l'historique.
+        C'est ecrit dans la documentation plutot que refuse ici.
+        """
+        entete = self.headers.get("X-Api-Key")
+        if entete:
+            return entete.strip()
+        requete = self.path.partition("?")[2]
+        if "apikey=" in requete:
+            return parse_qs(requete).get("apikey", [""])[0].strip()
+        return None
+
     def _allowed(self):
         """Qui a le droit d'entrer.
 
@@ -524,6 +542,25 @@ class Handler(BaseHTTPRequestHandler):
         activer un SSO puis rester joignable sans mot de passe depuis la machine
         elle-meme viderait la mesure de son sens des que le poste est partage.
         """
+        # La cle d'API passe AVANT le SSO, et c'est deliberé. Aujourd'hui
+        # `auth.actif()` refuse tout ce qui n'a pas de cookie de session : c'est
+        # juste pour un navigateur, et cela rendrait l'API inutilisable
+        # precisement dans les installations qui la protegent le mieux.
+        #
+        # Elle est PORTEE AU CHEMIN. Sans cette limite, une cle confiee a un
+        # tableau de bord ouvrirait aussi `/api/compte-supprimer` — ce qui
+        # reviendrait a distribuer le mot de passe de l'administrateur en le
+        # nommant autrement.
+        cle = self._cle_api()
+        if cle:
+            if not apiv1.dans_la_portee(self.path.partition("?")[0]):
+                return False
+            qui = apikeys.verifier(cle)
+            if qui:
+                self.cle_api = qui
+                return True
+            return False
+
         if auth.actif(CFG):
             if self.path.startswith("/auth/"):
                 return True                       # le flux de connexion lui-meme
@@ -720,6 +757,8 @@ class Handler(BaseHTTPRequestHandler):
         if p.startswith("/icon-"):
             size = 512 if "512" in p else 192
             return self._binary(_png_icon(size), "image/png")
+        if p.startswith(apiv1.PREFIXE):
+            return self._api_v1(p, "GET")
         if p in ("/", "/index.html"):
             self._static("index.html")
         elif p in ("/app.js", "/app.css", "/reactive.js", "/theme.js"):
@@ -923,6 +962,9 @@ class Handler(BaseHTTPRequestHandler):
             JOB.log("POST rejete sur %s : origine %s"
                     % (self.path, self.headers.get("Origin") or "?"), "warn")
             return self._json({"error": "origine inattendue"}, 403)
+        chemin = self.path.partition("?")[0]
+        if chemin.startswith(apiv1.PREFIXE):
+            return self._api_v1(chemin, "POST")
         if self.path == "/api/upload":
             return self._upload()
         if self.path == "/api/compte-photo":
@@ -1661,9 +1703,73 @@ class Handler(BaseHTTPRequestHandler):
             JOB.log("Route POST inconnue : %s (serveur a jour ?)" % p)
             self._json({"error": "route inconnue : " + p}, 404)
 
+    def _api_v1(self, chemin, methode):
+        """La surface publique. Elle ne partage RIEN avec le routage interne :
+        c'est ce qui permet de promettre qu'elle ne bougera pas pendant que
+        l'interface, elle, continue d'evoluer."""
+        params = parse_qs(self.path.partition("?")[2])
+        try:
+            reponse = apiv1.router(chemin, params, methode, _contexte_v1())
+        except Exception as exc:
+            JOB.log("Erreur API v1 sur %s : %s" % (chemin, exc), "warn")
+            # Le message d'exception n'est pas renvoye : il porte souvent un
+            # chemin absolu, donc l'arborescence du serveur.
+            return self._json({"error": "internal_error",
+                               "message": "The request could not be served."},
+                              500)
+        if reponse is None:
+            return self._json({"error": "not_found",
+                               "message": "Unknown route. See "
+                                          "/api/v1/openapi.json."}, 404)
+        code, corps = reponse
+        self._json(corps, code)
+
     def _job(self, fn, *args):
         ok = JOB.start(fn.__name__, fn, *args)
         self._json({} if ok else {"error": "Une tache est deja en cours."})
+
+
+DEMARRAGE = time.time()
+
+
+def _inventaire_v1():
+    """L'inventaire enrichi, sans la liste de courses ni le texte a coller.
+
+    `_lib_response()` construit aussi de quoi remplir un ecran — la liste de
+    courses, son rendu en texte, les fichiers en attente d'import. L'API n'en a
+    pas l'usage, et `shopping_text` change a chaque seconde, ce qui rendrait
+    toute mise en cache cote client inutile.
+    """
+    LIB.scan(log=JOB.log)
+    LIB.enrich()
+    return {"files": LIB.files, "stats": LIB.stats()}
+
+
+def _lancer_v1(quoi):
+    """Rend (lance, motif). Une seule tache a la fois : c'est ainsi que Romule
+    fonctionne, et l'API le dit plutot que de faire semblant d'une file."""
+    if JOB.snapshot()["running"]:
+        return False, "Another task is already running."
+    if quoi == "scan":
+        return JOB.start("scan", _inventaire_v1), ""
+    if quoi == "convert":
+        return JOB.start("convert", actions.convert_files, LIB, CFG, JOB, []), ""
+    if quoi == "push":
+        return JOB.start("push", actions.push_files, LIB, CFG, JOB, []), ""
+    return False, "Unknown task."
+
+
+def _contexte_v1():
+    return {
+        "health": _health,
+        "demarrage": DEMARRAGE,
+        "inventaire": _inventaire_v1,
+        "plateformes": lambda: systems.summary(CFG),
+        "console": device.state,
+        "job": JOB.snapshot,
+        "corbeille": trash.listing,
+        "lancer": _lancer_v1,
+    }
 
 
 def _health():

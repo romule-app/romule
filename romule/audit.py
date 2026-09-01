@@ -362,6 +362,37 @@ def _dependances():
                "en amont, rien a mettre a jour en urgence.")]
 
 
+def _cles_api():
+    """Les cles d'API sont un acces a part entiere : elles doivent figurer dans
+    le rapport qui dit qui peut entrer.
+
+    Une cle ne se perime pas et ne se rappelle a personne. Celle qu'on a creee
+    pour essayer un tableau de bord il y a six mois ouvre toujours la porte, et
+    rien dans l'interface ne la met sous les yeux. C'est le seul moment ou on
+    la relit.
+    """
+    from . import apikeys
+    try:
+        cles = apikeys.liste()
+    except Exception:
+        return []
+    if not cles:
+        return [_c("bon", "Aucune cle d'API",
+                   "Aucune cle n'est active : l'API n'est atteignable par "
+                   "personne.")]
+    jamais = [k for k in cles if not k.get("dernier_usage")]
+    detail = "%d cle(s) active(s) : %s." % (
+        len(cles), ", ".join(k["nom"] for k in cles[:5]))
+    if jamais:
+        return [_c("info", "Cles d'API actives",
+                   detail + " %d n'a jamais servi." % len(jamais),
+                   "Une cle creee pour un essai et jamais utilisee ouvre "
+                   "toujours l'API : `romule apikey revoke <id>`.")]
+    return [_c("info", "Cles d'API actives", detail,
+               "Chaque cle atteint /api/v1/ et rien d'autre. "
+               "`romule apikey list` montre leur derniere utilisation.")]
+
+
 # -------------------------------------------------------------------- rapport
 
 def lancer(cfg=None, hors_ligne=False):
@@ -370,6 +401,7 @@ def lancer(cfg=None, hors_ligne=False):
     for f in (_acces, _secrets):
         controles += f(cfg)
     controles += _permissions() + _entetes() + _csp() + _csrf() + _code()
+    controles += _cles_api()
     controles += _dependances() + _python(hors_ligne)
     pire = max((NIVEAUX[c["niveau"]] for c in controles), default=0)
     return {
