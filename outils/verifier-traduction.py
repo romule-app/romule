@@ -63,7 +63,9 @@ OUTILS = set((
 ACCENTS = re.compile(r"[àâäçéèêëîïôöûùüÿœÀÂÄÇÉÈÊËÎÏÔÖÛÙÜŸŒ]")
 # Ce qui n'est pas de la prose : selecteurs, chemins, adresses, identifiants.
 NON_PROSE = re.compile(
-    r"^\s*[<.#/]|://|^[a-z0-9_-]+$|^%[sd]$|^[-+*/=<>|&,;:()\[\]{}\s]+$")
+    r"^\s*[.#/]|://|^[a-z0-9_-]+$|^%[sd]$|^[-+*/=<>|&,;:()\[\]{}\s]+$")
+BALISE = re.compile(r"<[^>]*>")
+MOT = re.compile(r"[a-zA-ZÀ-ÿ']{2,}")
 
 
 # ----------------------------------------------------------- lecture du JS
@@ -221,7 +223,36 @@ def couvert(texte, plates, gabarits):
 
 # ------------------------------------------------------------- l'heuristique
 
-def candidat(texte):
+def morceaux_de_texte(litteral):
+    """Les fragments de TEXTE d'un litteral, balises retirees.
+
+    Ce code construit son interface en concatenant du HTML : la plupart des
+    phrases vivent dans des chaines qui commencent par `<div class=...>`.
+    Rejeter tout litteral commencant par `<`, comme le faisait la premiere
+    version, jetait donc l'essentiel du gisement — « Aucun événement » sortait
+    du radar parce que sa chaine commence par `<div class="jempty">`.
+    """
+    if "<" not in litteral:
+        return [litteral]
+    return [m for m in BALISE.split(litteral) if m.strip()]
+
+
+def vocabulaire(catalogue):
+    """Les mots deja vus dans des phrases francaises connues.
+
+    Plutot qu'un dictionnaire ecrit a la main — qui serait faux et se
+    perimerait — on se sert du catalogue lui-meme : ce sont, par construction,
+    des phrases d'interface en francais. « Dossier vide. » n'a ni accent ni
+    mot-outil, mais ses deux mots figurent dans des cles existantes.
+    """
+    mots = set()
+    for cle in catalogue:
+        if cle != "_meta":
+            mots.update(m.lower() for m in MOT.findall(cle))
+    return mots
+
+
+def candidat(texte, vocab=frozenset()):
     """Ce texte ressemble-t-il a une phrase d'interface en francais ?"""
     t = _plat(texte)
     if not (4 <= len(t) <= 220):
@@ -230,8 +261,16 @@ def candidat(texte):
         return False
     if ACCENTS.search(t):
         return True
-    mots = [m for m in re.findall(r"[a-zA-ZÀ-ÿ']+", t.lower())]
-    return sum(1 for m in mots if m in OUTILS) >= 2
+    mots = [m.lower() for m in MOT.findall(t)]
+    if sum(1 for m in mots if m in OUTILS) >= 2:
+        return True
+    # Faisceau : au moins deux mots, et la plupart deja vus dans une phrase
+    # francaise connue. C'est ce qui rattrape « Dossier vide. », que ni
+    # l'accent ni les mots-outils ne trahissent.
+    if len(mots) >= 2 and vocab:
+        connus = sum(1 for m in mots if m in vocab)
+        return connus >= 2 and connus / len(mots) >= 0.6
+    return False
 
 
 def manquantes(source_js=None, source_html=None, catalogue=None):
@@ -239,6 +278,7 @@ def manquantes(source_js=None, source_html=None, catalogue=None):
     cat = catalogue if catalogue is not None else json.loads(
         CATALOGUE.read_text(encoding="utf-8"))
     plates, gabarits = couverture(cat)
+    vocab = vocabulaire(cat)
     out = []
 
     js = source_js if source_js is not None else JS.read_text(encoding="utf-8")
@@ -247,8 +287,9 @@ def manquantes(source_js=None, source_html=None, catalogue=None):
         brut = lignes_js[ligne - 1] if ligne - 1 < len(lignes_js) else ""
         if MARQUE in brut:
             continue
-        if candidat(texte) and not couvert(texte, plates, gabarits):
-            out.append(("app.js", ligne, _plat(texte)))
+        for bout in morceaux_de_texte(texte):
+            if candidat(bout, vocab) and not couvert(bout, plates, gabarits):
+                out.append(("app.js", ligne, _plat(bout)))
 
     html = source_html if source_html is not None else HTML.read_text(encoding="utf-8")
     lecteur = LecteurHTML()
@@ -258,7 +299,7 @@ def manquantes(source_js=None, source_html=None, catalogue=None):
         brut = lignes_html[ligne - 1] if ligne - 1 < len(lignes_html) else ""
         if MARQUE in brut:
             continue
-        if candidat(texte) and not couvert(texte, plates, gabarits):
+        if candidat(texte, vocab) and not couvert(texte, plates, gabarits):
             out.append(("index.html", ligne, _plat(texte)))
     return out
 
@@ -279,7 +320,8 @@ def autotest():
             print("  ECHEC %s   %s" % (nom, detail))
 
     cat = {"Déjà traduit": "Already translated",
-           "Bonjour %s, tout va bien": "Hello %s, all is well"}
+           "Bonjour %s, tout va bien": "Hello %s, all is well",
+           "Un mot traduit ici": "A word translated here"}
 
     cas = [
         ("une phrase absente est signalee",
@@ -302,6 +344,17 @@ def autotest():
          "const k = 'switch-lite';", False),
         ("un selecteur CSS n'est pas une phrase",
          "el.querySelector('.gcard .gname');", False),
+        # Ce code construit son interface en concatenant du HTML : rejeter tout
+        # litteral commencant par `<` jetait l'essentiel du gisement.
+        ("une phrase noyee dans un fragment HTML est vue",
+         "el.innerHTML = '<div class=\"x\">Une phrase absente du catalogue.</div>';",
+         True),
+        ("un fragment HTML sans texte est ignore",
+         "el.innerHTML = '<div class=\"jempty\"></div>';", False),
+        # Le vocabulaire vient du catalogue lui-meme : une phrase sans accent
+        # ni mot-outil est reconnue si ses mots ont deja servi ailleurs.
+        ("une phrase sans accent ni mot-outil est reconnue par son vocabulaire",
+         "toast('Bonjour traduit');", True),
     ]
     for nom, code, attendu in cas:
         vu = bool(manquantes(source_js=code, source_html="", catalogue=cat))
