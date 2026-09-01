@@ -217,7 +217,7 @@ def navigateur():
     try:
         ok = True
         for f in ("audit_responsive.py", "test_parcours_mobile.py",
-                  "test_traduction.py"):
+                  "test_traduction.py", "test_gestes.py"):
             ok = script(TESTS / "navigateur" / f) and ok
         for f in ("test_ui_comptes.js", "test_ui_temoin.js", "test_ui_injection.js"):
             r = script_node(TESTS / "navigateur" / f)
