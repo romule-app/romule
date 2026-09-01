@@ -189,7 +189,9 @@ async function api(path, body, discret) {
   let j;
   try {
     const r = await fetch(path, body
-      ? {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)}
+      ? {method: 'POST',
+         headers: {'Content-Type': 'application/json'},  // i18n:ok - type MIME
+         body: JSON.stringify(body)}
       : {});
     j = await r.json();
   } catch (e) {
@@ -1185,7 +1187,7 @@ function renderLib() {
     grille = document.createElement('div');
     lib.appendChild(grille);
   }
-  grille.className = 'games taille-' + TAILLE;
+  grille.className = 'games taille-' + TAILLE  // i18n:ok - classe CSS;
 
   R.liste(grille, vus, {
     // L'etat deplie fait partie de l'identite de la carte : sans lui, la
@@ -1296,8 +1298,7 @@ function carteLigne(x) {
 
 // Mots trop courants pour peser dans la comparaison : les garder ferait passer
 // n'importe quelle phrase pour « proche du titre ».
-// i18n:ok - liste de mots vides pour la comparaison de titres, pas de l'interface
-const VIDES = new Set(('le la les un une des du de d l a au aux et ou en dans sur '
+const VIDES = new Set(('le la les un une des du de d l a au aux et ou en dans sur '  // i18n:ok - mots vides, pas de l'interface
   + 'pour par avec sans version edition the a an of and or in on for with your '
   + 'this that new').split(' '));
 
@@ -4417,7 +4418,7 @@ const app = {
     renderConn(d); this.refreshInstall();
     renderDeviceCard(d.info || {}, d.volumes || []);
     if (d.info && d.info.connected) {
-      annonce('Console détectée : ' + d.info.name, 'ok');
+      annonce(phrase('Console détectée : %s', d.info.name), 'ok');
       await this.chargerConsole();
     } else {
       // Assemblee, la phrase n'etait traduisible par aucun catalogue.
@@ -4473,7 +4474,9 @@ const app = {
       });
     }
     await this.saveConfig({device_dir: r.dir});
-    BROWSE_PATH = r.dir; toast('Dossier des jeux trouvé : ' + r.dir, 'ok'); this.explore();
+    BROWSE_PATH = r.dir;
+    toast(phrase('Dossier des jeux trouvé : %s', r.dir), 'ok');
+    this.explore();
   },
   // Le meme navigateur sert a choisir la racine des ROMs, le dossier Switch ou
   // celui de n'importe quelle plateforme : seule la CIBLE change.
@@ -4484,7 +4487,8 @@ const app = {
     R.texte($('browsecible'), {
       roms: 'Choisir la racine des ROMs',
       switch: 'Choisir le dossier des jeux Switch',
-    }[CIBLE_PARCOURS] || ('Choisir le dossier de ' + libelleSysteme(CIBLE_PARCOURS)));
+    }[CIBLE_PARCOURS] ||
+      phrase('Choisir le dossier de %s', libelleSysteme(CIBLE_PARCOURS)));
     this.browse(depart || BROWSE_PATH || (DATA.config || {}).roms_root
                 || (DATA.config || {}).device_dir);
     w.scrollIntoView({block: 'center', behavior: 'smooth'});
@@ -4493,7 +4497,7 @@ const app = {
   async browse(path) {
     path = (path || BROWSE_PATH || (DATA.config && DATA.config.device_dir) || '/storage/emulated/0');
     BROWSE_PATH = path.replace(/\/+$/, '') || '/';
-    say('Lecture de ' + BROWSE_PATH + '...');
+    say(phrase('Lecture de %s…', BROWSE_PATH));
     const r = await api('/api/device-browse', {path: BROWSE_PATH});
     if (!r.error) renderBrowser(BROWSE_PATH, r.items || []);
   },
@@ -4502,10 +4506,10 @@ const app = {
     if (!BROWSE_PATH) return toast('Ouvre d\'abord un dossier.', 'warn');
     if (CIBLE_PARCOURS === 'roms') {
       await this.saveField('roms_root', BROWSE_PATH);
-      toast('Racine des ROMs : ' + BROWSE_PATH, 'ok');
+      toast(phrase('Racine des ROMs : %s', BROWSE_PATH), 'ok');
     } else if (CIBLE_PARCOURS === 'switch') {
       await this.saveConfig({device_dir: BROWSE_PATH});
-      toast('Dossier Switch : ' + BROWSE_PATH, 'ok');
+      toast(phrase('Dossier Switch : %s', BROWSE_PATH), 'ok');
       this.explore();
     } else {
       // chemin absolu : il prime sur le nom de sous-dossier deduit de la racine
