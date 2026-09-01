@@ -168,9 +168,9 @@ Reporting a vulnerability: see [SECURITY.md](SECURITY.md).
 ### Known limitations
 
 - **No TLS.** A reverse proxy is required for internet exposure.
-- **`script-src` allows `'unsafe-inline'`.** 152 inline event handlers depend
-  on it. Removing them is planned; until then the CSP cannot forbid inline
-  scripts without making every button inert.
+- **`style-src` allows `'unsafe-inline'`.** Inline `style=` attributes are
+  common in the generated markup. A style is not executed, so this is a much
+  narrower exception than the `script-src` one removed in 0.2.0.
 - **Beta features**, labelled in the interface: OpenID Connect SSO (RS256
   verification written for Romule, no third-party library), emulator
   configuration piloting (Romule writes into another program's files),
