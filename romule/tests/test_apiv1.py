@@ -234,13 +234,65 @@ def test_post_sans_origin():
       code2 in (202, 409), "%s %s" % (code2, corps2))
 
 
+def _local(chemin, corps=None):
+    """Sans cle : on est en 127.0.0.1, donc dans le regime local — celui de
+    l'interface. C'est par la que passent les trois routes de gestion."""
+    donnees = json.dumps(corps or {}).encode() if corps is not None else None
+    req = urllib.request.Request(
+        BASE + chemin, data=donnees,
+        headers={"Content-Type": "application/json"} if donnees else {})
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
+            return r.status, json.loads(r.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        return e.code, {}
+
+
+def test_gestion_par_l_interface():
+    """Les trois routes que le bloc « Cles d'API » des Reglages utilise.
+
+    Elles sont INTERNES : l'interface est un navigateur avec une session, elle
+    ne peut pas passer par `/api/v1` qui exige justement une cle. Elles ne sont
+    donc pas figees — mais elles doivent marcher, et le seul moyen de le savoir
+    est de les appeler.
+    """
+    code, avant = _local("/api/cles")
+    t("l'interface peut lister les cles", code == 200 and "cles" in avant, code)
+    n0 = len(avant["cles"])
+
+    code, cree = _local("/api/cle-creer", {"nom": "depuis l'interface"})
+    t("l'interface peut creer une cle", code == 200 and cree.get("secret"), cree)
+    secret = cree.get("secret", "")
+    t("la cle creee porte le marqueur", secret.startswith("rml_"), secret[:8])
+    t("la fiche rendue ne contient pas d'empreinte",
+      "empreinte" not in json.dumps(cree.get("cle", {})), cree.get("cle"))
+
+    # Elle doit fonctionner tout de suite : une cle creee et inutilisable
+    # serait le pire des deux mondes.
+    code, _ = demander("/api/v1/system", cle=secret)
+    t("la cle creee par l'interface fonctionne aussitot", code == 200, code)
+
+    code, apres = _local("/api/cles")
+    t("elle apparait dans la liste", len(apres["cles"]) == n0 + 1,
+      "%d -> %d" % (n0, len(apres["cles"])))
+
+    cid = cree["cle"]["id"]
+    code, r = _local("/api/cle-revoquer", {"id": cid})
+    t("l'interface peut revoquer", code == 200 and r.get("ok"), r)
+    code, _ = demander("/api/v1/system", cle=secret)
+    t("la cle revoquee ne fonctionne plus", code in (401, 403), code)
+    code, r = _local("/api/cle-revoquer", {"id": "inexistante"})
+    t("revoquer une cle inconnue rend ok=false, pas une erreur",
+      code == 200 and r.get("ok") is False, r)
+
+
 try:
     for fn in (test_les_routes_repondent, test_contenu, test_pagination,
                test_recherche_et_fiche, test_route_inconnue,
                test_la_specification_correspond_au_code,
                test_la_cle_ne_sort_pas_de_sa_portee,
                test_cle_invalide_et_revoquee, test_cle_en_parametre,
-               test_post_sans_origin):
+               test_post_sans_origin, test_gestion_par_l_interface):
         fn()
 finally:
     srv.terminate()

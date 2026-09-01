@@ -1083,5 +1083,22 @@
   "globalement": "globalement",
   "%s erreur(s) et %s alerte(s). Le reste s'est bien déroulé.": "%s erreur(s) et %s alerte(s). Le reste s'est bien déroulé.",
   "%s — %s": "%s — %s",
-  "Voir la jaquette en grand": "Voir la jaquette en grand"
+  "Voir la jaquette en grand": "Voir la jaquette en grand",
+  "Aucune clé. L'API n'est atteignable par personne.": "Aucune clé. L'API n'est atteignable par personne.",
+  "Révoquer": "Révoquer",
+  "jamais utilisée": "jamais utilisée",
+  "Donne un nom à la clé : c'est ce qui permettra de savoir laquelle révoquer.": "Donne un nom à la clé : c'est ce qui permettra de savoir laquelle révoquer.",
+  "Clé créée": "Clé créée",
+  "Note-la maintenant : elle n'est conservée que sous forme d'empreinte et ne pourra pas être réaffichée.": "Note-la maintenant : elle n'est conservée que sous forme d'empreinte et ne pourra pas être réaffichée.",
+  "Clé copiée.": "Clé copiée.",
+  "Copie refusée par le navigateur : sélectionne la clé dans le détail.": "Copie refusée par le navigateur : sélectionne la clé dans le détail.",
+  "Révoquer cette clé ?": "Révoquer cette clé ?",
+  "%s cessera de fonctionner immédiatement. C'est irréversible : il faudra en créer une autre.": "%s cessera de fonctionner immédiatement. C'est irréversible : il faudra en créer une autre.",
+  "Clé révoquée.": "Clé révoquée.",
+  "Clés d'API": "Clés d'API",
+  "Pour interroger Romule depuis un tableau de bord ou un script.": "Pour interroger Romule depuis un tableau de bord ou un script.",
+  "Une clé n'atteint que l'API publique : elle ne peut ni ouvrir l'interface, ni toucher aux comptes.": "Une clé n'atteint que l'API publique : elle ne peut ni ouvrir l'interface, ni toucher aux comptes.",
+  "Voir la documentation": "Voir la documentation",
+  "À quoi elle sert": "À quoi elle sert",
+  "Créer une clé": "Créer une clé"
 }
