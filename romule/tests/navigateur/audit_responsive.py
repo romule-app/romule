@@ -43,11 +43,11 @@ SONDE = r"""
     return true;
   }
 
-  // `[data-act]` remplace `[onclick]` : depuis la phase 4, un element cliquable
-  // porte son action en donnee, pas en code. Les deux restent listes tant que
-  // la migration n'est pas achevee.
+  // `[data-act]` a remplace `[onclick]` : depuis la phase 4, un element
+  // cliquable porte son action en donnee, pas en code. Il n'y a plus un seul
+  // `onclick` dans le projet, et `test_ui_injection.js` echoue si l'un revient.
   const sel = 'button, a[href], select, input:not([type=hidden]), '
-            + '[onclick], [data-act], .chip';
+            + '[data-act], [data-act-change], .chip';
   for (const el of document.querySelectorAll(sel)) {
     if (!utilisable(el)) continue;
     const r = el.getBoundingClientRect();
