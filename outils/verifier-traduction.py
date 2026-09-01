@@ -115,7 +115,7 @@ def litteraux_js(source):
             i += 1
             continue
         if c in "'\"`":
-            debut, quote = ligne, c
+            debut, quote, depart_litteral = ligne, c, i
             i += 1
             morceaux = []
             while i < n and source[i] != quote:
@@ -134,13 +134,35 @@ def litteraux_js(source):
             for seq, rempl in (("\\n", "\n"), ("\\t", "\t"), ("\\'", "'"),
                                ('\\"', '"'), ("\\\\", "\\")):
                 brut = brut.replace(seq, rempl)
-            sorties.append((debut, brut))
+            sorties.append([debut, brut, depart_litteral, i])
             precedent = quote
             continue
         if not c.isspace():
             precedent = c
         i += 1
-    return sorties
+    return _recoller(sorties, source)
+
+
+def _recoller(litteraux, source):
+    """Fusionne les litteraux que `+` relie : a l'execution ils n'en font qu'un.
+
+    Une phrase trop longue pour une ligne s'ecrit en deux morceaux colles par
+    `+`. Le DOM n'en voit qu'un seul noeud de texte, donc la CLE est la phrase
+    entiere. Les tester separement signalait comme manquantes des phrases
+    parfaitement traduites — et aurait fait ecrire des cles qui ne servent a
+    rien.
+    """
+    out = []
+    for ligne, texte, debut, fin in litteraux:
+        if out:
+            entre = source[out[-1][3]:debut]
+            # Uniquement `+` et de la blancheur : c'est une continuation.
+            if entre.strip() == "+":
+                out[-1][1] += texte
+                out[-1][3] = fin
+                continue
+        out.append([ligne, texte, debut, fin])
+    return [(l, t) for l, t, _, _ in out]
 
 
 # --------------------------------------------------------- lecture du HTML
@@ -232,9 +254,23 @@ def morceaux_de_texte(litteral):
     version, jetait donc l'essentiel du gisement — « Aucun événement » sortait
     du radar parce que sa chaine commence par `<div class="jempty">`.
     """
-    if "<" not in litteral:
+    if "<" not in litteral and ">" not in litteral:
         return [litteral]
-    return [m for m in BALISE.split(litteral) if m.strip()]
+    bouts = []
+    for m in BALISE.split(litteral):
+        # Un litteral peut commencer ou finir au MILIEU d'une balise — quand
+        # une valeur interpolee la coupe en deux : `...onclick="f(' + x + ')">
+        # Détails</button>`. Il reste alors un morceau de balise autour du
+        # texte. Le texte d'interface ne contient jamais de chevron : on garde
+        # ce qui suit le dernier `>` et ce qui precede le premier `<`.
+        if ">" in m:
+            m = m.rsplit(">", 1)[1]
+        if "<" in m:
+            m = m.split("<", 1)[0]
+        m = m.strip()
+        if m:
+            bouts.append(m)
+    return bouts
 
 
 def vocabulaire(catalogue):
@@ -355,6 +391,14 @@ def autotest():
         # ni mot-outil est reconnue si ses mots ont deja servi ailleurs.
         ("une phrase sans accent ni mot-outil est reconnue par son vocabulaire",
          "toast('Bonjour traduit');", True),
+        # Une phrase trop longue pour une ligne s'ecrit en deux morceaux colles
+        # par `+`. A l'execution ils ne font qu'un noeud de texte : la cle est
+        # la phrase entiere, et les tester separement signalait comme
+        # manquantes des phrases parfaitement traduites.
+        ("deux morceaux colles par + ne font qu'une phrase",
+         "toast('Déjà ' +\n      'traduit');", False),
+        ("deux chaines SANS + restent distinctes",
+         "f('Déjà traduit', 'Une phrase absente du catalogue.');", True),
     ]
     for nom, code, attendu in cas:
         vu = bool(manquantes(source_js=code, source_html="", catalogue=cat))
