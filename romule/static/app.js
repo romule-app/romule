@@ -478,7 +478,10 @@ let JVUES = {sig: '', n: 0};
 
 function messageLisible(chemin, err) {
   const e = String(err).toLowerCase();
-  if (e.includes('route inconnue'))
+  // Ce n'est pas du texte affiche : c'est le message BRUT du serveur, qu'on
+  // reconnait pour le remplacer par la phrase lisible juste en dessous. Le
+  // traduire ferait echouer la reconnaissance.
+  if (e.includes('route inconnue'))   // i18n:ok
     return "Cette fonction n'existe pas sur le serveur. Il tourne probablement " +
            "sur une version plus ancienne : arrête-le et relance python3 -m romule.";
   if (e.includes('reseau') || e.includes('failed to fetch'))
@@ -1031,7 +1034,9 @@ function groupGames() {
   });
   return Object.values(games).map(g => {
     const base = g.files.find(f => f.type === 'BASE');
-    g.name = g.baseName || (g.files[0] && g.files[0].name) || 'Inconnu';
+    // Nom de repli quand un jeu n'en a aucun : il est AFFICHE, donc traduit.
+  // La recherche de jaquette par nom n'aurait de toute facon rien trouve.
+  g.name = g.baseName || (g.files[0] && g.files[0].name) || t('Inconnu');
     // Un pack .xci qui fusionne jeu, MAJ et DLC ne porte pas de title ID : il est
     // classe INCONNU alors qu'il CONTIENT le jeu. Le compter comme base evite
     // d'annoncer « le jeu de base manque » sur un jeu parfaitement jouable.
@@ -1819,8 +1824,13 @@ function majSection(g, e) {
       && !(e.aActiver || []).length) return '';
 
   const l = [];
+  // Un seul mot, sans accent : ni le controle statique ni le test navigateur
+  // ne pouvaient le voir — leurs deux heuristiques demandent un accent OU deux
+  // mots-outils. Le plancher a ete abaisse depuis, mais ces deux-la avaient
+  // deja traverse, et « aucune » s'affichait dans une interface anglaise.
   l.push('<div class="majrow"><span>Version installée</span><b>' +
-    (mienne != null ? 'v' + mienne : maj.length ? 'inconnue' : 'aucune') + '</b></div>');
+    (mienne != null ? 'v' + mienne
+                    : t(maj.length ? 'inconnue' : 'aucune')) + '</b></div>');
   if (g.dlcCount)
     l.push('<div class="majrow"><span>DLC présents</span><b>' + g.dlcCount + '</b></div>');
 
@@ -1982,7 +1992,7 @@ function renderImport(items) {
 
   const groupes = new Map();
   items.forEach(i => {
-    const cle = i.systeme_nom || 'Plateforme inconnue';
+    const cle = i.systeme_nom || t('Plateforme inconnue');
     if (!groupes.has(cle)) groupes.set(cle, []);
     groupes.get(cle).push(i);
   });
@@ -3691,7 +3701,9 @@ function fillSettings() {
   set('s-oidcissuer', c.oidc_issuer); set('s-oidcclient', c.oidc_client_id);
   set('s-oidcsecret', c.oidc_client_secret); set('s-oidcemails', c.oidc_emails);
   set('s-oidcgroupes', c.oidc_groupes); set('s-oidcredirect', c.oidc_redirect);
-  if ($('s-authmode')) $('s-authmode').value = c.auth_mode || 'aucun';
+  // `aucun` est la VALEUR du reglage, pas son libelle : l'option affichee
+  // vit dans index.html et passe par le catalogue.
+  if ($('s-authmode')) $('s-authmode').value = c.auth_mode || 'aucun';  // i18n:ok
   majBlocAuth();
   set('s-jobs', c.jobs); set('s-cover', c.cover_url); set('s-sgkey', c.steamgriddb_key);
   set('s-igdbid', c.igdb_client_id); set('s-igdbsecret', c.igdb_client_secret);
@@ -4068,7 +4080,8 @@ const app = {
   // console, et une preference d'appareil n'a pas a voyager.
   setTheme(v) { poserApparence('theme', v, ['sombre', 'clair', 'auto']); },
   setCarte(v) { poserApparence('carte', v, ['aucune', '0', '1', '2', '3', '4', '5']); },
-  setMouvement(v) { poserApparence('mvt', v, ['complet', 'reduit', 'aucun']); },
+  // Les trois valeurs autorisees du reglage, pas des libelles.
+  setMouvement(v) { poserApparence('mvt', v, ['complet', 'reduit', 'aucun']); },  // i18n:ok
 
   // ---- langue de l'interface
   async langLoad() {
@@ -4560,6 +4573,11 @@ const app = {
   // Une jaquette absente au premier essai (recherche en ligne en cours) est
   // retentee une fois avant d'abandonner : sinon elle ne revient jamais.
   coverRate(img) {
+    // Une image cassee affiche la boite grise du navigateur avec son texte
+    // alternatif — pendant les 2,5 s du reessai, la fiche montrait donc un
+    // rectangle brise. On la cache tout de suite : le fond de `.cover` fait
+    // deja office de pochette vide, comme dans la grille.
+    img.classList.add('vide');
     if (img.dataset.retry) { img.remove(); return; }
     img.dataset.retry = '1';
     const base = img.src.split('&r=')[0];
@@ -4580,6 +4598,7 @@ const app = {
   },
 
   coverVue(img) {
+    img.classList.remove('vide');
     const hote = img.closest('.gcard') || img.closest('.sheet');
     if (!hote) return;
     const cle = (hote.dataset.couleur || '').toLowerCase();

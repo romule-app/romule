@@ -1099,5 +1099,9 @@
   "Une clé n'atteint que l'API publique : elle ne peut ni ouvrir l'interface, ni toucher aux comptes.": "Une clé n'atteint que l'API publique : elle ne peut ni ouvrir l'interface, ni toucher aux comptes.",
   "Voir la documentation": "Voir la documentation",
   "À quoi elle sert": "À quoi elle sert",
-  "Créer une clé": "Créer une clé"
+  "Créer une clé": "Créer une clé",
+  "inconnue": "inconnue",
+  "aucune": "aucune",
+  "Plateforme inconnue": "Plateforme inconnue",
+  "Inconnu": "Inconnu"
 }
