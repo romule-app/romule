@@ -104,7 +104,10 @@ input[type=radio]{accent-color:var(--amber);cursor:pointer}
    deux tenait 49 phrases hors de portee du controle de traduction : elles
    restaient en francais dans une interface anglaise, sans que rien ne le
    signale. */
-.tid,.mono{font-family:var(--mono);font-size:11px;color:var(--mute);letter-spacing:.04em}
+/* `tid-vide` porte le LIBELLE affiche quand il n'y a pas de title ID. Il a la
+   meme apparence que `tid`, mais pas son role : `tid` est marquee « ne jamais
+   traduire », ce libelle doit l'etre. Meme separation que `cnom` / `cvide`. */
+.tid,.tid-vide,.mono{font-family:var(--mono);font-size:11px;color:var(--mute);letter-spacing:.04em}
 .tid b{color:var(--amber);font-weight:700;background:var(--primary-doux);padding:0 2px;border-radius:2px}
 .tag{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.09em;
   padding:2px 6px;border-radius:3px;border:1px solid currentColor;white-space:nowrap}
