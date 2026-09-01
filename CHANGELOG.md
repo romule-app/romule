@@ -50,6 +50,12 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Added
 
+- **170 interface strings translated**, and the checker taught to stop
+  over-reporting: a sentence too long for one line is written as two literals
+  joined by `+`, and at runtime they are a single text node, so the key is the
+  whole sentence. Testing the halves separately flagged 74 perfectly translated
+  sentences as missing. Literals joined by `+` are now merged before the
+  comparison, and tag fragments left by an interpolated value are stripped.
 - **`outils/verifier-traduction.py` compares the code to the catalogue.** The
   existing check compares `fr.json` to `en.json` — parity is perfect, so it is
   green whatever happens. Nobody compared the *code* to the catalogue, which is
