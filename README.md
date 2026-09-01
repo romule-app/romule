@@ -168,7 +168,7 @@ Reporting a vulnerability: see [SECURITY.md](SECURITY.md).
 ### Known limitations
 
 - **No TLS.** A reverse proxy is required for internet exposure.
-- **`script-src` allows `'unsafe-inline'`.** 124 inline event handlers depend
+- **`script-src` allows `'unsafe-inline'`.** 152 inline event handlers depend
   on it. Removing them is planned; until then the CSP cannot forbid inline
   scripts without making every button inert.
 - **Beta features**, labelled in the interface: OpenID Connect SSO (RS256
