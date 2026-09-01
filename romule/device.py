@@ -6,6 +6,7 @@ tout ce qui parle a adb passe par `_run` / `_shell`.
 """
 
 import hashlib
+import os
 import re
 import shutil
 import subprocess
@@ -21,8 +22,28 @@ _GAME_FIND = (r"\( -iname '*.nsp' -o -iname '*.xci' "
 
 # ------------------------------------------------------------- appels adb bruts
 
+def _binaire_adb():
+    """Chemin du binaire adb a lancer, ou None s'il n'y en a pas.
+
+    `ROMULE_ADB` passe avant tout. C'est ce qui permet a la suite de tests de
+    designer un faux adb, donc de FIXER l'etat de la console au lieu de le
+    subir : sans elle, les tests donnaient trois resultats differents selon
+    qu'un appareil etait branche, absent, ou branche mais hors ligne. C'est
+    exactement ce qui a laisse cinq chaines francaises sur l'ecran d'accueil
+    pendant des semaines — la branche « aucune console » ne s'affichait jamais
+    sur la machine qui faisait tourner les tests.
+
+    Un chemin qui ne designe rien vaut « pas d'adb » : c'est la facon la plus
+    simple de rejouer une machine sans adb du tout.
+    """
+    impose = config.env("ADB").strip()
+    if impose:
+        return impose if os.path.exists(impose) else None
+    return shutil.which("adb")
+
+
 def adb_available():
-    return shutil.which("adb") is not None
+    return _binaire_adb() is not None
 
 
 # Serie de l'appareil vise. Utile quand l'USB et le wifi sont connectes en
@@ -37,9 +58,10 @@ def set_target(serial):
 
 def _run(args, timeout=60, targeted=True):
     """Renvoie (returncode, stdout, stderr). `targeted` vise l'appareil choisi."""
-    if not adb_available():
+    binaire = _binaire_adb()
+    if not binaire:
         return 1, "", "adb introuvable"
-    cmd = ["adb"]
+    cmd = [binaire]
     if targeted:
         # Choisir la cible AU BESOIN. Sans cela, la premiere commande d'un
         # processus partait sans `-s` : avec deux transports attaches (une
@@ -216,8 +238,14 @@ def pair(addr, code):
     """Appairage sans fil (Android 11+). Renvoie (ok, message)."""
     if not addr or not code:
         return (False, "adresse ou code manquant")
+    # Cette fonction contournait `_run` : elle lancait « adb » en dur, sans le
+    # garde d'existence. Elle etait donc le seul appel que `ROMULE_ADB` aurait
+    # rate, et le seul a lever une exception quand adb manque.
+    binaire = _binaire_adb()
+    if not binaire:
+        return (False, "adb introuvable")
     try:
-        p = subprocess.run(["adb", "pair", addr, str(code)],
+        p = subprocess.run([binaire, "pair", addr, str(code)],
                            capture_output=True, text=True, timeout=60)
         msg = (p.stdout + p.stderr).strip().splitlines()
         msg = msg[-1] if msg else ""

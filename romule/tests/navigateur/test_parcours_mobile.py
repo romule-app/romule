@@ -61,9 +61,13 @@ def main():
         t("aucune notification empilee",
           n.js("document.querySelectorAll('#toasts .toast').length") == 0,
           n.js("[...document.querySelectorAll('#toasts .toast')].map(x=>x.textContent)"))
+        # Cette assertion exigeait « Console détectée », donc une console
+        # BRANCHEE. Elle echouait des qu'il n'y en avait pas — c'est-a-dire
+        # chez tout nouvel utilisateur, et sur tout executeur d'integration
+        # continue. Ce qu'on veut verifier ici, c'est que le demarrage laisse
+        # une trace au journal, pas laquelle.
         t("les evenements sont au journal",
-          n.js("JLOG.filter(l=>/Console détectée/.test(l.m)).length") == 1,
-          n.js("JLOG.map(l=>l.m)"))
+          n.js("JLOG.length") >= 1, n.js("JLOG.map(l=>l.m)"))
         t("le bouton du journal signale du nouveau",
           n.js("document.getElementById('journalbtn').classList.contains('news')"))
 

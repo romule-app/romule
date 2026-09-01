@@ -22,6 +22,7 @@ Aucune dependance : ni pytest, ni selenium, ni playwright.
 import os
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -115,13 +116,57 @@ def audit_securite():
     return r.returncode != 2 or "ouverte au reseau" in r.stdout
 
 
-def _demarrer_serveur():
-    """Serveur de test, sur la ludotheque reelle : les tests navigateur ne font
-    que LIRE l'interface. Rien n'est ecrit."""
+# Les tests navigateur tournaient sur la ludotheque REELLE du poste et sur
+# l'adb REEL de la machine. Leur resultat dependait donc de ce qui etait branche
+# et de ce que l'auteur possedait — trois verdicts differents pour le meme code.
+# C'est ce qui a cache cinq chaines francaises sur l'ecran d'accueil.
+#
+# On leur donne desormais un decor fixe : une racine jetable, quelques jeux
+# fabriques, une configuration deja ecrite (sinon l'assistant de premier
+# demarrage recouvre tout l'ecran et rien n'est cliquable), et un faux adb dans
+# l'etat choisi.
+FAUX_ADB = TESTS / "navigateur" / ".." / "faux_adb.py"
+
+TITRES_TEST = [
+    ("Aurora Drift",   "0100aa0000010000"),
+    ("Cinder Vale",    "0100bb0000020000"),
+    ("Harbour Lights", "0100cc0000030000"),
+]
+
+
+def _semer(racine):
+    """Une petite ludotheque previsible : sans jeu, la moitie des ecrans est vide."""
+    import json
+    jeux = Path(racine) / "GAMES"
+    jeux.mkdir(parents=True, exist_ok=True)
+    covers = Path(racine) / "_covers"
+    covers.mkdir(exist_ok=True)
+    for nom, tid in TITRES_TEST:
+        (jeux / ("%s [%s][v0].nsp" % (nom, tid))).write_bytes(b"\0" * 4096)
+        (covers / ("%s.en.json" % tid)).write_text(json.dumps({
+            "name": nom, "publisher": "Romule", "releaseDate": "20240101",
+            "intro": "A test entry, not a real game."}), encoding="utf-8")
+    # Une configuration presente = `first_run` faux = pas d'assistant par-dessus.
+    (Path(racine) / "_romule-config.json").write_text(
+        json.dumps({"ui_lang": "fr", "auth_mode": "aucun"}), encoding="utf-8")
+
+
+def _demarrer_serveur(etat=None):
+    """Serveur de test sur un decor fixe. `etat` est celui du faux adb.
+
+    Par defaut : celui de l'environnement, donc « aucune » — l'etat de tout
+    nouvel utilisateur, et celui dont la branche d'affichage n'etait jamais
+    exercee. Le laisser lire l'environnement permet de rejouer la suite
+    entiere dans les trois etats et de verifier qu'elle rend le meme verdict.
+    """
+    etat = etat or os.environ.get("ROMULE_FAUX_ADB", "aucune")
+    racine = tempfile.mkdtemp(prefix="ludo-navigateur-")
+    _semer(racine)
     proc = subprocess.Popen(
         [sys.executable, "-m", "romule", "serve"], cwd=str(RACINE),
-        env=dict(os.environ, ROMULE_WEB_PORT=str(PORT_NAV),
-                 ROMULE_NO_BROWSER="1"),
+        env=dict(os.environ, ROMULE_ROOT=racine,
+                 ROMULE_WEB_PORT=str(PORT_NAV), ROMULE_NO_BROWSER="1",
+                 ROMULE_ADB=str(FAUX_ADB.resolve()), ROMULE_FAUX_ADB=etat),
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     url = "http://127.0.0.1:%d/" % PORT_NAV
     for _ in range(90):
@@ -182,6 +227,14 @@ def navigateur():
 
 
 def main(argv):
+    # L'adb de la machine est neutralise pour TOUTE la suite, pas seulement pour
+    # les tests navigateur : chaque test lance un serveur qui herite de
+    # l'environnement, et un appareil branche changeait donc silencieusement le
+    # decor. `setdefault` laisse la main : poser ROMULE_ADB soi-meme permet de
+    # rejouer contre un vrai appareil quand c'est ce qu'on veut.
+    os.environ.setdefault("ROMULE_ADB", str(FAUX_ADB.resolve()))
+    os.environ.setdefault("ROMULE_FAUX_ADB", "aucune")
+
     avec_nav = "--navigateur" in argv or "--tout" in argv
     resultats = [("syntaxe", syntaxe()),
                  ("unitaires", unitaires()),
