@@ -62,7 +62,7 @@ terminates TLS. Reports are assessed against that model.
 
 - **No built-in TLS.** Romule speaks plain HTTP and expects a reverse proxy in
   front of it. Documented in the README and stated at first run.
-- **`script-src 'unsafe-inline'` in the Content-Security-Policy.** 124 inline
+- **`script-src 'unsafe-inline'` in the Content-Security-Policy.** 152 inline
   event handlers depend on it. Removing them is planned; until then, the CSP
   cannot forbid inline scripts without making every button inert.
 - **Network access without a password**, when the operator has explicitly
