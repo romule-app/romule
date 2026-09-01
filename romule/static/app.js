@@ -2311,8 +2311,9 @@ function renderPlateformes(r) {
   }
   const p = r.plateformes || [];
   if (!p.length) {
-    el.innerHTML = '<div class="mono">Aucun jeu trouvé sous <code>' + esc(r.racine || '') +
-      '</code>. Vérifie le dossier des ROMs juste au-dessus.</div>';
+    el.innerHTML = '<div class="mono">' + phrase(
+      'Aucun jeu trouvé sous %s. Vérifie le dossier des ROMs juste au-dessus.',
+      '<code>' + esc(r.racine || '') + '</code>') + '</div>';
     return;
   }
   PLATEFORMES = p;

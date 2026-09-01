@@ -733,5 +733,13 @@
   "Connecter sans câble": "Connect without a cable",
   "Détection de la console...": "Detecting the console…",
   "Wikipédia": "Wikipedia",
-  "Résumé issu de %s, sous licence CC BY-SA.": "Summary from %s, under the CC BY-SA licence."
+  "Résumé issu de %s, sous licence CC BY-SA.": "Summary from %s, under the CC BY-SA licence.",
+  "à vérifier": "to check",
+  "Facultatif. Sans modèle, les notes affichées viennent d'autres appareils et sont marquées d'une astérisque.": "Optional. Without a model, the ratings shown come from other devices and are marked with an asterisk.",
+  "Aucun jeu trouvé sous %s. Vérifie le dossier des ROMs juste au-dessus.": "No game found under %s. Check the ROMs folder just above.",
+  "Créer les dossiers manquants": "Create the missing folders",
+  "— hérité du réglage global": "— inherited from the global setting",
+  "✗ sera créé": "✗ will be created",
+  "Configuration propre à ce jeu.": "Settings specific to this game.",
+  "Ce jeu n'a pas encore de configuration : elle sera créée.": "This game has no settings yet: they will be created."
 }

@@ -3015,7 +3015,12 @@ body.compact .filters{margin-bottom:2px}
   gap:9px;padding:26px 16px 34px;font-family:var(--mono);font-size:11px;
   color:var(--mute);opacity:.7;transition:opacity .2s var(--ease)}
 #pied:hover{opacity:1}
-#pied a{color:var(--mute);text-decoration:underline;text-underline-offset:3px}
+/* Le lien du pied portait l'offre de code source exigee par l'AGPL sur une
+   cible de 13 px de haut — sous le minimum tactile de 44 px, donc difficile a
+   atteindre au doigt. La zone est agrandie par du remplissage vertical, sans
+   deplacer le texte : `align-items:center` du conteneur absorbe la hauteur. */
+#pied a{color:var(--mute);text-decoration:underline;text-underline-offset:3px;
+  display:inline-flex;align-items:center;min-height:44px}
 #pied a:hover{color:var(--amber)}
 .pied-sep{opacity:.4}
 .pied-beta{border:1px solid var(--primary-halo);color:var(--amber);
