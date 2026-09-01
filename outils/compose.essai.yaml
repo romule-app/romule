@@ -1,0 +1,14 @@
+# Surcouche utilisee UNIQUEMENT par `outils/essai-conteneur.py`.
+#
+# Le fichier `docker-compose.yml` livre laisse volontairement l'utilisateur DESIGNER
+# son dossier de jeux depuis l'interface : c'est la seule information qu'un
+# fichier compose ne peut pas connaitre. Un conteneur neuf a donc une
+# bibliotheque vide tant que personne n'a ouvert l'assistant — ce qui est
+# correct, et ce qui rend l'essai automatique aveugle.
+#
+# On fige donc le dossier ici, avec la variable que `docker-compose.yml` documente
+# deja en commentaire pour les deploiements geres.
+services:
+  romule:
+    environment:
+      ROMULE_LIBRARY: /library

@@ -314,6 +314,38 @@ jobs:
               print("::error title=Compose::%s" % e)
           sys.exit(1 if erreurs else 0)
           PY
+          # L'API publique DEPUIS L'HOTE, avec une cle creee dans le
+          # conteneur : c'est le parcours reel de quelqu'un qui branche un
+          # tableau de bord, et il ne passe par aucune des etapes ci-dessus.
+          cle=$(docker compose -p fumee exec -T romule \
+                  python3 -m romule apikey create ci \
+                | grep -o 'rml_[A-Za-z0-9_-]*' | head -1)
+          if [ -z "$cle" ]; then
+            echo "::error::aucune cle d'API creee dans le conteneur"
+            exit 1
+          fi
+          for route in health system stats library platforms job; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' \
+                   -H "X-Api-Key: $cle" \
+                   "http://127.0.0.1:8787/api/v1/$route")
+            if [ "$code" != "200" ]; then
+              echo "::error title=API::/api/v1/$route a repondu $code"
+              exit 1
+            fi
+          done
+          # La promesse de portee, verifiee sur le vrai routage : une cle
+          # confiee a un tableau de bord ne doit pas atteindre les comptes.
+          for interdit in /api/comptes /api/config /; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' \
+                   -H "X-Api-Key: $cle" "http://127.0.0.1:8787$interdit")
+            case "$code" in
+              401|403) ;;
+              *) echo "::error title=Portee::une cle d'API a obtenu $code sur $interdit"
+                 exit 1 ;;
+            esac
+          done
+          echo "API publique : 6 routes servies, 3 chemins correctement refuses."
+
           docker compose -p fumee down -v
 
       - name: Journal du conteneur
