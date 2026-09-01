@@ -88,7 +88,12 @@ jobs:
         with: { python-version: "3.12" }
       - run: pip install --quiet mkdocs==1.6.1 mkdocs-material==9.7.7
       - run: mkdocs build --strict
+      # `enablement: true` : sans cela l'action echoue tant que Pages n'a pas
+      # ete active a la main dans les reglages du depot — ce qui rend le
+      # workflow inutilisable tel quel pour qui duplique le projet. Avec, la
+      # premiere execution l'active elle-meme.
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d  # v6.0.0
+        with: { enablement: true }
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9  # v5.0.0
         with: { path: site/ }
       - id: pages
