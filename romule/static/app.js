@@ -680,7 +680,7 @@ function dialogue({titre, niveau = 'info', message = '', detail = '', options = 
     'autocomplete="' + esc(c.auto || 'off') + '" ' +
     'value="' + esc(c.valeur || '') + '" ' +
     'placeholder="' + esc(c.exemple || '') + '"></label>').join('') + '</div>' : '';
-  el.innerHTML = '<div class="sheet dlg d-' + niveau + '" onclick="event.stopPropagation()">' +
+  el.innerHTML = '<div class="sheet dlg d-' + niveau + '" data-interieur>' +
     '<div class="dhead"><span class="dico">' + (D_ICONE[niveau] || 'ℹ️') + '</span>' +
     '<div><h3>' + esc(titre) + '</h3>' +
     (message ? '<p class="dmsg">' + esc(message) + '</p>' : '') + '</div></div>' + opts + saisies +
@@ -1722,9 +1722,9 @@ function renderPager(total, pages, parPage) {
   }
   const de = PAGE * parPage + 1, a = Math.min(total, (PAGE + 1) * parPage);
   el.innerHTML =
-    '<button class="ghost" ' + (PAGE ? '' : 'disabled') + ' onclick="app.page(-1)">‹ Précédent</button>' +
+    '<button class="ghost" ' + (PAGE ? '' : 'disabled') + ' data-act="page" data-val="-1">‹ Précédent</button>' +
     '<span class="mono">' + de + '–' + a + ' sur ' + total + '</span>' +
-    '<button class="ghost" ' + (PAGE < pages - 1 ? '' : 'disabled') + ' onclick="app.page(1)">Suivant ›</button>';
+    '<button class="ghost" ' + (PAGE < pages - 1 ? '' : 'disabled') + ' data-act="page" data-val="1">Suivant ›</button>';
 }
 
 // La barre d'actions n'apparait qu'une fois des jeux coches, et ne propose que
@@ -1861,9 +1861,9 @@ function openGameHtml(g) {
     acts.push('<button class="go" onclick="app.importerJeu(\'' + jsq(g.key) + '\')">Copier vers le serveur</button>');
   else if (e.aEnvoyer.length)
     acts.push('<button class="go" onclick="app.sendGame(\'' + jsq(g.key) + '\')">Envoyer vers la console</button>');
-  acts.push('<button class="ghost" onclick="app.closeGame()">Fermer</button>');
+  acts.push('<button class="ghost" data-act="closeGame">Fermer</button>');
 
-  return '<div class="sheet"' + attrsTeinte(g) + ' onclick="event.stopPropagation()">' +
+  return '<div class="sheet"' + attrsTeinte(g) + ' data-interieur>' +
     // La jaquette ne dependait que du title ID Switch : tous les jeux des
     // autres plateformes ouvraient donc une fiche sans image, alors meme que
     // leur carte en affichait une. `coverImg` sait chercher par nom — c'est
@@ -2055,8 +2055,8 @@ function renduIntegrite(r) {
   + '<p class="mono">Une empreinte différente à taille ET date identiques signale '
   + 'une corruption silencieuse du disque.</p>'
   + '<div class="bar" style="margin-top:10px">'
-  + '<button class="go" onclick="app.verify(false, 20)">Vérifier 20 Go</button>'
-  + '<button class="ghost" onclick="app.verify(false)">Tout vérifier</button></div>';
+  + '<button class="go" data-act="verify-20">Vérifier 20 Go</button>'
+  + '<button class="ghost" data-act="verify" data-val="false">Tout vérifier</button></div>';
 }
 
 function renduSauvegardes(r) {
@@ -2065,7 +2065,7 @@ function renduSauvegardes(r) {
     + 'Une sauvegarde est prise automatiquement à chaque changement, au plus '
     + 'une par heure.</p>'
     + '<div class="bar" style="margin:10px 0">'
-    + '<button class="go" onclick="app.sauvegarder()">Sauvegarder maintenant</button></div>'
+    + '<button class="go" data-act="sauvegarder">Sauvegarder maintenant</button></div>'
     + (lots.length ? '<ul class="entretien-l">' + lots.map(l =>
         '<li><b>' + esc(l.date || l.lot) + '</b> <span class="mono">' + esc(l.motif || '')
         + ' · ' + nb((l.fichiers || []).length, 'fichier(s)') + '</span>'
@@ -2105,8 +2105,8 @@ function renduTransfert(r) {
   + '<p class="lead"><span class="beta">bêta</span> La reprise repart du dernier '
   + 'fichier confirmé. En cas de doute, abandonner puis renvoyer reste plus sûr.</p>'
   + '<div class="bar" style="margin-top:10px">'
-  + '<button class="go" onclick="app.reprendreTransfert()">Reprendre</button>'
-  + '<button class="ghost" onclick="app.oublierTransfert()">Abandonner</button></div>';
+  + '<button class="go" data-act="reprendreTransfert">Reprendre</button>'
+  + '<button class="ghost" data-act="oublierTransfert">Abandonner</button></div>';
 }
 
 function batterieHtml(b) {
@@ -2164,8 +2164,8 @@ function renderConn(d) {
       // classe `tid`, qui servait a la fois de marqueur et de style.
       '<span class="cvide">Aucune console</span>' +
       '<span class="cfaits">' +
-        '<button class="lien" onclick="app.detect()">Détecter</button><i>·</i>' +
-        '<button class="lien" onclick="app.togglePair()">sans câble</button>' +
+        '<button class="lien" data-act="detect">Détecter</button><i>·</i>' +
+        '<button class="lien" data-act="togglePair">sans câble</button>' +
         (vers ? '<i>·</i>' + esc(vers) : '') +
       '</span>';
     el.title = t('Branche le câble USB, ou connecte la console sans fil.');
@@ -2179,14 +2179,14 @@ function renderBarreConsole(info) {
   if (!el) return;
   const ok = info && info.connected;
   el.innerHTML = ok
-    ? '<button class="ghost" onclick="app.actualiser()">Relire les jeux</button>' +
+    ? '<button class="ghost" data-act="actualiser">Relire les jeux</button>' +
       '<span style="flex:1"></span>' +
-      '<button class="ghost" onclick="app.detect()">Re-détecter</button>' +
+      '<button class="ghost" data-act="detect">Re-détecter</button>' +
       (CONN.kind === 'usb'
-        ? '<button class="ghost" onclick="app.wifiSwitch()">Passer en Wi-Fi</button>'
-        : '<button class="ghost" onclick="app.wifiForget()">Oublier ce lien</button>')
-    : '<button class="go" onclick="app.detect()">Détecter la console</button>' +
-      '<button class="ghost" onclick="app.togglePair()">' +
+        ? '<button class="ghost" data-act="wifiSwitch">Passer en Wi-Fi</button>'
+        : '<button class="ghost" data-act="wifiForget">Oublier ce lien</button>')
+    : '<button class="go" data-act="detect">Détecter la console</button>' +
+      '<button class="ghost" data-act="togglePair">' +
         esc(t('Connecter sans câble')) + '</button>';
 }
 
@@ -2294,9 +2294,9 @@ function renduLudoOnboard() {
     '<div class="onbnote">' + esc(h.etat) + '</div>' +
     h.browser +
     '<div class="bar">' +
-      '<button class="go" onclick="app.ludoValider()">' +
+      '<button class="go" data-act="ludoValider">' +
         esc(t('Utiliser ce dossier')) + '</button>' +
-      '<button class="ghost" onclick="app.ludoAnnulerOnb()">' +
+      '<button class="ghost" data-act="ludoAnnulerOnb">' +
         esc(t('Annuler')) + '</button>' +
     '</div></div>';
 }
@@ -2498,8 +2498,8 @@ function renderPfCommun(sys) {
       '<button class="ghost" onclick="app.allerSysteme(\'' + jsq(sys.key) + '\')">' +
         'Voir ses jeux</button>' +
       (sys.engine === 'switch'
-        ? '<button class="ghost" onclick="app.mkTree()">Créer GAMES / UPDATE / DLC</button>' +
-          '<button class="ghost" onclick="app.organize()">Ranger par type</button>' : '') +
+        ? '<button class="ghost" data-act="mkTree">Créer GAMES / UPDATE / DLC</button>' +
+          '<button class="ghost" data-act="organize">Ranger par type</button>' : '') +
     '</div>' +
     (sys.engine === 'switch'
       ? '<p class="erdit petit">La Switch est la seule plateforme à séparer jeux, mises à '
@@ -2534,7 +2534,7 @@ function renderTree() {
   el.innerHTML = '<div class="treebox">' +
     '<div class="tlbl">Aperçu de l\'arborescence sous <b>' + esc(dir) + '</b> :</div>' +
     '<div class="troot">📂 ' + esc(dir.split('/').filter(Boolean).pop() || dir) + '/</div>' + rows +
-    (missing ? '<button class="go" style="margin-top:9px" onclick="app.mkTree()">Créer les dossiers manquants</button>' : '') +
+    (missing ? '<button class="go" style="margin-top:9px" data-act="mkTree">Créer les dossiers manquants</button>' : '') +
     '</div>';
 }
 // statut d'un jeu vis-a-vis de la console : ['ok','sur la console'] | ['upd','en partie'] | ['conv','nouveau'] | null (console non lue)
@@ -3487,7 +3487,7 @@ function ouvrirChoixPlateforme(items) {
       + '<select data-chemin="' + esc(it.chemin) + '">'
       + '<option value="">— laisser dans le dépôt —</option>' + opts + '</select></div>';
   };
-  el.innerHTML = '<div class="sheet dlg d-info" onclick="event.stopPropagation()">'
+  el.innerHTML = '<div class="sheet dlg d-info" data-interieur>'
     + '<div class="dhead"><span class="dico">📦</span><div>'
     + '<h3>Sur quelle plateforme ?</h3>'
     + '<p class="dmsg">' + phrase('%d fichier(s) portent une extension que ', items.length)
@@ -3628,7 +3628,7 @@ function renderChoixEmulateur() {
   // profil de sa mention « non verifie ». La phrase est donc assemblee DEJA
   // traduite, sinon le parcours du DOM cherche « Eden — not verified » comme
   // une seule cle, qu'aucun catalogue ne contiendra jamais.
-  el.innerHTML = '<select id="selemulateur" onchange="app.choisirEmulateur(this.value)">' +
+  el.innerHTML = '<select id="selemulateur" data-act-change="choisirEmulateur">' +
     profils.map(x => {
       const nom = t(x.nom);
       return '<option value="' + esc(x.cle) + '"' +
@@ -4782,12 +4782,12 @@ const app = {
     const el = $('dialog');
     const titre = nomJeu(representantGroupe(membres).g);
     el.innerHTML =
-      '<div class="sheet dlg d-info" onclick="event.stopPropagation()">' +
+      '<div class="sheet dlg d-info" data-interieur>' +
         '<div class="dlghead"><h3>' + esc(titre) + '</h3>' +
           '<span class="mono">' + membres.length + ' versions</span></div>' +
         '<div class="versions">' + membres.map(x => ligneVersion(x)).join('') +
         '</div>' +
-        '<div class="acts"><button class="ghost" onclick="app.closeDialog()">' +
+        '<div class="acts"><button class="ghost" data-act="closeDialog">' +
           'Fermer</button></div>' +
       '</div>';
     el.classList.remove('ferme');
@@ -5528,12 +5528,12 @@ function onbEtapes(h) {
           (h.ludotheque_imposee
             ? '<p class="onbnote">Il est fixé par le déploiement (variable ' +
               'ROMULE_LIBRARY) : pour en changer, modifie ton fichier compose.</p>'
-            : '<button class="ghost" onclick="app.onbChoisirDossier()">' +
+            : '<button class="ghost" data-act="onbChoisirDossier">' +
               'Choisir un autre dossier…</button>') +
           '<p class="onbnote">Le dossier reste à toi : Romule n\'y écrit que ses ' +
           'propres fichiers, tous préfixés d\'un tiret bas. Sa configuration et ' +
           'tes comptes, eux, vivent ailleurs et ne suivent pas ce dossier.</p>' +
-          '<button class="go" onclick="app.onbScanner()"' + (ONB.occupe ? ' disabled' : '') +
+          '<button class="go" data-act="onbScanner"' + (ONB.occupe ? ' disabled' : '') +
           '>' + (ONB.occupe ? 'Lecture…' : 'Analyser le dossier') + '</button>' +
           (r ? renduScanOnboard(r) : '');
       },
@@ -5555,7 +5555,7 @@ function onbEtapes(h) {
           '<label>Mot de passe<input type="password" id="onb-mdp" ' +
             'autocomplete="new-password" placeholder="12 caractères minimum"></label>' +
           '</div>' +
-          '<button class="go" onclick="app.onbCreerCompte()">Créer le compte</button>' +
+          '<button class="go" data-act="onbCreerCompte">Créer le compte</button>' +
           '<p class="onbnote" id="onb-mdp-msg"></p>',
       valide: () => !c.expose || c.comptes > 0,
       manque: 'Crée un compte : sans lui, n\'importe quel appareil du réseau peut tout faire.',
@@ -5576,7 +5576,7 @@ function onbEtapes(h) {
         '<label>IGDB — Client Secret' +
           '<input type="password" id="onb-igdb-secret" autocomplete="off"></label>' +
         '</div>' +
-        '<button class="go" onclick="app.onbTesterFiches()">Enregistrer et tester</button>' +
+        '<button class="go" data-act="onbTesterFiches">Enregistrer et tester</button>' +
         '<p class="onbnote" id="onb-fiches-msg">' + esc(ONB.testJaquettes) + '</p>',
     },
     {
@@ -5587,7 +5587,7 @@ function onbEtapes(h) {
             .replace('%s', c.device === 'wifi' ? 'Wi-Fi' : 'USB') + '</p>' +
           '<p class="onbnote">Le dossier de jeux repéré sur la console :</p>' +
           '<div class="onbchemin" data-i18n-skip>' + esc(c.device_dir || '') + '</div>' +
-          '<button class="ghost" onclick="app.onbScannerConsole()"' +
+          '<button class="ghost" data-act="onbScannerConsole"' +
             (ONB.occupe ? ' disabled' : '') + '>' +
             (ONB.occupe ? 'Lecture…' : 'Recenser les jeux de la console') + '</button>' +
           (ONB.consoleScan ? renduScanConsole(ONB.consoleScan) : '')
@@ -5598,7 +5598,7 @@ function onbEtapes(h) {
              'machine. Pour l\'ajouter :</p>' +
              '<div class="onbchemin" data-i18n-skip>' + esc(c.remede_adb || '') +
              '</div>') +
-          '<button class="ghost" onclick="app.onbChercherConsole()"' +
+          '<button class="ghost" data-act="onbChercherConsole"' +
             (c.adb ? '' : ' disabled') + '>Chercher une console</button>',
     },
     {
@@ -5683,19 +5683,19 @@ function renderOnboard() {
     '<div class="onbcorps" data-sens="' + ONB.sens + '">' + e.corps() + '</div>' +
     (bloque ? '<p class="onbmanque">' + esc(e.manque || '') + '</p>' : '') +
     '<div class="onbpied">' +
-      '<button class="ghost" onclick="app.onbPrec()"' +
+      '<button class="ghost" data-act="onbPrec"' +
         (ONB.i === 0 ? ' disabled' : '') + '>Précédent</button>' +
       '<div class="onbpoints">' + etapes.map((x, i) =>
         '<button class="onbpoint' + (i === ONB.i ? ' on' : '') +
           (i < ONB.i ? ' fait' : '') + '" title="' + esc(x.titre) +
-          '" aria-label="' + esc(x.titre) + '" onclick="app.onbAller(' + i + ')">' +
+          '" aria-label="' + esc(x.titre) + '" data-act="onbAller" data-arg=" + i + ">' +
         '</button>').join('') + '</div>' +
       (dernier
-        ? '<button class="go" onclick="app.closeOnboard()">Terminer</button>'
-        : '<button class="go" onclick="app.onbSuiv()"' + (bloque ? ' disabled' : '') +
+        ? '<button class="go" data-act="closeOnboard">Terminer</button>'
+        : '<button class="go" data-act="onbSuiv"' + (bloque ? ' disabled' : '') +
           '>Suivant</button>') +
     '</div>' +
-    '<button class="onbpasser" onclick="app.closeOnboard()">Passer l\'assistant</button>' +
+    '<button class="onbpasser" data-act="closeOnboard">Passer l\'assistant</button>' +
     '</div>';
   traduireDOM(el);
   el.classList.add('open');
@@ -5740,14 +5740,14 @@ function renderA2HS() {
     ? 'appuie sur <b>Partager</b> puis <b>Sur l\'écran d\'accueil</b>'
     : 'ouvre le menu <b>⋮</b> du navigateur puis <b>Ajouter à l\'écran d\'accueil</b>';
   const action = INSTALL_EVT
-    ? '<button class="go" onclick="app.installApp()">Installer l\'application</button>'
+    ? '<button class="go" data-act="installApp">Installer l\'application</button>'
     : '<span class="mono">' + how + '</span>';
 
   el.style.display = '';
   el.innerHTML = '<span class="a2icon">📲</span>' +
     '<span class="grow"><b>Ajoute la ludothèque à ton écran d\'accueil</b>' +
     '<div class="mono">Elle s\'ouvrira en plein écran, comme une vraie application.</div></span>' +
-    action + '<button class="ghost" onclick="app.dismissA2HS()">Plus tard</button>';
+    action + '<button class="ghost" data-act="dismissA2HS">Plus tard</button>';
 }
 
 // Chrome propose parfois une vraie installation : on l'utilise si elle arrive.
@@ -6133,18 +6133,21 @@ const ACTES = new Set([
   'actionFab', 'actualiser', 'actualiserFiches', 'ajouterCompte',
   'ajouterPlateforme', 'analyseGlobale', 'auditer', 'backupSaves',
   'basculerSuivi', 'basculerTaches', 'browse', 'cancelJob',
-  'choisirFichiers', 'classerImports', 'clearCovers', 'clearFav',
-  'closeOnboard', 'convertAll', 'copierRetour', 'deployPick',
-  'detect', 'doImport', 'ecApply', 'ecLoad', 'ecSaveProfile', 'erSync',
-  'forcerFiches', 'journalClear', 'journalCopy', 'loadSaves', 'loadTrash',
-  'ludoFermer', 'ludoNouveau', 'ludoOuvrir', 'ludoValider', 'openOnConsole',
-  'organize', 'page', 'purgeTrash', 'reloadImport',
-  'renderJournal', 'renderLib', 'reorganizeLocal', 'setLang',
-  'setMouvement', 'setParPage', 'setSens', 'setSystem', 'setTaille',
-  'setTheme', 'setTri', 'showOnboard', 'testerAuth', 'testerIgdb',
-  'toggleDrop', 'toggleJournal', 'togglePair', 'togglePause', 'useDir',
-  'verify', 'voirEntretien', 'wifiDiscover', 'wifiPair', 'wizCheck',
-  'wizStep',
+  'choisirEmulateur', 'choisirFichiers', 'classerImports', 'clearCovers',
+  'clearFav', 'closeOnboard', 'convertAll', 'copierRetour', 'deployPick',
+  'detect', 'dismissA2HS', 'doImport', 'ecApply', 'ecLoad', 'ecSaveProfile',
+  'erSync', 'forcerFiches', 'installApp', 'journalClear', 'journalCopy',
+  'loadSaves', 'loadTrash', 'ludoAnnulerOnb', 'ludoFermer', 'ludoNouveau',
+  'ludoOuvrir', 'ludoValider', 'mkTree', 'onbAller', 'onbChercherConsole',
+  'onbChoisirDossier', 'onbCreerCompte', 'onbPrec', 'onbScanner',
+  'onbScannerConsole', 'onbSuiv', 'onbTesterFiches', 'openOnConsole',
+  'organize', 'oublierTransfert', 'page', 'purgeTrash', 'reloadImport',
+  'renderJournal', 'renderLib', 'reorganizeLocal', 'reprendreTransfert',
+  'sauvegarder', 'setMouvement', 'setParPage', 'setSens', 'setSystem',
+  'setTaille', 'setTheme', 'setTri', 'showOnboard', 'testerAuth',
+  'testerIgdb', 'toggleDrop', 'toggleJournal', 'togglePair', 'togglePause',
+  'useDir', 'verify', 'voirEntretien', 'wifiDiscover', 'wifiForget',
+  'wifiPair', 'wifiSwitch', 'wizCheck', 'wizStep',
 ]);
 
 // Les cas qui ne se ramenent pas a « une methode, un argument ». Ceux-ci ont
@@ -6156,6 +6159,9 @@ const ACTES_SPECIAUX = {
   'closeGame': (el, ev) => app.closeGame(ev),
   'toggleFavPop': (el, ev) => app.toggleFavPop(ev),
   'toggleTrashList': (el, ev) => app.toggleTrashList(ev),
+  // Deux arguments : `data-val` n'en porte qu'un, et lui en faire porter une
+  // liste rendrait ambigu le jour ou une action prendra un tableau.
+  'verify-20': () => app.verify(false, 20),
   // Fermer le panneau des taches ET ouvrir le depot : deux appels, un geste.
   'taches-vers-depot': () => { app.basculerTaches(false); app.toggleDrop(true); },
 };

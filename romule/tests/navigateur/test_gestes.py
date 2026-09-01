@@ -229,6 +229,28 @@ def main():
         t("aucun element cliquable inerte", not inertes,
           "%d : %s" % (len(inertes), inertes[:4]))
 
+        print("   -- le fond de fenetre ferme, l'interieur non --")
+        # Quatre panneaux portaient `onclick="event.stopPropagation()"` pour
+        # empecher le clic d'atteindre le fond. La delegation ecoute sur
+        # `document` : arreter la propagation la n'aurait plus aucun effet.
+        # On l'a donc retire — en verifiant que le comportement tient, parce
+        # qu'il tient pour une AUTRE raison : `closeGame` et `closeDialog`
+        # comparent `e.target` a l'element precis du fond. Le test le prouve,
+        # au lieu de faire confiance a la lecture.
+        n.js("app.tab('jeux'); (function(){const c=document.querySelector("
+             "'#lib .gcard'); if (c) app.openGame(c.dataset.key);})()")
+        time.sleep(1.2)
+        ouvert = n.js("document.getElementById('modal').classList.contains('open')")
+        t("la fiche s'ouvre", ouvert)
+        n.js("document.querySelector('#modal [data-interieur]').click()")
+        time.sleep(0.5)
+        t("un clic DANS la fiche ne la ferme pas",
+          n.js("document.getElementById('modal').classList.contains('open')"))
+        n.js("document.getElementById('modal').click()")
+        time.sleep(0.5)
+        t("un clic sur le FOND la ferme",
+          not n.js("document.getElementById('modal').classList.contains('open')"))
+
         print("   -- liste blanche des actions --")
         # `app.ACTES` n'existe pas encore au debut de la phase 4 : tant qu'il
         # n'y a aucun `data-act`, il n'y a rien a verifier, et exiger la liste
