@@ -476,7 +476,13 @@ select{cursor:pointer}
 /* reglage visible mais sans effet avec l'option courante : on l'estompe et on
    explique pourquoi, plutot que de le faire disparaitre */
 .setrow.inactive .setlab b,.setrow.inactive .setctl{opacity:.5}
-.setrow.inactive .setlab span::after{content:" — " attr(data-note);color:var(--amber);opacity:.85}
+/* La note etait engendree par `content: attr(data-note)`. Un texte produit par
+   le CSS n'est jamais un noeud du document : ni l'observateur de traduction, ni
+   le test qui cherche du francais a l'ecran, ni aucun outil ne peut le voir. Il
+   ne pouvait donc pas etre traduit, et personne ne pouvait s'en apercevoir.
+   C'est maintenant un vrai element, `.setnote`, rempli par `textContent`. */
+.setrow.inactive .setlab .setnote{color:var(--amber);opacity:.85}
+.setnote:empty{display:none}
 /* Plusieurs controles pour UN reglage (deux identifiants, un bouton de test).
    `.setctl` est une rangee : sans ce variant, les champs se partageaient la
    largeur et le premier tombait a 24 px. */
