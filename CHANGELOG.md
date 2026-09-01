@@ -8,7 +8,37 @@ and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 Romule is at `0.x`: the HTTP API is **not** stable yet, and a minor release may
 change it. Breaking changes are always listed under **Changed** with the reason.
 
-## [Unreleased]
+## [0.2.0] — 2026-09-01
+
+### Added
+
+- **A public HTTP API — `/api/v1`, fourteen routes, versioned and frozen.**
+  Read the library, search it, watch the running task, start a scan, a
+  conversion or a push. Within a major version no route disappears and no
+  existing field changes name or type; new fields may appear.
+  [Documented here](https://romule-app.github.io/romule/api/), with an OpenAPI
+  3.1 specification served at `/api/v1/openapi.json` and checked in CI against
+  the routes actually served.
+  Romule's ~97 other `/api/...` routes exist for its own interface, follow it,
+  and are **not** covered by that promise.
+- **API keys.** Named, revocable one at a time, with a last-used date.
+  Created from Settings → Access or with `romule apikey create <name>` —
+  which is what makes the API usable inside a container, where there is no
+  browser. Stored as a SHA-256 hash, so a leak of the state file is harmless
+  and the key can never be shown again.
+- **A key reaches `/api/v1/` and nothing else.** Presenting a key does not
+  *grant* rights, it *selects a regime*: a request from `127.0.0.1` normally
+  gets full local access, but the moment it carries `X-Api-Key` the key decides,
+  and the key is scoped. A key can never widen an access — at most it narrows
+  one.
+- **`outils/essai-conteneur.py`** — a replayable full-scale container trial:
+  build, health probe, token, the API from outside the container, key scope,
+  restart persistence, revocation, audit. The CI compose step now runs the API
+  half of it too, so the scope promise is verified against the shipped image
+  and not only against `python3 -m romule`.
+- The audit counts active API keys and flags those that have never been used.
+  A key does not expire and reminds nobody it exists; the security report is
+  the one place it gets re-read.
 
 ### Security
 
@@ -352,5 +382,6 @@ what the release actually contains rather than how it was built.
   proxy that terminates HTTPS.
 - Emulator profiles other than Eden are untested on real hardware.
 
-[Unreleased]: https://github.com/romule-app/romule/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/romule-app/romule/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/romule-app/romule/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/romule-app/romule/releases/tag/v0.1.0
