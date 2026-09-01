@@ -69,6 +69,13 @@ RESTE_FR = r"""
   const ACCENTS = /[àâçéèêëîïôûùüÿœÀÂÇÉÈÊËÎÏÔÛÙÜŸŒ]/;
   // Le francais ne se trahit pas que par ses accents. Deux mots-outils
   // suffisent, comme dans l'extracteur statique.
+  // Un MOT SEUL a l'ecran echappait aux deux regles ci-dessous : « aucune »
+  // s'affichait en francais dans l'interface anglaise, et ni l'accent ni le
+  // compte de mots-outils ne pouvaient le trahir. Meme liste que le controle
+  // statique, meme raison.
+  const SEULS = new Set(('aucun aucune aucuns aucunes inconnu inconnue inconnus '
+    + 'inconnues jamais toujours plusieurs quelques autre autres chacun chacune '
+    + 'terminee terminees echouee echouees introuvable introuvables').split(' '));
   const OUTILS = new Set(('le la les un une des du de au aux et ou en dans sur '
     + 'sous pour par avec sans vers est sont ce cette ces son sa ses ton ta '
     + 'aucun aucune rien tout toute tous chaque plus deja encore jamais que '
@@ -92,6 +99,10 @@ RESTE_FR = r"""
   function francais(s) {
     if (ACCENTS.test(s)) return true;
     const mots = (s.toLowerCase().match(/[a-zà-ÿ']{2,}/g) || []);
+    // Un seul mot, mais un mot qui ne peut pas etre autre chose que du
+    // francais. A l'ecran il n'y a pas de contexte de comparaison a exclure :
+    // ce qui est affiche est affiche.
+    if (mots.length === 1 && SEULS.has(mots[0])) return true;
     return mots.filter(m => OUTILS.has(m)).length >= 2;
   }
   const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);

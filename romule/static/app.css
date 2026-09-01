@@ -202,6 +202,9 @@ select{cursor:pointer}
   overflow:hidden}
 .sheet .top{display:flex;gap:16px;padding:18px;background:var(--panel2);border-bottom:1px solid var(--rule)}
 .sheet .cover{width:104px;aspect-ratio:3/4;border-radius:9px;object-fit:cover;background:var(--creux);flex-shrink:0}
+/* Une jaquette absente ou en cours de reessai : on garde la place et le
+   fond, jamais le rectangle brise du navigateur. */
+img.vide{visibility:hidden}
 .sheet h3{margin:0 0 6px;font-size:17px}
 .sheet .sub2{font-family:var(--mono);font-size:11px;color:var(--mute)}
 .sheet .status{margin-top:9px;display:flex;flex-direction:column;gap:5px}

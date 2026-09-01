@@ -66,6 +66,23 @@ NON_PROSE = re.compile(
     r"^\s*[.#/]|://|^[a-z0-9_-]+$|^%[sd]$|^[-+*/=<>|&,;:()\[\]{}\s]+$"
     # `attribut="valeur"` : du balisage, pas une phrase.
     r'|[a-z-]+="')
+# Un MOT SEUL en minuscules est rejete par NON_PROSE, parce que c'est presque
+# toujours un identifiant ou une valeur de reglage. Presque : « aucune » et
+# « inconnue » s'affichaient dans la fiche d'un jeu, en francais, dans une
+# interface anglaise — et ni ce controle ni le test navigateur ne pouvaient les
+# voir, l'un les jetant comme identifiants, l'autre exigeant un accent ou deux
+# mots-outils.
+#
+# Cette liste rouvre la porte pour les mots dont l'emploi comme identifiant est
+# rare et l'emploi comme texte certain. Elle produira quelques faux positifs —
+# un mot francais EST parfois une valeur de reglage — et c'est le bon sens du
+# compromis : un faux positif se voit et se leve avec `i18n:ok` et sa raison,
+# un oubli ne se voit pas du tout.
+SEULS = set((
+    "aucun aucune aucuns aucunes inconnu inconnue inconnus inconnues "
+    "jamais toujours plusieurs quelques autre autres chacun chacune "
+    "terminee terminees echouee echouees introuvable introuvables"
+).split())
 BALISE = re.compile(r"<[^>]*>")
 MOT = re.compile(r"[a-zA-ZÀ-ÿ']{2,}")
 
@@ -295,11 +312,21 @@ def vocabulaire(catalogue):
     return mots
 
 
-def candidat(texte, vocab=frozenset()):
+# Une ligne qui COMPARE ne montre rien : `dataset.mvt === 'aucun'` teste une
+# valeur de reglage, `i.type === 'ARCHIVE' ? 'INCONNU' : …` choisit un suffixe
+# de classe CSS. C'est le contexte qui distingue une valeur d'un libelle, et
+# c'est la seule facon d'ouvrir la porte aux mots seuls sans noyer le rapport.
+COMPARAISON = re.compile(r"===|!==|\bcase\s")
+
+
+def candidat(texte, vocab=frozenset(), ligne_brute=""):
     """Ce texte ressemble-t-il a une phrase d'interface en francais ?"""
     t = _plat(texte)
     if not (4 <= len(t) <= 220):
         return False
+    # Avant NON_PROSE : c'est lui qui jetait ces mots-la.
+    if t.strip().lower() in SEULS:
+        return not COMPARAISON.search(ligne_brute)
     if NON_PROSE.search(t):
         return False
     if ACCENTS.search(t):
@@ -331,7 +358,7 @@ def manquantes(source_js=None, source_html=None, catalogue=None):
         if MARQUE in brut:
             continue
         for bout in morceaux_de_texte(texte):
-            if candidat(bout, vocab) and not couvert(bout, plates, gabarits):
+            if candidat(bout, vocab, brut) and not couvert(bout, plates, gabarits):
                 out.append(("app.js", ligne, _plat(bout)))
 
     html = source_html if source_html is not None else HTML.read_text(encoding="utf-8")
@@ -342,7 +369,7 @@ def manquantes(source_js=None, source_html=None, catalogue=None):
         brut = lignes_html[ligne - 1] if ligne - 1 < len(lignes_html) else ""
         if MARQUE in brut:
             continue
-        if candidat(texte, vocab) and not couvert(texte, plates, gabarits):
+        if candidat(texte, vocab, brut) and not couvert(texte, plates, gabarits):
             out.append(("index.html", ligne, _plat(texte)))
     return out
 
@@ -428,6 +455,25 @@ def autotest():
     ]
     for nom, html, attendu in html_cas:
         vu = bool(manquantes(source_js="", source_html=html, catalogue=cat))
+        t(nom, vu == attendu, "detecte=%s" % vu)
+
+    # Le mot SEUL : la classe qui a laisse « aucune » s'afficher en francais
+    # dans une interface anglaise. NON_PROSE le jetait comme identifiant, et
+    # les deux heuristiques exigeaient un accent ou deux mots-outils.
+    seuls_cas = [
+        ("un mot francais seul, affiche -> detecte",
+         "el.textContent = 'aucune';", True),
+        ("le meme dans une comparaison -> ignore",
+         "if (d.mvt === 'aucun') muter();", False),
+        ("le meme dans un ternaire de valeur -> ignore",
+         "cls = i.type === 'ARCHIVE' ? 'INCONNU' : i.type;", False),
+        ("un identifiant qui n'est pas un mot francais -> ignore",
+         "el.className = 'gcard';", False),
+        ("un mot francais seul en gabarit HTML -> detecte",
+         "h = '<b>' + 'introuvable' + '</b>';", True),
+    ]
+    for nom, js, attendu in seuls_cas:
+        vu = bool(manquantes(source_js=js, source_html="", catalogue=cat))
         t(nom, vu == attendu, "detecte=%s" % vu)
 
     print("  %d controles OK, %d echec(s)" % (ok, ko))
