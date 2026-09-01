@@ -31,7 +31,12 @@ No install step, no virtualenv, no build. Python 3.10 or newer.
 python3 lancer_tests.py --navigateur   # all five suites
 python3 outils/verifier-fuite.py       # leak check
 python3 -m romule.audit                # 0 grave, 0 alerte expected
+uvx ruff check romule outils lancer_tests.py   # exactly what CI runs
 ```
+
+`ruff` is a development tool, not a runtime dependency — running it through
+`uvx` (or `pipx run ruff`) keeps it out of the environment. CI runs the same
+command and it blocks, so running it locally saves a round trip.
 
 The browser suite drives a real headless Chrome and catches what reading CSS
 cannot: overflow, controls covered by other controls, untranslated strings.

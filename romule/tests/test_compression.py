@@ -20,7 +20,7 @@ recompressees, et l'ETag doit distinguer les deux representations — sans quoi
 un client qui cesse d'accepter le gzip recevrait un 304 pour un corps qu'il n'a
 jamais eu sous cette forme.
 """
-import gzip, json, os, socket, subprocess, sys, tempfile, time
+import gzip, os, socket, subprocess, sys, tempfile, time
 import urllib.error, urllib.request
 from pathlib import Path
 
