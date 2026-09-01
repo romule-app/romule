@@ -44,7 +44,7 @@
       <!-- Ouvrir l'interface sur l'ecran de la console : un geste qu'on fait
            depuis n'importe quel ecran, pas un reglage. -->
       <button class="ghost surconsole" id="installwrap" style="display:none"
-              onclick="app.openOnConsole()" title="" aria-label="Ouvrir sur la console">
+              data-act="openOnConsole" title="" aria-label="Ouvrir sur la console">
         <span class="hicon">📱</span>
       </button>
       <span id="installlead" hidden></span>
@@ -73,13 +73,13 @@
   <div class="panel active" id="panel-jeux">
 
     <div class="libbar">
-      <select id="sysel" onchange="app.setSystem(this.value)" title="Console / système"></select>
-      <input type="text" id="filter" class="search" placeholder="Rechercher un jeu..." data-i18n-ph="lib.search" oninput="app.renderLib()">
+      <select id="sysel" data-act-change="setSystem" title="Console / système"></select>
+      <input type="text" id="filter" class="search" placeholder="Rechercher un jeu..." data-i18n-ph="lib.search" data-act-input="renderLib">
       <span style="flex:1"></span>
-      <button class="go" id="bulkconv" style="display:none" onclick="app.convertAll()"></button>
-      <button class="ghost" onclick="app.actualiser()"
+      <button class="go" id="bulkconv" style="display:none" data-act="convertAll"></button>
+      <button class="ghost" data-act="actualiser"
               title="Relire le serveur et la console">Actualiser</button>
-      <button class="ghost" onclick="app.actualiserFiches()"
+      <button class="ghost" data-act="actualiserFiches"
               title="Chercher les titres, résumés et jaquettes manquants, toutes plateformes">Fiches manquantes</button>
     </div>
 
@@ -93,14 +93,14 @@
     </div>
 
     <div class="toolbar" id="toolbar">
-      <label class="tlbl">Trier par <select id="tri" onchange="app.setTri(this.value)"></select></label>
-      <button class="szbtn sensbtn" id="sens" onclick="app.setSens()" title="Inverser l'ordre">↑</button>
+      <label class="tlbl">Trier par <select id="tri" data-act-change="setTri"></select></label>
+      <button class="szbtn sensbtn" id="sens" data-act="setSens" title="Inverser l'ordre">↑</button>
 
       <div class="favwrap">
-        <button class="ghost" id="favbtn" onclick="app.toggleFavPop(event)">Plus de filtres</button>
+        <button class="ghost" id="favbtn" data-act="toggleFavPop">Plus de filtres</button>
         <div class="favpop" id="favpop">
           <div class="favhead">Affiner la liste
-            <button class="ghost" onclick="app.clearFav()">Tout enlever</button></div>
+            <button class="ghost" data-act="clearFav">Tout enlever</button></div>
           <div id="favlist"></div>
         </div>
       </div>
@@ -108,19 +108,19 @@
       <span style="flex:1"></span>
       <!-- Densite d'affichage : icones de grille, convention partagee par les
            gestionnaires de fichiers et les bibliothèques de jeux. -->
-      <label class="tlbl">Afficher <select id="parpage" onchange="app.setParPage(this.value)"></select></label>
+      <label class="tlbl">Afficher <select id="parpage" data-act-change="setParPage"></select></label>
       <div class="sizes" id="tailles" role="group" aria-label="Taille des vignettes">
-        <button class="szbtn" data-sz="compact" onclick="app.setTaille('compact')"
+        <button class="szbtn" data-sz="compact" data-act="setTaille" data-arg="compact"
                 title="Affichage dense" aria-label="Affichage dense">
           <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
             <g fill="currentColor"><rect x="1" y="1" width="3.4" height="3.4" rx=".7"/><rect x="6.3" y="1" width="3.4" height="3.4" rx=".7"/><rect x="11.6" y="1" width="3.4" height="3.4" rx=".7"/><rect x="1" y="6.3" width="3.4" height="3.4" rx=".7"/><rect x="6.3" y="6.3" width="3.4" height="3.4" rx=".7"/><rect x="11.6" y="6.3" width="3.4" height="3.4" rx=".7"/><rect x="1" y="11.6" width="3.4" height="3.4" rx=".7"/><rect x="6.3" y="11.6" width="3.4" height="3.4" rx=".7"/><rect x="11.6" y="11.6" width="3.4" height="3.4" rx=".7"/></g>
           </svg></button>
-        <button class="szbtn on" data-sz="moyen" onclick="app.setTaille('moyen')"
+        <button class="szbtn on" data-sz="moyen" data-act="setTaille" data-arg="moyen"
                 title="Affichage moyen" aria-label="Affichage moyen">
           <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
             <g fill="currentColor"><rect x="1" y="1" width="6.2" height="6.2" rx="1"/><rect x="8.8" y="1" width="6.2" height="6.2" rx="1"/><rect x="1" y="8.8" width="6.2" height="6.2" rx="1"/><rect x="8.8" y="8.8" width="6.2" height="6.2" rx="1"/></g>
           </svg></button>
-        <button class="szbtn" data-sz="grand" onclick="app.setTaille('grand')"
+        <button class="szbtn" data-sz="grand" data-act="setTaille" data-arg="grand"
                 title="Grandes vignettes" aria-label="Grandes vignettes">
           <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
             <rect x="1" y="1" width="14" height="14" rx="1.6" fill="currentColor"/>
@@ -151,14 +151,14 @@
     <div class="actionbar" id="actionbar">
       <span class="grow" id="deploysum"></span>
       <span class="acts" id="actions"></span>
-      <button class="ghost" id="touscocher" onclick="app.deployPick(1)">Tout cocher</button>
-      <button class="ghost" onclick="app.deployPick(0)">Tout décocher</button>
+      <button class="ghost" id="touscocher" data-act="deployPick" data-val="1">Tout cocher</button>
+      <button class="ghost" data-act="deployPick" data-val="0">Tout décocher</button>
     </div>
 
     <!-- Ajout de jeux : toujours a portee, jamais dans le chemin. Le bouton
          sert aussi de temoin d'activite — anneau de progression tout autour,
          et il s'allonge pour dire ce qui tourne et pour combien de temps. -->
-    <button class="fab" id="fab" onclick="app.actionFab()"
+    <button class="fab" id="fab" data-act="actionFab"
             title="Ajouter des jeux" aria-label="Ajouter des jeux">
       <svg class="fabring" id="fabring" aria-hidden="true" focusable="false">
         <rect class="fabpiste" id="fabpiste" pathLength="100"></rect>
@@ -180,7 +180,7 @@
          journal garde son role : l'historique de ce qui S'EST passe. -->
     <div class="tachewrap" id="tachewrap" role="status" aria-live="polite">
       <div class="drophead"><b>En cours</b>
-        <button class="ghost" onclick="app.basculerTaches(false)">Fermer</button></div>
+        <button class="ghost" data-act="basculerTaches" data-val="false">Fermer</button></div>
       <div class="tache" id="tache">
         <div class="tache-tete">
           <span class="tache-nom" id="tachelbl">Tâche en cours</span>
@@ -193,23 +193,23 @@
         </div>
         <div class="tache-detail" id="tachedetail"></div>
         <div class="bar" style="margin-top:12px">
-          <button class="ghost" id="pausebtn" onclick="app.togglePause()">Pause</button>
-          <button class="ghost" id="cancelbtn" onclick="app.cancelJob()">Arrêter</button>
+          <button class="ghost" id="pausebtn" data-act="togglePause">Pause</button>
+          <button class="ghost" id="cancelbtn" data-act="cancelJob">Arrêter</button>
           <span style="flex:1"></span>
-          <button class="ghost" onclick="app.toggleJournal()">Voir le journal</button>
+          <button class="ghost" data-act="toggleJournal">Voir le journal</button>
         </div>
       </div>
       <div class="tache-vide" id="tachevide">
         <p class="lead" style="margin:0">Rien en cours.</p>
       </div>
       <div class="bar" style="margin-top:12px">
-        <button class="go" onclick="app.basculerTaches(false);app.toggleDrop(true)">Ajouter des jeux</button>
+        <button class="go" data-act="taches-vers-depot">Ajouter des jeux</button>
       </div>
     </div>
 
     <div class="dropwrap" id="dropwrap">
       <div class="drophead"><b>Dépôt</b>
-        <button class="ghost" onclick="app.toggleDrop(false)">Fermer</button></div>
+        <button class="ghost" data-act="toggleDrop" data-val="false">Fermer</button></div>
       <!-- Le rectangle en pointilles faisait doublon : toute la fenetre accepte
            deja les fichiers. Il ne reste que ce qu'il apportait vraiment — un
            bouton pour ceux qui preferent choisir dans le Finder. -->
@@ -217,15 +217,15 @@
            trois noeuds de texte, et la traduction ne peut plus la reconnaitre. -->
       <p class="lead" style="margin:0 0 10px">Dépose tes fichiers n'importe où sur la page, ou choisis-les :</p>
       <div class="bar" style="margin-bottom:10px">
-        <button class="ghost" onclick="app.choisirFichiers()">Choisir des fichiers…</button>
-        <button class="ghost" id="btnclasser" hidden onclick="app.classerImports()">À classer</button>
+        <button class="ghost" data-act="choisirFichiers">Choisir des fichiers…</button>
+        <button class="ghost" id="btnclasser" hidden data-act="classerImports">À classer</button>
       </div>
       <div class="drop" id="drop"></div>
       <div class="bar" style="margin-top:12px">
-        <button class="go" id="importbtn" onclick="app.doImport()">Importer</button>
+        <button class="go" id="importbtn" data-act="doImport">Importer</button>
         <span class="mono" id="importinfo"></span>
         <span style="flex:1"></span>
-        <button class="ghost" onclick="app.reloadImport()">Relire le dépôt</button>
+        <button class="ghost" data-act="reloadImport">Relire le dépôt</button>
       </div>
     </div>
   </div>
@@ -266,7 +266,7 @@
         <div id="pairwrap" class="pairbox" style="display:none">
           <div class="wizhead">
             <h3>Connecter la console sans câble</h3>
-            <button class="ghost" onclick="app.togglePair()">Fermer</button>
+            <button class="ghost" data-act="togglePair">Fermer</button>
           </div>
           <p class="lead">Le Wi-Fi évite le câble, mais reste 2 à 5× plus lent pour
             les gros transferts. À faire une seule fois : ensuite la console est
@@ -287,7 +287,7 @@
                   et tape <b>7 fois</b> sur <b>Numéro de build</b>. Le menu apparaît alors
                   dans <b>Système</b>.</p>
               </details>
-              <button class="go" onclick="app.wizStep(2)">C'est activé</button>
+              <button class="go" data-act="wizStep" data-val="2">C'est activé</button>
             </div>
           </div>
 
@@ -304,8 +304,8 @@
                 <b>« Adresse IP et port »</b> du type <code>192.168.1.42:37105</code>.</div>
               <p class="lead">Laisse cette fenêtre ouverte : le code expire si tu la fermes.</p>
               <div class="bar">
-                <button class="ghost" onclick="app.wizStep(1)">Retour</button>
-                <button class="go" onclick="app.wizStep(3)">La fenêtre est ouverte</button>
+                <button class="ghost" data-act="wizStep" data-val="1">Retour</button>
+                <button class="go" data-act="wizStep" data-val="3">La fenêtre est ouverte</button>
               </div>
             </div>
           </div>
@@ -319,20 +319,20 @@
               <label class="wfield">
                 <span>Adresse IP et port <em>(fenêtre d'appairage de la console)</em></span>
                 <input type="text" id="pair-addr" placeholder="192.168.1.42:37105"
-                       autocomplete="off" oninput="app.wizCheck()">
+                       autocomplete="off" data-act-input="wizCheck">
               </label>
               <label class="wfield">
                 <span>Code à 6 chiffres</span>
                 <input type="text" id="pair-code" placeholder="123456" maxlength="6"
-                       inputmode="numeric" autocomplete="off" oninput="app.wizCheck()">
+                       inputmode="numeric" autocomplete="off" data-act-input="wizCheck">
               </label>
               <div class="wmsg" id="wizmsg"></div>
               <div class="bar">
-                <button class="ghost" onclick="app.wizStep(2)">Retour</button>
-                <button class="go" id="pairgo" onclick="app.wifiPair()" disabled>Associer la console</button>
+                <button class="ghost" data-act="wizStep" data-val="2">Retour</button>
+                <button class="go" id="pairgo" data-act="wifiPair" disabled>Associer la console</button>
               </div>
               <div class="wsep">ou</div>
-              <button class="ghost" onclick="app.wifiDiscover()">Chercher les consoles du réseau</button>
+              <button class="ghost" data-act="wifiDiscover">Chercher les consoles du réseau</button>
               <div id="pairfound"></div>
             </div>
           </div>
@@ -350,8 +350,8 @@
         <!-- Ce que l'outil trouve REELLEMENT sur la console : l'utilisateur n'a
              plus a deviner quels dossiers existent ni lesquels sont vides. -->
         <div class="bar" style="margin-top:10px">
-          <button class="go" onclick="app.analyseGlobale()">Analyser la console</button>
-          <button class="ghost" onclick="app.ajouterPlateforme()">Ajouter une plateforme…</button>
+          <button class="go" data-act="analyseGlobale">Analyser la console</button>
+          <button class="ghost" data-act="ajouterPlateforme">Ajouter une plateforme…</button>
         </div>
         <div class="plateformes" id="plateformes"></div>
         <div id="tree" class="tree" hidden></div>
@@ -360,8 +360,8 @@
           <p class="lead" style="margin-top:12px"><b id="browsecible">Choisir un dossier</b> —
             navigue jusqu'au dossier voulu, puis valide.</p>
           <div class="bar">
-            <button class="go" onclick="app.useDir()">Utiliser ce dossier</button>
-            <button class="ghost" onclick="app.browse()">Rafraîchir</button>
+            <button class="go" data-act="useDir">Utiliser ce dossier</button>
+            <button class="ghost" data-act="browse">Rafraîchir</button>
           </div>
           <div id="crumb" class="crumb"></div>
           <div id="browser"></div>
@@ -446,7 +446,7 @@
         <div class="setrow">
           <div class="setlab"><b>Compatibilité des jeux</b>
             <span id="ersync-info">Analyse ta ludothèque et affiche un badge sur chaque jeu.</span></div>
-          <div class="setctl"><button onclick="app.erSync()">Actualiser</button></div>
+          <div class="setctl"><button data-act="erSync">Actualiser</button></div>
         </div>
       </div>
       <div class="setgroup groupe-plateforme" data-plateforme="switch">
@@ -455,8 +455,8 @@
           un jeu se réinstalle, pas 200 h de partie. Chaque sauvegarde est datée,
           rien n'est jamais écrasé.</p>
         <div class="bar">
-          <button class="go" onclick="app.backupSaves()">Sauvegarder maintenant</button>
-          <button class="ghost" onclick="app.loadSaves()">Voir les sauvegardes</button>
+          <button class="go" data-act="backupSaves">Sauvegarder maintenant</button>
+          <button class="ghost" data-act="loadSaves">Voir les sauvegardes</button>
         </div>
         <div id="saves"></div>
       </div>
@@ -466,14 +466,14 @@
           Pour un jeu précis, ouvre sa fiche depuis la liste : c'est là que vivent
           ses réglages et ceux recommandés par la communauté.</p>
         <div class="bar">
-          <select id="ec-scope" onchange="app.ecLoad()"></select>
-          <button class="ghost" onclick="app.ecLoad()">Relire</button>
+          <select id="ec-scope" data-act-change="ecLoad"></select>
+          <button class="ghost" data-act="ecLoad">Relire</button>
           <span class="mono" id="ec-info"></span>
         </div>
         <div id="ec-table"></div>
         <div class="bar" style="margin-top:10px">
-          <button class="go" onclick="app.ecApply()">Appliquer les modifications</button>
-          <button onclick="app.ecSaveProfile()">Enregistrer comme profil</button>
+          <button class="go" data-act="ecApply">Appliquer les modifications</button>
+          <button data-act="ecSaveProfile">Enregistrer comme profil</button>
         </div>
         <div id="ec-profiles"></div>
       </details>
@@ -499,7 +499,7 @@
               service, et ne bougent pas avec lui.</span></div>
           <div class="setctl">
             <div class="onbchemin mono" id="s-ludo">—</div>
-            <button class="ghost" id="b-ludo" onclick="app.ludoOuvrir()">Changer…</button>
+            <button class="ghost" id="b-ludo" data-act="ludoOuvrir">Changer…</button>
           </div>
         </div>
         <!-- L'ordre de lecture est celui de la decision : on va quelque part,
@@ -513,9 +513,9 @@
           <div id="ludoetat" class="onbnote"></div>
           <div id="ludobrowser"></div>
           <div class="bar">
-            <button class="go" onclick="app.ludoValider()">Utiliser ce dossier</button>
-            <button class="ghost" onclick="app.ludoNouveau()">Nouveau dossier…</button>
-            <button class="ghost" onclick="app.ludoFermer()">Annuler</button>
+            <button class="go" data-act="ludoValider">Utiliser ce dossier</button>
+            <button class="ghost" data-act="ludoNouveau">Nouveau dossier…</button>
+            <button class="ghost" data-act="ludoFermer">Annuler</button>
           </div>
         </div>
       </div>
@@ -553,7 +553,7 @@
         <div class="setrow">
           <div class="setlab"><b>Réorganiser maintenant</b>
             <span>Applique ce rangement à toute la bibliothèque existante.</span></div>
-          <div class="setctl"><button onclick="app.reorganizeLocal()">Réorganiser</button></div>
+          <div class="setctl"><button data-act="reorganizeLocal">Réorganiser</button></div>
         </div>
 
         <div class="setrow">
@@ -604,15 +604,15 @@
               quand l'article existe. « Tout retélécharger » oublie les fiches
               actuelles et les reprend de zéro.</span></div>
           <div class="setctl pile">
-            <button class="go" onclick="app.actualiserFiches()">Compléter les fiches manquantes</button>
-            <button class="ghost" onclick="app.forcerFiches()">Tout retélécharger</button>
+            <button class="go" data-act="actualiserFiches">Compléter les fiches manquantes</button>
+            <button class="ghost" data-act="forcerFiches">Tout retélécharger</button>
           </div>
         </div>
 
         <div class="setrow">
           <div class="setlab"><b>Cache des images</b>
             <span>Vide le cache si les jaquettes te semblent fausses.</span></div>
-          <div class="setctl"><button onclick="app.clearCovers()">Vider le cache</button></div>
+          <div class="setctl"><button data-act="clearCovers">Vider le cache</button></div>
         </div>
       <div class="setrow" id="row-igdb">
         <div class="setlab"><b>Descriptions des jeux hors Switch</b>
@@ -626,7 +626,7 @@
           <input type="text" id="s-igdbid" placeholder="Client ID" autocomplete="off">
           <input type="password" id="s-igdbsecret" placeholder="Client Secret"
                  autocomplete="new-password">
-          <button class="ghost" onclick="app.testerIgdb()">Tester les identifiants</button>
+          <button class="ghost" data-act="testerIgdb">Tester les identifiants</button>
           <div id="igdbtest"></div>
         </div>
       </div>
@@ -656,9 +656,9 @@
         </div>
 
         <div class="bar">
-          <button class="warn" onclick="app.purgeTrash()">Vider maintenant</button>
-          <button class="ghost" onclick="app.loadTrash()">Rafraîchir</button>
-          <a href="#" onclick="app.toggleTrashList(event)" id="trashmore">voir le détail</a>
+          <button class="warn" data-act="purgeTrash">Vider maintenant</button>
+          <button class="ghost" data-act="loadTrash">Rafraîchir</button>
+          <a href="#" data-act="toggleTrashList" id="trashmore">voir le détail</a>
         </div>
         <div id="trash" style="display:none"></div>
       </div>
@@ -670,11 +670,11 @@
           qui s'est connecté.</p>
 
         <div class="entretien">
-          <button class="ghost" onclick="app.voirEntretien('doublons')">Doublons</button>
-          <button class="ghost" onclick="app.voirEntretien('integrite')">Intégrité</button>
-          <button class="ghost" onclick="app.voirEntretien('sauvegardes')">Sauvegardes</button>
-          <button class="ghost" onclick="app.voirEntretien('acces')">Connexions</button>
-          <button class="ghost" onclick="app.voirEntretien('transfert')">Transfert interrompu</button>
+          <button class="ghost" data-act="voirEntretien" data-arg="doublons">Doublons</button>
+          <button class="ghost" data-act="voirEntretien" data-arg="integrite">Intégrité</button>
+          <button class="ghost" data-act="voirEntretien" data-arg="sauvegardes">Sauvegardes</button>
+          <button class="ghost" data-act="voirEntretien" data-arg="acces">Connexions</button>
+          <button class="ghost" data-act="voirEntretien" data-arg="transfert">Transfert interrompu</button>
         </div>
         <div id="entretien"></div>
       </div>
@@ -685,8 +685,8 @@
           démarrage&nbsp;: ce qui cloche part dans le journal. Relance-le ici
           après avoir changé un réglage.</p>
         <div class="bar">
-          <button class="go" onclick="app.auditer()">Lancer l'audit</button>
-          <button class="ghost" onclick="app.auditer(true)">Sans réseau</button>
+          <button class="go" data-act="auditer">Lancer l'audit</button>
+          <button class="ghost" data-act="auditer" data-val="true">Sans réseau</button>
         </div>
         <div id="auditres"></div>
       </div>
@@ -728,7 +728,7 @@
                 ludothèque.</span></div>
             <div class="setctl"><div id="listecomptes"></div>
               <button class="ghost" style="margin-top:8px"
-                      onclick="app.ajouterCompte()">Ajouter une personne</button></div>
+                      data-act="ajouterCompte">Ajouter une personne</button></div>
           </div>
         </div>
 
@@ -765,8 +765,8 @@
             <div class="setctl"><input type="text" id="s-oidcredirect" placeholder="https://ludo.exemple.fr"></div>
           </div>
           <div class="bar">
-            <button class="go" onclick="app.testerAuth()">Tester la connexion au fournisseur</button>
-            <button class="ghost" onclick="app.copierRetour()">Copier l'adresse de retour</button>
+            <button class="go" data-act="testerAuth">Tester la connexion au fournisseur</button>
+            <button class="ghost" data-act="copierRetour">Copier l'adresse de retour</button>
           </div>
           <div id="authtest"></div>
         </div>
@@ -803,9 +803,9 @@
             <span data-i18n="settings.theme.help">« Automatique » suit le réglage clair ou sombre de l'appareil.</span></div>
           <div class="setctl">
             <div class="segment" id="s-theme" role="group" aria-label="Thème">
-              <button data-val="sombre" onclick="app.setTheme('sombre')" data-i18n="theme.sombre">Sombre</button>
-              <button data-val="clair" onclick="app.setTheme('clair')" data-i18n="theme.clair">Clair</button>
-              <button data-val="auto" onclick="app.setTheme('auto')" data-i18n="theme.auto">Automatique</button>
+              <button data-val="sombre" data-act="setTheme" data-arg="sombre" data-i18n="theme.sombre">Sombre</button>
+              <button data-val="clair" data-act="setTheme" data-arg="clair" data-i18n="theme.clair">Clair</button>
+              <button data-val="auto" data-act="setTheme" data-arg="auto" data-i18n="theme.auto">Automatique</button>
             </div>
           </div>
         </div>
@@ -821,9 +821,9 @@
             <span data-i18n="settings.mvt.help">Vaut pour tout le reste : arrivée des listes, ouverture des fenêtres, journal.</span></div>
           <div class="setctl">
             <div class="segment" id="s-mvt" role="group" aria-label="Mouvement">
-              <button data-val="complet" onclick="app.setMouvement('complet')" data-i18n="mvt.complet">Complet</button>
-              <button data-val="reduit" onclick="app.setMouvement('reduit')" data-i18n="mvt.reduit">Réduit</button>
-              <button data-val="aucun" onclick="app.setMouvement('aucun')" data-i18n="mvt.aucun">Aucun</button>
+              <button data-val="complet" data-act="setMouvement" data-arg="complet" data-i18n="mvt.complet">Complet</button>
+              <button data-val="reduit" data-act="setMouvement" data-arg="reduit" data-i18n="mvt.reduit">Réduit</button>
+              <button data-val="aucun" data-act="setMouvement" data-arg="aucun" data-i18n="mvt.aucun">Aucun</button>
             </div>
           </div>
         </div>
@@ -841,7 +841,7 @@
         <div class="setrow">
           <div class="setlab"><b>Diagnostic</b>
             <span>Vérifie outils, clés, ludothèque et console.</span></div>
-          <div class="setctl"><button onclick="app.showOnboard()">Voir l'état</button></div>
+          <div class="setctl"><button data-act="showOnboard">Voir l'état</button></div>
         </div>
 
         <div class="setrow col">
@@ -931,17 +931,17 @@
   </div>
 </div>
 
-<button class="jfab" id="journalbtn" onclick="app.toggleJournal()"
+<button class="jfab" id="journalbtn" data-act="toggleJournal"
         aria-label="Ouvrir le journal" title="Journal — glisse-le pour le déplacer (Maj + flèches au clavier)">
   <span class="jfab-ic">☰</span><span class="jfab-lbl">Journal</span>
 </button>
-<div class="jvoile" id="jvoile" onclick="app.toggleJournal()"></div>
+<div class="jvoile" id="jvoile" data-act="toggleJournal"></div>
 <aside class="jdrawer" id="jdrawer" aria-label="Journal">
   <div class="jhead">
     <b>Journal</b>
     <span class="mono" id="jetat"></span>
     <span style="flex:1"></span>
-    <button class="ghost" onclick="app.toggleJournal()">Fermer</button>
+    <button class="ghost" data-act="toggleJournal">Fermer</button>
   </div>
   <div id="journal">
     <div class="jbar">
@@ -951,11 +951,11 @@
         <button class="chip" data-jl="warn">Alertes <b id="j-nwarn">0</b></button>
         <button class="chip" data-jl="info">Infos</button>
       </div>
-      <input type="text" id="jsearch" class="search" placeholder="Filtrer…" oninput="app.renderJournal()">
+      <input type="text" id="jsearch" class="search" placeholder="Filtrer…" data-act-input="renderJournal">
       <div class="bar">
-        <button class="ghost on" id="jsuivi" onclick="app.basculerSuivi()">Suivi auto</button>
-        <button class="ghost" onclick="app.journalCopy()">Copier</button>
-        <button class="ghost" onclick="app.journalClear()">Effacer</button>
+        <button class="ghost on" id="jsuivi" data-act="basculerSuivi">Suivi auto</button>
+        <button class="ghost" data-act="journalCopy">Copier</button>
+        <button class="ghost" data-act="journalClear">Effacer</button>
       </div>
     </div>
     <div id="log"></div>
@@ -963,8 +963,8 @@
 </aside>
 
 <div class="toasts" id="toasts"></div>
-<div class="modal" id="modal" onclick="app.closeGame(event)"></div>
-<div class="modal" id="dialog" onclick="app.closeDialog(event)"></div>
+<div class="modal" id="modal" data-act="closeGame"></div>
+<div class="modal" id="dialog" data-act="closeDialog"></div>
 <script src="/reactive.js"></script>
 <script src="/app.js"></script>
 </body></html>

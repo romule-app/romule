@@ -43,7 +43,11 @@ SONDE = r"""
     return true;
   }
 
-  const sel = 'button, a[href], select, input:not([type=hidden]), [onclick], .chip';
+  // `[data-act]` remplace `[onclick]` : depuis la phase 4, un element cliquable
+  // porte son action en donnee, pas en code. Les deux restent listes tant que
+  // la migration n'est pas achevee.
+  const sel = 'button, a[href], select, input:not([type=hidden]), '
+            + '[onclick], [data-act], .chip';
   for (const el of document.querySelectorAll(sel)) {
     if (!utilisable(el)) continue;
     const r = el.getBoundingClientRect();
