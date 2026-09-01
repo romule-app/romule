@@ -113,14 +113,34 @@ class WS:
 
 class Navigateur:
     def __init__(self, port=9333, largeur=430, hauteur=932, dpr=3):
-        self.proc = subprocess.Popen(
-            [trouver_chrome(), "--headless=new", "--remote-debugging-port=%d" % port,
-             "--no-first-run", "--no-default-browser-check", "--disable-gpu",
-             "--hide-scrollbars", "--user-data-dir=%s" % (Path(tempfile.gettempdir()) / ("cdp-profil-%d" % port)),
-             "about:blank"],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        args = [trouver_chrome(), "--headless=new",
+                "--remote-debugging-port=%d" % port,
+                "--no-first-run", "--no-default-browser-check", "--disable-gpu",
+                "--hide-scrollbars",
+                # /dev/shm fait 64 Mio dans la plupart des conteneurs : Chrome y
+                # place sa memoire partagee et meurt sans un mot. Sans effet
+                # ailleurs, donc pose partout.
+                "--disable-dev-shm-usage",
+                "--user-data-dir=%s" % (Path(tempfile.gettempdir())
+                                        / ("cdp-profil-%d" % port)),
+                "about:blank"]
+        # Le bac a sable de Chrome demande des espaces de noms utilisateur que
+        # les executeurs d'integration continue n'accordent pas. Sans cette
+        # option Chrome demarre puis se tait, et l'erreur qu'on lit est
+        # « Chrome n'a pas repondu » — qui ne dit pas pourquoi.
+        #
+        # C'est un relachement de securite : il n'est pose QUE lorsque `CI` est
+        # dans l'environnement, jamais sur un poste de travail.
+        if os.environ.get("CI", "").strip():
+            args.insert(1, "--no-sandbox")
+        self.proc = subprocess.Popen(args, stdout=subprocess.DEVNULL,
+                                     stderr=subprocess.PIPE)
         cible = None
-        for _ in range(60):
+        # 60 s : un executeur froid met bien plus de temps que le poste de
+        # developpement, et l'ancienne limite de 24 s le coupait en route.
+        for _ in range(150):
+            if self.proc.poll() is not None:      # Chrome est mort : inutile d'attendre
+                break
             try:
                 d = json.load(urllib.request.urlopen(
                     "http://127.0.0.1:%d/json" % port, timeout=2))
@@ -131,7 +151,15 @@ class Navigateur:
                 pass
             time.sleep(0.4)
         if not cible:
-            raise RuntimeError("Chrome n'a pas repondu")
+            # Rendre la raison, pas seulement le symptome.
+            self.proc.kill()
+            try:
+                bruit = (self.proc.stderr.read() or b"").decode("utf-8", "replace")
+            except Exception:
+                bruit = ""
+            raise RuntimeError("Chrome n'a pas repondu.\n%s"
+                               % ("\n".join(bruit.strip().splitlines()[-6:])
+                                  or "(aucun message de Chrome)"))
         self.ws = WS(cible["webSocketDebuggerUrl"])
         self.n = 0
         self.cmd("Page.enable")
