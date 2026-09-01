@@ -6097,6 +6097,98 @@ $('log').addEventListener('scroll', () => {
 }, {passive: true});
 
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { app.closeGame(); app.closeDialog(); } });
+/* ---------------------------------------------------------------------------
+   DELEGATION — un seul ecouteur par geste, une liste blanche
+
+   Les gestionnaires `onclick="app.faire('x')"` obligeaient la politique de
+   securite a tolerer `'unsafe-inline'`, c'est-a-dire a autoriser n'importe
+   quel script pose dans la page. C'est ce qui a rendu exploitable l'XSS
+   stockee corrigee en 0.1.0 : un nom de fichier suffisait a fermer la chaine
+   et a ecrire du code. Deplacer la valeur dans un `data-*` ne DEPLACE pas le
+   probleme, il le supprime : un attribut de donnee n'est jamais compile.
+
+   `ACTES` est une liste BLANCHE, pas un appel dynamique. `app[el.dataset.act]`
+   sans ce filtre laisserait n'importe quel attribut atteindre n'importe quelle
+   methode — y compris celles qui suppriment. Le cout est une ligne par action ;
+   le prix de l'autre solution est une faille de la meme famille que celle
+   qu'on vient de fermer.
+
+   Un attribut PAR GESTE, et non un seul pour tous : un clic sur un `<select>`
+   precede le changement de valeur, donc un attribut commun aurait declenche
+   l'action avec l'ANCIENNE valeur avant de la rejouer avec la bonne.
+
+     data-act        au clic
+     data-act-change au changement de valeur
+     data-act-input  a la frappe
+
+   L'argument, quand il y en a un :
+     data-arg="jeux"     une CHAINE, toujours, jamais reinterpretee ;
+     data-val="2"        du JSON, pour un nombre ou un booleen ;
+     (rien)              la valeur du champ, si l'element en est un.
+   Cette separation n'est pas du zele : en 4.4 les arguments deviendront des
+   chemins de fichiers, et « 2024 » est un nom de dossier parfaitement legitime
+   qu'une coercition silencieuse transformerait en nombre.
+   ------------------------------------------------------------------------- */
+const ACTES = new Set([
+  'actionFab', 'actualiser', 'actualiserFiches', 'ajouterCompte',
+  'ajouterPlateforme', 'analyseGlobale', 'auditer', 'backupSaves',
+  'basculerSuivi', 'basculerTaches', 'browse', 'cancelJob',
+  'choisirFichiers', 'classerImports', 'clearCovers', 'clearFav',
+  'closeOnboard', 'convertAll', 'copierRetour', 'deployPick',
+  'detect', 'doImport', 'ecApply', 'ecLoad', 'ecSaveProfile', 'erSync',
+  'forcerFiches', 'journalClear', 'journalCopy', 'loadSaves', 'loadTrash',
+  'ludoFermer', 'ludoNouveau', 'ludoOuvrir', 'ludoValider', 'openOnConsole',
+  'organize', 'page', 'purgeTrash', 'reloadImport',
+  'renderJournal', 'renderLib', 'reorganizeLocal', 'setLang',
+  'setMouvement', 'setParPage', 'setSens', 'setSystem', 'setTaille',
+  'setTheme', 'setTri', 'showOnboard', 'testerAuth', 'testerIgdb',
+  'toggleDrop', 'toggleJournal', 'togglePair', 'togglePause', 'useDir',
+  'verify', 'voirEntretien', 'wifiDiscover', 'wifiPair', 'wizCheck',
+  'wizStep',
+]);
+
+// Les cas qui ne se ramenent pas a « une methode, un argument ». Ceux-ci ont
+// besoin de l'EVENEMENT : ce sont des fonds de fenetre, qui ne se ferment que
+// si le clic les a touches eux et non leur contenu. Un appel sans l'evenement
+// fermerait la fenetre des qu'on clique dedans.
+const ACTES_SPECIAUX = {
+  'closeDialog': (el, ev) => app.closeDialog(ev),
+  'closeGame': (el, ev) => app.closeGame(ev),
+  'toggleFavPop': (el, ev) => app.toggleFavPop(ev),
+  'toggleTrashList': (el, ev) => app.toggleTrashList(ev),
+  // Fermer le panneau des taches ET ouvrir le depot : deux appels, un geste.
+  'taches-vers-depot': () => { app.basculerTaches(false); app.toggleDrop(true); },
+};
+
+function argumentDe(el) {
+  if (el.dataset.val !== undefined) return [JSON.parse(el.dataset.val)];
+  if (el.dataset.arg !== undefined) return [el.dataset.arg];
+  if (/^(SELECT|INPUT|TEXTAREA)$/.test(el.tagName)) return [el.value];
+  return [];
+}
+
+function distributeur(attribut, cle) {
+  return ev => {
+    const el = ev.target.closest('[' + attribut + ']');
+    if (!el || el.disabled) return;
+    const nom = el.dataset[cle];
+    const special = ACTES_SPECIAUX[nom];
+    if (special) { special(el, ev); return; }
+    // Silence volontaire : un nom absent de la liste blanche ne fait RIEN. Le
+    // test `test_gestes.py` verifie qu'aucun `data-act` de l'interface n'est
+    // dans ce cas — c'est la qu'une faute de frappe doit se voir, pas ici.
+    if (!ACTES.has(nom)) return;
+    const f = app[nom];
+    if (typeof f === 'function') f.apply(app, argumentDe(el));
+  };
+}
+
+document.addEventListener('click', distributeur('data-act', 'act'));
+document.addEventListener('change', distributeur('data-act-change', 'actChange'));
+document.addEventListener('input', distributeur('data-act-input', 'actInput'));
+
+app.ACTES = ACTES;
+app.ACTES_SPECIAUX = ACTES_SPECIAUX;
 window.app = app;
 
 // Sequence de demarrage. Tant que l'inventaire n'est pas revenu, on affiche un
