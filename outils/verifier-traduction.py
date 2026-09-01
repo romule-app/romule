@@ -63,7 +63,9 @@ OUTILS = set((
 ACCENTS = re.compile(r"[àâäçéèêëîïôöûùüÿœÀÂÄÇÉÈÊËÎÏÔÖÛÙÜŸŒ]")
 # Ce qui n'est pas de la prose : selecteurs, chemins, adresses, identifiants.
 NON_PROSE = re.compile(
-    r"^\s*[.#/]|://|^[a-z0-9_-]+$|^%[sd]$|^[-+*/=<>|&,;:()\[\]{}\s]+$")
+    r"^\s*[.#/]|://|^[a-z0-9_-]+$|^%[sd]$|^[-+*/=<>|&,;:()\[\]{}\s]+$"
+    # `attribut="valeur"` : du balisage, pas une phrase.
+    r'|[a-z-]+="')
 BALISE = re.compile(r"<[^>]*>")
 MOT = re.compile(r"[a-zA-ZÀ-ÿ']{2,}")
 
@@ -156,6 +158,11 @@ def _recoller(litteraux, source):
     for ligne, texte, debut, fin in litteraux:
         if out:
             entre = source[out[-1][3]:debut]
+            # Un commentaire de fin de ligne peut s'y glisser — c'est meme la
+            # que se pose une marque d'exemption. Il ne rompt pas la
+            # concatenation, il ne doit donc pas rompre le recollage.
+            entre = re.sub(r"//[^\n]*", "", entre)
+            entre = re.sub(r"/\*.*?\*/", "", entre, flags=re.S)
             # Uniquement `+` et de la blancheur : c'est une continuation.
             if entre.strip() == "+":
                 out[-1][1] += texte

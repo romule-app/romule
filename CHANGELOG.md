@@ -12,6 +12,11 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Fixed
 
+- **`tid` was the fourth class doing double duty.** It marks a title ID, which
+  must never be translated — but when a file has none, the same span carried
+  the *label* “pas de title ID”, which must be. After `tid`, `cnom`, `jline`
+  and now `tid` again, the pattern is settled: a CSS class cannot be both a
+  style hook and a translation marker.
 - **Two functions shadowed the translation helper.** `t()` translates; a local
   variable named `t` hides it for the whole scope, and the call becomes
   `t is not a function`. In `renderToolbar` it broke the *first* render, so the
@@ -50,7 +55,7 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Added
 
-- **170 interface strings translated**, and the checker taught to stop
+- **270 interface strings translated**, and the checker taught to stop
   over-reporting: a sentence too long for one line is written as two literals
   joined by `+`, and at runtime they are a single text node, so the key is the
   whole sentence. Testing the halves separately flagged 74 perfectly translated

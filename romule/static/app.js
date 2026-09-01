@@ -63,6 +63,12 @@ const esc = s => String(s).replace(/[&<>"']/g,
 // Le vrai remede reste de sortir ces valeurs des attributs — `data-grp` le
 // fait deja pour la cle de groupe. Tant que les gestionnaires en ligne sont
 // la, c'est cet encodage qui tient.
+// Alias de `t()`, pour les rares fonctions dont un parametre s'appelle deja
+// `t` — un title ID, un element. Renommer le parametre serait plus propre ;
+// l'alias evite de toucher a des signatures utilisees partout, et le garde-fou
+// de test_ui_injection.js continue d'interdire les autres masquages.
+const t18n = (texte, defaut) => t(texte, defaut);
+
 const jsq = v => esc(JSON.stringify(String(v == null ? '' : v))
   .slice(1, -1)                    // JSON rend une chaine entre guillemets
   .replace(/'/g, "\\'")            // que JSON, lui, n'echappe pas
@@ -179,8 +185,14 @@ const tidBase = tid => {
   return tid.slice(0, 12) + n.toString(16) + '000';
 };
 function tidHtml(t) {   // title ID decoupe (detail uniquement)
-  if (!t) return '<span class="tid">pas de title ID</span>';
-  return '<span class="tid">' + t.slice(0, 12) + '<b>' + t[12] + '</b>' + t.slice(13) + '</span>';
+  // La classe `tid` est dans CLASSES_DONNEES : elle porte un identifiant, qui
+  // ne se traduit pas. Mais quand il n'y en a pas, elle portait un LIBELLE, qui
+  // lui doit se traduire — et restait donc en francais. Meme defaut que `cnom`,
+  // pour la quatrieme fois : une classe ne peut pas etre a la fois un style et
+  // un marqueur. Le libelle prend sa propre classe.
+  if (!t) return '<span class="tid-vide">' + esc(t18n('pas de title ID')) + '</span>';
+  return '<span class="tid">' + t.slice(0, 12) + '<b>' + t[12] + '</b>' +
+    t.slice(13) + '</span>';
 }
 // `discret` : l'appelant affiche lui-meme le refus. Un mot de passe trop
 // court est une correction a faire, pas une panne : la fenetre « Une action
@@ -438,7 +450,7 @@ function messageLisible(chemin, err) {
            "sur une version plus ancienne : arrête-le et relance python3 -m romule.";
   if (e.includes('reseau') || e.includes('failed to fetch'))
     return 'Le serveur ne répond plus. Vérifie qu\'il tourne toujours.';
-  if (e.includes('tache est deja en cours'))
+  if (e.includes('tache est deja en cours'))  // i18n:ok - message compare, pas affiche
     return 'Une autre opération est en cours. Attends qu\'elle se termine.';
   if (chemin.includes('/api/eden') || chemin.includes('/api/nand'))
     return 'Action sur la console impossible. Vérifie qu\'elle est bien connectée.';
@@ -2540,7 +2552,8 @@ function renderEcProfiles(profils) {
   el.innerHTML = '<h3 style="margin:16px 0 8px;font-size:13.5px">Profils enregistrés</h3>' +
     '<div class="card">' + profils.map(p =>
       '<div class="row"><span class="grow"><div class="fname">' + esc(p.nom) + '</div>' +
-      '<span class="mono">' + p.reglages + ' réglage(s) · ' + esc(p.portee) + '</span></span>' +
+      '<span class="mono">' + nb(p.reglages, 'réglage(s)') + ' · ' +
+      esc(p.portee) + '</span></span>' +
       '<button class="go" onclick="app.ecApplyProfile(\'' + jsq(p.nom) + '\')">Appliquer ici</button></div>'
     ).join('') + '</div>' +
     '<p class="lead" style="margin-top:8px">Les profils sont des fichiers JSON dans ' +
@@ -2599,15 +2612,17 @@ function erSection(g) {
   if (!ER.appareil)
     intro = 'Indique ta console dans les Réglages pour savoir lesquels te concernent.';
   else if (miens.length)
-    intro = miens.length + ' réglage(s) testé(s) sur ta ' + esc(ER.appareil_nom) + '.';
+    intro = phrase('%s réglage(s) testé(s) sur ta %s.',
+                   miens.length, esc(ER.appareil_nom));
   else
     intro = 'Rien de testé sur ta ' + esc(ER.appareil_nom) + '. Voici d\'autres appareils, '
           + 'à titre indicatif.';
 
   // Le titre trouve ne s'affiche que s'il y a un doute : sinon c'est du bruit.
   const doute = e.confiance === 'incertain'
-    ? '<p class="erdit alerte">Le titre trouvé est « ' + esc(e.titre || '') +
-      ' » : vérifie qu\'il s\'agit bien de ton jeu.</p>'
+    ? '<p class="erdit alerte">' +
+      phrase('Le titre trouvé est « %s » : vérifie qu\'il s\'agit bien de ton jeu.',
+             esc(e.titre || '')) + '</p>'
     : '';
 
   const ligne = (r, mien) => {
@@ -2697,7 +2712,8 @@ function etatDuJeu(g, nmap) {
   let etat, raison = '', note = '';
   if (cassesExtra.length) {
     note = cassesExtra.length === 1
-      ? 'Mise à jour incomplète (' + pretty(cassesExtra[0].name) + ') — le jeu reste jouable'
+      ? phrase('Mise à jour incomplète (%s) — le jeu reste jouable',
+                 pretty(cassesExtra[0].name))
       : cassesExtra.length + ' MAJ/DLC incomplets — le jeu reste jouable';
   }
   if (cassesBase.length) {
@@ -3023,7 +3039,7 @@ function baseSansMarqueur(nom) {
    On ne lit donc que ce qui est ecrit, et on n'affiche rien quand rien n'est
    ecrit : deviner « probablement anglais » serait inventer une information que
    l'utilisateur croirait verifiee. */
-const CODES_LANGUE = new Set(('en fr de es it ja nl pt sv no da fi ko zh ru pl ' +
+const CODES_LANGUE = new Set(('en fr de es it ja nl pt sv no da fi ko zh ru pl ' +  // i18n:ok - codes de langue
   'cs hu tr el ca').split(' '));
 const MOT_VERS_CODE = {
   french: 'fr', german: 'de', deutsch: 'de', english: 'en', spanish: 'es',
@@ -3368,8 +3384,9 @@ function changerMotDePasse() {
     message: 'Les autres appareils encore connectés seront déconnectés.',
     champs: [{id: 'ancien', libelle: 'Mot de passe actuel', type: 'password',
               auto: 'current-password'},
-             {id: 'nouveau', libelle: 'Nouveau mot de passe (' + MDP_MIN
-                                     + ' caractères minimum)', type: 'password',
+             {id: 'nouveau',
+              libelle: phrase('Nouveau mot de passe (%s caractères minimum)',
+                              MDP_MIN), type: 'password',
               auto: 'new-password'},
              {id: 'confirme', libelle: 'Répéter le nouveau', type: 'password',
               auto: 'new-password'}],
