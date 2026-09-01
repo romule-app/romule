@@ -11,6 +11,7 @@ import argparse
 import os
 import shutil
 import sys
+import time
 from pathlib import Path
 
 from . import __version__, config, convert, device, scan, versions
@@ -120,6 +121,50 @@ def cmd_device(args):
     for g in games:
         tag = "deja en biblio" if g["in_library"] else "NOUVEAU"
         print("  %-8s %-9s %-12s %s" % (g["type"], _human(g["size"]), tag, g["name"]))
+
+
+def cmd_apikey(args):
+    """Gerer les cles d'API sans navigateur.
+
+    C'est ce qui rend l'API utilisable dans un conteneur : `docker compose exec
+    romule python3 -m romule apikey create homarr` suffit, sans ouvrir
+    l'interface ni creer de compte.
+    """
+    from . import apikeys
+    action = getattr(args, "action", None) or "list"
+
+    if action == "create":
+        fiche, cle = apikeys.creer(args.nom)
+        print("Cle creee : %s" % fiche["nom"])
+        print()
+        print("  %s" % cle)
+        print()
+        # Elle n'est stockee que hachee : ce n'est pas une precaution de style,
+        # c'est ce qui rend une fuite du fichier d'etat inoffensive. Le prix
+        # est qu'on ne peut pas la reafficher, et il faut le dire ici.
+        print("Note-la maintenant : elle n'est conservee que sous forme")
+        print("d'empreinte et ne pourra pas etre reaffichee.")
+        return
+
+    if action == "revoke":
+        if apikeys.revoquer(args.id):
+            print("Cle %s revoquee." % args.id)
+        else:
+            print("Aucune cle active avec cet identifiant : %s" % args.id)
+            sys.exit(1)
+        return
+
+    cles = apikeys.liste(avec_revoquees=bool(getattr(args, "all", False)))
+    if not cles:
+        print("Aucune cle. `romule apikey create <nom>` en cree une.")
+        return
+    print("%-18s %-14s %-24s %s" % ("ID", "PREFIXE", "NOM", "DERNIER USAGE"))
+    for k in cles:
+        vu = k.get("dernier_usage")
+        vu = time.strftime("%Y-%m-%d %H:%M", time.localtime(vu)) if vu else "jamais"
+        etat = " (revoquee)" if k.get("revoquee") else ""
+        print("%-18s %-14s %-24s %s%s"
+              % (k["id"], k["prefixe"] + "…", k["nom"][:24], vu, etat))
 
 
 def cmd_test(args):
@@ -286,10 +331,20 @@ def main(argv):
 
     sub.add_parser("test", help="jouer les tests unitaires")
 
+    pk = sub.add_parser("apikey", help="cles d'API (lister, creer, revoquer)")
+    ka = pk.add_subparsers(dest="action")
+    kl = ka.add_parser("list", help="lister les cles")
+    kl.add_argument("--all", action="store_true",
+                    help="inclure les cles revoquees")
+    kc = ka.add_parser("create", help="creer une cle")
+    kc.add_argument("nom", help="a quoi elle sert (« homarr », « sauvegarde »)")
+    kr = ka.add_parser("revoke", help="revoquer une cle")
+    kr.add_argument("id", help="identifiant montre par `apikey list`")
+
     # tolere les options globales inconnues (ex : --no-browser)
     args, _ = parser.parse_known_args([a for a in argv if a != "--no-browser"])
     {
         None: cmd_serve, "serve": cmd_serve, "scan": cmd_scan,
         "convert": cmd_convert, "push": cmd_push, "device": cmd_device,
-        "test": cmd_test,
+        "test": cmd_test, "apikey": cmd_apikey,
     }[args.cmd](args)
