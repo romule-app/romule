@@ -32,7 +32,7 @@ import urllib.request
 # joindre son auteur : un projet distribue a des inconnus ne peut pas se
 # presenter comme « ludotheque personnelle » sans contact. Une adresse trop
 # vague fait limiter, puis bloquer, tout le monde d'un coup.
-from . import __version__, SOURCE_URL
+from . import SOURCE_URL, __version__, reseau
 
 AGENT = "Romule/%s (%s)" % (__version__, SOURCE_URL)
 WIKIDATA = "https://www.wikidata.org/w/api.php"
@@ -67,7 +67,7 @@ def _lire(url, essais=3):
         _attendre()
         try:
             req = urllib.request.Request(url, headers={"User-Agent": AGENT})
-            with urllib.request.urlopen(req, timeout=20) as r:
+            with reseau.ouvrir(req, timeout=20) as r:
                 return json.loads(r.read().decode("utf-8", "replace"))
         except urllib.error.HTTPError as exc:
             if exc.code == 429:

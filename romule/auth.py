@@ -34,7 +34,7 @@ import time
 import urllib.parse
 import urllib.request
 
-from . import config
+from . import config, reseau
 
 DUREE_SESSION = 12 * 3600      # au-dela, il faut repasser par le fournisseur
 # Duree du « pont » remis a celui qui vient d'activer
@@ -97,7 +97,7 @@ def _http_json(url, donnees=None, entetes=None, timeout=15):
         url,
         data=urllib.parse.urlencode(donnees).encode() if donnees else None,
         headers=entetes or {"Accept": "application/json"})
-    with urllib.request.urlopen(req, timeout=timeout) as r:
+    with reseau.ouvrir(req, timeout=timeout) as r:
         return json.loads(r.read().decode("utf-8", "replace"))
 
 

@@ -1729,7 +1729,12 @@ def _adresse_ecoute():
         return config.env("BIND").strip()
     ouvert = (CFG.get("lan_access") or config.ENV_LAN or config.TOKEN
               or _in_container())
-    return "0.0.0.0" if ouvert else "127.0.0.1"
+    # bandit signale toute ecoute sur 0.0.0.0. Ici elle est CONDITIONNELLE :
+    # elle n'a lieu que si l'operateur a ouvert l'acces (reglage `lan_access`,
+    # ROMULE_LAN, un jeton pose, ou un conteneur — ou une ecoute locale ne
+    # servirait a rien puisque le port est publie). Le defaut reste 127.0.0.1.
+    # C'est precisement ce que l'outil ne peut pas voir, d'ou la marque.
+    return "0.0.0.0" if ouvert else "127.0.0.1"  # nosec B104
 
 
 def _in_container():

@@ -100,6 +100,17 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Security
 
+- **Configured URLs were opened without checking their scheme.** `urlopen`
+  accepts `file://` and `ftp://`, and three addresses come from settings — the
+  artwork source, the titledb mirrors, the OIDC issuer. A `file:///etc/passwd`
+  in the artwork field made the server read a local file and hand it back as an
+  image. It takes an administrator to set those fields, which limits the reach,
+  but an administrator should not be able to turn the service into a file
+  reader through a settings box — and with authentication off there is no
+  separate administrator at all. Every network call now goes through a single
+  guarded exit, and a test asserts no direct call reappears elsewhere.
+
+
 - **Stored XSS through filenames.** Values interpolated into inline event
   handlers were escaped for the HTML context only. A value inside
   `onclick="app.do('HERE')"` crosses two parsers: the HTML parser decodes
