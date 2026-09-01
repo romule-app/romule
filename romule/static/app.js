@@ -3284,6 +3284,99 @@ function majBlocAuth() {
     R.classe(d, 'avert', sansFournisseur || sansCompte);
   }
   if (mode === 'interne') chargerComptes();
+  chargerCles();
+}
+
+// ------------------------------------------------------------------ cles d'API
+// Elles ne sont montrees qu'une fois. Le magasin n'en garde qu'une empreinte,
+// ce qui rend une fuite du fichier d'etat inoffensive — mais interdit de les
+// reafficher. Toute l'ergonomie de ce bloc decoule de cette contrainte : la
+// cle apparait en grand a la creation, avec un bouton copier, et l'utilisateur
+// est prevenu qu'elle ne reviendra pas.
+let CLES = [];
+
+async function chargerCles() {
+  const r = await api('/api/cles', null, true);
+  if (!r || r.error) return;
+  CLES = r.cles || [];
+  dessinerCles();
+}
+
+function dessinerCles() {
+  const boite = $('listecles');
+  if (!boite) return;
+  const vivantes = CLES.filter(k => !k.revoquee);
+  if (!vivantes.length) {
+    boite.innerHTML = '<p class="lead" style="margin:0 0 8px">'
+      + esc(t('Aucune clé. L\'API n\'est atteignable par personne.'))
+      + '</p>';
+    return;
+  }
+  boite.innerHTML = vivantes.map(k =>
+    '<div class="compte-ligne">'
+    + '<span class="compte-nom" data-i18n-skip>' + esc(k.nom) + '</span>'
+    + '<span class="compte-mail tid" data-i18n-skip>' + esc(k.prefixe) + '…</span>'
+    + '<span class="mono" data-i18n-skip>' + esc(dateCle(k.dernier_usage)) + '</span>'
+    + '<button class="ghost mini" data-act="revoquerCle" data-arg="'
+    + esc(k.id) + '">' + esc(t('Révoquer')) + '</button>'
+    + '</div>').join('');
+}
+
+function dateCle(t0) {
+  // « jamais » est un fait a signaler, pas une absence a masquer : une cle
+  // creee pour un essai et jamais utilisee ouvre toujours l'API.
+  if (!t0) return t('jamais utilisée');
+  // Les etiquettes de langue ne sont pas du texte d'interface : elles ne
+  // se traduisent pas, elles se choisissent.
+  const etiquette = LANGUE === 'fr' ? 'fr-FR' : 'en-GB';   // i18n:ok
+  return new Date(t0 * 1000).toLocaleDateString(etiquette);
+}
+
+async function creerCle() {
+  const champ = $('s-clenom');
+  const nom = (champ && champ.value || '').trim();
+  if (!nom) {
+    toast(t('Donne un nom à la clé : c\'est ce qui permettra de savoir '
+            + 'laquelle révoquer.'), 'warn');
+    if (champ) champ.focus();
+    return;
+  }
+  const r = await api('/api/cle-creer', {nom});
+  if (!r || r.error) return;
+  if (champ) champ.value = '';
+  await chargerCles();
+  dialogue({
+    titre: t('Clé créée'),
+    niveau: 'ok',
+    message: t('Note-la maintenant : elle n\'est conservée que sous forme '
+               + 'd\'empreinte et ne pourra pas être réaffichée.'),
+    detail: r.secret,
+    actions: [{libelle: t('Copier'), principal: true, action: () => {
+      navigator.clipboard.writeText(r.secret)
+        .then(() => toast(t('Clé copiée.'), 'ok'))
+        // Le presse-papiers est refuse hors contexte securise : sans ce
+        // rattrapage le bouton ne ferait rien, sans un mot. La cle reste
+        // lisible dans le detail de la fenetre, donc selectionnable a la main.
+        .catch(() => toast(t('Copie refusée par le navigateur : '
+                             + 'sélectionne la clé dans le détail.'), 'warn'));
+    }}],
+  });
+}
+
+async function revoquerCle(id) {
+  const k = CLES.find(x => x.id === id) || {};
+  dialogue({
+    titre: t('Révoquer cette clé ?'),
+    niveau: 'avert',
+    message: phrase('%s cessera de fonctionner immédiatement. C\'est '
+                    + 'irréversible : il faudra en créer une autre.',
+                    k.nom || id),
+    actions: [{libelle: t('Révoquer'), principal: true, action: async () => {
+      const r = await api('/api/cle-revoquer', {id});
+      if (r && r.ok) toast(t('Clé révoquée.'), 'ok');
+      chargerCles();
+    }}],
+  });
 }
 
 // ------------------------------------------------------------ comptes internes
@@ -5255,6 +5348,7 @@ const app = {
   },
 
   ajouterCompte,
+  creerCle, revoquerCle,
   chargerComptes,
 
   // Choix de la plateforme dont on regle les options.
@@ -6136,7 +6230,8 @@ const ACTES = new Set([
   'copierRetour', 'deployPick', 'detect', 'dismissA2HS', 'doImport',
   'ecApply', 'ecApplyProfile', 'ecLoad', 'ecSaveProfile', 'edenRestore',
   'erApply', 'erPreview', 'erSync', 'forcerFiches', 'importerJeu',
-  'installApp', 'journalClear', 'journalCopy', 'loadSaves', 'loadTrash',
+  'creerCle', 'installApp', 'journalClear', 'journalCopy', 'loadSaves',
+  'loadTrash', 'revoquerCle',
   'ludoAnnulerOnb', 'ludoFermer', 'ludoNouveau', 'ludoOuvrir',
   'ludoValider', 'mkTree', 'onbAller', 'onbChercherConsole',
   'onbChoisirDossier', 'onbCreerCompte', 'onbPrec', 'onbScanner',

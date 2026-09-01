@@ -782,6 +782,12 @@ class Handler(BaseHTTPRequestHandler):
                 self._json_revalide(json.loads(f.read_text(encoding="utf-8")))
             else:
                 self._json({"error": "langue inconnue"}, 404)
+        elif p == "/api/cles":
+            # L'interface est un navigateur avec une session : elle ne peut pas
+            # passer par /api/v1, qui exige justement une cle. Ces trois routes
+            # internes gerent les cles ; elles ne sont pas publiques et ne sont
+            # donc pas figees.
+            self._json({"cles": apikeys.liste(avec_revoquees=True)})
         elif p == "/api/trash-list":
             # La purge automatique n'agit que si l'utilisateur a fixe un delai :
             # par defaut (0) la corbeille n'est jamais videe toute seule.
@@ -1041,6 +1047,20 @@ class Handler(BaseHTTPRequestHandler):
         if p == "/api/versions":
             versions.load(LIB, force=bool(d.get("force")), log=JOB.log)
             self._json(_lib_response())
+
+        elif p == "/api/cle-creer":
+            fiche, cle = apikeys.creer(d.get("nom") or "")
+            JOB.log("Cle d'API creee : %s" % fiche["nom"])
+            # La cle en clair ne sortira qu'ICI, et une seule fois : elle n'est
+            # stockee que sous forme d'empreinte.
+            self._json({"cle": fiche, "secret": cle})
+
+        elif p == "/api/cle-revoquer":
+            cid = str(d.get("id") or "")
+            fait = apikeys.revoquer(cid)
+            if fait:
+                JOB.log("Cle d'API revoquee : %s" % cid)
+            self._json({"ok": fait})
 
         elif p == "/api/convert":
             self._job(actions.convert_files, LIB, CFG, JOB, d.get("paths", []))
