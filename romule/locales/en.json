@@ -1083,5 +1083,22 @@
   "globalement": "globally",
   "%s erreur(s) et %s alerte(s). Le reste s'est bien déroulé.": "%s error(s) and %s warning(s). The rest went fine.",
   "%s — %s": "%s — %s",
-  "Voir la jaquette en grand": "See the cover full size"
+  "Voir la jaquette en grand": "See the cover full size",
+  "Aucune clé. L'API n'est atteignable par personne.": "No key. The API is reachable by no one.",
+  "Révoquer": "Revoke",
+  "jamais utilisée": "never used",
+  "Donne un nom à la clé : c'est ce qui permettra de savoir laquelle révoquer.": "Name the key: that is what will tell you which one to revoke.",
+  "Clé créée": "Key created",
+  "Note-la maintenant : elle n'est conservée que sous forme d'empreinte et ne pourra pas être réaffichée.": "Write it down now: only a hash is kept, so it cannot be shown again.",
+  "Clé copiée.": "Key copied.",
+  "Copie refusée par le navigateur : sélectionne la clé dans le détail.": "The browser refused to copy: select the key in the details instead.",
+  "Révoquer cette clé ?": "Revoke this key?",
+  "%s cessera de fonctionner immédiatement. C'est irréversible : il faudra en créer une autre.": "%s will stop working immediately. This cannot be undone — you will have to create another one.",
+  "Clé révoquée.": "Key revoked.",
+  "Clés d'API": "API keys",
+  "Pour interroger Romule depuis un tableau de bord ou un script.": "To query Romule from a dashboard or a script.",
+  "Une clé n'atteint que l'API publique : elle ne peut ni ouvrir l'interface, ni toucher aux comptes.": "A key reaches the public API only: it can neither open the interface nor touch accounts.",
+  "Voir la documentation": "Read the documentation",
+  "À quoi elle sert": "What it is for",
+  "Créer une clé": "Create a key"
 }

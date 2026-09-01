@@ -765,6 +765,21 @@
           <div class="setctl"><label class="sw"><input type="checkbox" id="s-lan"><span></span></label></div>
         </div>
 
+        <!-- ------------------------------------------ cles d'API -->
+        <div class="setrow" style="align-items:flex-start">
+          <div class="setlab"><b>Clés d'API</b>
+            <span>Pour interroger Romule depuis un tableau de bord ou un script.</span>
+            <span>Une clé n'atteint que l'API publique&nbsp;: elle ne peut ni ouvrir
+              l'interface, ni toucher aux comptes.</span>
+            <span><a href="https://romule-app.github.io/romule/api/"
+                 target="_blank" rel="noopener">Voir la documentation</a></span></div>
+          <div class="setctl"><div id="listecles"></div>
+            <div id="clenouvelle" hidden></div>
+            <input type="text" id="s-clenom" placeholder="À quoi elle sert">
+            <button class="ghost" style="margin-top:8px"
+                    data-act="creerCle">Créer une clé</button></div>
+        </div>
+
         <div class="setrow">
           <div class="setlab"><b>Notifications</b>
             <span>Prévenir quand une conversion ou un transfert se termine.</span></div>
