@@ -115,7 +115,7 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 - `phrase()` in the interface substituted only `%d`, leaving a raw `%s` on
   screen as soon as a path or a name entered a translated sentence.
 
-## [0.1.0] — unreleased
+## [0.1.0] — 2026-09-01
 
 First public release. Everything below is new by definition; the list covers
 what the release actually contains rather than how it was built.
@@ -214,7 +214,7 @@ what the release actually contains rather than how it was built.
 
 ### Known limitations
 
-- `script-src` still allows `'unsafe-inline'`: 124 inline event handlers
+- `script-src` still allows `'unsafe-inline'`: 152 inline event handlers
   depend on it. Documented, and slated for a later release.
 - **No built-in TLS.** Exposing Romule to the internet requires a reverse
   proxy that terminates HTTPS.

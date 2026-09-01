@@ -98,7 +98,7 @@ one. Set `ROMULE_BASES` when you run natively under a broad account.
 
 ## Known weaknesses
 
-**`script-src` allows `'unsafe-inline'`.** 124 inline event handlers depend on
+**`script-src` allows `'unsafe-inline'`.** 152 inline event handlers depend on
 it. Removing them means converting every one to delegated events — a project in
 itself. Until then the CSP cannot forbid inline scripts without making every
 button inert. Documented rather than quietly dropped.
