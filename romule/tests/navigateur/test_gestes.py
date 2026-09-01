@@ -72,6 +72,15 @@ MOUCHARD = r"""
     return vrai.call(this, type, fn, opt);
   };
   window.__ecoute = el => marques.has(el);
+  // La politique de contenu refuse desormais tout script en ligne. Une
+  // violation ne fait pas echouer la page : le navigateur ecrit une ligne en
+  // console et continue, donc le defaut est SILENCIEUX pour tout le monde
+  // sauf pour celui qui a la console ouverte. On les collecte.
+  window.__csp = [];
+  document.addEventListener('securitypolicyviolation', e => {
+    window.__csp.push(e.violatedDirective + ' : '
+                      + (e.blockedURI || '') + ' ' + (e.sourceFile || ''));
+  });
 })()
 """
 
@@ -250,6 +259,31 @@ def main():
         time.sleep(0.5)
         t("un clic sur le FOND la ferme",
           not n.js("document.getElementById('modal').classList.contains('open')"))
+
+        print("   -- la politique de contenu ne bloque rien --")
+        # Ce controle vient APRES le balayage : il doit avoir vu tous les
+        # ecrans se construire, puisque c'est au rendu qu'un script en ligne
+        # serait refuse.
+        viol = n.js("window.__csp || []") or []
+        t("aucune violation de la politique de contenu", not viol, viol[:3])
+        # Vert ne veut rien dire tant qu'on n'a pas vu rouge. On provoque donc
+        # une violation : un script en ligne ajoute a la page. S'il s'execute,
+        # c'est que l'en-tete n'arrive pas — et le controle ci-dessus ne
+        # prouvait rien.
+        n.js("""
+          (function () {
+            window.__temoin = 'pas execute';
+            const sc = document.createElement('script');
+            sc.textContent = "window.__temoin = 'execute';";
+            document.body.appendChild(sc);
+            sc.remove();
+          })()""")
+        time.sleep(0.4)
+        t("un script en ligne est REFUSE",
+          n.js("window.__temoin") == "pas execute", n.js("window.__temoin"))
+        t("et la violation est rapportee",
+          len(n.js("window.__csp || []") or []) > len(viol),
+          n.js("window.__csp || []"))
 
         print("   -- liste blanche des actions --")
         # `app.ACTES` n'existe pas encore au debut de la phase 4 : tant qu'il

@@ -10,24 +10,7 @@
 <link rel="apple-touch-icon" href="/icon-192.png">
 <link rel="icon" href="/icon-192.png">
 <link rel="stylesheet" href="/app.css">
-<script>
-/* Le theme est pose AVANT le premier rendu. Le lire depuis app.js, charge en
-   fin de page, ferait apparaitre l'interface en sombre puis basculer en clair
-   sous les yeux de l'utilisateur a chaque ouverture.
-   Ces trois reglages restent locaux a l'appareil : le meme utilisateur veut
-   souvent du clair sur la tablette et du sombre sur la console. */
-(function () {
-  var d = document.documentElement, mag = null;
-  try { mag = localStorage; } catch (e) { mag = null; }   /* navigation privee */
-  function lu(cle, defaut, permis) {
-    var v = mag && mag.getItem(cle);
-    return permis.indexOf(v) >= 0 ? v : defaut;
-  }
-  d.dataset.theme = lu('theme', 'sombre', ['sombre', 'clair', 'auto']);
-  d.dataset.carte = lu('carte', '1', ['aucune', '0', '1', '2', '3', '4', '5']);
-  d.dataset.mvt   = lu('mvt', 'complet', ['complet', 'reduit', 'aucun']);
-})();
-</script>
+<script src="/theme.js"></script>
 </head><body>
 <header>
   <div class="head-in">
