@@ -741,5 +741,17 @@
   "— hérité du réglage global": "— inherited from the global setting",
   "✗ sera créé": "✗ will be created",
   "Configuration propre à ce jeu.": "Settings specific to this game.",
-  "Ce jeu n'a pas encore de configuration : elle sera créée.": "This game has no settings yet: they will be created."
+  "Ce jeu n'a pas encore de configuration : elle sera créée.": "This game has no settings yet: they will be created.",
+  "réseau : %s": "network: %s",
+  "Convertir les %s restants": "Convert the %s remaining",
+  "Aucun jeu ne correspond à « %s ».": "No game matches “%s”.",
+  "Rien dans « %s » — tout est en ordre de ce côté.": "Nothing in “%s” — all is in order on that front.",
+  "Mot de passe (%s caractères minimum)": "Password (%s characters minimum)",
+  "Aucun événement pour « %s ».": "No event for “%s”.",
+  "Aucun événement.": "No event.",
+  "MAJ/DLC": "updates/DLC",
+  "élément(s)": "item(s)",
+  "Importer %s élément(s)": "Import %s item(s)",
+  "Détail de %s": "Details of %s",
+  "%s plateforme(s) sous %s": "%s platform(s) under %s"
 }

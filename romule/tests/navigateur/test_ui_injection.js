@@ -133,6 +133,47 @@ t('tous les sites passent par jsq()', restants.length === 0, restants.join(' | '
 const total = /\\''\s*\+\s*jsq\(/g;
 console.log('      (' + (src.match(total) || []).length + ' sites proteges)');
 
+console.log('   -- 5. rien ne masque la fonction de traduction --');
+// `t()` traduit. Une variable locale nommee `t` la masque dans toute la
+// portee, et l'appel devient « t is not a function » — au premier rendu
+// seulement, donc un demarrage casse et rien du tout ensuite. C'est arrive :
+// `const t = $('tri')` dans `renderToolbar`, et l'ecran restait vide.
+//
+// Douze fonctions declarent un `t` local. Aucune ne doit appeler `t(`.
+function masquages(texte) {
+  const out = [];
+  const decl = /\b(?:const|let|var)\s+t\s*=/g;
+  let m;
+  while ((m = decl.exec(texte)) !== null) {
+    // On suit les accolades depuis la declaration : quand la profondeur passe
+    // sous zero, on a quitte le bloc ou le masquage s'applique.
+    let prof = 0;
+    for (let i = m.index; i < texte.length; i++) {
+      const c = texte[i];
+      if (c === '{') prof++;
+      else if (c === '}') { if (prof === 0) break; prof--; }
+      else if (c === 't' && /[^\w$.]/.test(texte[i - 1] || ' ')
+               && texte.slice(i).match(/^t\s*\(/)) {
+        out.push(texte.slice(0, i).split('\n').length);
+        break;
+      }
+    }
+  }
+  return out;
+}
+
+// Le detecteur est mis a l'epreuve avant d'etre applique, comme le bloc 3.
+t('il voit un t() dans une portee ou t est masque',
+  masquages("function f(){ const t = x; return t('a'); }").length === 1);
+t("il ignore un t() hors de la portee",
+  masquages("function f(){ const t = x; }\nfunction g(){ return t('a'); }").length === 0);
+t('il ignore une portee sans appel',
+  masquages("function f(){ const t = x; return t.value; }").length === 0);
+
+const masques = masquages(src);
+t('aucune fonction ne masque t() puis l\'appelle', masques.length === 0,
+  'lignes : ' + masques.join(', '));
+
 console.log('      ------------------------------------------------');
 console.log('      ' + ok + ' controles OK, ' + ko + ' echec(s)');
 process.exit(ko ? 1 : 0);
