@@ -457,7 +457,6 @@ async function chargerLangue(code) {
     delete d._meta;
     I18N = d;
     _compilerGabarits();
-    if (I18N['Ma ludothèque']) document.title = I18N['Ma ludothèque'];
     traduireDOM(document.body);
     retraduireAttributs();
     OBSERVATEUR.observe(document.body, {childList: true, subtree: true});
@@ -889,8 +888,34 @@ function majFab() {
 
 window.addEventListener('resize', majAnneau);
 
+// Vrai tant qu'une recherche de fiches tourne REELLEMENT.
+//
+// Le bandeau « Recherche des infos… » s'affichait sur toute carte sans fiche,
+// qu'une recherche soit en cours ou non. Pour un jeu qu'aucune base ne connait
+// — un titre trop recent, un homebrew, un nom de fichier trop abime — il ne
+// disparaissait donc JAMAIS : la carte annoncait un travail en cours qui
+// n'aurait jamais lieu. C'est un mensonge de l'interface, pas un detail
+// d'affichage, et il etait sous les yeux de tout le monde sur la capture du
+// README.
+//
+// Une carte sans fiche ne dit maintenant plus rien : son absence de resume se
+// voit deja, et « Fiches manquantes » est la pour aller les chercher.
+let RECHERCHE_FICHES = false;
+
+// Les libelles que le serveur donne aux taches qui remplissent les fiches.
+// Ce sont des noms de FONCTION Python, pas du texte affiche : ils ne se
+// traduisent pas.
+const TACHES_FICHES = ['sync_meta', 'meta_sync'];   // i18n:ok
+
 function renderTache(j) {
   const el = $('tache');
+  const cherche = !!j.running && TACHES_FICHES.includes(j.label);
+  if (cherche !== RECHERCHE_FICHES) {
+    RECHERCHE_FICHES = cherche;
+    // La fin de la recherche doit effacer les bandeaux restants : sans ce
+    // rendu, ils tiendraient jusqu'au prochain passage sur la grille.
+    if (typeof renderLib === 'function') renderLib();
+  }
   R.classe(el, 'on', !!j.running);
   R.classe($('journalbtn'), 'occupe', !!j.running);
   if (!j.running) {
@@ -1576,7 +1601,6 @@ function sansFiche(g) {
   const f = (g.files && g.files[0]) || g;
   return !(g.titre || f.titre);
 }
-
 // Une ligne de la fenetre des versions : de quoi choisir sans ouvrir chaque
 // fiche — la langue, la taille, l'etat, et ou se trouve le fichier.
 // La derniere fenetre ouverte passe devant, et elle seule. On ne fait pas
@@ -1609,7 +1633,7 @@ function carteHtml(x) {
   const {g, e} = x;
   const coche = dsel2.has(g.key);
   const [cls, txt] = carteLigne(x);
-  const attente = sansFiche(g);
+  const attente = RECHERCHE_FICHES && sansFiche(g);
   return '<div class="gcard' + (coche ? ' sel' : '') + (attente ? ' sansfiche' : '') +
     (g.groupeN ? ' groupe' : '') +
     // Le support sert de liseré en vue « toutes les plateformes » : c'est la
@@ -1649,7 +1673,7 @@ function majCarte(el, x) {
   R.classe(el, 'sel', coche);
   // Des que la fiche arrive, le voile d'attente disparait sans redessiner
   // la carte — donc sans faire clignoter la jaquette.
-  const attente = sansFiche(g);
+  const attente = RECHERCHE_FICHES && sansFiche(g);
   R.classe(el, 'sansfiche', attente);
   const art = el.querySelector('.art');
   const voile = el.querySelector('.enattente');
