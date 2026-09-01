@@ -170,11 +170,9 @@ jobs:
       # CODE au catalogue, et 309 phrases francaises ont pu s'y accumuler sans
       # que rien ne rougisse.
       #
-      # En avertissement tant que la dette n'est pas resorbee : le rendre
-      # bloquant aujourd'hui arreterait tout pour un etat de fait connu. Il le
-      # deviendra quand le compteur atteindra zero.
-      - name: Le code n'a pas de phrase hors catalogue (avertissement)
-        continue-on-error: true
+      # Le compteur est a zero : le controle devient bloquant. C'etait la
+      # condition annoncee quand il a ete pose en avertissement.
+      - name: Le code n'a pas de phrase hors catalogue
         run: |
           python3 outils/verifier-traduction.py --autotest
           python3 outils/verifier-traduction.py --liste
