@@ -36,6 +36,14 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Added
 
+- **Responses are compressed** when the client accepts it. Measured on a
+  2 000-title library: `/api/scan` goes from 2 088 KiB to 84 KiB (×25), and
+  `app.js` + `app.css` + `index.html` from 508 KiB to 153 KiB (×3.3) — the
+  latter matters because `_static` sends `Cache-Control: no-store`, so those
+  508 KiB went out on *every* page load. Images are left alone, `gzip;q=0` is
+  honoured, and the ETag distinguishes the two representations so a client
+  that stops accepting gzip is not handed a 304 for a body it never had in
+  that form.
 - `ROMULE_ADB` points at the `adb` binary to run. Its purpose is to make the
   console's state choosable in tests, but it also serves anyone whose `adb`
   is not on the `PATH`.
