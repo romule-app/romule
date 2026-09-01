@@ -1,9 +1,8 @@
 """Base de versions titledb : telechargement, cache 24 h, parsing."""
 
 import time
-import urllib.request
 
-from . import config
+from . import config, reseau
 
 
 def load(lib, force=False, log=lambda m, n=None: None):
@@ -32,7 +31,7 @@ def _download(log):
     for url in urls:
         log("Telechargement de la base de versions...")
         try:
-            with urllib.request.urlopen(url, timeout=90) as r:
+            with reseau.ouvrir(url, timeout=90) as r:
                 data = r.read()
             if b"version" not in data[:80]:
                 raise ValueError("contenu inattendu")
