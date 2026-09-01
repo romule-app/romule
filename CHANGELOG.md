@@ -12,6 +12,12 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Fixed
 
+- **`CLASSES_DONNEES` conflated a style hook with a "never translate" marker.**
+  `jline`, `brow` and `crumb` wrap a *mixture*: a log line holds a timestamp, a
+  level and a message, and only the message is data. Marking the wrapper froze
+  the labels around it. The marker now sits on the data node itself, through
+  `data-i18n-skip` — the attribute `traduisible()` already reads. This is the
+  third instance of the same fault, after `tid` and `cnom`.
 - **The browser test suites had never run in CI.** The guard looked for
   `/Applications/Google Chrome.app` — a macOS path — on an Ubuntu runner, so
   the whole family silently skipped and the job reported success. That included
@@ -36,6 +42,11 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Added
 
+- **`outils/verifier-traduction.py` compares the code to the catalogue.** The
+  existing check compares `fr.json` to `en.json` — parity is perfect, so it is
+  green whatever happens. Nobody compared the *code* to the catalogue, which is
+  the sole reason 462 French phrases accumulated without anything going red. It
+  runs in CI as a warning until the backlog is cleared.
 - **Responses are compressed** when the client accepts it. Measured on a
   2 000-title library: `/api/scan` goes from 2 088 KiB to 84 KiB (×25), and
   `app.js` + `app.css` + `index.html` from 508 KiB to 153 KiB (×3.3) — the
