@@ -824,6 +824,22 @@
           <div class="setctl"><label class="sw"><input type="checkbox" id="s-lan"><span></span></label></div>
         </div>
 
+        <!-- ------------------------------------- notifications sortantes -->
+        <div class="setrow" style="align-items:flex-start">
+          <div class="setlab"><b>Notifications</b>
+            <span>Être prévenu quand une tâche se termine — Discord, Slack,
+              Telegram, ntfy, Gotify, ou n'importe quel webhook.</span>
+            <span>Le service est deviné à partir de l'adresse.</span></div>
+          <div class="setctl"><div id="listenotifs"></div>
+            <input type="text" id="s-notifnom" placeholder="Nom (« salon famille »)">
+            <input type="text" id="s-notifurl" style="margin-top:6px"
+                   placeholder="https://discord.com/api/webhooks/…">
+            <div class="bar" style="margin-top:8px">
+              <button class="ghost" data-act="ajouterNotif">Ajouter</button>
+              <button class="ghost" data-act="testerNotifSaisie">Tester sans enregistrer</button>
+            </div></div>
+        </div>
+
         <!-- ------------------------------------------ cles d'API -->
         <div class="setrow" style="align-items:flex-start">
           <div class="setlab"><b>Clés d'API</b>

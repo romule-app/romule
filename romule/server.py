@@ -15,22 +15,24 @@ import json
 import os
 import secrets
 import shutil
+import sys
 import signal
 import threading
 import time
+import urllib.parse
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from html import escape as html_escape
 from urllib.parse import parse_qs, unquote
 
-from . import (actions, apikeys, apiv1, audit, auth, comptes, config, covers,
-               maj,
+from . import (actions, apikeys, apiv1, audit, auth, comptes, config, console,
+               covers, maj, notifs, reseau,
                device, edenconf,
                doublons, emuready, igdb, integrity, journal_acces, meta, nand,
                parcourir, sauvegarde, saves,
                scan, systems, titleid, transferts, trash, versions, vues,
-               profils)
+               profils, nsztool)
 from . import cli
 from . import LICENCE, SOURCE_URL, __version__
 from .jobs import JobRunner
@@ -182,7 +184,33 @@ def _trop_vite(client):
 
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *a):
+        # Le format d'origine de `BaseHTTPRequestHandler` va sur stderr, sans
+        # niveau ni horodatage utilisable. On le remplace par le notre, dans
+        # `handle_one_request`, ou le CODE de reponse et la duree sont connus.
         pass
+
+    def send_response_only(self, code, message=None):
+        # Le seul point par lequel passent `send_response` ET `send_error` :
+        # noter le code ici, c'est le noter pour toutes les routes, y compris
+        # celles qui echouent — precisement celles qu'on cherche.
+        self._code = code
+        BaseHTTPRequestHandler.send_response_only(self, code, message)
+
+    def handle_one_request(self):
+        debut = time.monotonic()
+        self._code = 0
+        try:
+            BaseHTTPRequestHandler.handle_one_request(self)
+        finally:
+            # `ROMULE_LOG=debug` seulement : l'interface interroge `/api/job`
+            # en boucle, et ces lignes noieraient tout le reste ailleurs.
+            if console.montre("debug") and getattr(self, "command", None):
+                ms = (time.monotonic() - debut) * 1000
+                code = self._code or 0
+                console.evenement(
+                    "%-4s %-3d %6.1fms %s" % (self.command, code, ms, self.path),
+                    "error" if code >= 500 else "warn" if code >= 400 else "debug",
+                    "http", client=self.client_address[0] if self.client_address else "?")
 
     # ---------------------------------------------------------- helpers
 
@@ -800,6 +828,17 @@ class Handler(BaseHTTPRequestHandler):
             self._json(maj.etat(CFG))
         elif p == "/api/vues":
             self._json({"vues": vues.liste()})
+        elif p == "/api/notifs":
+            # L'ADRESSE n'est jamais rendue en entier. Un webhook Discord est un
+            # secret porteur : qui l'obtient peut ecrire dans le salon. La
+            # montrer dans une reponse HTTP la mettrait dans l'historique du
+            # navigateur, dans les journaux du proxy, et sur toute capture
+            # d'ecran de la page des reglages.
+            self._json({"destinations": [_notif_public(x)
+                                         for x in notifs.destinations(CFG)],
+                        "evenements": notifs.EVENEMENTS,
+                        "services": list(notifs.SERVICES)})
+
         elif p == "/api/cles":
             # L'interface est un navigateur avec une session : elle ne peut pas
             # passer par /api/v1, qui exige justement une cle. Ces trois routes
@@ -1086,6 +1125,11 @@ class Handler(BaseHTTPRequestHandler):
         # --- designent ou le service lit et ecrit sur la machine hote
         "/api/parcourir",             # revele l'arborescence de l'hote
         "/api/ludotheque",
+        # --- envoient vers l'exterieur au nom du service
+        "/api/notifs",              # les adresses sont des secrets porteurs
+        "/api/notif-creer",
+        "/api/notif-supprimer",
+        "/api/notif-tester",        # sinon : un scanner de ports par procuration
         # --- renseignent sur qui se connecte, et sur la posture de securite
         "/api/acces",
         "/api/audit",
@@ -1111,6 +1155,58 @@ class Handler(BaseHTTPRequestHandler):
         elif p == "/api/vue-supprimer":
             vues.supprimer(str(d.get("id") or ""))
             self._json({"vues": vues.liste()})
+
+        elif p == "/api/notif-creer":
+            url = str(d.get("url") or "").strip()
+            if not url:
+                return self._json({"error": "An address is required."}, 400)
+            try:
+                reseau.verifier(url)
+            except reseau.SchemaRefuse as exc:
+                # Le meme controle que pour les jaquettes et l'emetteur OIDC :
+                # un champ de reglage ne doit pas pouvoir faire lire un fichier
+                # local au serveur.
+                return self._json({"error": str(exc)}, 400)
+            liste = list(CFG.get("notif_destinations") or [])
+            if len(liste) >= notifs.MAX_DESTINATIONS:
+                return self._json({"error": "Too many destinations (%d)."
+                                   % notifs.MAX_DESTINATIONS}, 400)
+            liste.append({"id": secrets.token_hex(8),
+                          "nom": str(d.get("nom") or "")[:60],
+                          "url": url,
+                          "service": d.get("service"),
+                          "evenements": d.get("evenements") or [],
+                          "actif": True})
+            CFG["notif_destinations"] = liste
+            config.save_config(CFG)
+            JOB.log("Destination de notification ajoutee : %s"
+                    % (d.get("nom") or notifs.deviner(url)))
+            self._json({"destinations": [_notif_public(x)
+                                         for x in notifs.destinations(CFG)]})
+
+        elif p == "/api/notif-supprimer":
+            nid = str(d.get("id") or "")
+            CFG["notif_destinations"] = [x for x in (CFG.get("notif_destinations") or [])
+                                         if str(x.get("id")) != nid]
+            config.save_config(CFG)
+            self._json({"destinations": [_notif_public(x)
+                                         for x in notifs.destinations(CFG)]})
+
+        elif p == "/api/notif-tester":
+            # Deux cas : une adresse saisie mais pas encore enregistree, ou une
+            # destination existante — dont l'URL ne sort jamais du serveur et
+            # doit donc etre retrouvee par son identifiant.
+            url = str(d.get("url") or "").strip()
+            if not url:
+                cible = next((x for x in notifs.destinations(CFG)
+                              if x["id"] == str(d.get("id") or "")), None)
+                if not cible:
+                    return self._json({"error": "Unknown destination."}, 404)
+                url, service = cible["url"], cible["service"]
+            else:
+                service = d.get("service")
+            reussi, raison = notifs.tester(url, service)
+            self._json({"ok": reussi, "detail": raison})
 
         elif p == "/api/cle-creer":
             fiche, cle = apikeys.creer(d.get("nom") or "")
@@ -2000,10 +2096,27 @@ def _audit_demarrage():
             JOB.log("Securite — %s : %s" % (c["titre"], c["constat"]), "warn")
     n = r["resume"]["grave"] + r["resume"]["alerte"]
     if n:
-        print("Securite   : %d point(s) a regarder — voir le journal, "
-              "ou `python3 -m romule.audit`" % n)
+        console.dit("Securite : %d point(s) a regarder — `python3 -m romule.audit`"
+                    % n, "warn", "audit")
     else:
-        print("Securite   : aucun point d'attention.")
+        console.dit("Securite : aucun point d'attention.", "ok", "audit")
+
+
+def _notif_public(d):
+    """Une destination telle qu'elle peut sortir du serveur.
+
+    L'adresse est REMPLACEE par un apercu — l'hote, et rien de plus. Un webhook
+    Discord est un secret porteur : qui l'a peut ecrire dans le salon. Le rendre
+    a l'interface le poserait dans l'historique du navigateur, dans les journaux
+    du proxy, et sur la moindre capture d'ecran des reglages.
+
+    L'hote seul suffit a reconnaitre laquelle est laquelle, ce qui est la seule
+    chose qu'on demande a cet affichage.
+    """
+    hote = urllib.parse.urlparse(d.get("url") or "").netloc or "?"
+    return {"id": d.get("id"), "nom": d.get("nom"), "service": d.get("service"),
+            "evenements": d.get("evenements"), "actif": d.get("actif"),
+            "apercu": hote}
 
 
 def _jeton_de_premier_demarrage():
@@ -2040,6 +2153,60 @@ def _jeton_de_premier_demarrage():
     return jeton
 
 
+def _faits_de_demarrage(url, ip, jeton_auto):
+    """Ce qu'on veut lire en premier quand un service ne fait pas ce qu'on croit.
+
+    Chaque ligne repond a une question qui, sans elle, se paie en une demi-heure
+    de recherche : « quelle version tourne vraiment », « ou est-ce qu'il range
+    ma configuration », « pourquoi le port publie ne repond pas », « pourquoi
+    il ne convertit rien ». Elles sont donc dites au demarrage plutot que
+    disponibles quelque part.
+    """
+    modes = {"aucun": "aucune", "interne": "comptes internes", "oidc": "OpenID Connect"}
+    outils = [n for n, present in (("adb", bool(adb_hint())),
+                                   ("nsz", nsztool.available()),
+                                   ("unar", bool(shutil.which("unar"))),
+                                   ("7z", bool(shutil.which("7z") or shutil.which("7zz"))))
+              if present]
+    faits = [
+        ("Version", "%s   Python %d.%d.%d sur %s"
+         % (__version__, sys.version_info[0], sys.version_info[1],
+            sys.version_info[2], sys.platform)),
+        ("Interface", "%s   (Ctrl+C pour arreter)" % url),
+    ]
+    if CFG.get("lan_access") and ip:
+        faits.append(("Reseau", "http://%s:%d   (telephone, console, tablette)"
+                      % (ip, config.PORT)))
+    elif not CFG.get("lan_access"):
+        faits.append(("Reseau", "desactive — ROMULE_BIND=0.0.0.0, ROMULE_LAN=1 "
+                                "ou un jeton, puis redemarrer"))
+    faits += [
+        ("Acces", modes.get(CFG.get("auth_mode"), CFG.get("auth_mode"))
+         + (" + jeton" if config.TOKEN and not jeton_auto else "")
+         + (" + jeton engendre" if jeton_auto else "")),
+        ("Comptes", "%d" % comptes.nombre()),
+        ("Ludotheque", "%s   (%s)"
+         % (config.LUDO, "imposee par ROMULE_LIBRARY" if config.LUDO_IMPOSEE
+            else "modifiable depuis l'interface")),
+    ]
+    # Les deux dossiers ne sont distingues que s'ils different : sinon on
+    # cherche sa configuration dans le dossier des jeux, ou l'inverse.
+    if config.LUDO != config.ROOT:
+        faits.append(("Donnees", "%s   (configuration, comptes, jaquettes)"
+                      % config.ROOT))
+    faits += [
+        ("Depot", "%s   (glisse tes fichiers ici)" % config.IMPORT),
+        ("Journal", str(config.LOGFILE)),
+        ("Outils", ", ".join(outils) if outils else
+         "aucun — conversion et console indisponibles"),
+        ("Jaquettes", CFG.get("cover_provider", "nlib")
+         + (" + IGDB" if (CFG.get("igdb_client_id") or "").strip() else "")),
+        ("Journalisation", "ROMULE_LOG=%s   (quiet, normal, verbose, debug, json)"
+         % console.STYLE),
+    ]
+    return faits
+
+
 def serve(open_browser=True):
     # Le dossier de donnees a deja ete valide par `cli._verifier_racine()`.
     # Le depot, lui, est un CONFORT : la ludotheque peut etre en lecture seule
@@ -2054,50 +2221,35 @@ def serve(open_browser=True):
     # administrateur apres la mise a jour.
     comptes.reprendre_roles()
     JOB.notify_end = bool(CFG.get("notify", True))
+    jeton_auto = _jeton_de_premier_demarrage()
+    url = "http://127.0.0.1:%d" % config.PORT
+    ip = _lan_ip()
+    console.banniere(_faits_de_demarrage(url, ip, jeton_auto))
     threading.Thread(target=_reconnect_wifi, daemon=True).start()
     LIB.scan(log=JOB.log)
     versions.load(LIB, log=JOB.log)
-    jeton_auto = _jeton_de_premier_demarrage()
-    url = "http://127.0.0.1:%d" % config.PORT
     # ROMULE_NO_BROWSER : la ludotheque lancee par launchd a chaque ouverture
     # de session ne doit pas ouvrir un navigateur sans qu'on lui demande.
     service = (_in_container() or config.ENV_LAN or config.TOKEN
                or config.env("NO_BROWSER", "").strip() not in ("", "0"))
     _audit_demarrage()
-    print("Ludotheque : %s" % config.LUDO)
-    # Les deux dossiers sont affiches separement des qu'ils different : sinon
-    # on cherche sa configuration dans le dossier des jeux, ou l'inverse.
-    if config.LUDO != config.ROOT:
-        print("Donnees    : %s  (configuration, comptes, jaquettes)" % config.ROOT)
-    print("Depot      : %s  (glisse tes fichiers ici)" % config.IMPORT)
     for souci in config.PROBLEMES:
-        print("Attention  : %s" % souci)
-    print("Interface  : %s   (Ctrl+C pour arreter)" % url)
-    ip = _lan_ip()
-    if CFG.get("lan_access"):
-        if ip:
-            print("Reseau     : http://%s:%d   (telephone, console, tablette...)" % (ip, config.PORT))
-        if config.TOKEN:
-            print("Acces      : protege par jeton — ajoute ?token=... a l'adresse")
-        else:
-            print("             ATTENTION : accessible sans mot de passe par tout appareil du reseau.")
-    else:
-        # Le socket est desormais lie a 127.0.0.1 seul : le reglage ne peut
-        # plus prendre effet a chaud, et le dire faussement enverrait
-        # l'utilisateur chercher une panne qui n'existe pas.
-        print("Reseau     : desactive — pour ouvrir : ROMULE_BIND=0.0.0.0, "
-              "ROMULE_LAN=1 ou un jeton, puis redemarrer")
+        console.dit(souci, "warn", "config")
+    if CFG.get("lan_access") and not config.TOKEN:
+        console.dit("Accessible SANS MOT DE PASSE par tout appareil du reseau.",
+                    "warn", "acces")
     if jeton_auto:
         # Sans l'adresse complete, le jeton est une chaine que l'utilisateur
         # doit recoller a la main au bon endroit — c'est la que ca echoue.
-        print("Acces      : ce service est joignable par le reseau et n'a pas "
-              "encore de compte.")
-        print("             Ouvre cette adresse, puis cree ton compte dans "
-              "l'assistant :")
-        print("               http://%s:%d/?token=%s"
-              % (ip or "<adresse-du-serveur>", config.PORT, jeton_auto))
+        console.dit("Ce service est joignable par le reseau et n'a pas encore "
+                    "de compte. Ouvre cette adresse, puis cree ton compte :",
+                    "warn", "acces")
+        console.dit("  http://%s:%d/?token=%s"
+                    % (ip or "<adresse-du-serveur>", config.PORT, jeton_auto),
+                    "warn", "acces")
     if not adb_hint():
-        print("adb        : absent — la console ne pourra pas etre pilotee")
+        console.dit("adb absent — la console ne pourra pas etre pilotee",
+                    "warn", "device")
     if open_browser and not service:
         threading.Timer(1.0, lambda: webbrowser.open(url)).start()
     srv = ThreadingHTTPServer((_adresse_ecoute(), config.PORT), Handler)
@@ -2105,7 +2257,7 @@ def serve(open_browser=True):
     def stop(*_):
         # `docker stop` envoie SIGTERM : on previent la tache en cours et on
         # rend la main proprement plutot que d'etre tue net.
-        print("\nArret demande, fermeture...")
+        console.dit("Arret demande, fermeture...", "info", "serveur")
         JOB.cancel()
         threading.Thread(target=srv.shutdown, daemon=True).start()
 

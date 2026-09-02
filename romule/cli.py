@@ -8,13 +8,14 @@
 """
 
 import argparse
+import json
 import os
 import shutil
 import sys
 import time
 from pathlib import Path
 
-from . import __version__, config, convert, device, scan, versions
+from . import __version__, config, console, convert, device, scan, versions
 from .jobs import JobRunner
 
 
@@ -304,6 +305,265 @@ def _signaler_anciennes_variables():
     print("     %s" % ", ".join(n.replace("SWITCH_", "ROMULE_") for n in noms))
 
 
+# ---------------------------------------------------------------- depannage
+#
+# Ces commandes existent pour le moment ou l'interface n'est PAS la reponse :
+# plus de mot de passe, plus de second facteur, un service qui ne demarre pas,
+# ou un conteneur sans navigateur. Jusqu'ici la seule issue etait d'editer
+# `_romule-comptes.json` a la main — c'est-a-dire d'y coller une empreinte
+# scrypt calculee ailleurs, ce que personne ne reussit du premier coup.
+#
+# Elles n'ouvrent aucun droit nouveau : qui peut lancer `romule` a deja les
+# droits du service, donc l'acces a ses fichiers. Elles rendent seulement
+# faisable, sans se tromper, ce que le systeme de fichiers permettait deja.
+
+
+def _demander_mdp(invite="Nouveau mot de passe : "):
+    """Demande un mot de passe deux fois, sans echo.
+
+    Le lire en argument de commande le poserait dans l'historique du shell et
+    dans la liste des processus, ou n'importe qui sur la machine peut le voir.
+    `--mdp` existe quand meme, pour un script qui sait ce qu'il fait, mais ce
+    n'est pas le chemin par defaut.
+    """
+    import getpass
+    un = getpass.getpass(invite)
+    deux = getpass.getpass("Confirme               : ")
+    if un != deux:
+        print("Les deux saisies different.")
+        return None
+    return un
+
+
+def cmd_user(args):
+    """Comptes : lister, reinitialiser, promouvoir, retirer le second facteur."""
+    from . import comptes
+    action = getattr(args, "action", None) or "list"
+
+    if action == "list":
+        liste = comptes.liste()
+        if not liste:
+            print("Aucun compte. Le premier cree sera administrateur.")
+            return
+        print("%-34s %-20s %-6s %-6s %s"
+              % ("EMAIL", "NOM", "ADMIN", "2FA", "DERNIERE CONNEXION"))
+        for u in liste:
+            vu = (time.strftime("%F %H:%M", time.localtime(u["derniere"]))
+                  if u.get("derniere") else "jamais")
+            print("%-34s %-20s %-6s %-6s %s"
+                  % (u["email"][:34], (u.get("nom") or "")[:20],
+                     "oui" if u.get("admin") else "-",
+                     "oui" if u.get("double_facteur") else "-", vu))
+        return
+
+    if action == "passwd":
+        mdp = args.mdp or _demander_mdp()
+        if mdp is None:
+            return 1
+        try:
+            u = comptes.reinitialiser_mdp(args.email, mdp)
+        except ValueError as exc:
+            print("Refuse : %s" % exc)
+            return 1
+        print("Mot de passe repose pour %s." % u["email"])
+        # Deux consequences que l'utilisateur doit connaitre AVANT de chercher
+        # pourquoi il a ete deconnecte partout.
+        print("Toutes les sessions ouvertes de ce compte sont invalidees.")
+        print("Le compteur d'echecs et le blocage eventuel sont remis a zero.")
+        return
+
+    if action == "admin":
+        try:
+            u = comptes.par_email(args.email)
+        except ValueError as exc:
+            print("Refuse : %s" % exc)
+            return 1
+        if not u:
+            print("Aucun compte avec cette adresse.")
+            return 1
+        vise = not args.retirer
+        try:
+            comptes.promouvoir(u["id"], vise)
+        except ValueError as exc:
+            # « On ne retire pas le dernier administrateur » : une instance que
+            # personne ne peut administrer se repare a la main, dans un fichier.
+            print("Refuse : %s" % exc)
+            return 1
+        print("%s %s administrateur."
+              % (u["email"], "est desormais" if vise else "n'est plus"))
+        return
+
+    if action == "totp-off":
+        try:
+            avait = comptes.desactiver_totp(args.email)
+        except ValueError as exc:
+            print("Refuse : %s" % exc)
+            return 1
+        if avait:
+            print("Second facteur retire pour %s." % args.email)
+        else:
+            print("Ce compte n'avait pas de second facteur actif.")
+        return
+
+    if action == "rm":
+        u = comptes.par_email(args.email)
+        if not u:
+            print("Aucun compte avec cette adresse.")
+            return 1
+        if not args.oui:
+            print("Ceci supprimera definitivement %s." % u["email"])
+            print("Relance avec --oui pour confirmer.")
+            return 1
+        try:
+            comptes.supprimer(u["id"])
+        except ValueError as exc:
+            print("Refuse : %s" % exc)
+            return 1
+        print("Compte supprime : %s" % u["email"])
+        return
+
+
+def cmd_config(args):
+    """Lire et ecrire un reglage sans navigateur."""
+    from . import config as cfgmod
+    cfg = cfgmod.load_config()
+    # Ce qui ne doit jamais s'afficher : une valeur secrete lue par-dessus
+    # l'epaule, ou copiee dans un rapport de bogue avec le reste de la sortie.
+    SECRETS = ("auth_secret", "jeton_auto", "steamgriddb_key",
+               "igdb_client_secret", "oidc_client_secret")
+
+    def montrer(cle, valeur):
+        if cle in SECRETS and valeur:
+            return "(%d caracteres, masque)" % len(str(valeur))
+        return json.dumps(valeur, ensure_ascii=False)
+
+    action = getattr(args, "action", None) or "list"
+    if action == "list":
+        for cle in sorted(cfg):
+            print("%-26s %s" % (cle, montrer(cle, cfg[cle])))
+        return
+    if action == "get":
+        if args.cle not in cfg:
+            print("Reglage inconnu : %s" % args.cle)
+            return 1
+        print(montrer(args.cle, cfg[args.cle]))
+        return
+    if action == "set":
+        if args.cle not in cfgmod.DEFAULTS:
+            print("Reglage inconnu : %s" % args.cle)
+            print("`romule config list` donne la liste.")
+            return 1
+        # La valeur est lue en JSON quand c'est possible : sans cela `false`
+        # deviendrait la chaine « false », qui est vraie.
+        try:
+            valeur = json.loads(args.valeur)
+        except ValueError:
+            valeur = args.valeur
+        attendu = type(cfgmod.DEFAULTS[args.cle])
+        if not isinstance(valeur, attendu) and cfgmod.DEFAULTS[args.cle] is not None:
+            print("Type refuse : %s attend %s, pas %s."
+                  % (args.cle, attendu.__name__, type(valeur).__name__))
+            return 1
+        cfg[args.cle] = valeur
+        cfgmod.save_config(cfg)
+        print("%s = %s" % (args.cle, montrer(args.cle, valeur)))
+        return
+
+
+def cmd_doctor(args):
+    """Tout ce qu'on demanderait dans un rapport de bogue, en une commande.
+
+    L'audit repond « ce service est-il sur ». Celle-ci repond « pourquoi ne
+    fait-il pas ce que je crois » : quelle version, quels chemins, quels
+    droits, quels outils, quelle configuration reseau. Ce sont les questions
+    qu'on pose en premier a quelqu'un qui ouvre un ticket.
+    """
+    import platform
+    import socket
+    from . import comptes, notifs, systems
+    cfg = config.load_config()
+
+    def bloc(titre):
+        print("\n\033[90m-- %s %s\033[0m" % (titre, "-" * max(0, 56 - len(titre))))
+
+    def ligne(cle, valeur):
+        print("  %-22s %s" % (cle, valeur))
+
+    bloc("version")
+    ligne("Romule", __version__)
+    ligne("Python", "%s  (%s)" % (platform.python_version(), sys.executable))
+    ligne("Systeme", "%s %s  %s" % (platform.system(), platform.release(),
+                                    platform.machine()))
+    ligne("Conteneur", "oui" if os.path.exists("/.dockerenv") else "non")
+
+    bloc("chemins")
+    for nom, chemin in (("Donnees (ROMULE_ROOT)", config.ROOT),
+                        ("Ludotheque", config.LUDO),
+                        ("Depot", config.IMPORT),
+                        ("Journal", config.LOGFILE),
+                        ("Configuration", config.CONFIG_FILE)):
+        p = Path(chemin)
+        etat = []
+        etat.append("existe" if p.exists() else "ABSENT")
+        if p.exists():
+            etat.append("inscriptible" if os.access(p, os.W_OK) else "LECTURE SEULE")
+            etat.append(oct(p.stat().st_mode & 0o777))
+        ligne(nom, "%s  [%s]" % (chemin, ", ".join(etat)))
+    if config.LUDO_IMPOSEE:
+        ligne("", "ludotheque imposee par ROMULE_LIBRARY")
+
+    bloc("acces")
+    ligne("Mode", cfg.get("auth_mode"))
+    ligne("Comptes", "%d (%d administrateur(s))"
+          % (comptes.nombre(),
+             sum(1 for u in comptes.liste() if u.get("admin"))))
+    ligne("Reseau ouvert", "oui" if cfg.get("lan_access") else "non")
+    ligne("Jeton", "pose" if config.TOKEN else "aucun")
+    ligne("Proxies de confiance", config.env("TRUSTED_PROXIES") or "aucun")
+    ligne("Ecoute", "%s:%d" % (config.env("BIND") or "(defaut)", config.PORT))
+    try:
+        with socket.socket() as s:
+            s.settimeout(0.5)
+            libre = s.connect_ex(("127.0.0.1", config.PORT)) != 0
+        ligne("Port %d" % config.PORT, "libre" if libre else "DEJA PRIS")
+    except OSError as exc:
+        ligne("Port %d" % config.PORT, "indeterminable (%s)" % exc)
+
+    bloc("outils externes")
+    for outil in ("adb", "nsz", "unar", "7z", "7zz"):
+        ligne(outil, shutil.which(outil) or "absent")
+
+    bloc("services distants")
+    ligne("Jaquettes", cfg.get("cover_provider"))
+    for cle, nom in (("steamgriddb_key", "SteamGridDB"),
+                     ("igdb_client_id", "IGDB"),
+                     ("oidc_issuer", "OIDC")):
+        ligne(nom, "configure" if (cfg.get(cle) or "").strip() else "non configure")
+    dests = notifs.destinations(cfg)
+    ligne("Notifications", "%d destination(s) : %s" % (
+        len(dests), ", ".join(d["service"] for d in dests) or "aucune"))
+
+    bloc("ludotheque")
+    try:
+        lib = scan.Library()
+        lib.scan()
+        par_sys = {}
+        for f in lib.files:
+            par_sys[f.get("systeme", "?")] = par_sys.get(f.get("systeme", "?"), 0) + 1
+        ligne("Fichiers reconnus", str(len(lib.files)))
+        for cle in sorted(par_sys, key=lambda k: -par_sys[k])[:8]:
+            ligne("  " + str(systems.get(cle).get("name", cle)), str(par_sys[cle]))
+    except Exception as exc:
+        ligne("Analyse", "IMPOSSIBLE : %s" % exc)
+
+    bloc("journalisation")
+    ligne("ROMULE_LOG", console.STYLE)
+    ligne("Styles", ", ".join(console.STYLES))
+    print()
+    print("Colle ce rapport dans un ticket : il ne contient ni mot de passe,")
+    print("ni cle, ni adresse de webhook.")
+
+
 def main(argv):
     _verifier_racine()
     _verifier_jeton()
@@ -341,10 +601,42 @@ def main(argv):
     kr = ka.add_parser("revoke", help="revoquer une cle")
     kr.add_argument("id", help="identifiant montre par `apikey list`")
 
+    pu = sub.add_parser("user", help="comptes : lister, reinitialiser, promouvoir")
+    ua = pu.add_subparsers(dest="action")
+    ua.add_parser("list", help="lister les comptes")
+    up = ua.add_parser("passwd", help="reposer un mot de passe oublie")
+    up.add_argument("email")
+    up.add_argument("--mdp", help="ne pas demander (le shell le retiendra)")
+    um = ua.add_parser("admin", help="donner ou retirer l'administration")
+    um.add_argument("email")
+    um.add_argument("--retirer", action="store_true", help="retirer au lieu de donner")
+    ut = ua.add_parser("totp-off", help="retirer le second facteur (telephone perdu)")
+    ut.add_argument("email")
+    ur = ua.add_parser("rm", help="supprimer un compte")
+    ur.add_argument("email")
+    ur.add_argument("--oui", action="store_true", help="confirmer la suppression")
+
+    pg = sub.add_parser("config", help="lire ou ecrire un reglage")
+    ga = pg.add_subparsers(dest="action")
+    ga.add_parser("list", help="tout afficher")
+    gg = ga.add_parser("get", help="lire un reglage")
+    gg.add_argument("cle")
+    gs = ga.add_parser("set", help="ecrire un reglage")
+    gs.add_argument("cle")
+    gs.add_argument("valeur")
+
+    sub.add_parser("doctor", help="tout ce qu'un ticket devrait contenir")
+
     # tolere les options globales inconnues (ex : --no-browser)
     args, _ = parser.parse_known_args([a for a in argv if a != "--no-browser"])
-    {
+    # Le code de retour est PROPAGE. Sans lui, `romule user passwd` affichait
+    # « Refuse : ... » et sortait quand meme sur 0 : un script ne pouvait pas
+    # distinguer un refus d'un succes, et un `&&` enchainait sur une commande
+    # qui n'avait rien fait. C'est le test des commandes de depannage qui l'a
+    # trouve — six refus parfaitement rediges, tous annonces comme reussis.
+    return {
         None: cmd_serve, "serve": cmd_serve, "scan": cmd_scan,
         "convert": cmd_convert, "push": cmd_push, "device": cmd_device,
         "test": cmd_test, "apikey": cmd_apikey,
-    }[args.cmd](args)
+        "user": cmd_user, "config": cmd_config, "doctor": cmd_doctor,
+    }[args.cmd](args) or 0

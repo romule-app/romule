@@ -58,10 +58,20 @@ MOTS = {n: (_en(n), _fr(n)) for n in range(1, 41)}
 
 
 def formes(n):
-    """Les ecritures acceptables d'un nombre : chiffres, anglais, francais."""
+    """Les ecritures acceptables d'un nombre : chiffres, anglais, francais.
+
+    Toutes les variantes, parce que ce controle existe pour attraper une
+    DERIVE, pas pour dicter l'orthographe. « trente et une routes » est le bon
+    francais — *route* est feminin — et la reforme de 1990 admet aussi
+    « trente-et-une ». Un outil qui n'accepterait qu'une seule graphie ferait
+    reecrire la phrase pour lui plaire, ce qui est le contraire du but.
+    """
     f = {str(n)}
     for mot in MOTS.get(n, ()):
-        f |= {mot, mot.capitalize()}
+        variantes = {mot, mot.replace("-et-", " et ")}
+        # Accord en genre : « vingt et une routes », « trente et une lignes ».
+        variantes |= {v[:-2] + "une" for v in list(variantes) if v.endswith("un")}
+        f |= variantes | {v.capitalize() for v in variantes}
     return f
 
 

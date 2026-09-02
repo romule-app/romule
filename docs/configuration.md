@@ -36,6 +36,8 @@ working exactly as before.
 | `ROMULE_RATE` | `600` | Requests per minute per client |
 | `ROMULE_CHROME` | — | Chrome binary for the browser test suite |
 | `ROMULE_SCRYPT_PARALLELE` | `2` | How many password hashes may run at once. scrypt deliberately costs ~128 MiB each; without a cap, a handful of parallel sign-in attempts would exhaust the server's memory and turn a protection into a lever. |
+| `ROMULE_LOG` | `normal` | How much Romule writes to the **terminal** — `quiet`, `normal`, `verbose`, `debug`, `json`. Unrelated to the Log panel in the interface: this is what `docker logs` and a systemd journal show. See [Reading the logs](#reading-the-logs). |
+| `NO_COLOR` | — | Any value turns off colour, per the [no-color.org](https://no-color.org) convention. Colour is also off automatically when the output is not a terminal. |
 | `ROMULE_ADB` | `adb` on the `PATH` | Path to the `adb` binary. A path that does not exist means “no console”, which is how the test suite stays independent of what is plugged in. |
 
 `ROMULE_BIND` defaults to `127.0.0.1`, except in a container or once network
@@ -52,6 +54,39 @@ around it.
 !!! info "Old names still work"
     `SWITCH_*` variables are still read, and Romule prints their replacement at
     startup. They will be dropped in a later release.
+
+## Reading the logs
+
+Two logs answer two different questions, and they are not the same log.
+
+The **Log panel** in the interface tells whoever is looking at their library
+what it is currently doing. The **terminal** is where you find out why a
+service will not start, on a machine where nobody can open a browser — a
+container, a NAS, an ssh session. `ROMULE_LOG` controls the second one only.
+
+| Value | What you get |
+|---|---|
+| `quiet` | Errors only |
+| `normal` *(default)* | The startup banner, the facts it lists, warnings and errors |
+| `verbose` | Plus every task event, timestamped |
+| `debug` | Plus each HTTP request with its status and duration, the module, the thread, and seconds since startup |
+| `json` | One JSON object per line, for a log collector |
+
+```sh
+docker compose logs -f romule                  # whatever the style is set to
+ROMULE_LOG=debug python3 -m romule serve       # when something is wrong
+```
+
+!!! tip "`verbose` deliberately hides `debug`"
+    The interface polls `/api/job` continuously while a task runs, and those
+    requests are logged at `debug`. A `verbose` that showed them would bury the
+    task events under dozens of lines a second — that is, make unreadable
+    exactly what you opened it to read.
+
+The startup banner is not decoration. It answers, before you go looking: which
+version is actually running, where it keeps your settings as opposed to your
+games, who may connect, which external tools it found, and where the log file
+is. Each of those lines is a question that otherwise costs half an hour.
 
 ## Settings
 
@@ -141,6 +176,85 @@ All of these are edited from the interface. The names are the keys stored in
 |---|---|---|
 | `ui_lang` | `en` | `en` or `fr`. Adding a language is a JSON file — see [Contributing](contribuer.md). |
 | `notify` | `true` | Notify when a job finishes |
+
+## Notifications
+
+Romule could already tell you a task had finished — but only the person sitting
+in front of it, with a desktop notification. What it does takes time: a
+thirty-file conversion, a multi-gigabyte transfer. Those are precisely the
+moments when you are **not** in front of the screen.
+
+**Settings → Access → Notifications.** Paste a webhook address, give it a name,
+done. The service is worked out from the address:
+
+| Service | What to paste |
+|---|---|
+| Discord | `https://discord.com/api/webhooks/…` — Server settings → Integrations → Webhooks |
+| Slack | `https://hooks.slack.com/services/…` — an Incoming Webhook |
+| Telegram | `https://api.telegram.org/bot<token>/sendMessage?chat_id=<id>` |
+| ntfy | `https://ntfy.sh/your-topic`, or your own instance |
+| Gotify | `https://gotify.example.com/message?token=…` |
+| Anything else | Any URL — Romule POSTs a plain JSON object |
+
+Each destination can be tested before or after saving, and the result says
+which side refused: a wrong address and a service that is down do not look the
+same.
+
+!!! warning "A webhook address is a bearer secret"
+    Whoever holds it can post in your channel. Romule therefore **never sends
+    it back** — the interface shows only the host, which is enough to tell two
+    destinations apart. The address is not in the API responses, not in the
+    log, and not in `romule doctor` output. Managing notifications is
+    administrator-only, and so is testing one: an endpoint that fetches an
+    arbitrary URL on demand is a port scanner by proxy.
+
+Nothing is sent when nothing is configured. A self-hosted service that reaches
+outward on its own is a problem, not a feature.
+
+## Debugging from the terminal
+
+These commands exist for the moment when the interface is **not** the answer:
+no password left, no second factor, a service that will not start, or a
+container with no browser. Until they existed, the only way out was editing
+`_romule-comptes.json` by hand — pasting an scrypt hash computed elsewhere,
+which nobody gets right the first time.
+
+They grant nothing new. Whoever can run `romule` already has the service's
+rights, and therefore its files. They only make doable, without mistakes, what
+the filesystem already allowed.
+
+```sh
+romule doctor                              # everything a bug report should contain
+romule user list
+romule user passwd you@example.com         # asks twice, no echo
+romule user admin you@example.com          # grant administration
+romule user admin you@example.com --retirer
+romule user totp-off you@example.com       # lost phone
+romule user rm someone@example.com --oui
+romule config list                         # secrets shown as "(n characters, masked)"
+romule config get auth_mode
+romule config set trash_days 7
+```
+
+Under Docker, prefix with `docker compose exec romule python3 -m romule`.
+
+`romule user passwd` resets a password **without knowing the old one**. That is
+why it exists only here and never as an HTTP route: a reset without proof of
+identity is exactly what an attacker wants. It also invalidates every open
+session for that account, and clears the failure counter — a lockout from
+repeated wrong attempts would otherwise survive the reset and make the new
+password look broken.
+
+!!! tip "`romule doctor` is what to paste into an issue"
+    Version, paths and their permissions, which port is taken, which external
+    tools are on `PATH`, which remote services are configured, how many
+    accounts and administrators, and the library breakdown per platform. It
+    contains no password, no key, and no webhook address — that is checked by
+    a test, not by intention.
+
+Every one of these commands **exits non-zero when it refuses**. That sounds
+obvious; it was not true when they were written, and a test caught six
+perfectly worded refusals all reported as success.
 
 ## Where the files live
 

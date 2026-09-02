@@ -1132,5 +1132,17 @@
   "Mise à jour": "Mise à jour",
   "Vérifier les mises à jour": "Vérifier les mises à jour",
   "Une fois par jour, Romule demande à GitHub s'il existe une version plus récente.": "Une fois par jour, Romule demande à GitHub s'il existe une version plus récente.",
-  "C'est la seule fois où il sort sur internet sans qu'on le lui demande.": "C'est la seule fois où il sort sur internet sans qu'on le lui demande."
+  "C'est la seule fois où il sort sur internet sans qu'on le lui demande.": "C'est la seule fois où il sort sur internet sans qu'on le lui demande.",
+  "Être prévenu quand une tâche se termine — Discord, Slack, Telegram, ntfy, Gotify, ou n'importe quel webhook.": "Être prévenu quand une tâche se termine — Discord, Slack, Telegram, ntfy, Gotify, ou n'importe quel webhook.",
+  "Le service est deviné à partir de l'adresse.": "Le service est deviné à partir de l'adresse.",
+  "Ajouter": "Ajouter",
+  "Tester": "Tester",
+  "Retirer": "Retirer",
+  "Tester sans enregistrer": "Tester sans enregistrer",
+  "Aucune destination. Romule ne prévient que cet écran.": "Aucune destination. Romule ne prévient que cet écran.",
+  "Colle l'adresse du webhook.": "Colle l'adresse du webhook.",
+  "Destination ajoutée.": "Destination ajoutée.",
+  "Destination retirée.": "Destination retirée.",
+  "Envoyé. Regarde ton salon.": "Envoyé. Regarde ton salon.",
+  "Nom (« salon famille »)": "Nom (« salon famille »)"
 }

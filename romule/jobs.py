@@ -10,6 +10,8 @@ import subprocess
 import threading
 from datetime import datetime
 
+from . import console
+
 # Journal : on ecrit a chaque evenement (un message perdu lors d'un plantage
 # ne sert a rien), et on fait tourner le fichier par taille — pratique
 # standard, preferable a une sauvegarde periodique.
@@ -77,6 +79,10 @@ class JobRunner:
         self.detail = ""       # debit / ETA / info libre affichee dans le dock
         self.logfile = logfile
         self.notify_end = True
+        # Nom affiche en `ROMULE_LOG=debug` a cote de chaque ligne. Il suit la
+        # tache en cours : « quel module a ecrit ceci » est la premiere
+        # question qu'on se pose devant un journal bavard.
+        self.module = "job"
 
     def log(self, line, niveau=None):
         """Journalise un evenement. Le niveau est deduit s'il n'est pas donne."""
@@ -87,6 +93,11 @@ class JobRunner:
         with self._lock:
             self.log_lines.append(entree)
             del self.log_lines[:-800]
+        # Le TERMINAL, en plus du fichier et du tampon memoire. Sans cela
+        # `docker logs romule` ne montrait que le bandeau de demarrage : tout
+        # ce qui arrivait ensuite n'existait que pour un navigateur, c'est-a-
+        # dire pour personne sur un serveur qu'on administre en ssh.
+        console.evenement(entree["m"], niveau, self.module)
         if self.logfile:
             try:
                 _rotate(self.logfile)
@@ -174,13 +185,29 @@ class JobRunner:
                 with self._lock:
                     self.running = False
                     done, total, cancelled = self.done, self.total, self.cancelled
+                if err:
+                    resume, evt, niveau = "failed: %s" % err, "tache_echec", "error"
+                elif cancelled:
+                    resume, evt, niveau = ("interrupted at %d/%d" % (done, total),
+                                           "tache_echec", "warn")
+                else:
+                    resume, evt, niveau = ("finished (%d/%d)" % (done, total),
+                                           "tache_ok", "ok")
                 if self.notify_end:
-                    if err:
-                        notify("%s : echec (%s)" % (label, err))
-                    elif cancelled:
-                        notify("%s : interrompu (%d/%d)" % (label, done, total))
-                    else:
-                        notify("%s : termine (%d/%d)" % (label, done, total))
+                    notify("%s : %s" % (label, resume))
+                # Une conversion de trente fichiers dure une demi-heure : c'est
+                # exactement le moment ou l'on n'est PAS devant l'ecran. La
+                # notification de bureau ne sert qu'a qui l'est deja.
+                #
+                # Importe ICI et non en tete : `notifs` importe `config`, qui
+                # lit le disque a l'import. Un cycle entre les deux modules
+                # ferait echouer le demarrage plutot qu'une notification.
+                try:
+                    from . import notifs
+                    notifs.envoyer(evt, "Romule — %s" % label, resume, niveau)
+                except Exception as exc:      # jamais fatal : c'est un confort
+                    console.evenement("Notification impossible : %s" % exc,
+                                      "warn", "notifs")
 
         threading.Thread(target=wrap, daemon=True).start()
         return True

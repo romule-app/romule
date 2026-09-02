@@ -59,7 +59,9 @@ def unitaires():
                 "romule.tests.test_reglages",
                 "romule.tests.test_rapprochement",
                 "romule.tests.test_maj",
-                "romule.tests.test_covers"):
+                "romule.tests.test_covers",
+                "romule.tests.test_console",
+                "romule.tests.test_cli_depannage"):
         r = subprocess.run([sys.executable, "-m", mod], cwd=str(RACINE))
         print("   %-34s %s" % (mod, "OK" if r.returncode == 0 else "ECHEC"), flush=True)
         ok = (r.returncode == 0) and ok
@@ -94,7 +96,7 @@ def serveur():
     for f in ("test_auth_interne.py", "test_oidc_sso.py", "test_totp.py",
               "test_verrouillage.py", "test_proxy.py",
               "test_autorisation.py", "test_limites.py", "test_premier_acces.py", "test_oidc_negatif.py", "test_intrusion.py", "test_ludotheque.py", "test_compression.py", "test_igdb.py",
-              "test_apiv1.py"):
+              "test_apiv1.py", "test_notifs.py"):
         ok = script(TESTS / f) and ok
     return ok
 
