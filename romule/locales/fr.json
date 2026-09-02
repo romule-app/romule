@@ -1103,5 +1103,17 @@
   "inconnue": "inconnue",
   "aucune": "aucune",
   "Plateforme inconnue": "Plateforme inconnue",
-  "Inconnu": "Inconnu"
+  "Inconnu": "Inconnu",
+  "Plateforme : %s": "Plateforme : %s",
+  "Recherche : %s": "Recherche : %s",
+  "État : %s": "État : %s",
+  "Filtres avancés : %s": "Filtres avancés : %s",
+  "Oublier cette vue": "Oublier cette vue",
+  "Plus de filtres · %d": "Plus de filtres · %d",
+  "Enregistrer cette vue": "Enregistrer cette vue",
+  "Nom de la vue": "Nom de la vue",
+  "À convertir sur Switch": "À convertir sur Switch",
+  "Vue enregistrée.": "Vue enregistrée.",
+  "Tout effacer": "Tout effacer",
+  "Enregistrer": "Enregistrer"
 }

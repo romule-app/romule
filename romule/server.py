@@ -28,7 +28,8 @@ from . import (actions, apikeys, apiv1, audit, auth, comptes, config, covers,
                device, edenconf,
                doublons, emuready, igdb, integrity, journal_acces, meta, nand,
                parcourir, sauvegarde, saves,
-               scan, systems, titleid, transferts, trash, versions, profils)
+               scan, systems, titleid, transferts, trash, versions, vues,
+               profils)
 from . import cli
 from . import LICENCE, SOURCE_URL, __version__
 from .jobs import JobRunner
@@ -782,6 +783,8 @@ class Handler(BaseHTTPRequestHandler):
                 self._json_revalide(json.loads(f.read_text(encoding="utf-8")))
             else:
                 self._json({"error": "langue inconnue"}, 404)
+        elif p == "/api/vues":
+            self._json({"vues": vues.liste()})
         elif p == "/api/cles":
             # L'interface est un navigateur avec une session : elle ne peut pas
             # passer par /api/v1, qui exige justement une cle. Ces trois routes
@@ -1047,6 +1050,17 @@ class Handler(BaseHTTPRequestHandler):
         if p == "/api/versions":
             versions.load(LIB, force=bool(d.get("force")), log=JOB.log)
             self._json(_lib_response())
+
+        elif p == "/api/vue-creer":
+            v = vues.creer(d.get("nom"), d.get("filtres"))
+            if not v:
+                return self._json({"error": "Trop de vues enregistrees (%d)."
+                                   % vues.MAX_VUES}, 400)
+            self._json({"vue": v, "vues": vues.liste()})
+
+        elif p == "/api/vue-supprimer":
+            vues.supprimer(str(d.get("id") or ""))
+            self._json({"vues": vues.liste()})
 
         elif p == "/api/cle-creer":
             fiche, cle = apikeys.creer(d.get("nom") or "")

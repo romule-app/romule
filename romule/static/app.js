@@ -1231,6 +1231,63 @@ function libelleSysteme(key) {
 // regroupe sur l'image suivante — c'est le rythme de l'ecran, et c'est le seul
 // moment ou un rendu peut se voir.
 let RENDU_PREVU = 0;
+let VUES = [];                  // vues enregistrees, servies par le serveur
+
+// Ce qui DEFINIT le sous-ensemble affiche. Ni le tri, ni la taille des
+// vignettes, ni la page : ce sont des preferences d'affichage, elles valent
+// pour tout ce qu'on regarde.
+function filtresCourants() {
+  return {systeme: SYS,
+          recherche: (($('filter') || {}).value || '').trim(),
+          etat: FILTER,
+          avances: [...FAV]};
+}
+
+function nbFiltresActifs() {
+  const f = filtresCourants();
+  return (f.recherche ? 1 : 0) + (f.etat !== 'all' ? 1 : 0) + f.avances.length;
+}
+
+function resumeFiltres(f) {
+  const bouts = [];
+  bouts.push(phrase('Plateforme : %s',
+                    f.systeme === 'all' ? t('toutes') : libelleSysteme(f.systeme)));
+  if (f.recherche) bouts.push(phrase('Recherche : %s', f.recherche));
+  if (f.etat !== 'all') bouts.push(phrase('État : %s', f.etat));
+  if (f.avances.length)
+    bouts.push(phrase('Filtres avancés : %s',
+                      f.avances.map(k => t((FAVANCES[k] || [k])[0])).join(', ')));
+  return bouts.join('\n');
+}
+
+function dessinerVues() {
+  const boite = $('vues');
+  if (boite)
+    boite.innerHTML = VUES.map(v =>
+      '<span class="vue" data-act="appliquerVue" data-arg="' + esc(v.id) + '"'
+      + ' data-i18n-skip>' + esc(v.nom)
+      + '<button class="oter" data-act="supprimerVue" data-arg="' + esc(v.id)
+      + '" title="' + esc(t('Oublier cette vue')) + '"'
+      + ' aria-label="' + esc(t('Oublier cette vue')) + '">×</button></span>').join('');
+  majBarreFiltres();
+}
+
+function majBarreFiltres() {
+  const n = nbFiltresActifs();
+  const eff = $('effacefiltres');
+  if (eff) eff.hidden = n === 0;
+  const enr = $('enregistrervue');
+  if (enr) enr.hidden = n === 0;
+  const b = $('favbtn');
+  if (b) R.texte(b, n ? phrase('Plus de filtres · %d', n) : t('Plus de filtres'));
+}
+
+async function chargerVues() {
+  const r = await api('/api/vues', null, true);
+  if (!r || r.error) return;
+  VUES = r.vues || [];
+  dessinerVues();
+}
 
 function renderLibBientot() {
   if (RENDU_PREVU) return;
@@ -1239,6 +1296,7 @@ function renderLibBientot() {
 
 function renderLib() {
   renderSysSelect();
+  majBarreFiltres();
   // Les filtres d'etat propres a la Switch (MAJ, DLC, conversion) n'ont pas de
   // sens ailleurs : on les masque, le reste de la vue est commun.
   const suisse = isSwitch();
@@ -1784,9 +1842,13 @@ function renderToolbar(tous) {
     '<label class="favrow"><input type="checkbox" ' + (FAV.has(k) ? 'checked ' : '') +
     'data-act-change="toggleFav" data-arg="' + esc(k) + '"><span class="grow">' + esc(lib) + '</span>' +
     '<span class="mono">' + tous.filter(fn).length + '</span></label>').join('');
+  // Le LIBELLE de ce bouton appartient a `majBarreFiltres()`, et a elle seule :
+  // il comptait ici les seuls filtres avances, alors que la recherche et la
+  // pastille d'etat filtrent tout autant. Deux ecrivains sur le meme texte,
+  // c'est le dernier qui gagne — et c'etait celui qui comptait le moins bien.
   const b = $('favbtn');
-  if (b) { b.classList.toggle('on', FAV.size > 0);
-           b.textContent = FAV.size ? 'Filtres (' + FAV.size + ')' : 'Plus de filtres'; }
+  if (b) b.classList.toggle('on', FAV.size > 0);
+  majBarreFiltres();
 }
 
 function renderPager(total, pages, parPage) {
@@ -3457,7 +3519,7 @@ async function creerCle() {
     message: t('Note-la maintenant : elle n\'est conservée que sous forme '
                + 'd\'empreinte et ne pourra pas être réaffichée.'),
     detail: r.secret,
-    actions: [{libelle: t('Copier'), principal: true, action: () => {
+    actions: [{libelle: t('Copier'), principal: true, faire: () => {
       navigator.clipboard.writeText(r.secret)
         .then(() => toast(t('Clé copiée.'), 'ok'))
         // Le presse-papiers est refuse hors contexte securise : sans ce
@@ -3477,7 +3539,7 @@ async function revoquerCle(id) {
     message: phrase('%s cessera de fonctionner immédiatement. C\'est '
                     + 'irréversible : il faudra en créer une autre.',
                     k.nom || id),
-    actions: [{libelle: t('Révoquer'), principal: true, action: async () => {
+    actions: [{libelle: t('Révoquer'), principal: true, faire: async () => {
       const r = await api('/api/cle-revoquer', {id});
       if (r && r.ok) toast(t('Clé révoquée.'), 'ok');
       chargerCles();
@@ -5026,6 +5088,67 @@ const app = {
     PAGE = 0; renderLib();
   },
   clearFav() { FAV.clear(); localStorage.removeItem('fav'); PAGE = 0; renderLib(); },
+
+  // ---- filtres : les compter, les effacer, les enregistrer
+  //
+  // Trois mecanismes cohabitent — la recherche, la pastille d'etat, les
+  // filtres avances — et rien ne disait combien etaient actifs. On pouvait
+  // chercher pendant dix minutes pourquoi la grille etait vide alors qu'un
+  // filtre pose la veille tenait toujours.
+  effacerFiltres() {
+    const champ = $('filter');
+    if (champ) champ.value = '';
+    FILTER = 'all';
+    FAV.clear();
+    localStorage.removeItem('fav');
+    PAGE = 0;
+    renderLib();
+  },
+
+  async enregistrerVue() {
+    const f = filtresCourants();
+    dialogue({
+      titre: t('Enregistrer cette vue'),
+      niveau: 'info',
+      // On MONTRE ce qui sera enregistre : personne ne doit sauvegarder a
+      // l'aveugle une combinaison qu'il ne pourra pas relire ensuite.
+      message: resumeFiltres(f),
+      champs: [{id: 'nom', libelle: t('Nom de la vue'),
+                exemple: t('À convertir sur Switch')}],
+      actions: [{libelle: t('Enregistrer'), principal: true,
+                 faire: async saisies => {
+        const r = await api('/api/vue-creer', {nom: saisies.nom, filtres: f});
+        if (!r || r.error) return;
+        VUES = r.vues || [];
+        dessinerVues();
+        toast(t('Vue enregistrée.'), 'ok');
+      }}],
+    });
+  },
+
+  appliquerVue(id) {
+    const v = VUES.find(x => x.id === id);
+    if (!v) return;
+    const f = v.filtres || {};
+    const champ = $('filter');
+    if (champ) champ.value = f.recherche || '';
+    FILTER = f.etat || 'all';
+    FAV.clear();
+    (f.avances || []).forEach(k => FAV.add(k));
+    localStorage.setItem('fav', JSON.stringify([...FAV]));
+    PAGE = 0;
+    // La plateforme en dernier : `setSystem` redessine, et le faire avant
+    // aurait dessine la grille avec les anciens filtres.
+    if (f.systeme && f.systeme !== SYS) this.setSystem(f.systeme);
+    else renderLib();
+  },
+
+  async supprimerVue(id) {
+    const r = await api('/api/vue-supprimer', {id});
+    if (!r || r.error) return;
+    VUES = r.vues || [];
+    dessinerVues();
+  },
   // Frappe dans la recherche : on revient a la premiere page, sinon chercher
   // depuis la page 3 ne montre rien alors qu'il y a des resultats.
   chercher() { PAGE = 0; renderLibBientot(); },
@@ -6385,7 +6508,9 @@ const ACTES = new Set([
   'copierRetour', 'deployPick', 'detect', 'dismissA2HS', 'doImport',
   'ecApply', 'ecApplyProfile', 'ecLoad', 'ecSaveProfile', 'edenRestore',
   'erApply', 'erPreview', 'erSync', 'forcerFiches', 'importerJeu',
-  'chercher', 'creerCle', 'installApp', 'journalClear', 'journalCopy',
+  'appliquerVue', 'chercher', 'creerCle', 'effacerFiltres',
+  'enregistrerVue', 'installApp', 'journalClear', 'journalCopy',
+  'supprimerVue',
   'loadSaves',
   'loadTrash', 'revoquerCle',
   'ludoAnnulerOnb', 'ludoFermer', 'ludoNouveau', 'ludoOuvrir',
@@ -7268,6 +7393,7 @@ majApparence();
   }
   // le reste peut arriver apres : rien n'en depend pour un premier affichage
   app.checkHealth();
+  chargerVues();                   // les vues enregistrees, servies par le serveur
   app.erLoad();
   app.erDevices();
   // `scan()` a deja lu la liste des plateformes et l'attend : la redemander

@@ -96,14 +96,28 @@
       <label class="tlbl">Trier par <select id="tri" data-act-change="setTri"></select></label>
       <button class="szbtn sensbtn" id="sens" data-act="setSens" title="Inverser l'ordre">↑</button>
 
+      <!-- « Tout effacer » remet les TROIS filtres a zero : la recherche, la
+           pastille d'etat et les filtres avances. Il n'apparait que lorsqu'il
+           y a quelque chose a effacer — un bouton toujours la, souvent inerte,
+           finit par ne plus etre lu. -->
+      <button class="ghost effacer" id="effacefiltres" data-act="effacerFiltres"
+              hidden>Tout effacer</button>
+
       <div class="favwrap">
         <button class="ghost" id="favbtn" data-act="toggleFavPop">Plus de filtres</button>
         <div class="favpop" id="favpop">
           <div class="favhead">Affiner la liste
             <button class="ghost" data-act="clearFav">Tout enlever</button></div>
-          <div id="favlist"></div>
+              <div id="favlist"></div>
         </div>
       </div>
+
+      <!-- Les vues enregistrees : une combinaison de filtres qu'on retrouve
+           d'un clic. Elles vivent sur le serveur, donc les memes sur le
+           telephone et sur le poste. -->
+      <div class="vues" id="vues"></div>
+      <button class="ghost" id="enregistrervue" data-act="enregistrerVue"
+              hidden>Enregistrer cette vue</button>
 
       <span style="flex:1"></span>
       <!-- Densite d'affichage : icones de grille, convention partagee par les
