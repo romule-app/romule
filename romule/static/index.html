@@ -63,7 +63,18 @@
 
     <div class="libbar">
       <select id="sysel" data-act-change="setSystem" title="Console / système"></select>
-      <input type="text" id="filter" class="search" placeholder="Rechercher un jeu..." data-i18n-ph="lib.search" data-act-input="renderLib">
+      <!-- La recherche porte sur ce qui est AFFICHE : dans « toutes les
+           plateformes » elle cherche partout, ailleurs dans la plateforme
+           courante. Elle se combine avec les pastilles et les filtres
+           avances — `jeuxFiltres()` applique les trois ensemble. -->
+      <div class="champ-recherche">
+        <svg class="loupe" viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
+          <circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.7"/>
+          <path d="M10.4 10.4 L14 14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+        </svg>
+        <input type="text" id="filter" class="search" placeholder="Rechercher un jeu..." data-i18n-ph="lib.search" data-act-input="chercher">
+        <kbd class="raccourci" id="kbd-recherche" data-i18n-skip>/</kbd>
+      </div>
       <span style="flex:1"></span>
       <button class="go" id="bulkconv" style="display:none" data-act="convertAll"></button>
       <button class="ghost" data-act="actualiser"
