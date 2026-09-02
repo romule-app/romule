@@ -21,6 +21,7 @@ over adb.
 - **[Your console](console.md)** — pairing over Wi-Fi or USB
 - **[Configuration](configuration.md)** — every setting and environment variable
 - **[HTTP API](api.md)** — query your library from a dashboard or a script
+- **[Roles and access](roles.md)** — who may do what, and how SSO groups map
 
 </div>
 

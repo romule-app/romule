@@ -289,6 +289,7 @@ them. Those names are used only to say what the software works with.
 |---|---|
 | [Documentation site](https://romule-app.github.io/romule/) | Install, first run, console setup, full configuration reference |
 | [HTTP API](https://romule-app.github.io/romule/api/) | Keys, the fourteen routes, pagination, errors |
+| [Roles and access](https://romule-app.github.io/romule/roles/) | The two roles, the three modes, and OIDC group mapping |
 | [CHANGELOG.md](CHANGELOG.md) | What changed, release by release |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Zero-dependency rule, house style, how to run the suites |
 | [SECURITY.md](SECURITY.md) | How to report a vulnerability, and what is in scope |

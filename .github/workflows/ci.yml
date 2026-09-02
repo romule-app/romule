@@ -107,6 +107,30 @@ jobs:
       # de `romule/apiv1.py`, c'est-a-dire exactement celui qui compte. Ce
       # projet a deja perdu des semaines a un filtre de chemin qui empechait
       # une famille de tests de tourner.
+      # Les variables d'environnement se documentent dans un tableau que rien
+      # ne reliait au code. Une variable ajoutee sans sa ligne se decouvrait
+      # par quelqu'un qui ne la trouvait pas.
+      - name: Les variables d'environnement sont-elles toutes documentees ?
+        run: |
+          python - <<'PY'
+          import pathlib, re, sys
+          doc = pathlib.Path("docs/configuration.md").read_text()
+          cites = set(re.findall(r"`(ROMULE_[A-Z_]+)`", doc))
+          # `config.env("X")` construit le nom : le literal n'apparait jamais.
+          src = "\n".join(p.read_text() for p in pathlib.Path("romule").rglob("*.py"))
+          util = {"ROMULE_" + m for m in re.findall(r'\benv(?:_bool)?\("([A-Z_]+)"', src)}
+          util |= set(re.findall(r"\bROMULE_[A-Z_]+", src))
+          # Ce qui ne sert qu'aux tests n'a pas a figurer dans la reference.
+          util -= {"ROMULE_FAUX_ADB"}
+          manquantes = sorted(util - cites)
+          for k in manquantes:
+              print("::error title=Variable non documentee::%s est lue par le "
+                    "code mais absente de docs/configuration.md" % k)
+          print("%d variables lues, %d documentees."
+                % (len(util), len(util) - len(manquantes)))
+          sys.exit(1 if manquantes else 0)
+          PY
+
       - name: La specification OpenAPI est-elle a jour ?
         run: |
           python -m romule.apiv1 > /tmp/openapi-attendu.json
