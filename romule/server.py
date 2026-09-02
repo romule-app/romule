@@ -1134,7 +1134,14 @@ class Handler(BaseHTTPRequestHandler):
         elif p == "/api/trash":
             n, where = trash.move(d.get("paths", []),
                                   "ecarte depuis l'interface web", JOB.log)
-            self._json({"message": "%d fichier(s) deplace(s) dans %s" % (n, where)})
+            # On rend des FAITS, pas une phrase. La phrase etait composee ici,
+            # en francais, et s'affichait telle quelle dans une interface
+            # anglaise — l'i18n de Romule est entierement cote navigateur.
+            # `lot` est le nom du dossier horodate : c'est lui que
+            # `/api/restore` attend, donc c'est lui qui rend l'annulation
+            # possible.
+            self._json({"n": n, "dossier": where,
+                        "lot": where.rsplit("/", 1)[-1]})
 
         # ---- comptes internes
         elif p == "/api/comptes":

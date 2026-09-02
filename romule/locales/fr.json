@@ -1123,5 +1123,6 @@
   "Qui peut ouvrir les Réglages et gérer l'outil.": "Qui peut ouvrir les Réglages et gérer l'outil.",
   "C'est une question différente de « qui peut entrer » ci-dessus.": "C'est une question différente de « qui peut entrer » ci-dessus.",
   "Vide : personne n'administre par le SSO.": "Vide : personne n'administre par le SSO.",
-  "Le rôle est lu à la connexion, donc retirer quelqu'un d'un groupe le déclasse à sa session suivante.": "Le rôle est lu à la connexion, donc retirer quelqu'un d'un groupe le déclasse à sa session suivante."
+  "Le rôle est lu à la connexion, donc retirer quelqu'un d'un groupe le déclasse à sa session suivante.": "Le rôle est lu à la connexion, donc retirer quelqu'un d'un groupe le déclasse à sa session suivante.",
+  "%d {fichier|fichiers} à la corbeille.": "%d {fichier|fichiers} à la corbeille."
 }
