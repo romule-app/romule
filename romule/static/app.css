@@ -595,6 +595,10 @@ img.vide{visibility:hidden}
 .toasts{position:fixed;right:18px;bottom:64px;z-index:40;display:flex;flex-direction:column;
   gap:9px;max-width:340px;pointer-events:none}
 .toast{pointer-events:none}
+/* Un toast qui porte une action doit pouvoir etre clique : les autres sont
+   volontairement transparents au pointeur pour ne jamais gener un geste. */
+.toast.agir{pointer-events:auto;display:flex;align-items:center;gap:12px}
+.toast.agir button{flex:0 0 auto}
 .toast{background:var(--panel2);border:1px solid var(--rule);border-left:3px solid var(--indigo);
   border-radius:8px;padding:11px 14px;font-size:12.5px;box-shadow:0 8px 24px -10px var(--ombre);
   animation:toastin .3s var(--ease)}

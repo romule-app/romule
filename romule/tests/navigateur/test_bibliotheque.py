@@ -250,6 +250,36 @@ def croix(n):
       })()"""))
 
 
+def annuler(n):
+    print("   -- la corbeille se defait d'un clic --")
+    # La corbeille EST l'annulation : demander « êtes-vous sûr ? » avant d'y
+    # mettre un fichier fait payer a chaque fois le prix d'une erreur qui ne
+    # coute rien. Encore faut-il que le bouton « Annuler » RESTAURE
+    # reellement — sinon on a remplace une gene par un mensonge.
+    n.js("app.effacerFiltres(); app.tab('jeux')")
+    time.sleep(0.8)
+    avant = cartes(n)
+    cle = n.js("(document.querySelector('#lib .gcard') || {}).dataset ?"
+               " document.querySelector('#lib .gcard').dataset.key : ''")
+    chemin = n.js("""
+      (function () {
+        const g = jeuxUnifies().find(x => x.g.key === %s);
+        return g && g.g.files && g.g.files[0] ? g.g.files[0].path : '';
+      })()""" % ("'" + (cle or "").replace("'", "\\'") + "'"))
+    if not chemin:
+        t("un fichier a mettre a la corbeille", False, cle)
+        return
+    n.js("app.trashFile('%s')" % chemin.replace("'", "\\'"))
+    time.sleep(2.5)
+    t("le jeu quitte la grille", cartes(n) < avant, (avant, cartes(n)))
+    t("un toast propose d'annuler",
+      bool(n.js("!!document.querySelector('.toast.agir button')")))
+    n.js("document.querySelector('.toast.agir button').click()")
+    time.sleep(3.0)
+    t("annuler le remet dans la grille", cartes(n) == avant,
+      (avant, cartes(n)))
+
+
 def alignement(n):
     print("   -- les rangees de la barre sont alignees --")
     # Mesure avant correction : trois axes verticaux dans la MEME rangee
@@ -400,6 +430,7 @@ def main():
         pluriels(n)
         mobile(n)
         croix(n)
+        annuler(n)
         liste_gardee(n)
         recherche(n)
         filtres(n)

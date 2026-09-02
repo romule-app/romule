@@ -790,6 +790,40 @@ function toast(msg, kind) {
   setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 300); }, 3600);
 }
 
+// Un toast qui porte une ACTION, et qui vit plus longtemps.
+//
+// La corbeille EST l'annulation : demander « êtes-vous sûr ? » avant d'y
+// mettre un fichier fait payer a chaque fois le prix d'une erreur qui ne
+// coute rien. On agit, et on propose de revenir en arriere — huit secondes,
+// le temps de s'apercevoir qu'on s'est trompe.
+//
+// Les actions VRAIMENT irreversibles — vider la corbeille, effacer le
+// journal, revoquer une cle — gardent leur confirmation. La regle : on
+// confirme ce qu'on ne peut pas defaire, on propose d'annuler le reste.
+function toastAction(msg, libelle, faire, kind) {
+  const pile = $('toasts');
+  while (pile.children.length >= TOAST_MAX) pile.firstChild.remove();
+  const el = document.createElement('div');
+  el.className = 'toast agir' + (kind ? ' ' + kind : '');
+  const txt = document.createElement('span');
+  txt.textContent = msg;
+  const b = document.createElement('button');
+  b.className = 'ghost mini';
+  b.textContent = libelle;
+  let fini = false;
+  const fermer = () => {
+    if (fini) return;
+    fini = true;
+    el.classList.add('out');
+    setTimeout(() => el.remove(), 300);
+  };
+  b.addEventListener('click', () => { fermer(); faire(); });
+  el.append(txt, b);
+  pile.appendChild(el);
+  setTimeout(fermer, 8000);
+  return fermer;
+}
+
 // Au demarrage, l'etat est deja lisible dans l'en-tete et dans les compteurs :
 // empiler des notifications par-dessus n'apprend rien et masque l'interface.
 // Elles vont donc au journal seul, qui est fait pour ca.
@@ -4126,9 +4160,15 @@ const app = {
     this.poll();
   },
   async trashFile(path) {
-    if (!confirm('Mettre ce fichier a la corbeille ? Il reste restaurable.')) return;
+    // Plus de `confirm()` : il n'etait pas traduisible — c'est le navigateur
+    // qui l'ecrit — et il faisait payer le prix d'une erreur qui n'en est pas
+    // une, puisque la corbeille se restaure.
     const r = await api('/api/trash', {paths: [path]});
-    toast(r.message, 'ok'); this.closeGame(); this.scan();
+    if (!r || r.error) return;
+    this.closeGame();
+    await this.scan();
+    toastAction(phrase('%d {fichier|fichiers} à la corbeille.', r.n),
+                t('Annuler'), () => this.restore(r.lot), 'ok');
   },
 
   // ---- systemes / autres consoles
@@ -5088,23 +5128,20 @@ const app = {
     });
   },
   // Corbeille locale : rien n'est efface, tout reste restaurable.
+  //
+  // Plus de fenetre de confirmation. La corbeille EST l'annulation : demander
+  // « êtes-vous sûr ? » avant d'y mettre un fichier fait payer a chaque fois
+  // le prix d'une erreur qui ne coute rien. On agit, et le toast propose de
+  // revenir en arriere pendant huit secondes.
   async corbeilleSelection() {
     const {local} = deployCibles();
     if (!local.length) return toast('Rien à mettre à la corbeille.', 'warn');
-    dialogue({
-      titre: phrase('Mettre %d {fichier|fichiers} à la corbeille ?', local.length),
-      niveau: 'warn',
-      message: 'Ils quittent la bibliothèque mais restent dans _corbeille/, restaurables à tout moment.',
-      detail: local.slice(0, 20).map(p => p.split('/').pop()).join('\n') +
-              (local.length > 20
-               ? '\n' + phrase('… et %d {autre|autres}', local.length - 20)
-               : ''),
-      fermer: 'Annuler',
-      actions: [{libelle: 'Mettre à la corbeille', principal: true, faire: async () => {
-        const r = await api('/api/trash', {paths: local});
-        if (!r.error) { dsel2.clear(); toast(r.message || 'Déplacé.', 'ok'); this.scan(); }
-      }}],
-    });
+    const r = await api('/api/trash', {paths: local});
+    if (!r || r.error) return;
+    dsel2.clear();
+    await this.scan();
+    toastAction(phrase('%d {fichier|fichiers} à la corbeille.', r.n),
+                t('Annuler'), () => this.restore(r.lot), 'ok');
   },
   // « Tout cocher » porte sur l'ensemble des resultats filtres, pas seulement
   // sur la page visible : sinon le geste ment des qu'il y a une pagination.
@@ -5796,7 +5833,11 @@ const app = {
     if (activite()) this.basculerTaches();
     else this.toggleDrop();
   },
-  async restore(n) { const r = await api('/api/restore', {name: n}); toast(r.message, 'ok'); this.scan(); },
+  async restore(nom) {
+    const r = await api('/api/restore', {name: nom});
+    if (r && r.message) toast(r.message, 'ok');
+    this.scan();
+  },
   setJFilter(f) {
     JFILTRE = f;
     document.querySelectorAll('#jfilters .chip').forEach(c => c.classList.toggle('on', c.dataset.jl === f));
