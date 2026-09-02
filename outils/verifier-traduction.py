@@ -374,6 +374,39 @@ def manquantes(source_js=None, source_html=None, catalogue=None):
     return out
 
 
+# ------------------------------------------------------- pluriels paresseux
+
+# « 1 fichier(s) » n'est pas un pluriel, c'est un aveu — et il etait sur presque
+# chaque ecran. La notation `{singulier|pluriel}` le remplace, et la langue
+# choisit : en francais 0 et 1 sont au singulier, en anglais seul 1 l'est.
+#
+# Ce controle interdit le retour de la forme paresseuse. Il ne regarde que les
+# CHAINES : `String(s)` et `compte(s)` sont des appels de fonction, et une
+# premiere version qui balayait le fichier entier les avait transformes.
+PARESSEUX = re.compile(r"[0-9A-Za-zÀ-ÿ'’/-]+\((s|x|es)\)")
+
+
+def pluriels_paresseux(source_js=None, source_html=None):
+    out = []
+    js = source_js if source_js is not None else JS.read_text(encoding="utf-8")
+    lignes = js.splitlines()
+    for ligne, texte in litteraux_js(js):
+        brut = lignes[ligne - 1] if ligne - 1 < len(lignes) else ""
+        if MARQUE in brut:
+            continue
+        m = PARESSEUX.search(texte)
+        if m:
+            out.append(("app.js", ligne, m.group(0)))
+    html = source_html if source_html is not None else HTML.read_text(encoding="utf-8")
+    lecteur = LecteurHTML()
+    lecteur.feed(html)
+    for ligne, texte in lecteur.trouves:
+        m = PARESSEUX.search(texte)
+        if m:
+            out.append(("index.html", ligne, m.group(0)))
+    return out
+
+
 # ----------------------------------------------------------------- autotest
 
 def autotest():
@@ -476,6 +509,16 @@ def autotest():
         vu = bool(manquantes(source_js=js, source_html="", catalogue=cat))
         t(nom, vu == attendu, "detecte=%s" % vu)
 
+    paresse_cas = [
+        ("un pluriel paresseux -> detecte", "x = 'Trouve %d fichier(s).';", True),
+        ("la forme accordee -> ignore",
+         "x = 'Trouve %d {fichier|fichiers}.';", False),
+        ("un appel de fonction -> ignore", "const e = s => String(s).trim();", False),
+        ("une phrase sans nombre -> ignore", "x = 'Rien a signaler.';", False),
+    ]
+    for nom, js, attendu in paresse_cas:
+        t(nom, bool(pluriels_paresseux(source_js=js, source_html="")) == attendu)
+
     print("  %d controles OK, %d echec(s)" % (ok, ko))
     return 1 if ko else 0
 
@@ -487,13 +530,22 @@ def main(argv):
         print("-- autotest du detecteur --")
         return autotest()
     trous = manquantes()
+    paresse = pluriels_paresseux()
+    if paresse:
+        for fichier, ligne, forme in paresse:
+            print("  PLURIEL  %s:%d  %s  ->  {%s|%s%s}"
+                  % (fichier, ligne, forme, forme[:-3], forme[:-3], forme[-2]))
+        print("\n%d pluriel(s) paresseux : ecrire {singulier|pluriel}, la langue "
+              "choisit." % len(paresse))
     if "--json" in argv:
         print(json.dumps([{"fichier": f, "ligne": n, "texte": t}
                           for f, n, t in trous], ensure_ascii=False, indent=2))
         return 1 if trous else 0
-    if not trous:
+    if not trous and not paresse:
         print("Toutes les phrases du code sont au catalogue.")
         return 0
+    if not trous:
+        return 1
     if "--liste" in argv:
         for f, n, t in trous:
             print("  %s:%d  %s" % (f, n, t[:110]))
