@@ -65,6 +65,28 @@ SONDE = r"""
     return true;
   }
 
+  // Un element sorti du cadre d'un conteneur DEFILANT n'est pas « recouvert » :
+  // il n'est pas a l'ecran, et un geste de defilement le ramene. Sans cette
+  // distinction, la barre des reglages — qui defile a l'horizontale sur un
+  // petit ecran — faisait signaler son dernier onglet comme inatteignable,
+  // alors qu'il suffit de faire glisser la barre.
+  //
+  // `getBoundingClientRect()` rend la position de MISE EN PAGE, pas ce qui est
+  // reellement peint : un element rogne par le `overflow` d'un ancetre garde
+  // un rectangle a sa place theorique. C'est ce qui rendait le faux positif
+  // invisible a la lecture.
+  function rogne(el) {
+    const r = el.getBoundingClientRect();
+    for (let n = el.parentElement; n && n !== document.body; n = n.parentElement) {
+      const st = getComputedStyle(n);
+      if (!/auto|scroll|hidden/.test(st.overflowX + ' ' + st.overflowY)) continue;
+      const c = n.getBoundingClientRect();
+      const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      if (cx < c.left || cx > c.right || cy < c.top || cy > c.bottom) return true;
+    }
+    return false;
+  }
+
   // `[data-act]` a remplace `[onclick]` : depuis la phase 4, un element
   // cliquable porte son action en donnee, pas en code. Il n'y a plus un seul
   // `onclick` dans le projet, et `test_ui_injection.js` echoue si l'un revient.
@@ -72,6 +94,7 @@ SONDE = r"""
             + '[data-act], [data-act-change], .chip';
   for (const el of document.querySelectorAll(sel)) {
     if (!utilisable(el)) continue;
+    if (rogne(el)) continue;
     const r = el.getBoundingClientRect();
     if (!r.width || !r.height) continue;
     if (r.bottom < 8 || r.top > innerHeight - 8) continue;      // hors de la vue
@@ -113,6 +136,47 @@ def uniq(xs):
     return out
 
 
+# La sonde a gagne un filtre — « rogne par un conteneur defilant, donc pas
+# recouvert » — et un filtre peut aveugler autant qu'il precise. On lui montre
+# donc les DEUX cas dans une page reelle avant de lui faire confiance : un
+# bouton reellement recouvert doit etre signale, le meme sorti d'un cadre
+# defilant ne doit pas l'etre.
+EPREUVE = r"""
+(function () {
+  const z = document.createElement('div');
+  z.id = 'zone-epreuve';
+  // DANS le champ de vision : ajoute en fin de page, le decor tombait sous la
+  // ligne de flottaison et la sonde le sautait comme « hors de la vue ». Mon
+  // epreuve ne prouvait alors rien — elle disait « manque » pour une raison
+  // qui n'avait rien a voir avec le filtre teste.
+  z.style.cssText = 'position:fixed;left:20px;top:120px;z-index:5;'
+                  + 'background:#111;padding:6px';
+  z.innerHTML =
+    '<div style="position:relative;height:60px">'
+  +   '<button id="e-couvert" style="position:absolute;left:0;top:0;'
+  +     'width:120px;height:44px">couvert</button>'
+  +   '<div style="position:absolute;left:0;top:0;width:120px;height:44px;'
+  +     'background:#000"></div>'
+  + '</div>'
+  + '<div id="e-cadre" style="width:80px;overflow-x:auto;white-space:nowrap">'
+  +   '<button style="width:60px;height:44px">a</button>'
+  +   '<button id="e-rogne" style="width:300px;height:44px">hors cadre</button>'
+  + '</div>';
+  document.body.appendChild(z);
+})()
+"""
+
+
+def eprouver(n):
+    """Rend (couvert_signale, rogne_signale)."""
+    n.js(EPREUVE)
+    time.sleep(0.4)
+    vus = (n.js(SONDE) or {}).get("bloques") or []
+    texte = " | ".join(vus)
+    n.js("document.getElementById('zone-epreuve').remove()")
+    return "#e-couvert" in texte, "#e-rogne" in texte
+
+
 def main():
     total_pb = 0
     # Le port derive de l'INDEX, pas de la largeur : deux profils peuvent
@@ -127,6 +191,15 @@ def main():
                     break
                 time.sleep(1.5)
             time.sleep(1)
+            if i == 0:                       # une seule fois : la sonde est la meme
+                couvert, rogne_ = eprouver(n)
+                print("   sonde : recouvrement reel %s | rognage ignore %s"
+                      % ("vu" if couvert else "MANQUE",
+                         "oui" if not rogne_ else "NON"))
+                if not couvert or rogne_:
+                    print("   ::error:: la sonde ne distingue plus recouvert "
+                          "et rogne — les resultats qui suivent ne valent rien")
+                    total_pb += 1
             for onglet, libelle in (("jeux", "Jeux"), ("settings", "Réglages")):
                 n.js("app.tab('%s')" % onglet)
                 time.sleep(0.6)
