@@ -129,6 +129,31 @@ try:
         c, b = appel(lambda_, route, corps)
         t("il ne peut pas %s" % quoi, c == 403, (c, js(b)))
 
+    # Les sept routes ci-dessus etaient choisies a la main. Or la reserve en
+    # compte vingt-sept, et rien ne garantissait que les vingt autres la
+    # respectent : une route ajoutee a `RESERVE_ADMIN` sans etre eprouvee est
+    # une reserve que personne n'a verifiee. On les prend donc TOUTES, lues
+    # dans le serveur lui-meme pour que la liste ne puisse pas deriver.
+    print("   -- et aucune des routes reservees, sans exception --")
+    sys.path.insert(0, RACINE_PROJET)
+    from romule.server import Handler                              # noqa: E402
+    reservees = sorted(Handler.RESERVE_ADMIN)
+    t("la reserve est lue dans le serveur", len(reservees) >= 20, len(reservees))
+    passees = []
+    for route in reservees:
+        c, b = appel(lambda_, route, {})
+        if c != 403:
+            passees.append("%s -> %s" % (route, c))
+    t("les %d routes reservees refusent un compte ordinaire" % len(reservees),
+      not passees, passees[:5])
+
+    print("   -- et l'interface sait quel role elle sert --")
+    c, b = appel(lambda_, "/api/scan")
+    moi = js(b).get("moi") or {}
+    t("/api/scan annonce le role", bool(moi), moi)
+    t("un compte ordinaire n'est pas administrateur", moi.get("admin") is False, moi)
+    t("et il est bien reconnu comme connecte", moi.get("connecte") is True, moi)
+
     # Et il garde ce qui releve de l'usage normal : sans cela, la reserve
     # transformerait un compte ordinaire en spectateur.
     c, b = appel(lambda_, "/api/push-plan", {"paths": []})
@@ -148,6 +173,9 @@ try:
     t("il lit le journal des acces", c == 200, (c, js(b)))
     c, b = appel(chefnav, "/api/config", {"auth_mode": "aucun"})
     t("il modifie les reglages", c == 200, (c, js(b)))
+    c, b = appel(chefnav, "/api/scan")
+    t("et l'interface le sait administrateur",
+      (js(b).get("moi") or {}).get("admin") is True, js(b).get("moi"))
 
     # Authentification eteinte : il n'existe plus d'identite a distinguer, et
     # la reserve ne doit pas transformer le mode le plus courant en impasse.
