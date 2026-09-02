@@ -39,41 +39,42 @@
 
 ## ✨ Key features
 
-**Your library, whatever it holds.** Nintendo Switch in detail — title IDs,
-base/update/DLC relationships, missing updates, orphaned DLC — plus 22 other
-platforms identified per file. One **“all platforms”** view is the default,
-because that is what you own; per-platform views are one click away and are
-kept in memory, so switching back is instant and nothing flickers.
-
-**Cover art and details, cached.** SteamGridDB for artwork, IGDB for summaries,
-year and publisher, stored on disk so the grid never waits on the network.
-
-**Find things.** Search by name or title ID, combine it with status chips and
-advanced filters, clear all three in one click — and **save a combination as a
-view**, kept on the server so it is the same on your phone and on your desk.
-
-**Push to a handheld** over adb, by USB or Wi‑Fi, with a pairing assistant,
-resumable transfers and free-space checks. Emulator layouts are **profiles**,
-not hard-coded paths.
-
-**Works where you actually are.** The interface folds down for phones and for
-retro handhelds — short landscape screens included — and the grid is walkable
-with a **D-pad**: arrow keys move from card to card, Enter opens. The responsive
-audit runs on ten device profiles in CI, from a 640 × 480 Anbernic to a Steam
-Deck.
-
-**Two roles, and nothing else to reason about.** Administrators change settings
-and manage accounts; everyone else gets the library and its actions. Works with
-internal accounts (scrypt, optional TOTP) or with your OpenID Connect provider,
-where a group decides who administers.
-
-**Scriptable.** A small, versioned [HTTP API](https://romule-app.github.io/romule/api/)
-with named, revocable keys — for a dashboard, a cron job, or a shell script.
-
-**Reversible.** Sending a file to the trash does not ask you to confirm: it
-happens, and the toast offers *Undo*. Only what cannot be undone asks first.
-
-**Yours.** Romule ships no games, no console keys, and no links to either.
+- 🗂️ **Your library, whatever it holds.** Nintendo Switch in detail — title
+  IDs, base/update/DLC relationships, missing updates, orphaned DLC — plus 22
+  other platforms identified per file, **and any platform you declare
+  yourself**.
+- ⚡ **No waiting between platforms.** The **“all platforms”** view is the
+  default, because that is what you own. Per-platform views are one click away
+  and stay in memory: switching back is instant, and the grid never blanks.
+- 🖼️ **Cover art and details, cached.** SteamGridDB for artwork, IGDB for
+  summaries, year, publisher — and for artwork too when SteamGridDB has none.
+  Everything is stored on disk, so the grid never waits on the network.
+- 🔍 **Find things.** Search by name or title ID, combine it with status chips
+  and advanced filters, clear all three in one click — and **save a combination
+  as a view**, kept on the server so it is the same on your phone and on your
+  desk.
+- 📲 **Push to a handheld** over adb, by USB or Wi‑Fi, with a pairing assistant,
+  resumable transfers and free-space checks. Emulator layouts are
+  **profiles**, not hard-coded paths.
+- 🎮 **Works where you actually are.** The interface folds down for phones and
+  for retro handhelds — short landscape screens included — and the grid is
+  walkable with a **D-pad**: arrow keys move from card to card, Enter opens.
+  The responsive audit runs on ten device profiles in CI, from a 640 × 480
+  Anbernic to a Steam Deck.
+- 👥 **Two roles, and nothing else to reason about.** Administrators change
+  settings and manage accounts; everyone else gets the library and its actions.
+  Works with internal accounts (scrypt, optional TOTP) or with your OpenID
+  Connect provider, where a group decides who administers.
+- 🔌 **Scriptable.** A small, versioned
+  [HTTP API](https://romule-app.github.io/romule/api/) with named, revocable
+  keys — for a dashboard, a cron job, or a shell script.
+- ↩️ **Reversible.** Sending a file to the trash does not ask you to confirm:
+  it happens, and the toast offers *Undo*. Only what cannot be undone asks
+  first.
+- 🔔 **Tells you when it is out of date.** One request to GitHub a day, the
+  release notes in the interface, and a setting to switch it off. That is the
+  only time Romule reaches the internet unasked.
+- 🔒 **Yours.** Romule ships no games, no console keys, and no links to either.
 
 ### 🔗 Integrations
 
@@ -135,9 +136,22 @@ listens on `127.0.0.1` gets no token — nothing to protect it from.
 
 ### 🕹️ Supported platforms
 
+Twenty-three are recognised out of the box:
+
 Nintendo Switch · PlayStation 1/2/3 · PSP · PS Vita · GameCube · Wii · Wii U ·
 Nintendo 3DS · DS · 64 · SNES · NES · Game Boy Advance · Game Boy / Color ·
 Dreamcast · Saturn · Mega Drive · Arcade (MAME/FBN) · Xbox · Xbox 360 · PC
+
+**The list is not a limit.** *Settings → Your console → Add a platform…* takes
+a display name, a folder on the console and a list of extensions — Neo Geo,
+MSX, a handheld nobody ported yet — and that platform is then scanned,
+filtered, counted and pushed like any other. It is also how you handle a
+console Romule *does* know but that you keep in a folder it would not guess.
+[How to add one](https://romule-app.github.io/romule/console/#a-platform-romule-does-not-know).
+
+Switch is the only platform whose files Romule opens: title IDs, base/update/DLC
+relationships and missing updates come from reading the container. Every other
+platform — built-in or added — is identified by folder and extension.
 
 ### 🎛️ Emulator profiles
 
@@ -180,7 +194,7 @@ must be known before it starts.
 `ROMULE_BIND` defaults to `127.0.0.1`, except in a container or when network
 access has been enabled — otherwise a published port would reach nothing.
 
-All 37 settings in the configuration file are edited from the interface and
+All 40 settings in the configuration file are edited from the interface and
 documented on the
 [documentation site](https://romule-app.github.io/romule/).
 

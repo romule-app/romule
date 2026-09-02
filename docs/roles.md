@@ -61,13 +61,16 @@ than assumed.
 
 ## What a non-administrator cannot do
 
-Twenty-seven routes are reserved server-side. They fall into five groups:
+Twenty-seven routes are reserved server-side. They fall into six groups:
 
 - **erase or restore data** — restoring a backup puts the accounts file back,
   which would hand administration back to whoever lost it;
 - **move files in bulk** — reorganising the library or the console;
 - **write into another program's files** — emulator configuration, NAND;
 - **change the link to the console** — Wi‑Fi pairing, forgetting a device;
+- **choose where the service reads and writes on the host** — the folder
+  picker and the library location. Browsing the host's filesystem is a
+  disclosure primitive, so it is treated as one;
 - **reveal who connects, and the security posture** — access log, audit.
 
 The interface hides what the role cannot use: a non-administrator does not see

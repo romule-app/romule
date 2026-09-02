@@ -56,7 +56,8 @@ Acces : ce service est joignable par le reseau et n'a pas encore de compte.
         http://192.0.2.20:8787/?token=Kzrmfve...
 ```
 
-Il est conservé dans ton dossier de jeux, survit aux redémarrages, et n'est
+Il est conservé dans le dossier de données du service — sous `jeton_auto`,
+dans `_romule-config.json` — survit aux redémarrages, et n'est
 jamais envoyé au navigateur avec le reste de la configuration. Rien n'est
 engendré quand Romule n'écoute que sur `127.0.0.1`.
 

@@ -69,6 +69,7 @@ Tous se modifient depuis l'interface. Les noms sont les clés rangées dans
 | `lan_access` | `false` | Laisse entrer le réseau **sans mot de passe** |
 | `maj_check` | `true` | Demande à GitHub une fois par jour s'il existe une version plus récente. C'est la **seule** fois où Romule sort sur internet sans qu'on le lui demande ; coupé, il ne le fait jamais. |
 | `auth_secret` | engendrée | Clé de signature des cookies de session. Ne quitte jamais le serveur. |
+| `jeton_auto` | engendré | Le jeton de premier accès, conservé pour survivre aux redémarrages. Écrit seulement si le service est joignable et n'a ni compte, ni `ROMULE_TOKEN`, ni accès réseau — voir [Sécurité](securite.md#le-jeton-de-premier-acces). |
 | `oidc_issuer` | — | Adresse du fournisseur |
 | `oidc_client_id` / `oidc_client_secret` | — | Identifiants du client |
 | `oidc_redirect` | — | URI de redirection déclarée chez le fournisseur |

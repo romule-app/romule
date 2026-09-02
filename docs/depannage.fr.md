@@ -38,10 +38,23 @@ l'extension sont ignorés — l'assistant dit combien d'extensions il connaît.
 
 ## Les jaquettes restent vides
 
-La source par défaut travaille à partir des title ID Switch. Pour les autres
-plateformes, il faut une clé SteamGridDB : **Réglages → Jaquettes et fiches**,
-puis **Enregistrer et tester**. Si le test échoue, la clé est mauvaise — le
-message dit quel service a refusé.
+La source par défaut travaille à partir des seuls title ID Switch : les autres
+plateformes ont donc besoin d'une clé. **Réglages → Jaquettes et fiches**, puis
+**Enregistrer et tester**. Si le test échoue, la clé est mauvaise — le message
+dit quel service a refusé.
+
+Les jaquettes ont deux sources, essayées dans cet ordre. SteamGridDB est une
+base de *visuels* communautaires, pauvre sur les catalogues de consoles
+portables ; IGDB est une base de jeux, et elle publie aussi des jaquettes —
+Romule s'y rabat quand la première ne rend aucune image. **Renseigner les
+identifiants IGDB corrige donc des jaquettes vides qu'une clé SteamGridDB seule
+ne corrige pas.**
+
+Encore faut-il que la source reconnaisse le jeu : un candidat doit couvrir les
+deux tiers des mots distinctifs du titre. Un fichier nommé `Un Jeu (Europe)
+(En,Fr) [!].nds` est cherché sous `Un Jeu` — la région et les marques de dump
+sont retirées d'abord. Une jaquette appartenant à un autre jeu serait pire que
+pas de jaquette du tout.
 
 ## Les `.nsz` / `.xcz` ne se convertissent pas
 
@@ -86,7 +99,8 @@ langue par défaut ; le français est livré à côté.
   service.
 - Le panneau **Journal**, sur la droite, contient ce que Romule a fait et
   pourquoi il a échoué.
-- `_romule-lib.log`, dans ton dossier de jeux, contient la même chose, gardée
+- `_romule-lib.log`, dans le dossier de données du service (`ROMULE_ROOT`,
+  ou le volume `/data`), contient la même chose, gardée
   d'un redémarrage à l'autre.
 
 Pour ouvrir un ticket, indique la version (pied de l'interface, ou

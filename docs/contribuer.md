@@ -35,8 +35,15 @@ selector on its own.
 
 !!! warning "Never assemble a sentence from fragments"
     `'Found ' + n + ' games'` produces three keys no catalogue can hold. Use
-    `phrase('%d game(s) found', n)`, or `nb(n, 'game(s)')` for a bare count.
+    `phrase('%d games found', n)`, or `nb(n, '{game|games}')` for a bare count.
     This mistake hid 49 phrases from the translation check once already.
+
+!!! tip "Plurals are written `{singular|plural}`"
+    `1 file(s)` is not a plural, it is an admission. Both forms go in the
+    string — `nb(n, '{file|files}')` — and the catalogue picks one **per
+    language**, because the rules differ: French writes *0 fichier* in the
+    singular, English writes *0 files* in the plural. A single rule for both
+    would trade one mistake for another.
 
 ## Adding an emulator profile
 

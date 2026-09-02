@@ -42,24 +42,12 @@ jobs:
       - name: Construction
         run: mkdocs build --strict
 
-      # Verifier que la reference de configuration decrit bien les cles qui
-      # existent : une documentation qui derive du code est pire qu'absente.
-      - name: La reference correspond-elle au code ?
-        run: |
-          python - <<'PY'
-          import re, sys, pathlib
-          sys.path.insert(0, ".")
-          from romule import config
-          doc = pathlib.Path("docs/configuration.md").read_text()
-          cites = set(re.findall(r"`([a-z][a-z_]+)`", doc))
-          manquantes = sorted(set(config.DEFAULTS) - cites)
-          for k in manquantes:
-              print("::error title=Reglage non documente::%s existe dans le code "
-                    "mais pas dans docs/configuration.md" % k)
-          print("%d reglages, %d documentes." %
-                (len(config.DEFAULTS), len(config.DEFAULTS) - len(manquantes)))
-          sys.exit(1 if manquantes else 0)
-          PY
+      # `--strict` attrape les liens morts, pas le markdown qui s'affiche en
+      # clair. Une extension manquante, une admonition mal indentee ou un
+      # onglet mal ferme ne sont pas des avertissements de MkDocs : ce sont des
+      # pages qui se lisent mal, et rien ne les regardait.
+      - name: Le site affiche-t-il du markdown en clair ?
+        run: python3 outils/verifier-rendu.py
 
       # Le site est bilingue. Une page ajoutee dans une seule langue ne
       # disparait pas — le greffon retombe sur l'anglais — mais elle cesse
@@ -85,6 +73,41 @@ jobs:
                     "une page qui n'existe pas" % k)
           print("%d pages, %d traduites." % (len(en), len(en & fr)))
           sys.exit(1 if manquantes or orphelines else 0)
+          PY
+
+      # Une page traduite peut exister ET avoir cesse de suivre l'originale :
+      # une section ajoutee d'un cote, un tableau enrichi de l'autre. La
+      # STRUCTURE se compare sans lire la langue — titres, tableaux, encadres —
+      # et un ecart signale une traduction restee en arriere.
+      - name: Les traductions suivent-elles la page d'origine ?
+        run: |
+          python - <<'PY'
+          import pathlib, re, sys
+          docs = pathlib.Path("docs")
+          def profil(p):
+              t = p.read_text(encoding="utf-8")
+              return (len(re.findall(r"^##+ ", t, re.M)),
+                      len(re.findall(r"^\|", t, re.M)),
+                      len(re.findall(r"^!!! ", t, re.M)),
+                      len(re.findall(r"^```", t, re.M)))
+          NOMS = ("titres", "lignes de tableau", "encadres", "delimiteurs de code")
+          ecarts = 0
+          for en in sorted(docs.glob("*.md")):
+              if en.name.endswith(".fr.md"):
+                  continue
+              fr = docs / (en.stem + ".fr.md")
+              if not fr.exists():
+                  continue
+              a, b = profil(en), profil(fr)
+              if a == b:
+                  continue
+              ecarts += 1
+              detail = ", ".join("%s %d/%d" % (n, x, y)
+                                 for n, x, y in zip(NOMS, a, b) if x != y)
+              print("::error file=docs/%s::la traduction a derive : %s"
+                    % (fr.name, detail))
+          print("%d ecart(s) de structure." % ecarts)
+          sys.exit(1 if ecarts else 0)
           PY
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1

@@ -53,7 +53,12 @@ bibliothèque fonctionne, mais elle n'affiche que des noms de fichiers.
 | Service | Ce qu'il donne | Où obtenir une clé |
 |---|---|---|
 | SteamGridDB | Les jaquettes | [steamgriddb.com/profile/preferences/api](https://www.steamgriddb.com/profile/preferences/api) |
-| IGDB | Résumés, année, éditeur | [dev.twitch.tv/console/apps](https://dev.twitch.tv/console/apps) |
+| IGDB | Résumés, année, éditeur — **et les jaquettes que SteamGridDB n'a pas** | [dev.twitch.tv/console/apps](https://dev.twitch.tv/console/apps) |
+
+Renseigne les deux. SteamGridDB est une base de *visuels* communautaires,
+riche sur ce qui se joue au clavier et pauvre sur les catalogues de consoles
+portables ; IGDB couvre ce qui lui manque. Avec une seule des deux, certains
+jeux gardent une pochette vide.
 
 **Enregistrer et tester** vérifie les identifiants sur-le-champ. Enregistrer
 sans vérifier, c'est découvrir dans un mois qu'une clé a été mal collée.

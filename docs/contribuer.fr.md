@@ -41,6 +41,13 @@ Elle apparaît toute seule dans le sélecteur.
     pour un simple décompte. Cette erreur a déjà caché 49 phrases au contrôle de
     traduction.
 
+!!! tip "Les pluriels s'écrivent `{singulier|pluriel}`"
+    `1 fichier(s)` n'est pas un pluriel, c'est un aveu. Les deux formes vont
+    dans la chaîne — `nb(n, '{fichier|fichiers}')` — et le catalogue en choisit
+    une **par langue**, car les règles diffèrent : le français écrit
+    *0 fichier* au singulier, l'anglais écrit *0 files* au pluriel. Une règle
+    unique remplacerait une faute par une autre.
+
 ## Ajouter un profil d'émulateur
 
 Dépose un fichier JSON dans `romule/profils/`, sur le modèle d'`eden.json`.
