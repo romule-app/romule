@@ -1045,6 +1045,9 @@ button .tid{color:inherit;opacity:.72;font-weight:400}
   .jfab{min-height:64px;padding:14px 11px;align-items:center;justify-content:center}
 }
 @media (pointer:coarse) and (min-width:521px){.jfab{min-height:104px}}
+
+
+}
 .jfab.masque{opacity:0;pointer-events:none;transform:translate(100%,-50%)}
 .jfab-ic{writing-mode:horizontal-tb;font-size:13px}
 .jfab.news{color:var(--amber);border-color:var(--amber)}
@@ -1879,6 +1882,7 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
 /* `--tete-h` est mesuree a l'execution : l'en-tete change de hauteur selon la
    largeur (les onglets passent a la ligne). Colle a `top:0` comme lui, le
    sommaire disparaissait derriere. */
+}
 .setnav{position:sticky;top:var(--tete-h,60px);z-index:12;display:flex;gap:2px;flex-wrap:wrap;
   margin:0 0 26px;padding:6px;border-radius:11px;
   background:var(--verre-plein);backdrop-filter:blur(10px);
@@ -1888,6 +1892,8 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
   text-transform:uppercase;color:var(--mute);
   transition:color .2s var(--ease),background .2s var(--ease)}
 .setnav a:hover{color:var(--ink);background:var(--panel2)}
+
+
 .setnav a.on{color:var(--amber);background:var(--panel2);
   box-shadow:inset 0 0 0 1px var(--rule)}
 
@@ -1913,8 +1919,15 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
 #pf-specifique{margin:0 0 4px}
 
 @media (max-width:640px){
-  .setnav{gap:2px;padding:4px;margin-bottom:18px;overflow-x:auto;
-    flex-wrap:nowrap;-webkit-overflow-scrolling:touch}
+  /* `margin-right` : la poignee du journal est fixee au bord droit et passe
+     par-dessus le contenu. Sans cette marge, le dernier onglet de cette barre
+     se pose dessous et devient inatteignable — trouve par l'audit responsive
+     sur le second ecran de l'AYN Thor (360 x 413, presque carre), le seul
+     viewport plus haut que large de la liste.
+     Une MARGE et non un remplissage : le remplissage ajoute de l'espace apres
+     le dernier element sans le deplacer, donc ne change rien. */
+  .setnav{gap:2px;padding:4px;margin-bottom:18px;margin-right:42px;
+    overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch}
   .setnav a{white-space:nowrap;padding:9px 12px;font-size:11px}
   .sectitre{font-size:21px}
   .setsection{gap:12px;margin-bottom:34px}
