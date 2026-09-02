@@ -108,6 +108,43 @@ def main():
             cible = peuplees[0]
             t("une seconde plateforme peuplee existe dans le decor", True)
 
+            print("   -- la liste unifiee est gardee, et rendue quand il faut --")
+            # Reconstruire et RETRIER toute la bibliotheque coutait 16,5 ms sur
+            # 5 000 titres, a chaque frappe dans la recherche. Elle est desormais
+            # gardee tant que ni les donnees, ni la plateforme, ni le tri ne
+            # changent. Un cache qui ne se renouvelle pas afficherait une liste
+            # perimee : on verifie les DEUX moities.
+            t("deux appels de suite rendent la meme liste",
+              n.js("jeuxUnifies() === jeuxUnifies()"))
+            t("changer de tri la reconstruit", n.js("""
+            (function () {
+            const avant = jeuxUnifies();
+            const ancien = TRI;
+            const autre = Object.keys(TRIS).find(k => k !== ancien);
+            if (!autre) return true;
+            app.setTri(autre);
+            const apres = jeuxUnifies();
+            app.setTri(ancien);
+            return apres !== avant;
+            })()"""))
+            t("un changement d'inventaire la reconstruit", n.js("""
+            (function () {
+            const avant = jeuxUnifies();
+            inventaireChange();
+            return jeuxUnifies() !== avant;
+            })()"""))
+
+            print("   -- la recherche filtre ce qui est affiche --")
+            avant = n.js("document.querySelectorAll('#lib .gcard').length")
+            n.js("document.getElementById('filter').value = 'zzzzimprobable'; app.chercher()")
+            time.sleep(0.5)
+            t("une requete sans resultat vide la grille",
+              n.js("document.querySelectorAll('#lib .gcard').length") == 0, avant)
+            n.js("document.getElementById('filter').value = ''; app.chercher()")
+            time.sleep(0.5)
+            t("effacer la requete la remplit",
+              n.js("document.querySelectorAll('#lib .gcard').length") == avant, avant)
+
             print("   -- revenir ne redemande rien --")
             # Les DEUX vues sont d'abord chargees : le bloc precedent a vide le
             # cache a dessein, donc sans cette mise en bouche on compterait un

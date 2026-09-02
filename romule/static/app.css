@@ -139,6 +139,16 @@ select{cursor:pointer}
 /* ---------------------------------------------------------------- bibliotheque v2 */
 .libbar{position:sticky;top:60px;z-index:10;display:flex;gap:10px;flex-wrap:wrap;align-items:center;
   background:var(--verre);backdrop-filter:blur(8px);padding:12px 0;margin-bottom:14px}
+/* La recherche : une loupe a gauche, le raccourci a droite. Le badge n'est pas
+   decoratif — c'est la seule chose qui annonce que le clavier ouvre la
+   recherche, et un raccourci que rien n'annonce n'existe pas. */
+.champ-recherche{position:relative;display:flex;align-items:center;flex:1 1 260px;min-width:180px}
+.champ-recherche .loupe{position:absolute;left:11px;color:var(--mute);pointer-events:none}
+.champ-recherche .search{width:100%;padding-left:32px;padding-right:38px}
+.champ-recherche .raccourci{position:absolute;right:9px;pointer-events:none;
+  font-family:var(--mono);font-size:11px;color:var(--mute);
+  border:1px solid var(--rule);border-radius:5px;padding:1px 5px;background:var(--creux)}
+.champ-recherche:focus-within .raccourci{opacity:0}
 .filters{display:flex;gap:6px;flex-wrap:wrap}
 .chip{display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:20px;
   border:1px solid var(--rule);background:var(--panel);color:var(--mute);font-size:12.5px;
