@@ -119,11 +119,23 @@ Tous se modifient depuis l'interface. Les noms sont les clés rangées dans
 | `cover_provider` | `nlib` | `nlib`, `steamgriddb`, ou `custom` |
 | `cover_url` | gabarit nlib | Utilisé quand `cover_provider` vaut `custom`. `{tid}` est substitué. |
 | `steamgriddb_key` | — | Clé d'API SteamGridDB |
-| `igdb_client_id` / `igdb_client_secret` | — | Identifiants IGDB |
+| `igdb_client_id` / `igdb_client_secret` | — | Identifiants IGDB. Servent aux résumés **et**, quand la source choisie n'a pas d'image, de seconde source de jaquettes. |
 | `meta_lang` | `en` | Langue des titres et des résumés |
 | `emuready` | `false` | Notes de compatibilité communautaires ([bêta](beta.md)) |
 | `emuready_device` | — | L'appareil auquel comparer les notes |
 | `emuready_device_nom` | — | Son nom d'affichage, retenu pour ne pas redemander la liste |
+
+!!! info "Pourquoi les jaquettes ont deux sources"
+    SteamGridDB est une base de *visuels* communautaires : riche sur ce qui se
+    joue au clavier, pauvre sur les catalogues de consoles portables. IGDB est
+    une base de jeux, et elle publie aussi des jaquettes. Romule lui demandait
+    déjà les résumés ; il lui demande désormais les images — mais seulement
+    après que la source choisie a échoué à rendre une **image**, et non une
+    simple adresse : une URL qui répond 404 reste une URL.
+
+    Les deux sources passent par le même rapprochement : un candidat doit
+    couvrir les deux tiers des mots distinctifs du titre. Une jaquette qui est
+    celle d'un autre jeu est pire qu'une pochette vide.
 
 ### Interface
 

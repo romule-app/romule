@@ -69,6 +69,31 @@ def main():
         igdb.chercher("titre introuvable zzz", cfg)
         t("echec non rejoue", len(compteurs()["requetes"]) == n)
 
+        # --- La jaquette IGDB (repli quand SteamGridDB n'a rien) ------------
+        #
+        # Chaque controle est double : ce que le repli doit RENDRE, et ce
+        # qu'il doit REFUSER. Un repli qui accepte tout rendrait des jaquettes
+        # de jeux sans rapport, ce qui est pire qu'une pochette vide.
+        u = igdb.jaquette("Chrono Trigger", cfg)
+        t("jaquette : adresse construite depuis l'image_id",
+          u == "https://images.igdb.com/igdb/image/upload/t_cover_big_2x/co-test.jpg", u)
+
+        u = igdb.jaquette("un titre voisin", cfg)
+        t("jaquette : un jeu sans rapport est refuse meme s'il a une image",
+          u is None, u)
+
+        u = igdb.jaquette("jeu sans image", cfg)
+        t("jaquette : un jeu sans image ne rend rien", u is None, u)
+        f2 = igdb.chercher("jeu sans image", cfg)
+        t("jaquette : l'absence d'image ne raye pas le jeu pour son resume",
+          bool(f2) and f2["resume"] == "Un jeu sans jaquette.", f2)
+
+        t("jaquette : rien sans identifiants", igdb.jaquette("Chrono Trigger", vide) is None)
+        n2 = len(compteurs()["requetes"])
+        igdb.jaquette("titre introuvable zzz", cfg)
+        t("jaquette : un jeu deja introuvable n'est pas redemande",
+          len(compteurs()["requetes"]) == n2)
+
         r = igdb.tester(cfg)
         # La doublure renvoie desormais le titre CHERCHE : c'est ce que fait le
         # vrai IGDB, et c'est ce que le filtre anti-hack exige.

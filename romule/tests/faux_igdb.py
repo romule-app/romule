@@ -38,8 +38,21 @@ class H(BaseHTTPRequestHandler):
             import re as _re
             m = _re.search(r'search "([^"]*)"', corps)
             cherche = (m.group(1) if m else "Chrono Trigger").strip()
+            bas = cherche.lower()
+            if "voisin" in bas:
+                # Le piege que le vrai SteamGridDB a tendu sur « Crazy
+                # Construction » : un jeu SANS RAPPORT, mais bien classe, et
+                # pourvu d'une jaquette. Le client doit le refuser.
+                return self._j([{"name": "Autre Chose Entierement",
+                                 "cover": {"image_id": "co-piege"}}])
+            if "sans image" in bas:
+                # Jeu connu, mais sans jaquette : ce n'est pas un echec de
+                # recherche, et cela ne doit pas le rayer pour les resumes.
+                return self._j([{"name": cherche, "category": 0,
+                                 "summary": "Un jeu sans jaquette."}])
             return self._j([{
                 "name": cherche,
+                "cover": {"image_id": "co-test"},
                 "category": 0,
                 "summary": "Un groupe d'aventuriers voyage a travers le temps.",
                 "first_release_date": 793843200,
