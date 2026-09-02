@@ -131,24 +131,12 @@ jobs:
           sys.exit(1 if manquantes else 0)
           PY
 
-      # Verifier que la reference de configuration decrit bien les cles qui
-      # existent : une documentation qui derive du code est pire qu'absente.
-      - name: La reference correspond-elle au code ?
-        run: |
-          python - <<'PY'
-          import re, sys, pathlib
-          sys.path.insert(0, ".")
-          from romule import config
-          doc = pathlib.Path("docs/configuration.md").read_text()
-          cites = set(re.findall(r"`([a-z][a-z_]+)`", doc))
-          manquantes = sorted(set(config.DEFAULTS) - cites)
-          for k in manquantes:
-              print("::error title=Reglage non documente::%s existe dans le code "
-                    "mais pas dans docs/configuration.md" % k)
-          print("%d reglages, %d documentes." %
-                (len(config.DEFAULTS), len(config.DEFAULTS) - len(manquantes)))
-          sys.exit(1 if manquantes else 0)
-          PY
+      # Une documentation qui derive du code est pire qu'absente. Ce controle
+      # vivait ici en YAML, donc nulle part sur une machine de developpement :
+      # on le decouvrait apres avoir pousse. Il est desormais un outil, et
+      # `lancer_tests.py --tout` le joue avec les autres.
+      - name: La reference des reglages correspond-elle au code ?
+        run: python3 outils/verifier-reglages-doc.py
 
       # « Vingt-sept routes », « 40 reglages » : ces nombres sont ce qui rend un
       # texte credible, et ils derivent en silence. Le README a annonce 37
