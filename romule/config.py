@@ -308,6 +308,7 @@ DEFAULTS = {
     "versions_urls": list(VERSIONS_URLS),         # miroirs titledb, essayes dans l'ordre
     "lan_access": False,                          # ouvrir l'interface au reseau local
     "notify": True,                               # notification macOS en fin de tache
+    "notif_destinations": [],                     # Discord, Slack, Telegram, ntfy, Gotify, webhook
     "roms_root": "",                              # racine des ROMs sur la console (multi-systemes)
     "saves_dir": "",                              # dossier des sauvegardes sur la console
     "wifi_addr": "",                              # derniere adresse de la console en wifi

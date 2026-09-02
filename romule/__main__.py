@@ -11,8 +11,8 @@ from . import cli
 
 
 def main():
-    cli.main(sys.argv[1:])
+    return cli.main(sys.argv[1:]) or 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

@@ -474,6 +474,71 @@ def changer_mdp(uid, ancien, nouveau):
     raise ValueError("Compte introuvable.")
 
 
+def reinitialiser_mdp(email, nouveau):
+    """Repose le mot de passe SANS connaitre l'ancien. Depuis le terminal seul.
+
+    C'est la porte de secours d'un administrateur enferme dehors : plus de mot
+    de passe, plus de second facteur, et personne d'autre pour promouvoir un
+    compte. La seule alternative etait d'editer `_romule-comptes.json` a la
+    main — c'est-a-dire de coller une empreinte scrypt calculee ailleurs, ce
+    que personne ne fait correctement du premier coup.
+
+    Elle n'est atteignable QUE par la ligne de commande, jamais par une route
+    HTTP : une reinitialisation sans preuve d'identite est exactement ce qu'un
+    attaquant cherche. Qui peut lancer `romule` a deja les droits du service,
+    donc l'acces au fichier des comptes : la commande ne donne rien de plus
+    que ce que le systeme de fichiers donnait deja, elle le rend seulement
+    faisable sans se tromper.
+    """
+    email = valider_email(email)
+    valider_mdp(nouveau, email)
+    with _LOCK:
+        d = _lire()
+        i = _index_email(d, email)
+        if i < 0:
+            raise ValueError("Aucun compte avec cette adresse.")
+        d["comptes"][i]["hash"] = hacher(nouveau)
+        # Coupe toutes les sessions en cours : si le compte a ete pris, le
+        # reprendre ne doit pas laisser l'autre connecte.
+        d["comptes"][i]["maj_mdp"] = int(time.time())
+        # Un compte bloque par des echecs repetes doit repartir : sinon la
+        # reinitialisation reussit et la connexion echoue quand meme.
+        d["comptes"][i]["echecs"] = 0
+        d["comptes"][i]["bloque"] = 0
+        _ecrire(d)
+        return _public(d["comptes"][i])
+
+
+def desactiver_totp(email):
+    """Retire le second facteur. Pour un telephone perdu, depuis le terminal.
+
+    `totp_desactiver()` exige le mot de passe, ce qui est juste depuis
+    l'interface. Ici on est deja sur la machine : exiger le mot de passe
+    n'ajouterait aucune preuve, et l'exiger pour un compte dont on vient de
+    perdre le second facteur enfermerait dehors pour de bon.
+    """
+    email = valider_email(email)
+    with _LOCK:
+        d = _lire()
+        i = _index_email(d, email)
+        if i < 0:
+            raise ValueError("Aucun compte avec cette adresse.")
+        avait = bool((d["comptes"][i].get("totp") or {}).get("actif"))
+        # `{}` plutot qu'une cle retiree : c'est ce que fait deja
+        # `totp_desactiver`, et deux representations du meme etat finissent
+        # toujours par diverger quelque part.
+        d["comptes"][i]["totp"] = {}
+        _ecrire(d)
+        return avait
+
+
+def par_email(email):
+    """Le compte portant cette adresse, ou None. Pour la ligne de commande."""
+    d = _lire()
+    i = _index_email(d, valider_email(email))
+    return _public(d["comptes"][i]) if i >= 0 else None
+
+
 def modifier(uid, nom=None, email=None):
     with _LOCK:
         d = _lire()

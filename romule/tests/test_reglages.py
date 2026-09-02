@@ -50,6 +50,12 @@ HORS_INTERFACE = {
     # Ecrites par l'outil lui-meme au fil de son usage, jamais saisies.
     "wifi_addr", "emuready_device", "emuready_device_nom",
     "systemes_perso", "emulateur_paquet",
+    # Les destinations de notification passent par `/api/notif-creer`, qui
+    # verifie le schema de l'adresse (`reseau.verifier`) et borne leur nombre.
+    # Les laisser entrer par les reglages generiques contournerait les deux —
+    # et une URL de reglage qui devient un `file://` est justement le defaut
+    # que `reseau.py` existe pour empecher.
+    "notif_destinations",
 }
 
 

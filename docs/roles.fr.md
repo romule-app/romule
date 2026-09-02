@@ -63,7 +63,7 @@ est dit ici plutôt que supposé.
 
 ## Ce qu'un non-administrateur ne peut pas faire
 
-Vingt-sept routes lui sont réservées côté serveur. Elles se rangent en six
+Trente et une routes lui sont réservées côté serveur. Elles se rangent en sept
 familles :
 
 - **effacer ou remettre en place des données** — restaurer une sauvegarde
@@ -77,13 +77,18 @@ familles :
   de dossiers et l'emplacement de la ludothèque. Parcourir le système de
   fichiers de l'hôte est une primitive de divulgation, et elle est traitée
   comme telle ;
+- **émettre vers l'extérieur au nom du service** — les destinations de
+  [notification](configuration.md#notifications). Un webhook Discord est un
+  secret porteur : qui l'a peut écrire dans le salon. Tester une adresse
+  quelconque est par ailleurs un scanner de ports par procuration, ce qui est
+  une raison à soi seule ;
 - **renseigner sur qui se connecte et sur la posture de sécurité** — journal
   des accès, audit.
 
 L'interface masque ce que le rôle ne peut pas utiliser : un non-administrateur
 ne voit pas l'onglet Réglages. C'est une politesse, **pas** la frontière de
 sécurité. Le serveur refuse quoi qu'affiche l'interface, et la suite de tests
-vérifie les vingt-sept routes face à un compte ordinaire — pour les comptes
+vérifie les trente et une routes face à un compte ordinaire — pour les comptes
 internes comme pour les sessions SSO.
 
 ## Les clés d'API sont une troisième chose

@@ -68,6 +68,7 @@ plugins:
             Roles and access: Rôles et accès
             Emulator profiles: Profils d'émulateur
             Security and exposure: Sécurité et exposition
+            Storage and performance: Stockage et performance
             Help: Aide
             Troubleshooting: Dépannage
             Beta features: Fonctions bêta
@@ -109,6 +110,7 @@ nav:
       - Emulator profiles: profils.md
       - Roles and access: roles.md
       - Security and exposure: securite.md
+      - Storage and performance: stockage.md
   - Help:
       - Troubleshooting: depannage.md
       - Beta features: beta.md

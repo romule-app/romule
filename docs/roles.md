@@ -61,7 +61,7 @@ than assumed.
 
 ## What a non-administrator cannot do
 
-Twenty-seven routes are reserved server-side. They fall into six groups:
+Thirty-one routes are reserved server-side. They fall into seven groups:
 
 - **erase or restore data** — restoring a backup puts the accounts file back,
   which would hand administration back to whoever lost it;
@@ -71,12 +71,16 @@ Twenty-seven routes are reserved server-side. They fall into six groups:
 - **choose where the service reads and writes on the host** — the folder
   picker and the library location. Browsing the host's filesystem is a
   disclosure primitive, so it is treated as one;
+- **send outward in the service's name** — [notification](configuration.md#notifications)
+  destinations. A Discord webhook is a bearer secret: whoever holds it can post
+  in the channel. Testing an arbitrary address is also a port scanner by proxy,
+  which is its own reason;
 - **reveal who connects, and the security posture** — access log, audit.
 
 The interface hides what the role cannot use: a non-administrator does not see
 the Settings tab. That is a courtesy, **not** the security boundary. The server
 refuses regardless of what the interface shows, and the test suite checks all
-twenty-seven routes against an ordinary account — for internal accounts and for
+thirty-one routes against an ordinary account — for internal accounts and for
 SSO sessions alike.
 
 ## API keys are a third thing
