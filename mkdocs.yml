@@ -35,6 +35,44 @@ theme:
       accent: amber
       toggle: { icon: material/brightness-4, name: Switch to light }
 
+# Le site est bilingue. Le greffon n'est PAS une dependance de Romule : comme
+# MkDocs lui-meme, il n'est installe que dans le job de publication — la
+# propriete « zero dependance » porte sur l'execution.
+#
+# Une page sans traduction retombe sur l'anglais plutot que de disparaitre :
+# mieux vaut une page lisible dans l'autre langue qu'un lien mort.
+plugins:
+  - search
+  - i18n:
+      docs_structure: suffix
+      fallback_to_default: true
+      reconfigure_material: true
+      reconfigure_search: true
+      languages:
+        - locale: en
+          default: true
+          name: English
+          build: true
+        - locale: fr
+          name: Français
+          build: true
+          nav_translations:
+            Home: Accueil
+            Getting started: Pour commencer
+            Installation: Installation
+            First run: Premier démarrage
+            Your console: Ta console
+            Reference: Référence
+            Configuration: Configuration
+            HTTP API: API HTTP
+            Roles and access: Rôles et accès
+            Emulator profiles: Profils d'émulateur
+            Security and exposure: Sécurité et exposition
+            Help: Aide
+            Troubleshooting: Dépannage
+            Beta features: Fonctions bêta
+            Contributing: Contribuer
+
 markdown_extensions:
   - admonition
   - attr_list
