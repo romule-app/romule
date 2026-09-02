@@ -19,6 +19,7 @@ import urllib.parse
 import urllib.request
 
 from . import config, reseau
+from . import rapprochement
 
 NLIB = "https://api.nlib.cc/nx/{tid}/icon/256/256"
 
@@ -175,13 +176,26 @@ def sgdb_infos(name, key):
     base = "https://www.steamgriddb.com/api/v2"
     h = {"Authorization": "Bearer " + key, "User-Agent": "romule"}
     try:
+        cherche = search_name(name)
         found = _json.loads(_download(base + "/search/autocomplete/"
-                                      + urllib.parse.quote(search_name(name)), h))
-        jeu = found["data"][0]
+                                      + urllib.parse.quote(cherche), h))
+        # PAS `data[0]`. SteamGridDB classe par SA pertinence, qui n'est pas la
+        # notre : sur « Crazy Construction » il rend d'abord un jeu nomme
+        # « Crazy ». Ce titre servait ensuite de pivot pour interroger IGDB,
+        # donc la carte affichait le nom ET le resume d'un autre jeu.
+        #
+        # Une fiche absente se voit ; une fiche fausse se croit. On prefere
+        # donc ne rien rendre.
+        jeu = rapprochement.meilleur(found.get("data") or [], cherche,
+                                     nom=lambda j: j.get("name") or "")
+        if not jeu:
+            return None
         infos = {"titre": jeu.get("name") or "", "url": None}
         try:
             grids = _json.loads(_download(
                 base + "/grids/game/%d?dimensions=600x900&limit=1&types=static" % jeu["id"], h))
+            # Ce `[0]`-ci est legitime : le jeu est deja identifie, et on
+            # prend simplement sa premiere jaquette.
             infos["url"] = grids["data"][0]["url"]
         except Exception:
             pass

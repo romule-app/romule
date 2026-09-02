@@ -23,6 +23,7 @@ import urllib.parse
 import urllib.request
 
 from . import config, reseau
+from . import rapprochement
 
 TOKEN_URL = "https://id.twitch.tv/oauth2/token"
 API_URL = "https://api.igdb.com/v4"
@@ -245,9 +246,11 @@ def _meilleur(jeux, cherche):
         return (principal, commun - penalite * 0.5, avec_resume,
                 -(j.get("category") or 0))
 
-    meilleur = max(jeux, key=score)
-    # Aucun mot en commun : ce n'est pas le bon jeu, mieux vaut rien.
-    return meilleur if _tokens(meilleur.get("name")) & vise else None
+    retenu = max(jeux, key=score)
+    # « Au moins un mot en commun » etait trop permissif : « Crazy » passait
+    # pour « Crazy Construction ». Il faut couvrir la MAJORITE des mots
+    # distinctifs — meme regle que pour SteamGridDB, meme raison.
+    return retenu if rapprochement.assez_proche(retenu.get("name"), cherche) else None
 
 
 def tester(cfg=None):
