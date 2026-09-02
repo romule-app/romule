@@ -612,7 +612,22 @@ img.vide{visibility:hidden}
   #sysel{min-width:140px}
 }
 
+/* Le bouton de repli n'existe que sur telephone. */
+.replier{display:none}
+
 /* telephone et petits ecrans de console */
+@media (max-width:700px){
+  /* Mesure : 19 controles entre le haut de l'ecran et la premiere jaquette.
+     On fait defiler un panneau de reglages pour atteindre le contenu. Les
+     rangees de filtre et de tri se replient donc derriere un seul bouton, et
+     la recherche reste, elle, toujours accessible. */
+  .replier{display:inline-flex;align-items:center}
+  #filters,#toolbar{display:none}
+  body.filtres-ouverts #filters{display:flex}
+  body.filtres-ouverts #toolbar{display:flex}
+  .replier[aria-expanded="true"]{border-color:var(--amber);color:var(--amber)}
+}
+
 @media (max-width:640px){
   .size,.ext{display:none}
   main{padding:14px 14px 20px}

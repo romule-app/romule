@@ -148,6 +148,62 @@ def pluriels(n):
     t("aucun « (s) » a l'ecran", not restes, restes[:3])
 
 
+def mobile(n):
+    print("   -- sur telephone, le contenu vient avant les reglages --")
+    # Mesure avant : 19 controles entre le haut de l'ecran et la premiere
+    # jaquette. On faisait defiler un panneau de configuration pour atteindre
+    # ce qu'on etait venu voir.
+    n.cmd("Emulation.setDeviceMetricsOverride",
+          {"width": 430, "height": 932, "deviceScaleFactor": 2, "mobile": True})
+    time.sleep(1.5)
+    # Sans cette verification, tout ce qui suit serait mesure sur un ecran
+    # large et passerait pour vrai : un test qui croit etre sur telephone et
+    # ne l'est pas ne prouve rien.
+    t("la fenetre est bien celle d'un telephone",
+      n.js("window.matchMedia('(max-width:700px)').matches"),
+      n.js("window.innerWidth"))
+    # Ce qu'on compte : les controles DES BARRES DE LA BIBLIOTHEQUE — le
+    # panneau qu'on fait defiler pour atteindre la grille. Pas l'en-tete de
+    # l'application (onglets, etat de la console) : il est present sur tous les
+    # ecrans et ne fait pas partie de ce qui s'interpose.
+    avant = n.js("""
+      (function () {
+        // Chaque terme doit etre prefixe : `'.libbar ' + 'a, b'` ne porte que
+        // sur le premier, et les suivants redeviennent globaux. Ma premiere
+        // mesure comptait ainsi toutes les cartes de la grille.
+        const parts = ['button', 'select', 'input:not([type=hidden])',
+                       '[role=button]'];
+        const sel = ['.libbar', '#filters', '#toolbar', '#vues']
+          .flatMap(z => parts.map(p => z + ' ' + p)).join(', ');
+        return [...document.querySelectorAll(sel)]
+          .filter(e => e.getClientRects().length > 0).length;
+      })()""")
+    t("des controles sont mesurables avant la premiere jaquette",
+      avant is not None, avant)
+    if avant is not None:
+        t("moins de dix controles avant le premier jeu", avant < 10, avant)
+    t("le bouton de repli est visible sur telephone",
+      bool(n.js("document.getElementById('replier').getClientRects().length > 0")),
+      n.js("""(function(){
+        const r = document.getElementById('replier');
+        return {replier: r ? getComputedStyle(r).display : 'absent',
+                toolbar: getComputedStyle(document.getElementById('toolbar')).display,
+                filters: getComputedStyle(document.getElementById('filters')).display,
+                largeur: window.innerWidth};
+      })()"""))
+    n.js("app.basculerFiltres()")
+    time.sleep(0.5)
+    t("il deplie les filtres",
+      bool(n.js("document.getElementById('toolbar').getClientRects().length > 0")))
+    t("et l'annonce aux lecteurs d'ecran",
+      n.js("document.getElementById('replier').getAttribute('aria-expanded')")
+      == "true")
+    n.js("app.basculerFiltres()")
+    n.cmd("Emulation.setDeviceMetricsOverride",
+          {"width": 1400, "height": 1000, "deviceScaleFactor": 1, "mobile": False})
+    time.sleep(1.0)
+
+
 def alignement(n):
     print("   -- les rangees de la barre sont alignees --")
     # Mesure avant correction : trois axes verticaux dans la MEME rangee
@@ -296,6 +352,7 @@ def main():
         time.sleep(1.5)
         alignement(n)
         pluriels(n)
+        mobile(n)
         liste_gardee(n)
         recherche(n)
         filtres(n)

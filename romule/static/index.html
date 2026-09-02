@@ -81,6 +81,13 @@
               title="Relire le serveur et la console">Actualiser</button>
       <button class="ghost" data-act="actualiserFiches"
               title="Chercher les titres, résumés et jaquettes manquants, toutes plateformes">Fiches manquantes</button>
+      <!-- Sur telephone, les rangees de filtre et de tri se replient derriere
+           ce seul bouton : sinon on fait defiler un panneau de configuration
+           avant d'atteindre le premier jeu. Il vit dans CETTE barre, qui reste
+           visible — le mettre dans celle qu'il ouvre revenait a cacher la
+           poignee a l'interieur du tiroir. Invisible au-dessus de 700 px. -->
+      <button class="ghost replier" id="replier" data-act="basculerFiltres"
+              aria-expanded="false" aria-controls="filters toolbar">Filtrer et trier</button>
     </div>
 
     <div class="filters" id="filters">
