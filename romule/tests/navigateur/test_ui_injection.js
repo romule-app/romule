@@ -317,6 +317,38 @@ const vides = videAvantAttente(src);
 t('setSystem ne vide aucune liste avant son premier await',
   vides.length === 0, vides.join(', '));
 
+console.log('   -- 8. les boutons de fenetre portent le bon rappel --');
+// `dialogue()` appelle `actions[i].faire(champs)`. Ecrire `action:` au lieu de
+// `faire:` produit un bouton qui s'affiche, se clique, et NE FAIT RIEN — sans
+// erreur, sans trace. Trois appels etaient dans ce cas, dont le « Copier »
+// d'une cle d'API, qu'on ne peut plus reafficher ensuite.
+//
+// `test_gestes.py` ne pouvait pas le voir : le bouton EST atteignable, il a
+// bien un gestionnaire. C'est ce que le gestionnaire appelle qui n'existe pas.
+function rappelsFautifs(texte) {
+  const out = [];
+  // Un objet d'action se reconnait a `libelle:` ; on regarde ce qui le suit
+  // jusqu'a la fin de l'objet.
+  const re = /libelle:\s*[^,]+,([^}]*)\}/g;
+  let m;
+  while ((m = re.exec(texte)) !== null)
+    if (/\baction\s*:/.test(m[1]) && !/\bfaire\s*:/.test(m[1]))
+      out.push(texte.slice(0, m.index).split('\n').length);
+  return out;
+}
+const epreuvesRappel = [
+  ['action: au lieu de faire: -> detecte',
+   "actions: [{libelle: 'X', principal: true, action: () => f()}]", true],
+  ['faire: -> ignore',
+   "actions: [{libelle: 'X', principal: true, faire: () => f()}]", false],
+  ['un libelle sans rappel -> ignore', "actions: [{libelle: 'X'}]", false],
+];
+for (const [nom, extrait, attendu] of epreuvesRappel)
+  t(nom, (rappelsFautifs(extrait).length > 0) === attendu);
+const fautifsRappel = rappelsFautifs(src);
+t('aucun bouton de fenetre n\'utilise `action:`',
+  fautifsRappel.length === 0, 'lignes : ' + fautifsRappel.join(', '));
+
 console.log('      ------------------------------------------------');
 console.log('      ' + ok + ' controles OK, ' + ko + ' echec(s)');
 process.exit(ko ? 1 : 0);

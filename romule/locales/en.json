@@ -1103,5 +1103,17 @@
   "inconnue": "unknown",
   "aucune": "none",
   "Plateforme inconnue": "Unknown platform",
-  "Inconnu": "Unknown"
+  "Inconnu": "Unknown",
+  "Plateforme : %s": "Platform: %s",
+  "Recherche : %s": "Search: %s",
+  "État : %s": "Status: %s",
+  "Filtres avancés : %s": "Advanced filters: %s",
+  "Oublier cette vue": "Forget this view",
+  "Plus de filtres · %d": "More filters · %d",
+  "Enregistrer cette vue": "Save this view",
+  "Nom de la vue": "View name",
+  "À convertir sur Switch": "To convert on Switch",
+  "Vue enregistrée.": "View saved.",
+  "Tout effacer": "Clear all",
+  "Enregistrer": "Save"
 }

@@ -145,6 +145,60 @@ def main():
             t("effacer la requete la remplit",
               n.js("document.querySelectorAll('#lib .gcard').length") == avant, avant)
 
+            print("   -- filtres : compter, effacer, enregistrer --")
+            n.js("app.effacerFiltres()")
+            time.sleep(0.4)
+            t("sans filtre, « Tout effacer » est cache",
+              n.js("document.getElementById('effacefiltres').hidden"))
+            n.js("document.getElementById('filter').value = 'jeu'; app.chercher()")
+            time.sleep(0.4)
+            t("avec un filtre, il apparait",
+              not n.js("document.getElementById('effacefiltres').hidden"))
+            t("le compteur figure sur le bouton",
+              "1" in (n.js("document.getElementById('favbtn').textContent") or ""),
+              n.js("document.getElementById('favbtn').textContent"))
+            n.js("app.effacerFiltres()")
+            time.sleep(0.4)
+            t("« Tout effacer » vide la recherche",
+              n.js("document.getElementById('filter').value") == "")
+            t("et remet la pastille d'etat", n.js("FILTER") == "all", n.js("FILTER"))
+
+            print("   -- une vue enregistree se rejoue --")
+            # Le parcours complet, par le serveur : c'est la seule facon de
+            # savoir que la vue survit et se relit.
+            n.js("document.getElementById('filter').value = 'jeu'; app.chercher()")
+            time.sleep(0.3)
+            n.js("""
+              (async () => {
+                const r = await api('/api/vue-creer',
+                  {nom: 'Essai', filtres: filtresCourants()});
+                VUES = r.vues || []; dessinerVues();
+              })()""")
+            time.sleep(1.2)
+            t("la vue apparait comme une puce",
+              (n.js("document.querySelectorAll('#vues .vue').length") or 0) >= 1)
+            n.js("app.effacerFiltres()")
+            time.sleep(0.4)
+            n.js("""
+              (function () {
+                const v = VUES.find(x => x.nom === 'Essai');
+                if (v) app.appliquerVue(v.id);
+              })()""")
+            time.sleep(0.8)
+            t("l'appliquer restaure la recherche",
+              n.js("document.getElementById('filter').value") == "jeu",
+              n.js("document.getElementById('filter').value"))
+            n.js("""
+              (function () {
+                const v = VUES.find(x => x.nom === 'Essai');
+                if (v) app.supprimerVue(v.id);
+              })()""")
+            time.sleep(1.0)
+            t("l'oublier la retire",
+              not any(v.get("nom") == "Essai" for v in (n.js("VUES") or [])),
+              n.js("VUES"))
+            n.js("app.effacerFiltres()")
+
             print("   -- revenir ne redemande rien --")
             # Les DEUX vues sont d'abord chargees : le bloc precedent a vide le
             # cache a dessein, donc sans cette mise en bouche on compterait un
