@@ -43,6 +43,7 @@ function oublierCacheSysteme() {
 }
 
 function appliquerSysteme(d) {
+  inventaireChange();
   SALL = d.tout || [];
   SGAMES = d.games || [];
   SCONSOLE = (d.console || []).map(x => x.nom || x);
@@ -1179,6 +1180,7 @@ function render() {
   const s = DATA.stats;
   META = DATA.meta || {};
   GAMES = groupGames();
+  inventaireChange();
   renderLib();
   // Ce qui manque officiellement (patches, DLC) n'est plus une liste a part :
   // l'information vit sur la carte du jeu concerne, la ou elle est utile.
@@ -1221,6 +1223,19 @@ function libelleSysteme(key) {
   return (s && s.folder) || key;
 }
 
+
+// Une frappe ne doit pas redessiner la grille a chaque touche.
+//
+// `renderLib()` etait appele directement par l'evenement `input` : taper huit
+// caracteres declenchait huit rendus complets, dont sept jetes aussitot. On
+// regroupe sur l'image suivante — c'est le rythme de l'ecran, et c'est le seul
+// moment ou un rendu peut se voir.
+let RENDU_PREVU = 0;
+
+function renderLibBientot() {
+  if (RENDU_PREVU) return;
+  RENDU_PREVU = requestAnimationFrame(() => { RENDU_PREVU = 0; renderLib(); });
+}
 
 function renderLib() {
   renderSysSelect();
@@ -3061,7 +3076,26 @@ function jeuxTous() {
   return out;
 }
 
-function jeuxUnifies() {
+// Reconstruire ET RETRIER toute la bibliotheque a chaque rendu coute 16,5 ms
+// sur 5 000 titres — mesure. Comme `renderLib()` est appele a chaque frappe
+// dans la recherche, chaque touche depassait le budget d'une image (16 ms) et
+// la saisie accrochait.
+//
+// Or rien de tout cela ne depend de la RECHERCHE : la liste unifiee ne change
+// que si les donnees, la plateforme ou le tri changent. On la garde donc, et
+// `jeuxFiltres()` n'a plus qu'a filtrer — ce qui est de l'ordre du dixieme de
+// milliseconde.
+//
+// La signature inclut `DONNEES_V`, incremente partout ou l'inventaire est
+// remplace. Oublier un de ces endroits afficherait une liste perimee : c'est
+// le risque de tout cache, et c'est pourquoi il n'y en a qu'UN seul endroit
+// qui incremente, appele depuis les trois sites d'affectation.
+let DONNEES_V = 0;
+let _uniCle = null, _uniListe = null;
+
+function inventaireChange() { DONNEES_V++; _uniCle = null; }
+
+function jeuxUnifiesBrut() {
   const cmp = (TRIS[TRI] || TRIS.nom)[1];
   if (vueTotale()) return jeuxTous().sort((a, b) => cmp(a, b) * SENS);
   if (!isSwitch())
@@ -3071,6 +3105,12 @@ function jeuxUnifies() {
     .filter(g => g.console || g.files.length)
     .map(g => ({g: Object.assign({}, g, {sysNom: 'Switch'}), e: etatDuJeu(g, nmap)}))
     .sort((a, b) => cmp(a, b) * SENS);
+}
+
+function jeuxUnifies() {
+  const cle = SYS + '\u0000' + TRI + '\u0000' + SENS + '\u0000' + DONNEES_V;
+  if (cle !== _uniCle) { _uniCle = cle; _uniListe = jeuxUnifiesBrut(); }
+  return _uniListe;
 }
 
 /* ============================================================================
@@ -4334,7 +4374,9 @@ const app = {
 
   async loadNand() {
     const r = await api('/api/nand-status', {});
-    NANDST = r.items || []; NANDCONN = !!r.connectee;
+    // L'etat NAND entre dans `etatDuJeu()` : il fait donc partie de ce que la
+    // liste unifiee reflete.
+    NANDST = r.items || []; NANDCONN = !!r.connectee; inventaireChange();
     renderLib();          // l'etat NAND nourrit la vue unifiee
   },
 
@@ -4509,7 +4551,7 @@ const app = {
       extensions: (sys.extensions || []).length,
     };
     if (total) {
-      DATA = lib; GAMES = groupGames(); renderLib();
+      DATA = lib; GAMES = groupGames(); inventaireChange(); renderLib();
     }
     renderOnboard();
   },
@@ -4853,7 +4895,7 @@ const app = {
     say('Lecture des jeux de la console...');
     const r = await api('/api/device-games', {root});
     if (r.error) return;
-    DGAMES = r.games || []; buildConset();
+    DGAMES = r.games || []; buildConset(); inventaireChange();
     renderLib(); this.checkTree();
     annonce(phrase('%d fichier(s) sur la console, %d absent(s) du serveur.',
                r.total, r.new),
@@ -4984,6 +5026,9 @@ const app = {
     PAGE = 0; renderLib();
   },
   clearFav() { FAV.clear(); localStorage.removeItem('fav'); PAGE = 0; renderLib(); },
+  // Frappe dans la recherche : on revient a la premiere page, sinon chercher
+  // depuis la page 3 ne montre rien alors qu'il y a des resultats.
+  chercher() { PAGE = 0; renderLibBientot(); },
   toggleFavPop(e) {
     if (e) e.stopPropagation();
     $('favpop').classList.toggle('on');
@@ -6280,6 +6325,22 @@ $('log').addEventListener('scroll', () => {
 }, {passive: true});
 
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { app.closeGame(); app.closeDialog(); } });
+
+// « / » saute a la recherche — le raccourci qu'attend quiconque a deja utilise
+// GitHub. Il est ignore quand on est deja en train d'ecrire quelque part,
+// sinon taper une barre oblique dans un chemin deplacerait le curseur.
+document.addEventListener('keydown', e => {
+  if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return;
+  const ou = document.activeElement;
+  if (ou && /^(INPUT|TEXTAREA|SELECT)$/.test(ou.tagName)) return;
+  if (ou && ou.isContentEditable) return;
+  const champ = $('filter');
+  if (!champ || !champ.offsetParent) return;
+  e.preventDefault();
+  app.tab('jeux');
+  champ.focus();
+  champ.select();
+});
 /* ---------------------------------------------------------------------------
    DELEGATION — un seul ecouteur par geste, une liste blanche
 
@@ -6324,7 +6385,8 @@ const ACTES = new Set([
   'copierRetour', 'deployPick', 'detect', 'dismissA2HS', 'doImport',
   'ecApply', 'ecApplyProfile', 'ecLoad', 'ecSaveProfile', 'edenRestore',
   'erApply', 'erPreview', 'erSync', 'forcerFiches', 'importerJeu',
-  'creerCle', 'installApp', 'journalClear', 'journalCopy', 'loadSaves',
+  'chercher', 'creerCle', 'installApp', 'journalClear', 'journalCopy',
+  'loadSaves',
   'loadTrash', 'revoquerCle',
   'ludoAnnulerOnb', 'ludoFermer', 'ludoNouveau', 'ludoOuvrir',
   'ludoValider', 'mkTree', 'onbAller', 'onbChercherConsole',
