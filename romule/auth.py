@@ -320,9 +320,38 @@ def terminer(cfg, params, cookie_transit, redirect_uri):
         "groupes": claims.get("groups") if isinstance(claims.get("groups"), list) else [],
     }
     _verifier_autorisation(cfg, identite)
+    identite["admin"] = est_admin_oidc(cfg, identite)
+    # Le role est fige DANS le jeton, donc pour la duree de la session (12 h).
+    # Le relire a chaque requete demanderait de rappeler le fournisseur : ici
+    # on inscrit ce qu'il a dit au moment de la connexion. Retirer quelqu'un
+    # d'un groupe le declasse a sa prochaine session, pas au milieu de
+    # celle-ci — c'est le comportement de la plupart des SSO, et il est dit
+    # dans la documentation plutot que suppose.
     session = _signer({"sub": identite["sub"], "nom": identite["nom"],
-                       "email": identite["email"], "exp": time.time() + DUREE_SESSION})
+                       "email": identite["email"], "src": "oidc",
+                       "admin": bool(identite["admin"]),
+                       "exp": time.time() + DUREE_SESSION})
     return session, identite
+
+
+def est_admin_oidc(cfg, identite):
+    """Ce compte SSO a-t-il le role d'administrateur ?
+
+    `oidc_groupes` dit QUI PEUT ENTRER ; `oidc_admin_groupes` dit QUI
+    ADMINISTRE. Ce sont deux questions differentes, et les confondre donnerait
+    l'administration a tout le monde — c'est l'erreur qui rendrait le modele de
+    roles decoratif.
+
+    Sans `oidc_admin_groupes`, AUCUNE session SSO n'est administratrice. Le
+    defaut refuse : un reglage vide ne doit jamais valoir « tout le monde ».
+    """
+    voulus = [x.strip().lower()
+              for x in str(cfg.get("oidc_admin_groupes") or "")
+              .replace(";", ",").split(",") if x.strip()]
+    if not voulus:
+        return False
+    siens = {str(g).lower() for g in (identite.get("groupes") or [])}
+    return bool(siens & set(voulus))
 
 
 def _verifier_autorisation(cfg, identite):

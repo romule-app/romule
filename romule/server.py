@@ -767,7 +767,15 @@ class Handler(BaseHTTPRequestHandler):
         elif p == "/api/scan":
             # `shop_text` contient la date de generation : elle change a chaque
             # seconde alors que l'inventaire, lui, est identique.
-            self._json_revalide(_lib_response(), volatiles=("shop_text",))
+            #
+            # `moi` dit a l'interface ce qu'elle a le droit de MONTRER. Ce
+            # n'est pas une securite — c'est `RESERVE_ADMIN` qui refuse, cote
+            # serveur, et un test le verifie. Masquer une action qu'on ne peut
+            # pas faire est une politesse : sans cela un non-administrateur
+            # ouvre les Reglages et recolte des 403 sans comprendre pourquoi.
+            rep = _lib_response()
+            rep["moi"] = self._moi()
+            self._json_revalide(rep, volatiles=("shop_text", "moi"))
         elif p == "/api/job":
             self._json(JOB.snapshot())
         elif p == "/api/import-list":
@@ -931,17 +939,52 @@ class Handler(BaseHTTPRequestHandler):
         jeton = auth.session(self.headers.get("Cookie"))
         if jeton and jeton.get("src") == "config":
             return ""
-        u = self._qui()
-        if not u:
+        if not auth.session(self.headers.get("Cookie")):
             return "Aucun compte connecte."
-        if not comptes.est_admin(u["id"]):
+        if not self._est_admin():
             return "Reserve a un administrateur."
         return ""
 
     def _qui(self):
-        """Compte connecte, ou None si l'authentification est desactivee."""
+        """Compte INTERNE connecte, ou None.
+
+        Ne rend rien pour une session SSO : il n'y a pas de fiche locale a
+        rendre. C'est `_est_admin()` qui repond a la question du role, pour les
+        deux sources.
+        """
         s = auth.session(self.headers.get("Cookie"))
         return comptes.par_id(s.get("sub")) if s and s.get("src") == "interne" else None
+
+    def _moi(self):
+        """Qui regarde, et avec quel role.
+
+        `authentification` dit s'il y a une identite a avoir : sans elle, tout
+        le monde est administrateur — c'est le mode le plus courant de Romule,
+        et l'audit le signale deja comme un point d'attention.
+        """
+        s = auth.session(self.headers.get("Cookie"))
+        return {"authentification": bool(auth.actif(CFG)),
+                "connecte": bool(s),
+                "nom": (s or {}).get("nom") or "",
+                "source": (s or {}).get("src") or "",
+                "admin": (not auth.actif(CFG)) or self._est_admin()}
+
+    def _est_admin(self):
+        """Le role, quelle que soit la provenance de la session.
+
+        Un compte interne porte son role dans le fichier des comptes ; une
+        session SSO le porte dans son jeton, inscrit a la connexion d'apres les
+        groupes du fournisseur. Sans cette seconde branche, `_qui()` ne
+        reconnaissant que l'interne, AUCUNE session SSO ne pouvait administrer
+        — et rien ne permettait de lui donner le role.
+        """
+        s = auth.session(self.headers.get("Cookie"))
+        if not s:
+            return False
+        if s.get("src") == "oidc":
+            return bool(s.get("admin"))
+        u = comptes.par_id(s.get("sub")) if s.get("src") == "interne" else None
+        return bool(u and comptes.est_admin(u["id"]))
 
     def _photo_envoi(self):
         u = self._qui()
@@ -1680,6 +1723,13 @@ class Handler(BaseHTTPRequestHandler):
             for k in SECRETS:
                 if d.get(k) == MASQUE:
                     d.pop(k)
+            # Liste FERMEE des reglages qu'un client peut ecrire. Une cle
+            # declaree dans `config.DEFAULTS`, affichee par l'interface, et
+            # absente d'ici produit le pire des comportements : le champ se
+            # remplit, le serveur repond 200, et rien ne change.
+            # `oidc_admin_groupes` et `emulateur` etaient dans ce cas — choisir
+            # un profil d'emulateur ne l'enregistrait pas. `test_reglages.py`
+            # compare desormais cette liste a `DEFAULTS` dans les deux sens.
             for k in ("device_dir", "jobs", "push_layout", "verify_mode",
                       "incremental", "cover_provider", "cover_url",
                       "steamgriddb_key", "igdb_client_id", "igdb_client_secret",
@@ -1690,7 +1740,7 @@ class Handler(BaseHTTPRequestHandler):
                       "trash_days", "system_dirs", "systemes_perso", "auth_mode",
                       "oidc_issuer", "oidc_client_id", "oidc_client_secret",
                       "oidc_scopes", "oidc_redirect", "oidc_emails",
-                      "oidc_groupes"):
+                      "oidc_groupes", "oidc_admin_groupes", "emulateur"):
                 if k in d:
                     CFG[k] = d[k]
             # Les plateformes ajoutees a la main sont assainies A L'ECRITURE,

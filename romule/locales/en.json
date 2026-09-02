@@ -1118,5 +1118,10 @@
   "Enregistrer": "Save",
   "{section|sections}": "{section|sections}",
   "… et %d {autre|autres}": "… and %d {other|others}",
-  "Filtrer et trier": "Filter and sort"
+  "Filtrer et trier": "Filter and sort",
+  "Groupes administrateurs": "Administrator groups",
+  "Qui peut ouvrir les Réglages et gérer l'outil.": "Who can open Settings and manage the tool.",
+  "C'est une question différente de « qui peut entrer » ci-dessus.": "This is a different question from “who may get in” above.",
+  "Vide : personne n'administre par le SSO.": "Empty: nobody administers through SSO.",
+  "Le rôle est lu à la connexion, donc retirer quelqu'un d'un groupe le déclasse à sa session suivante.": "The role is read at sign-in, so removing someone from a group demotes them at their next session."
 }

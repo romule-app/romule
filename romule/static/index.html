@@ -780,6 +780,19 @@
               <input type="text" id="s-oidcgroupes" placeholder="groupe-ludotheque">
             </div>
           </div>
+
+          <div class="setrow">
+            <!-- Les phrases restent entieres : une balise au MILIEU d'une
+                 phrase la coupe en deux morceaux, et on ne traduit pas une
+                 demi-phrase. -->
+            <div class="setlab"><b>Groupes administrateurs</b>
+              <span>Qui peut ouvrir les Réglages et gérer l'outil.</span>
+              <span>C'est une question différente de « qui peut entrer » ci-dessus.</span>
+              <span>Vide : personne n'administre par le SSO.</span>
+              <span>Le rôle est lu à la connexion, donc retirer quelqu'un d'un groupe le déclasse à sa session suivante.</span></div>
+            <div class="setctl"><input type="text" id="s-oidcadmingroupes"
+                   placeholder="groupe-admin"></div>
+          </div>
           <div class="setrow">
             <div class="setlab"><b>Adresse publique</b>
               <span>Uniquement derrière un proxy. Vide = déduite de la requête.</span></div>
