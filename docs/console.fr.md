@@ -42,6 +42,33 @@ ailleurs. Le réglage **Dossier des ROMs** est le parent de toutes les autres
 plateformes, chacune dans son sous-dossier (`GBA`, `SNES`, `PS2`…). Laissé
 vide, il est déduit du dossier Switch.
 
+## Une plateforme que Romule ne connaît pas
+
+Vingt-trois plateformes sont reconnues d'origine, et la liste n'est pas une
+limite. **Réglages → Ta console → Ajouter une plateforme…** demande trois
+choses :
+
+| Champ | Exemple | À quoi il sert |
+|---|---|---|
+| Nom affiché | `Neo Geo` | Ce que tu verras dans le sélecteur de plateformes |
+| Dossier sur la console | `NeoGeo` | Un sous-dossier du dossier des ROMs ci-dessus |
+| Extensions | `zip, neo` | Ce qui compte comme un jeu pour cette plateforme |
+
+Cela suffit pour que la plateforme soit analysée, filtrée, comptée et envoyée
+comme les autres. C'est aussi la réponse quand une console *est* connue mais
+que tu la ranges dans un dossier que Romule ne devinerait pas : déclare-la sous
+le nom que tu emploies réellement.
+
+Les plateformes ajoutées sont rangées sous `systemes_perso` dans le fichier de
+réglages, et suivent tes sauvegardes.
+
+!!! note "Ce que cela ne fait pas"
+    Déclarer une plateforme n'apprend pas à Romule à lire l'*intérieur* de ses
+    fichiers. La Switch est la seule qu'il ouvre : les title ID, les liens
+    base/mise à jour/DLC et les mises à jour manquantes viennent de l'analyse
+    du conteneur. Toute autre plateforme — livrée ou ajoutée — est identifiée
+    par son dossier et son extension.
+
 ## Rangement sur la console
 
 Les fichiers Switch sont triés en `GAMES`, `UPDATE` et `DLC`. Le type vient du

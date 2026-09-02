@@ -51,7 +51,11 @@ library works, but it only shows file names.
 | Service | What it gives | Where to get a key |
 |---|---|---|
 | SteamGridDB | Cover art | [steamgriddb.com/profile/preferences/api](https://www.steamgriddb.com/profile/preferences/api) |
-| IGDB | Summaries, year, publisher | [dev.twitch.tv/console/apps](https://dev.twitch.tv/console/apps) |
+| IGDB | Summaries, year, publisher — **and cover art when SteamGridDB has none** | [dev.twitch.tv/console/apps](https://dev.twitch.tv/console/apps) |
+
+Fill in both. SteamGridDB is a community *artwork* database, rich on what gets
+played with a keyboard and thin on handheld console catalogues; IGDB covers
+what it misses. With only one of the two, some games keep an empty sleeve.
 
 **Save and test** checks the credentials on the spot. Saving without checking
 means finding out in a month that a key was pasted wrong.

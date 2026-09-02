@@ -66,6 +66,7 @@ All of these are edited from the interface. The names are the keys stored in
 | `lan_access` | `false` | Allow the network in **without a password** |
 | `maj_check` | `true` | Ask GitHub once a day whether a newer version exists. This is the **only** time Romule reaches the internet without being asked; turn it off and it never does. |
 | `auth_secret` | generated | Signing key for session cookies. Never leaves the server. |
+| `jeton_auto` | generated | The first-access token, kept so it survives restarts. Written only when the service is reachable and has no account, no `ROMULE_TOKEN` and no network access — see [Security](securite.md#the-first-access-token). |
 | `oidc_issuer` | — | Provider URL |
 | `oidc_client_id` / `oidc_client_secret` | — | Client credentials |
 | `oidc_redirect` | — | Redirect URI registered with the provider |

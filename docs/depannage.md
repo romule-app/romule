@@ -36,9 +36,20 @@ extensions it knows.
 
 ## Cover art stays blank
 
-The default provider works from Switch title IDs. For other platforms you need
-a SteamGridDB key: **Settings → Covers and details**, then **Save and test**.
-If the test fails, the key is wrong — the message says which service refused.
+The default provider works from Switch title IDs alone, so other platforms
+need a key: **Settings → Covers and details**, then **Save and test**. If the
+test fails, the key is wrong — the message says which service refused.
+
+Covers have two sources, tried in that order. SteamGridDB is a community
+*artwork* database and is thin on handheld console catalogues; IGDB is a game
+database that publishes cover art too, and Romule falls back to it when the
+first source returns no image. **Filling in the IGDB credentials therefore
+fixes blank covers that a SteamGridDB key alone does not.**
+
+Both sources must actually match the game: a candidate has to cover two thirds
+of the distinctive words of the title. A file named `Some Game (Europe) (En,Fr)
+[!].nds` is searched under `Some Game` — the region and dump tags are stripped
+first. A cover belonging to another game would be worse than none.
 
 ## `.nsz` / `.xcz` files will not convert
 
@@ -80,7 +91,8 @@ default; a French locale ships alongside it.
 
 - `python3 -m romule.audit` — reports on the running configuration.
 - The **Log** panel, right-hand side, holds what Romule did and why it failed.
-- `_romule-lib.log` in your library folder holds the same, kept across
+- `_romule-lib.log` in the service data folder (`ROMULE_ROOT`, or the
+  `/data` volume) holds the same, kept across
   restarts.
 
 When opening an issue, include the version (interface footer, or

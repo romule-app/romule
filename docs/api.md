@@ -30,26 +30,34 @@ Every request needs an API key. Keys are named, revocable one at a time, and
 show you when they were last used.
 
 **From the interface** — Settings → Access → API keys. Give it a name that says
-what it is for (`homarr`, `nightly-backup`); that name is what will tell you
+what it is for (`dashboard`, `nightly-backup`); that name is what will tell you
 which one to revoke later.
 
 **From the command line** — useful in a container, where there may be no
 browser at all:
 
 ```sh
-romule apikey create homarr
+romule apikey create dashboard
 # in Docker:
-docker compose exec romule python3 -m romule apikey create homarr
+docker compose exec romule python3 -m romule apikey create dashboard
 ```
 
 ```
-Cle creee : homarr
+Cle creee : dashboard
 
   rml_Ac0ffee1S3cr3t...
 
 Note-la maintenant : elle n'est conservee que sous forme
 d'empreinte et ne pourra pas etre reaffichee.
 ```
+
+!!! note "The command line speaks French"
+    That output is verbatim, not a translation slip. Like the audit report and
+    the login pages, the CLI is composed by the server and never passes through
+    the interface's translation catalogue — see
+    [Beta features](beta.md#the-audit-report-the-login-pages-and-the-cli-are-french-only).
+    The commands, their arguments and everything on this page are English; only
+    what the command prints back is not.
 
 !!! warning "Shown once, and only once"
     Romule stores a SHA-256 hash of the key, never the key itself. That is what
