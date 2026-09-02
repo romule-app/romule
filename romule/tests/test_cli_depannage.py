@@ -31,14 +31,26 @@ def t(nom, cond, detail=""):
         print("      ECHEC %s  %s" % (nom, detail))
 
 
-def romule(racine, *args):
-    """Lance la commande dans un vrai sous-processus, comme un utilisateur."""
+def lancer(racine, *args, chemin=None):
+    """Lance la commande dans un vrai sous-processus, comme un utilisateur.
+
+    Rend (code, stdout, stderr) SEPARES : c'est la distinction qui compte pour
+    une commande dont la sortie est lue par un programme.
+    """
     env = dict(os.environ, ROMULE_ROOT=str(racine), ROMULE_NO_BROWSER="1",
                ROMULE_ADB="/inexistant", NO_COLOR="1")
+    if chemin is not None:
+        env["PATH"] = chemin
     r = subprocess.run([sys.executable, "-m", "romule"] + list(args),
                        cwd=str(RACINE), env=env, capture_output=True, text=True,
                        timeout=180)
-    return r.returncode, (r.stdout or "") + (r.stderr or "")
+    return r.returncode, (r.stdout or ""), (r.stderr or "")
+
+
+def romule(racine, *args):
+    """Les deux sorties reunies, pour les controles qui ne les distinguent pas."""
+    code, out, err = lancer(racine, *args)
+    return code, out + err
 
 
 def main():
@@ -109,8 +121,21 @@ def main():
     # --- config ------------------------------------------------------------
     code, sortie = romule(racine, "config", "set", "trash_days", "7")
     t("`config set` accepte un entier", code == 0 and "7" in sortie, sortie)
-    code, sortie = romule(racine, "config", "get", "trash_days")
-    t("`config get` le relit", sortie.strip() == "7", sortie)
+    code, out, err = lancer(racine, "config", "get", "trash_days")
+    t("`config get` le relit", out.strip() == "7", (out, err))
+
+    # Le defaut que la CI a trouve et que ma machine cachait : les avis
+    # preliminaires (« nsz absent — ... ») partaient sur STDOUT, donc
+    # `VALEUR=$(romule config get x)` les capturait avec la valeur. On force
+    # ici l'absence des outils, au lieu d'esperer qu'ils manquent : le
+    # controle doit tomber sur toute machine, pas seulement sur celles qui
+    # n'ont pas `nsz`.
+    vide = str(racine / "aucun-outil-ici")
+    os.makedirs(vide, exist_ok=True)
+    code, out, err = lancer(racine, "config", "get", "trash_days", chemin=vide)
+    t("un outil absent produit bien un avis", "absent" in err, (out, err))
+    t("mais l'avis va sur stderr, pas sur stdout",
+      out.strip() == "7", (out, err))
     # Sans lecture JSON, « false » deviendrait la chaine « false », qui est vraie.
     romule(racine, "config", "set", "incremental", "false")
     cfg = json.loads((racine / "_romule-config.json").read_text())
