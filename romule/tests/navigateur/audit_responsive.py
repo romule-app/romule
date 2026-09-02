@@ -14,12 +14,34 @@ from cdp import Navigateur
 
 import os
 URL = os.environ.get("LUDO_URL", "http://127.0.0.1:8799/")
+# Cinq telephones et tablettes, puis les consoles portables de retrogaming —
+# des appareils Android avec un navigateur, un ecran COURT, et des boutons
+# plutot qu'un doigt precis. Aucune n'etait testee.
+#
+# Les viewports sont ceux que le navigateur annonce reellement : la resolution
+# divisee par la densite. Un 1080p de 6 pouces rend environ 720 x 405 points
+# CSS, pas 1920 x 1080.
 TAILLES = [
-    ("iPhone SE     ", 375, 667, 2),
-    ("iPhone 15 Pro ", 393, 852, 3),
-    ("iPhone 15 PM  ", 430, 932, 3),
-    ("paysage       ", 852, 393, 3),
-    ("tablette      ", 768, 1024, 2),
+    ("iPhone SE       ", 375, 667, 2),
+    ("iPhone 15 Pro   ", 393, 852, 3),
+    ("iPhone 15 PM    ", 430, 932, 3),
+    ("paysage         ", 852, 393, 3),
+    ("tablette        ", 768, 1024, 2),
+
+    # Le plus petit ecran 4:3 encore vendu. S'il tient ici, il tient partout.
+    ("Anbernic RG35XX ", 640, 480, 1),
+    # 16:9 tres court : le cas que vise `@media (max-height:460px)`.
+    ("Retroid Pocket 5", 640, 360, 3),
+    # 6 pouces 1080p en paysage — le format le plus repandu des consoles
+    # Android. L'Odin 2 et le Thor partagent ce viewport ; un seul profil suffit
+    # donc a couvrir les deux.
+    ("AYN Odin 2/Thor ", 720, 405, 2.66),
+    # Le SECOND ecran du Thor : 3,92 pouces en 1080 x 1240. C'est le seul
+    # viewport plus haut que large ET presque carre de la liste — une grille
+    # reglee pour du 16:9 y rencontre un rapport qu'elle n'a jamais vu.
+    ("AYN Thor 2e ecr.", 360, 413, 3),
+    # Large mais court, et sous Linux.
+    ("Steam Deck      ", 1280, 800, 1),
 ]
 
 SONDE = r"""
@@ -93,8 +115,11 @@ def uniq(xs):
 
 def main():
     total_pb = 0
-    for nom, l, h, dpr in TAILLES:
-        n = Navigateur(port=9400 + l % 100, largeur=l, hauteur=h, dpr=dpr)
+    # Le port derive de l'INDEX, pas de la largeur : deux profils peuvent
+    # partager la meme largeur (640 pour le RG35XX et le Retroid Pocket 5) et
+    # se disputeraient alors le meme port.
+    for i, (nom, l, h, dpr) in enumerate(TAILLES):
+        n = Navigateur(port=9400 + i, largeur=l, hauteur=h, dpr=dpr)
         try:
             n.aller(URL, attente=3)
             for _ in range(40):
