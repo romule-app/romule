@@ -71,6 +71,14 @@
 - ↩️ **Reversible.** Sending a file to the trash does not ask you to confirm:
   it happens, and the toast offers *Undo*. Only what cannot be undone asks
   first.
+- 🔔 **Tells you when a task is done, wherever you are.** Discord, Slack,
+  Telegram, ntfy, Gotify, or any webhook — the service is worked out from the
+  address you paste. A thirty-file conversion is exactly when you are not in
+  front of the screen.
+- 🩺 **Debuggable from a terminal.** `romule doctor` prints everything a bug
+  report should contain; `romule user passwd` gets you back in when the
+  password and the second factor are both gone; `ROMULE_LOG=debug` turns
+  `docker logs` into something worth reading.
 - 🔔 **Tells you when it is out of date.** One request to GitHub a day, the
   release notes in the interface, and a setting to switch it off. That is the
   only time Romule reaches the internet unasked.
@@ -87,6 +95,7 @@
 | **Conversion** | `nsz` for `.nsz` / `.xcz`, `unar` and `7z` for archives dropped into `_import` |
 | **Authentication** | Internal accounts with scrypt + TOTP, or **OpenID Connect** — Authentik, Keycloak, Authelia, Pocket ID, Zitadel, Google, GitHub |
 | **Reverse proxies** | Traefik, Caddy, nginx, NGINX Proxy Manager — with `ROMULE_TRUSTED_PROXIES` so forwarded headers are only honoured from proxies you name |
+| **Notifications** | Discord, Slack, Telegram, ntfy, Gotify — or any webhook. The service is worked out from the address |
 | **Dashboards & automation** | Any client that can send a header: Homarr, Homepage, Glance, Uptime Kuma, n8n, cron, `curl` — through the [HTTP API](https://romule-app.github.io/romule/api/) |
 | **Containers** | Docker and Docker Compose, multi-arch `amd64` / `arm64` — Synology, unRAID, TrueNAS, Proxmox LXC, Raspberry Pi |
 | **Desktop & mobile** | Installable as a PWA (standalone window, home-screen icon) on macOS, Windows, Linux, iOS and Android |
@@ -202,7 +211,7 @@ must be known before it starts.
 `ROMULE_BIND` defaults to `127.0.0.1`, except in a container or when network
 access has been enabled — otherwise a published port would reach nothing.
 
-All 40 settings in the configuration file are edited from the interface and
+All 41 settings in the configuration file are edited from the interface and
 documented on the
 [documentation site](https://romule-app.github.io/romule/).
 

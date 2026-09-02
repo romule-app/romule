@@ -12,6 +12,44 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Added
 
+- **Notifications to Discord, Slack, Telegram, ntfy, Gotify — or any webhook.**
+  Paste an address in Settings → Access; the service is worked out from it.
+  Comparable tools reach for Apprise, which is a dependency; Romule has none,
+  so the five families that cover most self-hosted setups are implemented in
+  about a hundred lines of `urllib`, plus a generic webhook for the rest.
+  The address is a bearer secret and is **never sent back** — the interface
+  shows only the host, and it appears in no log, no API response and no
+  `doctor` output.
+- **`ROMULE_LOG` — five terminal log styles.** `quiet`, `normal`, `verbose`,
+  `debug`, `json`. `JobRunner.log()` wrote to a file and an in-memory buffer
+  and *never to stdout*, so `docker logs romule` showed almost nothing. It now
+  writes to all three. `debug` adds each HTTP request with its status and
+  duration, the module, the thread and seconds since startup; `verbose`
+  deliberately stops short of it, because the interface polls `/api/job` in a
+  loop and those lines would bury what you came to read.
+- **A startup banner** naming the service and the facts you would otherwise
+  spend half an hour looking for: version and Python, where settings live as
+  opposed to games, who may connect, external tools found, the log file path.
+- **Terminal commands for when the interface is not the answer** —
+  `romule doctor`, `romule user list|passwd|admin|totp-off|rm`,
+  `romule config list|get|set`. `user passwd` resets a password without the old
+  one, invalidates that account's sessions and clears the lockout counter. They
+  exist only on the command line: whoever can run them already has the
+  service's files, so they grant nothing new — they only make it doable without
+  mistakes.
+
+### Changed
+
+- **The library scan no longer uses `pathlib` in its hot loop.** Answering
+  *"should this be in SQLite?"* honestly meant profiling it, and the profile
+  said the bottleneck was never storage: on 20 000 titles, `Path.relative_to`
+  was 39 % of the time and JSON serialisation did not appear at all. Rewritten
+  with `os.walk` and strings, `/api/scan` went from **1 759 ms to 1 170 ms**
+  and startup from **949 ms to 457 ms**. The rewrite was checked by replaying
+  the old loop verbatim and comparing every field of 4 433 entries: zero
+  differences. Written up in
+  [Storage and performance](https://romule-app.github.io/romule/stockage/).
+
 - **IGDB is now a second source for cover art.** SteamGridDB is a community
   *artwork* database: rich on what gets played with a keyboard, thin on
   handheld console catalogues. It does not have *Crazy Construction* — a real
@@ -37,6 +75,11 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Fixed
 
+- **Commands exited 0 when they refused.** `romule user passwd` printed
+  *"Refused: ..."* and reported success, so a script could not tell a refusal
+  from a completed job and `&&` chained onto a command that had done nothing.
+  Found by the new tests — six perfectly worded refusals, all announced as
+  successes.
 - **The documentation home page rendered its own markdown as text.** The card
   grid is written inside a `<div>`, and without the `md_in_html` extension
   everything in an HTML block is left verbatim. `--strict` cannot see it: it is

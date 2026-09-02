@@ -3572,6 +3572,7 @@ function majBlocAuth() {
   }
   if (mode === 'interne') chargerComptes();
   chargerCles();
+  chargerNotifs();
 }
 
 // ------------------------------------------------------------------ cles d'API
@@ -3664,6 +3665,88 @@ async function revoquerCle(id) {
       chargerCles();
     }}],
   });
+}
+
+// ------------------------------------------------------ notifications sortantes
+//
+// L'adresse n'est JAMAIS rendue par le serveur : un webhook Discord est un
+// secret porteur, et l'afficher le poserait dans l'historique du navigateur et
+// sur la moindre capture d'ecran des reglages. On n'en montre que l'hote, ce
+// qui suffit a reconnaitre laquelle est laquelle.
+let NOTIFS = [], NOTIF_EVTS = {};
+
+async function chargerNotifs() {
+  const r = await api('/api/notifs', null, true);
+  if (!r || r.error) return;
+  NOTIFS = r.destinations || [];
+  NOTIF_EVTS = r.evenements || {};
+  dessinerNotifs();
+}
+
+function dessinerNotifs() {
+  const boite = $('listenotifs');
+  if (!boite) return;
+  if (!NOTIFS.length) {
+    boite.innerHTML = '<p class="lead" style="margin:0 0 8px">'
+      + esc(t('Aucune destination. Romule ne prévient que cet écran.'))
+      + '</p>';
+    return;
+  }
+  boite.innerHTML = NOTIFS.map(d =>
+    '<div class="compte-ligne">'
+    + '<span class="compte-nom" data-i18n-skip>' + esc(d.nom || d.service) + '</span>'
+    + '<span class="compte-mail tid" data-i18n-skip>' + esc(d.service) + '</span>'
+    + '<span class="mono" data-i18n-skip>' + esc(d.apercu) + '</span>'
+    + '<button class="ghost mini" data-act="testerNotif" data-arg="'
+    + esc(d.id) + '">' + esc(t('Tester')) + '</button>'
+    + '<button class="ghost mini" data-act="supprimerNotif" data-arg="'
+    + esc(d.id) + '">' + esc(t('Retirer')) + '</button>'
+    + '</div>').join('');
+}
+
+async function ajouterNotif() {
+  const cn = $('s-notifnom'), cu = $('s-notifurl');
+  const url = (cu && cu.value || '').trim();
+  if (!url) {
+    toast(t('Colle l\'adresse du webhook.'), 'warn');
+    if (cu) cu.focus();
+    return;
+  }
+  const r = await api('/api/notif-creer',
+                      {nom: (cn && cn.value || '').trim(), url});
+  if (!r || r.error) return;
+  if (cn) cn.value = '';
+  if (cu) cu.value = '';
+  NOTIFS = r.destinations || [];
+  dessinerNotifs();
+  toast(t('Destination ajoutée.'), 'ok');
+}
+
+async function supprimerNotif(id) {
+  const r = await api('/api/notif-supprimer', {id});
+  if (!r || r.error) return;
+  NOTIFS = r.destinations || [];
+  dessinerNotifs();
+  toastAction(t('Destination retirée.'), '', null, 'ok');
+}
+
+function _direResultatNotif(r) {
+  if (!r) return;
+  if (r.ok) toast(t('Envoyé. Regarde ton salon.'), 'ok');
+  // Le detail porte le code HTTP ou le nom de l'erreur : sans lui, « échec »
+  // ne dit pas si l'adresse est fausse ou le service en panne.
+  else toast(phrase('Échec : %s', r.detail || r.error || '?'), 'warn');
+}
+
+async function testerNotif(id) {
+  _direResultatNotif(await api('/api/notif-tester', {id}));
+}
+
+async function testerNotifSaisie() {
+  const cu = $('s-notifurl');
+  const url = (cu && cu.value || '').trim();
+  if (!url) { toast(t('Colle l\'adresse du webhook.'), 'warn'); return; }
+  _direResultatNotif(await api('/api/notif-tester', {url}));
 }
 
 // ------------------------------------------------------------ comptes internes
@@ -5767,6 +5850,7 @@ const app = {
 
   ajouterCompte,
   creerCle, revoquerCle,
+  ajouterNotif, supprimerNotif, testerNotif, testerNotifSaisie,
   chargerComptes,
 
   // Choix de la plateforme dont on regle les options.
@@ -6735,7 +6819,8 @@ const ACTES = new Set([
   'copierRetour', 'deployPick', 'detect', 'dismissA2HS', 'doImport',
   'ecApply', 'ecApplyProfile', 'ecLoad', 'ecSaveProfile', 'edenRestore',
   'erApply', 'erPreview', 'erSync', 'forcerFiches', 'importerJeu',
-  'appliquerVue', 'basculerFiltres', 'chercher', 'creerCle', 'effacerFiltres',
+  'ajouterNotif', 'appliquerVue', 'basculerFiltres', 'chercher', 'creerCle',
+  'effacerFiltres', 'supprimerNotif', 'testerNotif', 'testerNotifSaisie',
   'voirMaj',
   'enregistrerVue', 'installApp', 'journalClear', 'journalCopy',
   'supprimerVue',
