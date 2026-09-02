@@ -20,11 +20,60 @@
 > internet.
 
 <p align="center">
-  <img src="docs/images/bibliotheque.jpg" alt="The Romule library view: a grid of
-  game cards showing cover art, size, platform and update badges, with filters
-  and a search box above."
+  <img src="docs/images/apercu-bureau.jpg" alt="Romule in a desktop browser: a
+  grid of game cards with cover art, size, platform and update badges, a
+  platform selector, a search field and filter chips above."
   width="900">
 </p>
+
+<p align="center">
+  <img src="docs/images/apercu-portables.jpg" alt="Romule on a retro handheld
+  console and on a phone. On the handheld, the filter and sort rows are folded
+  behind a single button so the cover art starts near the top of the short
+  screen. On the phone, the same folding leaves the platform selector, the
+  search field and one button."
+  width="900">
+</p>
+
+---
+
+## ✨ Key features
+
+**Your library, whatever it holds.** Nintendo Switch in detail — title IDs,
+base/update/DLC relationships, missing updates, orphaned DLC — plus 22 other
+platforms identified per file. One **“all platforms”** view is the default,
+because that is what you own; per-platform views are one click away and are
+kept in memory, so switching back is instant and nothing flickers.
+
+**Cover art and details, cached.** SteamGridDB for artwork, IGDB for summaries,
+year and publisher, stored on disk so the grid never waits on the network.
+
+**Find things.** Search by name or title ID, combine it with status chips and
+advanced filters, clear all three in one click — and **save a combination as a
+view**, kept on the server so it is the same on your phone and on your desk.
+
+**Push to a handheld** over adb, by USB or Wi‑Fi, with a pairing assistant,
+resumable transfers and free-space checks. Emulator layouts are **profiles**,
+not hard-coded paths.
+
+**Works where you actually are.** The interface folds down for phones and for
+retro handhelds — short landscape screens included — and the grid is walkable
+with a **D-pad**: arrow keys move from card to card, Enter opens. The responsive
+audit runs on ten device profiles in CI, from a 640 × 480 Anbernic to a Steam
+Deck.
+
+**Two roles, and nothing else to reason about.** Administrators change settings
+and manage accounts; everyone else gets the library and its actions. Works with
+internal accounts (scrypt, optional TOTP) or with your OpenID Connect provider,
+where a group decides who administers.
+
+**Scriptable.** A small, versioned [HTTP API](https://romule-app.github.io/romule/api/)
+with named, revocable keys — for a dashboard, a cron job, or a shell script.
+
+**Reversible.** Sending a file to the trash does not ask you to confirm: it
+happens, and the toast offers *Undo*. Only what cannot be undone asks first.
+
+**Yours.** Romule ships no games, no console keys, and no links to either.
 
 ---
 
@@ -67,20 +116,7 @@ listens on `127.0.0.1` gets no token — nothing to protect it from.
 
 ---
 
-## 🎮 What it does
-
-- 📚 **Takes stock of your library.** Nintendo Switch in detail — title IDs,
-  base/update/DLC relationships, missing updates, orphaned DLC — plus 22 other
-  platforms identified per file.
-- 🖼️ **Fills in the blanks.** Cover art from SteamGridDB, summaries, year and
-  publisher from IGDB, cached on disk so the grid never waits on the network.
-- 📲 **Sends games to a handheld** over adb, by USB or Wi-Fi, with a pairing
-  assistant, resumable transfers and free-space checks.
-- 🔌 **Answers to your scripts.** A small, versioned HTTP API with revocable
-  keys, so a dashboard or a cron job can query the library —
-  [documented here](https://romule-app.github.io/romule/api/).
-- 🏠 **Keeps it yours.** Romule ships no games, no console keys, and no links to
-  either. It manages files you already have.
+## 🎮 Platforms and emulators
 
 ### 🕹️ Supported platforms
 

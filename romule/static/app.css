@@ -628,13 +628,27 @@ img.vide{visibility:hidden}
 .replier{display:none}
 
 /* telephone et petits ecrans de console */
-@media (max-width:700px){
+/* Le repli se declenche sur la largeur OU sur la HAUTEUR.
+   La virgule est un « ou ». Une console portable fait 720 px de large — elle
+   passait donc a cote du seuil de 700 — mais seulement 405 px de haut : les
+   trois rangees de reglages y remplissaient l'ecran entier et AUCUN jeu
+   n'etait visible. Trouve en fabriquant la maquette du README, pas par un
+   test : l'audit responsive verifie ce qui est atteignable, pas ce qu'on voit
+   en arrivant. */
+@media (max-width:700px), (max-height:560px){
   /* Mesure : 19 controles entre le haut de l'ecran et la premiere jaquette.
      On fait defiler un panneau de reglages pour atteindre le contenu. Les
      rangees de filtre et de tri se replient donc derriere un seul bouton, et
      la recherche reste, elle, toujours accessible. */
   .replier{display:inline-flex;align-items:center}
   #filters,#toolbar{display:none}
+  /* « Actualiser » et « Fiches manquantes » ne sont pas des gestes du
+     quotidien : sur un ecran de 405 px de haut, ils repoussaient la premiere
+     jaquette hors de la vue. Ils rejoignent le repli, et reapparaissent avec
+     lui. Restent trois controles avant le contenu : la plateforme, la
+     recherche, et le bouton qui ouvre le reste. */
+  .repliable{display:none}
+  body.filtres-ouverts .repliable{display:inline-flex}
   body.filtres-ouverts #filters{display:flex}
   body.filtres-ouverts #toolbar{display:flex}
   .replier[aria-expanded="true"]{border-color:var(--amber);color:var(--amber)}
