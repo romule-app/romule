@@ -28,6 +28,14 @@
     <!-- Etat de la console : une seule fois, dans l'en-tete. Le bandeau separe
          repetait le meme fait deux lignes plus bas. -->
     <div class="status">
+      <!-- Une version plus recente existe. Discret tant qu'il n'y a rien a
+           dire — il reste cache — et jamais bloquant : c'est une invitation,
+           pas une alerte. -->
+      <button class="majpuce" id="majpuce" data-act="voirMaj" hidden
+              aria-label="Une mise à jour est disponible">
+        <span class="majpoint" aria-hidden="true"></span>
+        <span class="majtxt">Mise à jour</span>
+      </button>
       <span id="hostchip" class="hostchip" style="display:none"></span>
       <div id="conn" class="conn"></div>
       <!-- Ouvrir l'interface sur l'ecran de la console : un geste qu'on fait
@@ -829,6 +837,13 @@
             <input type="text" id="s-clenom" placeholder="À quoi elle sert">
             <button class="ghost" style="margin-top:8px"
                     data-act="creerCle">Créer une clé</button></div>
+        </div>
+
+        <div class="setrow">
+          <div class="setlab"><b>Vérifier les mises à jour</b>
+            <span>Une fois par jour, Romule demande à GitHub s'il existe une version plus récente.</span>
+            <span>C'est la seule fois où il sort sur internet sans qu'on le lui demande.</span></div>
+          <div class="setctl"><label class="sw"><input type="checkbox" id="s-majcheck"><span></span></label></div>
         </div>
 
         <div class="setrow">

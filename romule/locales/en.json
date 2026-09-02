@@ -1124,5 +1124,13 @@
   "C'est une question différente de « qui peut entrer » ci-dessus.": "This is a different question from “who may get in” above.",
   "Vide : personne n'administre par le SSO.": "Empty: nobody administers through SSO.",
   "Le rôle est lu à la connexion, donc retirer quelqu'un d'un groupe le déclasse à sa session suivante.": "The role is read at sign-in, so removing someone from a group demotes them at their next session.",
-  "%d {fichier|fichiers} à la corbeille.": "%d {file|files} moved to the trash."
+  "%d {fichier|fichiers} à la corbeille.": "%d {file|files} moved to the trash.",
+  "Version %s disponible": "Version %s available",
+  "Aucune note de version publiée.": "No release notes published.",
+  "Voir la publication": "Open the release",
+  "Une mise à jour est disponible": "An update is available",
+  "Mise à jour": "Update",
+  "Vérifier les mises à jour": "Check for updates",
+  "Une fois par jour, Romule demande à GitHub s'il existe une version plus récente.": "Once a day, Romule asks GitHub whether a newer version exists.",
+  "C'est la seule fois où il sort sur internet sans qu'on le lui demande.": "This is the only time it reaches the internet without being asked."
 }

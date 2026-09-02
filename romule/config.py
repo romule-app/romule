@@ -334,6 +334,10 @@ DEFAULTS = {
     # QUI ADMINISTRE, ce qui n'est pas la meme question que QUI PEUT ENTRER.
     # Vide = aucune session SSO n'est administratrice : le defaut refuse.
     "oidc_admin_groupes": "",
+    # Verifier une fois par jour s'il existe une version plus recente.
+    # C'est la SEULE sortie reseau que Romule fait sans qu'on la lui
+    # demande ; certains hebergent precisement pour ne parler a personne.
+    "maj_check": True,
     "auth_secret": "",                            # signature des cookies, genere seul
 }
 
