@@ -75,6 +75,13 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Fixed
 
+- **Startup notices went to stdout.** `nsz absent — ...` was printed before
+  every command, including ones whose output is meant to be read by a program:
+  `VALUE=$(romule config get trash_days)` captured the notice along with the
+  value. They go to stderr now — visible in a terminal, out of the way of a
+  pipe. Found by CI, on a machine that has no `nsz`; mine has one, so the
+  defect was invisible locally. The test now removes the tools from `PATH`
+  itself rather than hoping they are missing.
 - **Commands exited 0 when they refused.** `romule user passwd` printed
   *"Refused: ..."* and reported success, so a script could not tell a refusal
   from a completed job and `&&` chained onto a command that had done nothing.
