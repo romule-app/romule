@@ -150,6 +150,15 @@ select{cursor:pointer}
   border:1px solid var(--rule);border-radius:5px;padding:1px 5px;background:var(--creux)}
 .champ-recherche:focus-within .raccourci{opacity:0}
 .filters{display:flex;gap:6px;flex-wrap:wrap}
+.vues{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.vue{display:inline-flex;align-items:center;gap:6px;padding:6px 8px 6px 12px;
+  border-radius:20px;border:1px solid var(--rule);background:var(--panel);
+  color:var(--mute);font-size:12.5px;cursor:pointer}
+.vue:hover{border-color:var(--indigo);color:var(--txt)}
+.vue .oter{border:0;background:none;color:var(--mute);cursor:pointer;
+  font-size:14px;line-height:1;padding:0 2px}
+.vue .oter:hover{color:var(--rouge,#e06c6c)}
+.ghost.effacer{color:var(--amber);border-color:var(--amber)}
 .chip{display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:20px;
   border:1px solid var(--rule);background:var(--panel);color:var(--mute);font-size:12.5px;
   transition:color .2s,border-color .2s,background .2s}
