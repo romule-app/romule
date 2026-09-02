@@ -102,6 +102,52 @@ def vue_par_defaut(n):
       n.js("SYS") == "all", n.js("SYS"))
 
 
+def pluriels(n):
+    print("   -- l'accord suit la langue --")
+    # « 1 fichier(s) » n'est pas un pluriel, c'est un aveu. Et les regles ne
+    # sont pas les memes : en francais 0 et 1 sont au singulier, en anglais
+    # seul 1 l'est. On verifie les DEUX langues, sinon on remplace une faute
+    # par une autre sans le voir.
+    cas = n.js("""
+      (async () => {
+        const rendu = [];
+        for (const langue of ['fr', 'en']) {
+          await chargerLangue(langue);
+          rendu.push([langue,
+                      nb(0, '{fichier|fichiers}'),
+                      nb(1, '{fichier|fichiers}'),
+                      nb(2, '{fichier|fichiers}'),
+                      phrase('%d {jeu|jeux} au total', 1),
+                      phrase('%d {jeu|jeux} au total', 5)]);
+        }
+        await chargerLangue('fr');
+        return rendu;
+      })()""") or []
+    attendu = {
+        "fr": ["0 fichier", "1 fichier", "2 fichiers",
+               "1 jeu au total", "5 jeux au total"],
+        "en": ["0 files", "1 file", "2 files",
+               "1 game in total", "5 games in total"],
+    }
+    for ligne in cas:
+        langue, *vus = ligne
+        t("accord en %s" % langue, vus == attendu.get(langue), vus)
+    t("les deux langues ont ete eprouvees", len(cas) == 2, len(cas))
+
+    # Et rien a l'ecran ne doit plus porter la forme paresseuse.
+    restes = n.js(r"""
+      (function () {
+        const out = [];
+        const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+        for (let x = w.nextNode(); x; x = w.nextNode()) {
+          const s = (x.nodeValue || '').trim();
+          if (/[A-Za-zÀ-ÿ]\([sx]\)/.test(s)) out.push(s.slice(0, 60));
+        }
+        return out;
+      })()""") or []
+    t("aucun « (s) » a l'ecran", not restes, restes[:3])
+
+
 def alignement(n):
     print("   -- les rangees de la barre sont alignees --")
     # Mesure avant correction : trois axes verticaux dans la MEME rangee
@@ -249,6 +295,7 @@ def main():
         n.js("app.tab('jeux')")
         time.sleep(1.5)
         alignement(n)
+        pluriels(n)
         liste_gardee(n)
         recherche(n)
         filtres(n)
