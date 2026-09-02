@@ -35,6 +35,8 @@ working exactly as before.
 | `ROMULE_MAX_CONN` | `64` | Simultaneous connections |
 | `ROMULE_RATE` | `600` | Requests per minute per client |
 | `ROMULE_CHROME` | — | Chrome binary for the browser test suite |
+| `ROMULE_SCRYPT_PARALLELE` | `2` | How many password hashes may run at once. scrypt deliberately costs ~128 MiB each; without a cap, a handful of parallel sign-in attempts would exhaust the server's memory and turn a protection into a lever. |
+| `ROMULE_ADB` | `adb` on the `PATH` | Path to the `adb` binary. A path that does not exist means “no console”, which is how the test suite stays independent of what is plugged in. |
 
 `ROMULE_BIND` defaults to `127.0.0.1`, except in a container or once network
 access is enabled — otherwise a published port would reach nothing.
@@ -67,7 +69,17 @@ All of these are edited from the interface. The names are the keys stored in
 | `oidc_client_id` / `oidc_client_secret` | — | Client credentials |
 | `oidc_redirect` | — | Redirect URI registered with the provider |
 | `oidc_scopes` | `openid profile email` | Scopes requested |
-| `oidc_emails` / `oidc_groupes` | — | Restrict who may log in |
+| `oidc_emails` / `oidc_groupes` | — | Restrict **who may log in** |
+| `oidc_admin_groupes` | — | Groups whose members **may administer**. Empty: nobody does. |
+
+!!! warning "Two different questions"
+    `oidc_groupes` decides who gets in. `oidc_admin_groupes` decides who may
+    open Settings and manage the tool. Confusing them would hand administration
+    to everyone who can log in.
+
+    The role is read from the token **at sign-in**, so removing someone from a
+    group demotes them at their next session, not in the middle of the current
+    one. See [Roles and access](roles.md).
 
 ### Your console
 
