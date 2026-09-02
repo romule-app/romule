@@ -25,6 +25,7 @@ from html import escape as html_escape
 from urllib.parse import parse_qs, unquote
 
 from . import (actions, apikeys, apiv1, audit, auth, comptes, config, covers,
+               maj,
                device, edenconf,
                doublons, emuready, igdb, integrity, journal_acces, meta, nand,
                parcourir, sauvegarde, saves,
@@ -791,6 +792,12 @@ class Handler(BaseHTTPRequestHandler):
                 self._json_revalide(json.loads(f.read_text(encoding="utf-8")))
             else:
                 self._json({"error": "langue inconnue"}, 404)
+        elif p == "/api/maj":
+            # Paresseuse : elle rend ce qu'elle sait et ne va sur le reseau que
+            # si le cache a plus d'un jour. Une panne de GitHub rend « je ne
+            # sais pas », jamais une erreur — une verification ratee ne doit
+            # pas se voir.
+            self._json(maj.etat(CFG))
         elif p == "/api/vues":
             self._json({"vues": vues.liste()})
         elif p == "/api/cles":
@@ -1747,7 +1754,8 @@ class Handler(BaseHTTPRequestHandler):
                       "trash_days", "system_dirs", "systemes_perso", "auth_mode",
                       "oidc_issuer", "oidc_client_id", "oidc_client_secret",
                       "oidc_scopes", "oidc_redirect", "oidc_emails",
-                      "oidc_groupes", "oidc_admin_groupes", "emulateur"):
+                      "oidc_groupes", "oidc_admin_groupes", "emulateur",
+                      "maj_check"):
                 if k in d:
                     CFG[k] = d[k]
             # Les plateformes ajoutees a la main sont assainies A L'ECRITURE,

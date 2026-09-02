@@ -64,6 +64,7 @@ All of these are edited from the interface. The names are the keys stored in
 |---|---|---|
 | `auth_mode` | `aucun` | `aucun`, `interne` (accounts), or `oidc` ([beta](beta.md)) |
 | `lan_access` | `false` | Allow the network in **without a password** |
+| `maj_check` | `true` | Ask GitHub once a day whether a newer version exists. This is the **only** time Romule reaches the internet without being asked; turn it off and it never does. |
 | `auth_secret` | generated | Signing key for session cookies. Never leaves the server. |
 | `oidc_issuer` | — | Provider URL |
 | `oidc_client_id` / `oidc_client_secret` | — | Client credentials |

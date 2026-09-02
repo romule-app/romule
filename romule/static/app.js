@@ -1361,6 +1361,35 @@ function majBarreFiltres() {
   if (b) R.texte(b, n ? phrase('Plus de filtres · %d', n) : t('Plus de filtres'));
 }
 
+// ------------------------------------------------------------ mise a jour
+//
+// Une invitation, pas une alerte : la pastille n'apparait que s'il y a
+// vraiment une version plus recente, et rien n'est bloque tant qu'on l'ignore.
+let MAJ = null;
+
+async function chargerMaj() {
+  const r = await api('/api/maj', null, true);
+  if (!r || r.error) return;
+  MAJ = r;
+  const b = $('majpuce');
+  if (b) b.hidden = !r.disponible;
+}
+
+// Les notes viennent de GitHub : c'est du texte ECRIT PAR QUELQU'UN D'AUTRE.
+// Il n'entre donc jamais dans du HTML — `dialogue()` pose son `detail` par
+// `textContent`. On se contente d'alleger la syntaxe Markdown la plus
+// bruyante, sans jamais l'interpreter.
+function notesLisibles(md) {
+  return String(md || '')
+    .replace(/\r/g, '')
+    .replace(/^#{1,6}\s*/gm, '')        // titres
+    .replace(/^\s*[-*]\s+/gm, '• ')     // puces
+    .replace(/\*\*([^*]+)\*\*/g, '$1')  // gras
+    .replace(/`([^`]+)`/g, '$1')        // code
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 async function chargerVues() {
   const r = await api('/api/vues', null, true);
   if (!r || r.error) return;
@@ -3939,6 +3968,7 @@ function fillSettings() {
   $('s-emuready').checked = !!c.emuready;
   $('s-autonand').checked = !!c.auto_nand;
   $('s-notify').checked = c.notify !== false;
+  if ($('s-majcheck')) $('s-majcheck').checked = c.maj_check !== false;
   $('s-layout').value = c.push_layout || 'type';
   $('s-local').value = c.local_layout || 'type';
   $('s-verify').value = c.verify_mode || 'size';
@@ -5199,6 +5229,24 @@ const app = {
   // filtres avances — et rien ne disait combien etaient actifs. On pouvait
   // chercher pendant dix minutes pourquoi la grille etait vide alors qu'un
   // filtre pose la veille tenait toujours.
+  // La fenetre des notes de version. Deux boutons : lire la publication
+  // complete, ou fermer. Romule ne se met PAS a jour tout seul — il tourne
+  // dans un conteneur ou sous un gestionnaire de paquets, et decider a la
+  // place de l'operateur serait deplace.
+  voirMaj() {
+    if (!MAJ) return;
+    dialogue({
+      titre: phrase('Version %s disponible', MAJ.version || '?'),
+      niveau: 'ok',
+      message: MAJ.titre && MAJ.titre !== MAJ.version ? MAJ.titre : '',
+      detail: notesLisibles(MAJ.notes) || t('Aucune note de version publiée.'),
+      fermer: t('Plus tard'),
+      actions: [{libelle: t('Voir la publication'), principal: true, faire: () => {
+        if (MAJ.url) window.open(MAJ.url, '_blank', 'noopener');
+      }}],
+    });
+  },
+
   effacerFiltres() {
     const champ = $('filter');
     if (champ) champ.value = '';
@@ -6366,6 +6414,7 @@ const SET_FIELDS = {
   's-oidcclient': ['oidc_client_id', 'text'], 's-oidcsecret': ['oidc_client_secret', 'text'],
   's-oidcemails': ['oidc_emails', 'text'], 's-oidcgroupes': ['oidc_groupes', 'text'],
   's-oidcadmingroupes': ['oidc_admin_groupes', 'text'],
+  's-majcheck': ['maj_check', 'bool'],
   's-oidcredirect': ['oidc_redirect', 'text'],
 };
 $('panel-settings').addEventListener('change', e => {
@@ -6687,6 +6736,7 @@ const ACTES = new Set([
   'ecApply', 'ecApplyProfile', 'ecLoad', 'ecSaveProfile', 'edenRestore',
   'erApply', 'erPreview', 'erSync', 'forcerFiches', 'importerJeu',
   'appliquerVue', 'basculerFiltres', 'chercher', 'creerCle', 'effacerFiltres',
+  'voirMaj',
   'enregistrerVue', 'installApp', 'journalClear', 'journalCopy',
   'supprimerVue',
   'loadSaves',
@@ -7572,6 +7622,7 @@ majApparence();
   // le reste peut arriver apres : rien n'en depend pour un premier affichage
   app.checkHealth();
   chargerVues();                   // les vues enregistrees, servies par le serveur
+  chargerMaj();                    // y a-t-il une version plus recente ?
   app.erLoad();
   app.erDevices();
   // `scan()` a deja lu la liste des plateformes et l'attend : la redemander

@@ -149,8 +149,14 @@ EPREUVE = r"""
   // ligne de flottaison et la sonde le sautait comme « hors de la vue ». Mon
   // epreuve ne prouvait alors rien — elle disait « manque » pour une raison
   // qui n'avait rien a voir avec le filtre teste.
-  z.style.cssText = 'position:fixed;left:20px;top:120px;z-index:5;'
-                  + 'background:#111;padding:6px';
+  // SOUS l'en-tete colle, mesure a l'execution. Une position fixe en dur
+  // (120 px) a fini par tomber DANS l'en-tete quand celui-ci a grandi, et la
+  // sonde sautait le decor comme « recouvert par l'en-tete, ce qui est
+  // normal » — donc l'epreuve annoncait un manque qui n'en etait pas un.
+  const tete = document.querySelector('header');
+  const bas = tete ? Math.ceil(tete.getBoundingClientRect().bottom) : 0;
+  z.style.cssText = 'position:fixed;left:20px;z-index:5;background:#111;'
+                  + 'padding:6px;top:' + (bas + 24) + 'px';
   z.innerHTML =
     '<div style="position:relative;height:60px">'
   +   '<button id="e-couvert" style="position:absolute;left:0;top:0;'

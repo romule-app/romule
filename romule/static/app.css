@@ -566,6 +566,41 @@ img.vide{visibility:hidden}
 .radios .rd{color:var(--mute);font-size:11.5px}
 .radios code{font-family:var(--mono);color:var(--amber)}
 
+/* ------------------------------------------------------- mise a jour
+
+   Une invitation, pas une alerte. La pastille n'apparait que lorsqu'il y a
+   VRAIMENT quelque chose a lire, et elle n'empeche rien : on peut l'ignorer
+   pendant des semaines.
+
+   L'animation est une respiration lente, pas un clignotement : un element qui
+   clignote se lit comme une panne, et on finit par ne plus le voir. Elle
+   s'arrete au survol — le regard est deja dessus — et elle n'existe pas du
+   tout pour qui demande moins de mouvement. */
+.majpuce{display:inline-flex;align-items:center;gap:7px;
+  padding:5px 11px 5px 9px;border-radius:20px;cursor:pointer;
+  border:1px solid var(--amber);background:var(--primary-doux);
+  color:var(--amber);font-size:11.5px;font-family:var(--disp);
+  letter-spacing:.06em;text-transform:uppercase;
+  transition:background .18s,transform .18s var(--ease)}
+.majpuce:hover{background:var(--amber);color:var(--fond);transform:translateY(-1px)}
+.majpoint{width:7px;height:7px;border-radius:50%;background:currentColor;
+  animation:majrespire 2.6s var(--ease) infinite}
+.majpuce:hover .majpoint{animation:none}
+@keyframes majrespire{
+  0%,100%{opacity:1;box-shadow:0 0 0 0 var(--amber)}
+  50%{opacity:.55;box-shadow:0 0 0 5px transparent}
+}
+@media (prefers-reduced-motion:reduce){.majpoint{animation:none}}
+/* Sur un petit ecran, le mot disparait : le point suffit a dire qu'il se passe
+   quelque chose, et la place manque. */
+@media (max-width:700px),(max-height:560px){.majpuce .majtxt{display:none}
+  .majpuce{padding:6px}}
+
+/* Les notes de version : du texte brut rendu lisible, jamais du HTML. */
+.majnotes{margin:0;max-height:46vh;overflow:auto;white-space:pre-wrap;
+  font-size:12.5px;line-height:1.65;color:var(--mute)}
+.majnotes strong{color:var(--ink);font-weight:600}
+
 /* ---------------------------------------------------------------- dock bas */
 /* pastille : du nouveau dans le journal, sans l'ouvrir de force */
 #journalbtn.news{border-color:var(--amber);color:var(--amber)}

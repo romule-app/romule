@@ -75,6 +75,21 @@ happens, and the toast offers *Undo*. Only what cannot be undone asks first.
 
 **Yours.** Romule ships no games, no console keys, and no links to either.
 
+### 🔗 Integrations
+
+| | |
+|---|---|
+| **Emulators** | Eden, Yuzu, Sudachi, Citron, Ryujinx — as [profiles](https://romule-app.github.io/romule/profils/), not hard-coded paths |
+| **Handhelds** | Any Android device over **adb**, USB or Wi‑Fi: AYN Odin 2 / Odin 3 / Thor, Retroid Pocket, Anbernic, AYANEO, GPD |
+| **Artwork & metadata** | SteamGridDB (covers), IGDB / Twitch (summaries, year, publisher), Wikipedia (fallback), titledb (Switch versions) |
+| **Community settings** | EmuReady — per-game emulator settings, matched to your device *(beta)* |
+| **Conversion** | `nsz` for `.nsz` / `.xcz`, `unar` and `7z` for archives dropped into `_import` |
+| **Authentication** | Internal accounts with scrypt + TOTP, or **OpenID Connect** — Authentik, Keycloak, Authelia, Pocket ID, Zitadel, Google, GitHub |
+| **Reverse proxies** | Traefik, Caddy, nginx, NGINX Proxy Manager — with `ROMULE_TRUSTED_PROXIES` so forwarded headers are only honoured from proxies you name |
+| **Dashboards & automation** | Any client that can send a header: Homarr, Homepage, Glance, Uptime Kuma, n8n, cron, `curl` — through the [HTTP API](https://romule-app.github.io/romule/api/) |
+| **Containers** | Docker and Docker Compose, multi-arch `amd64` / `arm64` — Synology, unRAID, TrueNAS, Proxmox LXC, Raspberry Pi |
+| **Desktop & mobile** | Installable as a PWA (standalone window, home-screen icon) on macOS, Windows, Linux, iOS and Android |
+
 ---
 
 ## 🚀 Quick start
