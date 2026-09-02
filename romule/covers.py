@@ -116,16 +116,47 @@ def fetch(tid, name=None, cfg=None):
         if secours:
             urls.append(secours)
 
-    for url in urls:
+    def essayer(url):
+        """Range l'image et rend son chemin, ou None si elle ne vaut rien."""
         try:
             data = _download(url)
-            if len(data) < MINI:
-                continue
-            config.COVERS.mkdir(exist_ok=True)
-            path_for(cle).write_bytes(data)
-            return path_for(cle)
         except Exception:
-            continue
+            return None
+        if len(data) < MINI:
+            return None
+        config.COVERS.mkdir(exist_ok=True)
+        path_for(cle).write_bytes(data)
+        return path_for(cle)
+
+    for url in urls:
+        p = essayer(url)
+        if p:
+            return p
+
+    # DEUXIEME source, et non un secours de derniere chance. SteamGridDB est
+    # une base de visuels communautaires : riche sur ce qui se joue au clavier,
+    # pauvre sur les catalogues de consoles portables. IGDB, que Romule
+    # interrogeait deja pour ses resumes, publie aussi des jaquettes — il ne
+    # lui en demandait simplement jamais.
+    #
+    # Elle est consultee APRES la boucle, et non ajoutee a `urls` : la question
+    # a laquelle il faut repondre est « aucune image », pas « aucune adresse ».
+    # Placee avant, une adresse nlib ou SteamGridDB qui rend un 404 aurait
+    # suffi a ecarter IGDB — le repli n'aurait alors jamais servi les jeux qui
+    # en ont le plus besoin.
+    if name:
+        # `search_name` et pas `name` : ici, `name` est le NOM DE FICHIER, et
+        # ses mots distinctifs comprennent « europe », « fr » et « 3ds ». Le
+        # rapprochement, qui exige les deux tiers d'entre eux, rejetait donc
+        # le bon jeu — le repli s'appelait, cherchait, trouvait, et refusait.
+        # `sgdb_infos` nettoie en interne ; IGDB attend un titre deja propre,
+        # comme pour `chercher()`.
+        from . import igdb
+        depuis_igdb = igdb.jaquette(search_name(name), cfg)
+        if depuis_igdb:
+            p = essayer(depuis_igdb)
+            if p:
+                return p
     _fail(cle)
     return None
 

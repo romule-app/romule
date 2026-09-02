@@ -171,6 +171,52 @@ def chercher(nom, cfg=None):
             "annee": annee, "editeur": editeur}
 
 
+# `t_cover_big_2x` rend 528 x 704 : la taille d'une jaquette de carte, sans
+# aller chercher l'original qui peut peser plusieurs megaoctets pour rien.
+IMAGE = "https://images.igdb.com/igdb/image/upload/t_cover_big_2x/%s.jpg"
+
+
+def jaquette(nom, cfg=None):
+    """Adresse de la jaquette IGDB d'un jeu, ou None.
+
+    IGDB publie des jaquettes, et Romule ne les lui demandait jamais : il ne
+    l'interrogeait que pour les resumes, et s'en remettait a SteamGridDB pour
+    les images. Or SteamGridDB est une base de VISUELS communautaires, riche
+    sur ce qui se joue au clavier et pauvre sur les catalogues de consoles
+    portables — « Crazy Construction », un jeu 3DS parfaitement reel, n'y
+    figure pas, quand IGDB le connait avec sa jaquette.
+
+    Ce n'est donc pas un secours de derniere chance : c'est une seconde source,
+    consultee quand la premiere n'a rien. Elle passe par le meme rapprochement,
+    pour la meme raison : une jaquette qui n'est pas celle du jeu est pire
+    qu'une pochette vide.
+    """
+    cfg = cfg or config.load_config()
+    if not configure(cfg) or not (nom or "").strip():
+        return None
+    cle = nom.strip().lower()
+    with _LOCK:
+        if cle in _ECHECS:
+            return None       # IGDB ne connait pas ce jeu : pas de jaquette non plus
+    corps = ('search "%s"; fields name,cover.image_id; limit 10;'
+             % _echapper(nom))
+    jeux = _requete(cfg, "games", corps)
+    if jeux is None:
+        return None                    # echec technique : on reessaiera
+    if not jeux:
+        with _LOCK:
+            _ECHECS.add(cle)           # vraiment introuvable
+        return None
+    # On ecarte les jeux sans jaquette AVANT de rapprocher, pour qu'un jeu sans
+    # image ne prive pas Romule de celle d'une edition voisine qui en a une.
+    #
+    # Un jeu connu mais depourvu d'image ne rejoint PAS `_ECHECS` : il existe,
+    # et `chercher()` doit continuer a pouvoir en tirer un resume.
+    avec = [j for j in jeux if (j.get("cover") or {}).get("image_id")]
+    j = rapprochement.meilleur(avec, nom, nom=lambda x: x.get("name") or "")
+    return IMAGE % j["cover"]["image_id"] if j else None
+
+
 # Noms de plateformes chez IGDB -> cles de l'outil. IGDB en connait des
 # centaines ; on ne mappe que celles qu'on sait ranger.
 _PLATEFORMES = {
