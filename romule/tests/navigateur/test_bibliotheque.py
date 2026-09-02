@@ -204,6 +204,52 @@ def mobile(n):
     time.sleep(1.0)
 
 
+def croix(n):
+    print("   -- la grille se parcourt a la croix directionnelle --")
+    # Sur une console portable, le pouce est sur la croix. Ces appareils
+    # emettent des evenements clavier standards : ce test les rejoue.
+    n.js("app.effacerFiltres()")
+    time.sleep(0.5)
+    total = cartes(n)
+    if total < 2:
+        t("assez de cartes pour se deplacer", False, total)
+        return
+    n.js("document.querySelector('#lib .gcard').focus()")
+    t("la premiere carte prend le focus",
+      n.js("document.activeElement.classList.contains('gcard')"))
+    t("elle porte un nom pour les lecteurs d'ecran",
+      bool(n.js("document.activeElement.getAttribute('aria-label')")))
+
+    def touche(k):
+        n.cmd("Input.dispatchKeyEvent",
+              {"type": "rawKeyDown", "key": k, "code": k,
+               "windowsVirtualKeyCode": {"ArrowRight": 39, "ArrowLeft": 37,
+                                         "ArrowDown": 40, "ArrowUp": 38}[k]})
+        n.cmd("Input.dispatchKeyEvent", {"type": "keyUp", "key": k, "code": k})
+        time.sleep(0.25)
+
+    depart = n.js("document.activeElement.dataset.key")
+    touche("ArrowRight")
+    apres = n.js("document.activeElement.dataset.key")
+    t("la fleche droite change de carte", apres != depart, (depart, apres))
+    touche("ArrowLeft")
+    t("la fleche gauche revient",
+      n.js("document.activeElement.dataset.key") == depart)
+    # Sortir de la grille ne doit RIEN faire : sur une console, un rebond se
+    # lit comme un bouton qui n'a pas repondu.
+    touche("ArrowLeft")
+    t("sortir par la gauche ne bouge pas",
+      n.js("document.activeElement.dataset.key") == depart)
+    touche("ArrowDown")
+    t("la fleche bas descend d'une rangee ou ne bouge pas",
+      n.js("document.activeElement.classList.contains('gcard')"))
+    t("l'anneau de focus est dessine",
+      n.js("""(function(){
+        const st = getComputedStyle(document.activeElement);
+        return st.outlineStyle !== 'none' || st.boxShadow !== 'none';
+      })()"""))
+
+
 def alignement(n):
     print("   -- les rangees de la barre sont alignees --")
     # Mesure avant correction : trois axes verticaux dans la MEME rangee
@@ -353,6 +399,7 @@ def main():
         alignement(n)
         pluriels(n)
         mobile(n)
+        croix(n)
         liste_gardee(n)
         recherche(n)
         filtres(n)

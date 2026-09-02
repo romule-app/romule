@@ -675,6 +675,36 @@ img.vide{visibility:hidden}
 /* plus de barre en bas : on garde seulement la marge d'encoche */
 body{padding-bottom:env(safe-area-inset-bottom,0)}
 
+/* ------------------------------------------------- comportement d'application
+
+   Romule s'installe : le manifeste declare `standalone`, et sur telephone
+   comme sur console portable elle s'ouvre alors sans barre de navigateur. Il
+   reste trois gestes qui trahissent la page web a chaque manipulation. */
+
+/* L'elastique et le « tirer pour recharger ». Dans une application, tirer vers
+   le bas au sommet d'une liste ne recharge rien et ne decolle pas la page. */
+html,body{overscroll-behavior:none}
+#journal,.favpop,#lib{overscroll-behavior:contain}
+
+/* Le rectangle gris que pose Android sur chaque appui. Aucune application n'en
+   met : le retour visuel vient du style du bouton, pas du systeme. */
+html{-webkit-tap-highlight-color:transparent}
+
+/* Un appui long qui surligne « Réglages » n'arrive dans aucune application.
+   Le texte de CONTENU — noms de jeux, chemins, journal — reste selectionnable :
+   c'est de l'information qu'on veut pouvoir copier. */
+nav.tabs,.chip,.szbtn,.jfab,.replier,.vue,.setnav a,.brand{
+  -webkit-user-select:none;user-select:none}
+
+/* Les marges de securite : l'encoche en haut, la barre gestuelle en bas, et
+   les bords arrondis sur les cotes en paysage — le cas d'une console portable
+   tenue a l'horizontale. */
+header,.libbar{padding-left:env(safe-area-inset-left,0);
+  padding-right:env(safe-area-inset-right,0)}
+.jfab{margin-right:env(safe-area-inset-right,0)}
+#fab{margin-right:env(safe-area-inset-right,0);
+  margin-bottom:env(safe-area-inset-bottom,0)}
+
 /* ---- ecrans bas / mode paysage : la hauteur est la ressource rare */
 @media (max-height:560px){
   header{position:static}                    /* rendre les ~60px a la lecture */
@@ -1905,7 +1935,12 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
    l'amener sous le sommaire, donc cliquer son entree ne menait nulle part et
    le sommaire designait la precedente. Une hauteur minimale lui donne la
    place de monter. */
-.setsection:last-of-type{margin-bottom:24px;min-height:calc(100vh - 150px)}
+/* `dvh` et non `vh` : sur mobile, `100vh` vaut la hauteur SANS la barre
+   d'adresse. La page deborde donc tant que la barre est la, puis le contenu
+   saute quand elle se retracte. `dvh` suit la hauteur reellement disponible.
+   `vh` reste en repli pour les navigateurs qui ignorent `dvh`. */
+.setsection:last-of-type{margin-bottom:24px;min-height:calc(100vh - 150px);
+  min-height:calc(100dvh - 150px)}
 .sectitre{font-family:var(--disp);font-size:26px;font-weight:600;
   letter-spacing:.01em;margin:0;color:var(--ink)}
 .sectxt{margin:-12px 0 4px;color:var(--mute);font-size:13px;max-width:62ch}

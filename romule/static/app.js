@@ -6516,6 +6516,65 @@ $('log').addEventListener('scroll', () => {
 
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { app.closeGame(); app.closeDialog(); } });
 
+/* ---------------------------------------------------------------------------
+   LA CROIX DIRECTIONNELLE
+
+   Sur une console portable de retrogaming — Anbernic, Retroid, AYN — le pouce
+   est sur la croix, pas sur l'ecran. Ces appareils emettent des evenements
+   CLAVIER standards : il n'y a donc pas besoin de l'API Gamepad, et s'en
+   passer evite de dependre d'un materiel qu'on ne peut pas eprouver ici.
+
+   Deux tiers du chemin etaient deja faits, et il vaut la peine de le dire :
+   les cartes portent `tabindex="0"` et `role="button"`, elles repondent donc
+   deja a Entree (regle posee en phase 4), et `.gcard:focus-visible` dessine
+   deja un anneau lisible. Ce qui manquait, c'etait de passer d'une carte a
+   l'autre autrement qu'avec la tabulation.
+
+   Le nombre de COLONNES n'est pas une constante : la grille est un
+   `auto-fill`, il depend de la largeur et de la densite choisie. On le lit
+   donc dans la geometrie — les cartes de la premiere rangee partagent leur
+   bord superieur.
+   ------------------------------------------------------------------------- */
+function cartesGrille() {
+  return [...document.querySelectorAll('#lib .gcard')];
+}
+
+function colonnesGrille(cartes) {
+  if (cartes.length < 2) return 1;
+  const haut = Math.round(cartes[0].getBoundingClientRect().top);
+  let n = 1;
+  while (n < cartes.length
+         && Math.round(cartes[n].getBoundingClientRect().top) === haut) n++;
+  return n;
+}
+
+document.addEventListener('keydown', ev => {
+  const DEPLACE = {ArrowLeft: 1, ArrowRight: 1, ArrowUp: 1, ArrowDown: 1,
+                   Home: 1, End: 1};
+  if (!DEPLACE[ev.key] || ev.metaKey || ev.ctrlKey || ev.altKey) return;
+  const ici = document.activeElement;
+  if (!ici || !ici.classList || !ici.classList.contains('gcard')) return;
+  const cartes = cartesGrille();
+  const i = cartes.indexOf(ici);
+  if (i < 0) return;
+  const col = colonnesGrille(cartes);
+  let cible = i;
+  if (ev.key === 'ArrowLeft') cible = i - 1;
+  else if (ev.key === 'ArrowRight') cible = i + 1;
+  else if (ev.key === 'ArrowUp') cible = i - col;
+  else if (ev.key === 'ArrowDown') cible = i + col;
+  else if (ev.key === 'Home') cible = 0;
+  else if (ev.key === 'End') cible = cartes.length - 1;
+  // Une fleche qui sort de la grille ne fait rien plutot que de rebondir :
+  // sur une console, le rebond se lit comme un bouton qui n'a pas repondu.
+  if (cible < 0 || cible >= cartes.length) return;
+  ev.preventDefault();
+  cartes[cible].focus();
+  // `nearest` : on ne recentre pas la page quand la carte visee est deja
+  // visible, sinon chaque appui fait sauter la grille sous les yeux.
+  cartes[cible].scrollIntoView({block: 'nearest', inline: 'nearest'});
+});
+
 // « / » saute a la recherche — le raccourci qu'attend quiconque a deja utilise
 // GitHub. Il est ignore quand on est deja en train d'ecrire quelque part,
 // sinon taper une barre oblique dans un chemin deplacerait le curseur.
