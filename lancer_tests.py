@@ -245,6 +245,31 @@ def navigateur():
         proc.terminate()
 
 
+def coherence_doc():
+    """Les controles qui relient la documentation au code.
+
+    Ils vivaient en YAML dans les workflows, donc nulle part sur une machine de
+    developpement : on les decouvrait apres avoir pousse. Un controle qu'on ne
+    peut pas lancer avant de pousser est un controle qu'on subit.
+
+    `verifier-rendu.py` n'est PAS ici : il lit le site construit, ce qui demande
+    MkDocs — une dependance que ce depot n'a pas. Il reste dans le workflow de
+    documentation, qui l'installe deja.
+    """
+    titre("coherence de la documentation")
+    ok = True
+    for outil in ("verifier-reglages-doc.py", "verifier-chiffres.py",
+                  "verifier-traduction.py"):
+        r = subprocess.run([sys.executable, str(RACINE / "outils" / outil)],
+                           cwd=str(RACINE), capture_output=True, text=True)
+        etat = "OK" if r.returncode == 0 else "ECHEC"
+        print("   %-28s %s" % (outil, etat), flush=True)
+        if r.returncode != 0:
+            print((r.stdout or "") + (r.stderr or ""), end="")
+        ok = (r.returncode == 0) and ok
+    return ok
+
+
 def main(argv):
     # L'adb de la machine est neutralise pour TOUTE la suite, pas seulement pour
     # les tests navigateur : chaque test lance un serveur qui herite de
@@ -258,7 +283,8 @@ def main(argv):
     resultats = [("syntaxe", syntaxe()),
                  ("unitaires", unitaires()),
                  ("serveur", serveur()),
-                 ("audit", audit_securite())]
+                 ("audit", audit_securite()),
+                 ("doc", coherence_doc())]
     if avec_nav:
         resultats.append(("navigateur", navigateur()))
     else:
