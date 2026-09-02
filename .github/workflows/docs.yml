@@ -37,7 +37,7 @@ jobs:
         with: { python-version: "3.12" }
 
       - name: Installation
-        run: pip install --quiet mkdocs==1.6.1 mkdocs-material==9.7.7
+        run: pip install --quiet mkdocs==1.6.1 mkdocs-material==9.7.7 mkdocs-static-i18n==1.3.0
 
       - name: Construction
         run: mkdocs build --strict
@@ -59,6 +59,32 @@ jobs:
           print("%d reglages, %d documentes." %
                 (len(config.DEFAULTS), len(config.DEFAULTS) - len(manquantes)))
           sys.exit(1 if manquantes else 0)
+          PY
+
+      # Le site est bilingue. Une page ajoutee dans une seule langue ne
+      # disparait pas — le greffon retombe sur l'anglais — mais elle cesse
+      # silencieusement d'etre traduite, et personne ne s'en apercoit. Ce
+      # controle demande donc une decision explicite : traduire, ou dire
+      # pourquoi on ne traduit pas.
+      - name: Chaque page a-t-elle sa traduction ?
+        run: |
+          python - <<'PY'
+          import pathlib, sys
+          docs = pathlib.Path("docs")
+          # Ce qui reste volontairement dans une seule langue, avec sa raison.
+          EXCEPTIONS = {}
+          en = {p.stem for p in docs.glob("*.md") if not p.name.endswith(".fr.md")}
+          fr = {p.name[:-6] for p in docs.glob("*.fr.md")}
+          manquantes = sorted(en - fr - set(EXCEPTIONS))
+          orphelines = sorted(fr - en)
+          for k in manquantes:
+              print("::error title=Page non traduite::docs/%s.md n'a pas de "
+                    "docs/%s.fr.md" % (k, k))
+          for k in orphelines:
+              print("::error title=Traduction orpheline::docs/%s.fr.md traduit "
+                    "une page qui n'existe pas" % k)
+          print("%d pages, %d traduites." % (len(en), len(en & fr)))
+          sys.exit(1 if manquantes or orphelines else 0)
           PY
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
@@ -86,7 +112,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
         with: { python-version: "3.12" }
-      - run: pip install --quiet mkdocs==1.6.1 mkdocs-material==9.7.7
+      - run: pip install --quiet mkdocs==1.6.1 mkdocs-material==9.7.7 mkdocs-static-i18n==1.3.0
       - run: mkdocs build --strict
       # `enablement: true` : sans cela l'action echoue tant que Pages n'a pas
       # ete active a la main dans les reglages du depot — ce qui rend le
