@@ -20,6 +20,15 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Changed
 
+- **Installing no longer starts with `git clone`.** The container image is
+  public on `ghcr.io/romule-app/romule` — `latest`, `0.2`, `0.2.0`, multi-arch,
+  no authentication — so the recommended path is now a Compose file you paste,
+  with one line to change. Cloning remains the answer for building it yourself.
+- **`outils/essai-conteneur.py --image`** runs the whole thirty-two-check
+  suite against the *published* image instead of a locally built one. Building
+  proves the `Dockerfile` holds; pulling proves what was published starts —
+  two different questions as soon as there is a publish step. Verified against
+  `latest`, logged out of the registry: 32 checks, 0 failures.
 - **Key features in the README are a bullet list**, and the platform list no
   longer reads as a limit: twenty-three are recognised out of the box, and
   *Settings → Your console → Add a platform…* takes any other — a display name,
