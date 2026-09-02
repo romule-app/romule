@@ -6,6 +6,12 @@
      bibliotheque : c'est ce qui garantit que les rangees restent alignees
      quand on y ajoute un bouton. */
   --h-controle:44px;   /* la hauteur des pastilles et de la barre du haut */
+  /* Deux largeurs, parce que deux besoins opposes. La grille de jaquettes
+     gagne a occuper l'ecran : une colonne de plus, c'est une rangee de moins
+     a faire defiler. Une colonne de TEXTE, elle, devient penible a lire
+     au-dela d'une certaine largeur — les Reglages restent donc etroits. */
+  --largeur-page:1600px;
+  --largeur-texte:1180px;
   --gouttiere:12px;
   --mono:"SF Mono",SFMono-Regular,Menlo,monospace;
   --disp:"Avenir Next Condensed","Helvetica Neue",sans-serif;
@@ -21,7 +27,7 @@ a{color:var(--amber)}
 /* ---------------------------------------------------------------- en-tete */
 header{position:sticky;top:0;z-index:20;background:var(--verre);
   backdrop-filter:blur(10px);border-bottom:1px solid var(--rule)}
-.head-in{max-width:1180px;margin:0 auto;padding:12px 22px;
+.head-in{max-width:var(--largeur-page);margin:0 auto;padding:12px 22px;
   display:flex;align-items:center;gap:20px;flex-wrap:wrap}
 .brand{font-family:var(--disp);font-weight:600;text-transform:uppercase;
   letter-spacing:.16em;font-size:15px;white-space:nowrap}
@@ -44,7 +50,9 @@ nav.tabs button.active{background:var(--panel2);color:var(--amber);
 .dot.off{background:var(--red);box-shadow:0 0 0 3px var(--danger-doux)}
 
 /* ---------------------------------------------------------------- panneaux */
-main{max-width:1180px;margin:0 auto;padding:22px}
+main{max-width:var(--largeur-page);margin:0 auto;padding:22px}
+/* La prose et les formulaires gardent une colonne lisible. */
+#panel-settings,#panel-jeux .vide{max-width:var(--largeur-texte);margin:0 auto}
 .panel{display:none}
 .panel.active{display:block;animation:enter .35s var(--ease)}
 @keyframes enter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
@@ -563,7 +571,7 @@ img.vide{visibility:hidden}
 #journalbtn.news{border-color:var(--amber);color:var(--amber)}
 #journalbtn.news::after{content:"";display:inline-block;width:6px;height:6px;margin-left:6px;
   border-radius:50%;background:var(--amber);vertical-align:middle}
-#journal{max-width:1180px;margin:0 auto;padding:0 22px;max-height:0;overflow:hidden;
+#journal{max-width:var(--largeur-page);margin:0 auto;padding:0 22px;max-height:0;overflow:hidden;
   transition:max-height .35s var(--ease)}
 /* hauteur relative : le journal ne monopolise jamais un petit ecran */
 .jbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 0}
@@ -1041,7 +1049,7 @@ button .tid{color:inherit;opacity:.72;font-weight:400}
 
 /* --- bandeau de connexion : global, sous le menu, lisible d'un coup d'oeil */
 .conn{position:sticky;top:57px;z-index:19;display:flex;align-items:center;gap:12px;
-  flex-wrap:wrap;max-width:1180px;margin:0 auto;padding:10px 22px;
+  flex-wrap:wrap;max-width:var(--largeur-page);margin:0 auto;padding:10px 22px;
   border-bottom:1px solid var(--rule);background:var(--bg)}
 .conn .cnom,.conn .cvide{font-family:var(--disp);font-size:16px;letter-spacing:.2px}
 .conn .clien{color:var(--mute);font-size:12.5px}
@@ -1081,7 +1089,6 @@ button .tid{color:inherit;opacity:.72;font-weight:400}
 @media (pointer:coarse) and (min-width:521px){.jfab{min-height:104px}}
 
 
-}
 .jfab.masque{opacity:0;pointer-events:none;transform:translate(100%,-50%)}
 .jfab-ic{writing-mode:horizontal-tb;font-size:13px}
 .jfab.news{color:var(--amber);border-color:var(--amber)}
@@ -1916,7 +1923,6 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
 /* `--tete-h` est mesuree a l'execution : l'en-tete change de hauteur selon la
    largeur (les onglets passent a la ligne). Colle a `top:0` comme lui, le
    sommaire disparaissait derriere. */
-}
 .setnav{position:sticky;top:var(--tete-h,60px);z-index:12;display:flex;gap:2px;flex-wrap:wrap;
   margin:0 0 26px;padding:6px;border-radius:11px;
   background:var(--verre-plein);backdrop-filter:blur(10px);
@@ -3072,9 +3078,19 @@ body.compact .filters{margin-bottom:2px}
 @keyframes onbpuce{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
 
 .onbcorps>.go,.onbcorps>.ghost{margin-top:14px}
+/* Un chemin se coupe par le MILIEU, jamais par la fin.
+   `word-break:break-all` l'etalait sur quatre lignes dans les Reglages ; une
+   ellipse finale, elle, aurait cache la partie qui identifie le dossier. Le
+   debut dit ou l'on est, la fin dit lequel c'est — ce sont les deux bouts
+   qu'il faut garder. Le chemin entier reste en infobulle.
+   `direction:rtl` + `text-overflow:ellipsis` coupe a gauche ; le
+   `unicode-bidi` et le marquage LTR autour du texte evitent que la
+   ponctuation ne bascule de cote. */
 .onbchemin{font-family:var(--mono);font-size:12px;color:var(--text);
   background:var(--puits);border:1px solid var(--rule);border-radius:8px;
-  padding:11px 13px;word-break:break-all;margin-bottom:4px}
+  padding:11px 13px;margin-bottom:4px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  direction:rtl;text-align:left}
 
 .onbchamps{display:flex;flex-direction:column;gap:12px;margin:0 0 14px}
 .onbchamps label{display:flex;flex-direction:column;gap:5px;font-size:12.5px;
@@ -3171,11 +3187,25 @@ body.compact .filters{margin-bottom:2px}
 .brow.dir.muet{opacity:.5}
 .brow.dir.muet .ic{color:var(--mute)}
 /* Le chemin courant, dans une ligne de reglages. Il ne doit ni deborder ni
-   pousser le bouton hors de la ligne — mais le tronquer par des points de
-   suspension le rendait illisible : « /private/var/folders… » ne dit rien.
-   Un chemin est une information qu'on lit en entier, il s'enroule donc. */
+   pousser le bouton hors de la ligne.
+   Une precedente version le laissait s'enrouler, et son commentaire disait
+   pourquoi : tronquer « /private/var/folders… » ne dit rien. L'objection est
+   juste, mais elle ne vise que la troncature FINALE. Le debut d'un chemin dit
+   ou l'on est, la fin dit lequel c'est — ce sont les deux bouts qu'il faut
+   garder, et c'est le milieu qu'il faut couper.
+   `direction:rtl` seul place l'ellipse au DEBUT, donc garde la fin — celle
+   qui nomme le dossier. Sans lui, la coupe tombe a la fin et on retrouve
+   exactement le « /private/var/folders… » que l'ancien commentaire refusait.
+   Pas de `unicode-bidi:plaintext` : il rend son sens naturel au texte, donc
+   annule l'effet, et l'ellipse repart a droite.
+   Le chemin entier reste en infobulle, parce qu'un chemin qu'on ne peut pas
+   lire en entier est un chemin qu'on ne peut pas verifier. */
 .setctl>#s-ludo{flex:1 1 auto;min-width:0;margin-right:8px;
-  white-space:normal;word-break:break-all}
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  direction:rtl;text-align:left;word-break:normal}
+/* Le chemin lui-meme garde son sens de lecture : seule la BOITE est en RTL,
+   pour que la coupe tombe au debut. */
+#s-ludo bdi{direction:ltr;unicode-bidi:isolate}
 
 /* Provenance du resume, sous la description d'un jeu. Discrete : c'est une
    obligation de licence, pas une information qu'on vient chercher. */

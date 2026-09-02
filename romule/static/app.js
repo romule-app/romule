@@ -2529,8 +2529,19 @@ function renduLudoOnboard() {
 function majLudotheque() {
   const el = $('s-ludo'), b = $('b-ludo');
   if (!el || !HEALTH) return;
-  el.textContent = HEALTH.ludotheque || HEALTH.root || '';
-  el.title = el.textContent;
+  // Le chemin complet reste dans l'infobulle : la boite le tronque par le
+  // milieu, et un chemin tronque qu'on ne peut pas lire en entier est un
+  // chemin qu'on ne peut pas verifier.
+  //
+  // Affectation directe et NON `poserAttr()` : celui-ci garde la valeur comme
+  // une cle de traduction a rejouer a chaque changement de langue. Un chemin
+  // est une donnee, pas une phrase.
+  const chemin = HEALTH.ludotheque || HEALTH.root || '';
+  // `<bdi>` isole le chemin du sens RTL impose a la boite. Sans lui, la barre
+  // oblique du debut migrait visuellement a la FIN : le chemin semblait se
+  // terminer par « / », ce qui est faux et trompeur.
+  el.innerHTML = '<bdi>' + esc(chemin) + '</bdi>';
+  el.title = chemin;
   if (b) {
     b.disabled = !!HEALTH.ludotheque_imposee;
     b.title = HEALTH.ludotheque_imposee
