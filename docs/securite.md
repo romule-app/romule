@@ -1,5 +1,8 @@
 # Security and exposure
 
+See also **[Roles and access](roles.md)** for who may do what, in each of the
+three authentication modes.
+
 ## Romule has no TLS
 
 It speaks plain HTTP. Anything reachable from the internet needs a reverse

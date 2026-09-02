@@ -55,6 +55,7 @@ nav:
       - Configuration: configuration.md
       - HTTP API: api.md
       - Emulator profiles: profils.md
+      - Roles and access: roles.md
       - Security and exposure: securite.md
   - Help:
       - Troubleshooting: depannage.md
