@@ -73,9 +73,23 @@ plugins:
             Beta features: Fonctions bêta
             Contributing: Contribuer
 
+# `--strict` verifie les liens entre PAGES, pas les ancres a l'interieur
+# d'une page : `securite.md#un-titre-qui-n-existe-plus` passait en silence, et
+# le lecteur atterrissait en haut de la page sans comprendre pourquoi. Un
+# titre renomme est exactement le genre de changement qui casse une ancre.
+validation:
+  anchors: warn
+  unrecognized_links: warn
+
 markdown_extensions:
   - admonition
   - attr_list
+  # `md_in_html` : sans elle, tout ce qui est place dans une balise HTML est
+  # rendu TEL QUEL. La grille de cartes de la page d'accueil affichait donc son
+  # markdown brut — les `**` et les `[lien](page.md)` visibles a l'ecran — et
+  # `--strict` ne pouvait pas le voir : ce n'est pas un avertissement MkDocs,
+  # c'est du texte qui s'affiche mal.
+  - md_in_html
   - def_list
   - tables
   - toc: { permalink: true }

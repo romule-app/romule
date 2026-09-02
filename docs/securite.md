@@ -55,7 +55,8 @@ Acces : ce service est joignable par le reseau et n'a pas encore de compte.
         http://192.0.2.20:8787/?token=Kzrmfve...
 ```
 
-It is stored in your library folder, survives restarts, and is never sent to
+It is stored in the service data folder — as `jeton_auto` in
+`_romule-config.json` — survives restarts, and is never sent to
 the browser with the rest of the configuration. Nothing is generated when
 Romule listens on `127.0.0.1` only.
 

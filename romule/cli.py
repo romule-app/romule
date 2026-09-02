@@ -127,7 +127,7 @@ def cmd_apikey(args):
     """Gerer les cles d'API sans navigateur.
 
     C'est ce qui rend l'API utilisable dans un conteneur : `docker compose exec
-    romule python3 -m romule apikey create homarr` suffit, sans ouvrir
+    romule python3 -m romule apikey create tableau-de-bord` suffit, sans ouvrir
     l'interface ni creer de compte.
     """
     from . import apikeys
@@ -337,7 +337,7 @@ def main(argv):
     kl.add_argument("--all", action="store_true",
                     help="inclure les cles revoquees")
     kc = ka.add_parser("create", help="creer une cle")
-    kc.add_argument("nom", help="a quoi elle sert (« homarr », « sauvegarde »)")
+    kc.add_argument("nom", help="a quoi elle sert (« tableau-de-bord », « sauvegarde »)")
     kr = ka.add_parser("revoke", help="revoquer une cle")
     kr.add_argument("id", help="identifiant montre par `apikey list`")
 

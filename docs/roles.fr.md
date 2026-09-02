@@ -63,7 +63,7 @@ est dit ici plutôt que supposé.
 
 ## Ce qu'un non-administrateur ne peut pas faire
 
-Vingt-sept routes lui sont réservées côté serveur. Elles se rangent en cinq
+Vingt-sept routes lui sont réservées côté serveur. Elles se rangent en six
 familles :
 
 - **effacer ou remettre en place des données** — restaurer une sauvegarde
@@ -73,6 +73,10 @@ familles :
 - **écrire dans les fichiers d'un autre logiciel** — configuration
   d'émulateur, NAND ;
 - **changer la liaison à la console** — appairage Wi-Fi, oubli d'un appareil ;
+- **désigner où le service lit et écrit sur la machine hôte** — le sélecteur
+  de dossiers et l'emplacement de la ludothèque. Parcourir le système de
+  fichiers de l'hôte est une primitive de divulgation, et elle est traitée
+  comme telle ;
 - **renseigner sur qui se connecte et sur la posture de sécurité** — journal
   des accès, audit.
 

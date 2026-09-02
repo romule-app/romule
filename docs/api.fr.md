@@ -31,26 +31,32 @@ Chaque requête a besoin d'une clé d'API. Les clés sont nommées, révocables 
 par une, et montrent leur dernière utilisation.
 
 **Depuis l'interface** — Réglages → Accès → Clés d'API. Donne-lui un nom qui
-dise à quoi elle sert (`homarr`, `sauvegarde-nuit`) : ce nom est ce qui te
+dise à quoi elle sert (`tableau-de-bord`, `sauvegarde-nuit`) : ce nom est ce qui te
 permettra plus tard de savoir laquelle révoquer.
 
 **En ligne de commande** — utile dans un conteneur, où il n'y a parfois aucun
 navigateur :
 
 ```sh
-romule apikey create homarr
+romule apikey create tableau-de-bord
 # sous Docker :
-docker compose exec romule python3 -m romule apikey create homarr
+docker compose exec romule python3 -m romule apikey create tableau-de-bord
 ```
 
 ```
-Cle creee : homarr
+Cle creee : tableau-de-bord
 
   rml_Ac0ffee1S3cr3t...
 
 Note-la maintenant : elle n'est conservee que sous forme
 d'empreinte et ne pourra pas etre reaffichee.
 ```
+
+!!! note "La sortie est sans accents"
+    Elle est reproduite telle quelle. Comme le rapport d'audit et les pages de
+    connexion, la ligne de commande est composée par le serveur et ne passe
+    jamais par le catalogue de traduction de l'interface — voir
+    [Fonctions bêta](beta.md#le-rapport-daudit-les-pages-de-connexion-et-la-ligne-de-commande-sont-en-francais).
 
 !!! warning "Montrée une fois, et une seule"
     Romule range une empreinte SHA-256 de la clé, jamais la clé elle-même.

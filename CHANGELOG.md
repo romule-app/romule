@@ -18,8 +18,42 @@ change it. Breaking changes are always listed under **Changed** with the reason.
   3DS game — while IGDB does, with its cover. Romule already queried IGDB for
   summaries and simply never asked it for images.
 
+### Changed
+
+- **Key features in the README are a bullet list**, and the platform list no
+  longer reads as a limit: twenty-three are recognised out of the box, and
+  *Settings → Your console → Add a platform…* takes any other — a display name,
+  a folder and a list of extensions. The feature existed and a button carried
+  it; nothing said so.
+
 ### Fixed
 
+- **The documentation home page rendered its own markdown as text.** The card
+  grid is written inside a `<div>`, and without the `md_in_html` extension
+  everything in an HTML block is left verbatim. `--strict` cannot see it: it is
+  not a MkDocs warning, it is a page that reads badly. `outils/verifier-rendu.py`
+  now scans the *built* site for markdown that survived into the prose.
+- **Numbers cited in the documentation are checked against the code.** The
+  README claimed 37 settings when there were 40, and the roles page listed five
+  families of admin-only routes when there are six.
+  `outils/verifier-chiffres.py` ties each sentence to the `len()` that produces
+  it, in digits or spelled out, in either language.
+- **Two checks that guard against drift could not see it.** The
+  settings-reference and numbers checks lived in the documentation workflow,
+  filtered on `docs/**`: adding a setting without touching the docs never ran
+  them. They moved to the unfiltered CI job.
+- **The access token and the activity log were documented in the wrong
+  folder** — they live in the service data folder, not next to your games.
+- **`beta.md` said the audit report and login pages were "English-only"** two
+  lines above stating they are in French. They are in French, and so is the
+  command line — now said once, correctly, in both languages.
+- **The contributing page still taught `'%d game(s) found'`**, the notation
+  0.3.0 replaced with `{singular|plural}` and that a check now refuses.
+- **`homarr` was used as an example API key name** without ever saying what it
+  is. Replaced with `dashboard` / `tableau-de-bord`, which need no gloss.
+- **Anchors are validated at build time.** A renamed heading used to leave
+  `page.md#old-title` pointing nowhere, silently; the first build with
+  validation on found one.
 - **A cover source is consulted when there is no image, not when there is no
   address.** A `nlib` or SteamGridDB URL that answers 404 is still a URL; the
   fallback now runs after every candidate has been *downloaded* and rejected,

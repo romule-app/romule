@@ -131,6 +131,36 @@ jobs:
           sys.exit(1 if manquantes else 0)
           PY
 
+      # Verifier que la reference de configuration decrit bien les cles qui
+      # existent : une documentation qui derive du code est pire qu'absente.
+      - name: La reference correspond-elle au code ?
+        run: |
+          python - <<'PY'
+          import re, sys, pathlib
+          sys.path.insert(0, ".")
+          from romule import config
+          doc = pathlib.Path("docs/configuration.md").read_text()
+          cites = set(re.findall(r"`([a-z][a-z_]+)`", doc))
+          manquantes = sorted(set(config.DEFAULTS) - cites)
+          for k in manquantes:
+              print("::error title=Reglage non documente::%s existe dans le code "
+                    "mais pas dans docs/configuration.md" % k)
+          print("%d reglages, %d documentes." %
+                (len(config.DEFAULTS), len(config.DEFAULTS) - len(manquantes)))
+          sys.exit(1 if manquantes else 0)
+          PY
+
+      # « Vingt-sept routes », « 40 reglages » : ces nombres sont ce qui rend un
+      # texte credible, et ils derivent en silence. Le README a annonce 37
+      # reglages quand le code en avait 40, et rien ne pouvait le voir.
+      #
+      # Ces deux controles vivaient dans le workflow « Documentation », filtre
+      # sur `docs/**` : ajouter un reglage sans toucher a la doc ne les
+      # declenchait donc PAS. Le controle cense attraper la derive etait
+      # aveugle a exactement le changement qui la produit.
+      - name: Les nombres cites dans la documentation valent-ils encore ?
+        run: python3 outils/verifier-chiffres.py
+
       - name: La specification OpenAPI est-elle a jour ?
         run: |
           python -m romule.apiv1 > /tmp/openapi-attendu.json
