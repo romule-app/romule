@@ -1258,6 +1258,25 @@ function libelleSysteme(key) {
 // moment ou un rendu peut se voir.
 let RENDU_PREVU = 0;
 let VUES = [];                  // vues enregistrees, servies par le serveur
+// Qui regarde, et avec quel role. Sans authentification, tout le monde est
+// administrateur — c'est le mode le plus courant de Romule.
+let ROLE = {authentification: false, connecte: false, admin: true, nom: ''};
+
+// L'interface ne montre pas ce qu'on ne peut pas faire.
+//
+// Ce n'est PAS une securite : c'est `RESERVE_ADMIN`, cote serveur, qui refuse,
+// et un test le verifie sur les 27 routes. Masquer est une politesse — sans
+// elle, un non-administrateur ouvre les Reglages, clique, et recolte des 403
+// sans comprendre ce qui lui arrive.
+function appliquerRole() {
+  const onglet = document.querySelector('#tabs [data-tab="settings"]');
+  if (onglet) onglet.hidden = !ROLE.admin;
+  document.body.classList.toggle('sansadmin', !ROLE.admin);
+  // Deja sur les reglages au moment ou le role arrive : on revient aux jeux
+  // plutot que de laisser un ecran qu'on n'a pas le droit d'utiliser.
+  if (!ROLE.admin && document.querySelector('#panel-settings.active'))
+    app.tab('jeux');
+}
 
 // Ce qui DEFINIT le sous-ensemble affiche. Ni le tri, ni la taille des
 // vignettes, ni la page : ce sont des preferences d'affichage, elles valent
@@ -3860,7 +3879,7 @@ function fillSettings() {
   };
   set('s-oidcissuer', c.oidc_issuer); set('s-oidcclient', c.oidc_client_id);
   set('s-oidcsecret', c.oidc_client_secret); set('s-oidcemails', c.oidc_emails);
-  set('s-oidcgroupes', c.oidc_groupes); set('s-oidcredirect', c.oidc_redirect);
+  set('s-oidcgroupes', c.oidc_groupes); set('s-oidcadmingroupes', c.oidc_admin_groupes); set('s-oidcredirect', c.oidc_redirect);
   // `aucun` est la VALEUR du reglage, pas son libelle : l'option affichee
   // vit dans index.html et passe par le catalogue.
   if ($('s-authmode')) $('s-authmode').value = c.auth_mode || 'aucun';  // i18n:ok
@@ -3925,6 +3944,10 @@ function renderChoixEmulateur() {
 
 const app = {
   tab(name) {
+    // Un non-administrateur n'a rien a faire dans les reglages : le serveur
+    // refuserait tout ce qu'il y ferait. On l'y laisse entrer par erreur
+    // serait le laisser buter sur des 403.
+    if (name === 'settings' && !ROLE.admin) return;
     // On note ou en etait la lecture avant de changer d'onglet : revenir des
     // reglages renvoyait jusqu'ici tout en haut de la bibliotheque, ce qui
     // oblige a retrouver a la main la carte qu'on regardait.
@@ -4233,6 +4256,7 @@ const app = {
 
   async scan() {
     DATA = await api('/api/scan');
+    if (DATA && DATA.moi) { ROLE = DATA.moi; appliquerRole(); }
     render();
     this.loadTrash();
     return this.loadSystems();     // attendue : la sequence de lancement en depend
@@ -6289,6 +6313,7 @@ const SET_FIELDS = {
   's-authmode': ['auth_mode', 'val'], 's-oidcissuer': ['oidc_issuer', 'text'],
   's-oidcclient': ['oidc_client_id', 'text'], 's-oidcsecret': ['oidc_client_secret', 'text'],
   's-oidcemails': ['oidc_emails', 'text'], 's-oidcgroupes': ['oidc_groupes', 'text'],
+  's-oidcadmingroupes': ['oidc_admin_groupes', 'text'],
   's-oidcredirect': ['oidc_redirect', 'text'],
 };
 $('panel-settings').addEventListener('change', e => {

@@ -331,6 +331,9 @@ DEFAULTS = {
     "oidc_redirect": "",                          # adresse publique, si proxy
     "oidc_emails": "",                            # liste blanche, separee par des virgules
     "oidc_groupes": "",                           # ou par groupes
+    # QUI ADMINISTRE, ce qui n'est pas la meme question que QUI PEUT ENTRER.
+    # Vide = aucune session SSO n'est administratrice : le defaut refuse.
+    "oidc_admin_groupes": "",
     "auth_secret": "",                            # signature des cookies, genere seul
 }
 
