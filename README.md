@@ -96,14 +96,22 @@
 ## 🚀 Quick start
 
 ```sh
-git clone https://github.com/romule-app/romule
-cd romule
-docker compose up -d
-docker compose logs romule      # prints the URL with your access token
+docker run -d --name romule --restart unless-stopped \
+  -p 8787:8787 \
+  -e ROMULE_ROOT=/data -e ROMULE_BASES=/library \
+  -v romule-data:/data \
+  -v /path/to/your/games:/library \
+  ghcr.io/romule-app/romule:latest
+
+docker logs romule              # prints the URL with your access token
 ```
 
 Open the address it prints, create your account in the six-step wizard, and
-point Romule at your library. Nothing else needs configuring.
+point Romule at your library. Nothing else needs configuring. The image is
+multi-arch (`amd64`, `arm64`) and ships `adb`, `nsz`, `unar` and `7z`.
+
+A [Compose file](https://romule-app.github.io/romule/installation/) is the
+better shape if you plan to keep it — same thing, one file to edit.
 
 <details>
 <summary>Without Docker</summary>

@@ -15,9 +15,29 @@ file de messages, ni étape de compilation.
 
 ## Docker Compose (recommandé)
 
+Rien à cloner. Mets ceci dans un `docker-compose.yml`, change l'unique ligne de
+`volumes:` qui désigne tes jeux, et démarre :
+
+```yaml
+services:
+  romule:
+    image: ghcr.io/romule-app/romule:latest
+    container_name: romule
+    restart: unless-stopped
+    ports:
+      - "8787:8787"
+    environment:
+      ROMULE_ROOT: /data
+      ROMULE_BASES: /library
+    volumes:
+      - romule-donnees:/data
+      - /chemin/vers/tes/jeux:/library    # ← la seule ligne à changer
+
+volumes:
+  romule-donnees:
+```
+
 ```sh
-git clone https://github.com/romule-app/romule
-cd romule
 docker compose up -d
 docker compose logs romule      # affiche l'adresse avec ton jeton d'accès
 ```
@@ -26,15 +46,17 @@ Ouvre l'adresse affichée, crée ton compte dans l'assistant, et indique à Romu
 où sont tes jeux. L'image embarque `adb`, `nsz`, `unar` et `7z` : il n'y a rien
 d'autre à installer.
 
-### Le fichier complet
+### Le même fichier, avec toutes les options
 
-Le dépôt fournit un `docker-compose.yml` commenté. Le voici, réduit à
-l'essentiel — copie-le, change les deux lignes de `volumes:`, et c'est fait.
+Celui du dessus est le minimum. Voici le même avec tout ce que tu peux vouloir
+régler, commenté — le dépôt le livre sous le nom `docker-compose.yml`, avec
+`build: .` à la place d'`image:` parce que qui a cloné le dépôt veut faire
+tourner ce qu'il vient de lire.
 
 ```yaml
 services:
   romule:
-    build: .                      # ou : image: ghcr.io/romule-app/romule:latest
+    image: ghcr.io/romule-app/romule:latest    # ou, depuis un clone : build: .
     container_name: romule
     restart: unless-stopped
 
@@ -156,11 +178,19 @@ docker run -d --name romule --restart unless-stopped \
 docker logs romule              # l'adresse avec ton jeton d'accès
 ```
 
-!!! note "Construire plutôt que tirer"
-    L'image publiée vit sur `ghcr.io/romule-app/romule`. Si le tirage est
-    refusé, le paquet n'est peut-être pas encore public — clone le dépôt et
-    utilise `docker compose up -d --build`, qui construit la même image
-    localement.
+!!! tip "Les étiquettes disponibles"
+    `latest` suit la dernière version publiée. `0.2.0` fige une version exacte
+    et `0.2` en suit les correctifs — épingle l'une des deux si tu préfères
+    choisir quand tu montes de version. L'image est multi-architecture
+    (`amd64` et `arm64`) et ne demande aucune authentification.
+
+    ```sh
+    docker pull ghcr.io/romule-app/romule:0.2.0
+    ```
+
+    Tu peux aussi la construire toi-même : `docker compose up -d --build` rend
+    la même image depuis les sources, et c'est la réponse honnête si tu
+    préfères ne pas exécuter un binaire que tu n'as pas construit.
 
 ---
 

@@ -1,5 +1,9 @@
 services:
   romule:
+    # Ce fichier CONSTRUIT depuis les sources, parce qu'il vit dans le depot :
+    # qui l'a clone veut voir tourner ce qu'il vient de lire. Pour installer
+    # Romule sans cloner, remplacer cette ligne par :
+    #     image: ghcr.io/romule-app/romule:latest
     build: .
     container_name: romule
     restart: unless-stopped
