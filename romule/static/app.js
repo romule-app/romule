@@ -5184,6 +5184,16 @@ const app = {
   // Frappe dans la recherche : on revient a la premiere page, sinon chercher
   // depuis la page 3 ne montre rien alors qu'il y a des resultats.
   chercher() { PAGE = 0; renderLibBientot(); },
+
+  // Replie ou deplie les rangees de filtre et de tri, sur telephone seulement.
+  // L'attribut `aria-expanded` porte l'etat : c'est lui que lit un lecteur
+  // d'ecran, et c'est aussi lui que la CSS utilise pour teinter le bouton —
+  // une seule source, pas une classe en plus a tenir synchronisee.
+  basculerFiltres() {
+    const b = $('replier');
+    const ouvert = document.body.classList.toggle('filtres-ouverts');
+    if (b) b.setAttribute('aria-expanded', ouvert ? 'true' : 'false');
+  },
   toggleFavPop(e) {
     if (e) e.stopPropagation();
     $('favpop').classList.toggle('on');
@@ -6540,7 +6550,7 @@ const ACTES = new Set([
   'copierRetour', 'deployPick', 'detect', 'dismissA2HS', 'doImport',
   'ecApply', 'ecApplyProfile', 'ecLoad', 'ecSaveProfile', 'edenRestore',
   'erApply', 'erPreview', 'erSync', 'forcerFiches', 'importerJeu',
-  'appliquerVue', 'chercher', 'creerCle', 'effacerFiltres',
+  'appliquerVue', 'basculerFiltres', 'chercher', 'creerCle', 'effacerFiltres',
   'enregistrerVue', 'installApp', 'journalClear', 'journalCopy',
   'supprimerVue',
   'loadSaves',

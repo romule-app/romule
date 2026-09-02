@@ -1117,5 +1117,6 @@
   "Tout effacer": "Clear all",
   "Enregistrer": "Save",
   "{section|sections}": "{section|sections}",
-  "… et %d {autre|autres}": "… and %d {other|others}"
+  "… et %d {autre|autres}": "… and %d {other|others}",
+  "Filtrer et trier": "Filter and sort"
 }
