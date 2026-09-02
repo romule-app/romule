@@ -149,6 +149,15 @@ def _semer(racine):
         (covers / ("%s.en.json" % tid)).write_text(json.dumps({
             "name": nom, "publisher": "Romule", "releaseDate": "20240101",
             "intro": "A test entry, not a real game."}), encoding="utf-8")
+    # Une SECONDE plateforme, peuplee. Sans elle, tout le decor est en Switch
+    # et la bascule d'une plateforme a l'autre n'a rien a montrer : un test qui
+    # mesure le passage d'une liste a une autre restait vert meme sur du code
+    # qui vidait la grille, faute de seconde liste. Cinq fichiers suffisent.
+    gba = Path(racine) / "GBA"
+    gba.mkdir(parents=True, exist_ok=True)
+    for i in range(5):
+        (gba / ("Un jeu portable %02d.gba" % i)).write_bytes(b"\0" * 2048)
+
     # Une configuration presente = `first_run` faux = pas d'assistant par-dessus.
     (Path(racine) / "_romule-config.json").write_text(
         json.dumps({"ui_lang": "fr", "auth_mode": "aucun"}), encoding="utf-8")
@@ -219,7 +228,8 @@ def navigateur():
     try:
         ok = True
         for f in ("audit_responsive.py", "test_parcours_mobile.py",
-                  "test_traduction.py", "test_gestes.py"):
+                  "test_traduction.py", "test_gestes.py",
+                  "test_bibliotheque.py"):
             ok = script(TESTS / "navigateur" / f) and ok
         for f in ("test_ui_comptes.js", "test_ui_temoin.js", "test_ui_injection.js"):
             r = script_node(TESTS / "navigateur" / f)
