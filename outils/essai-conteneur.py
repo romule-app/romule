@@ -20,13 +20,16 @@ Ce qu'il couvre, et que les suites de tests ne couvrent PAS :
   * une cle revoquee est refusee, et une cle valide n'atteint pas `/api/comptes`.
     C'est la promesse de portee, verifiee sur le vrai routage.
 
-L'essai construit l'image DEPUIS LES SOURCES. Verifier l'image publiee sur
-ghcr.io est une question distincte : elle demande de pouvoir la tirer, donc un
-depot public ou une authentification.
+Par defaut l'essai construit l'image DEPUIS LES SOURCES. `--image` la tire au
+contraire du registre : ce n'est pas la meme question. Construire prouve que le
+`Dockerfile` tient ; tirer prouve que ce qui a ete PUBLIE demarre — deux choses
+qui se separent des qu'une etape de publication existe.
 
 Usage :
     python3 outils/essai-conteneur.py            # construit, essaie, nettoie
     python3 outils/essai-conteneur.py --garder   # laisse la pile debout
+    python3 outils/essai-conteneur.py --image    # tire ghcr.io/...:latest
+    python3 outils/essai-conteneur.py --image ghcr.io/romule-app/romule:0.2.0
 """
 
 import json
@@ -41,6 +44,11 @@ from pathlib import Path
 
 RACINE = Path(__file__).resolve().parent.parent
 BASE = "http://127.0.0.1:8787"
+PUBLIEE = "ghcr.io/romule-app/romule:latest"
+EPINGLE = RACINE / "outils" / "compose.image.yaml"
+
+# Renseigne par `--image` : la reference a tirer au lieu de construire.
+IMAGE = None
 
 ok = ko = 0
 
@@ -68,9 +76,11 @@ def dc(*args, **kw):
     est correct et rend un essai automatique aveugle : la surcouche fige
     `ROMULE_LIBRARY`, avec la variable que `docker-compose.yml` documente deja.
     """
+    fichiers = ["-f", "docker-compose.yml", "-f", "outils/compose.essai.yaml"]
+    if IMAGE:
+        fichiers += ["-f", str(EPINGLE.relative_to(RACINE))]
     return subprocess.run(
-        ["docker", "compose", "-f", "docker-compose.yml",
-         "-f", "outils/compose.essai.yaml"] + list(args),
+        ["docker", "compose"] + fichiers + list(args),
         cwd=str(RACINE), capture_output=True, text=True, **kw)
 
 
@@ -133,7 +143,18 @@ def jeton_des_journaux():
 
 
 def main(argv):
+    global IMAGE
     garder = "--garder" in argv
+
+    if "--image" in argv:
+        i = argv.index("--image")
+        suite = argv[i + 1] if len(argv) > i + 1 else ""
+        IMAGE = suite if suite and not suite.startswith("--") else PUBLIEE
+        # `image:` remplace `build:` dans la surcouche. Ecrit ici plutot que
+        # livre en fichier fige : la reference change a chaque version, et un
+        # fichier qui la contient serait perime des la publication suivante.
+        EPINGLE.write_text("services:\n  romule:\n    image: %s\n" % IMAGE,
+                           encoding="utf-8")
 
     if not shutil.which("docker"):
         print("docker introuvable — cet essai a besoin d'un moteur de conteneurs.")
@@ -145,9 +166,19 @@ def main(argv):
           % (jeux, len(list(jeux.glob("*.nsp")))))
     dc("down", "-v")                       # repartir d'une ardoise propre
 
-    titre("construction et demarrage")
+    if IMAGE:
+        titre("tirage de l'image publiee")
+        print("   %s" % IMAGE)
+        r = dc("pull", "romule")
+        # Un tirage refuse est la panne qu'on vient verifier : elle merite un
+        # controle a elle, pas d'etre noyee dans l'echec de `up`.
+        if not t("l'image se tire SANS authentification", r.returncode == 0,
+                 (r.stderr or "")[-300:]):
+            return 1
+
+    titre("construction et demarrage" if not IMAGE else "demarrage")
     debut = time.time()
-    r = dc("up", "-d", "--build")
+    r = dc("up", "-d", "--no-build") if IMAGE else dc("up", "-d", "--build")
     if not t("`docker compose up` reussit", r.returncode == 0,
              (r.stderr or "")[-400:]):
         return 1
