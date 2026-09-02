@@ -264,6 +264,21 @@ def remede(outil):
     return r.get(_famille()) or r.get("autre") or ""
 
 
+def _avis(*lignes):
+    """Un avis preliminaire, sur STDERR.
+
+    Ces messages precedent chaque commande, y compris celles dont la sortie est
+    faite pour etre lue par un programme. Sur stdout, ils la polluaient :
+    `VALEUR=$(romule config get trash_days)` rapportait « nsz absent — ... »
+    colle a la valeur. C'est la CI qui l'a montre — la machine n'a pas `nsz`,
+    la mienne l'a, et le defaut ne se voyait donc que la-bas.
+
+    stderr est fait pour cela : visible dans un terminal, ecarte d'un tube.
+    """
+    for ligne in lignes:
+        print(ligne, file=sys.stderr)
+
+
 def _signaler_outils():
     """Signale les outils absents sans empecher de demarrer.
 
@@ -275,10 +290,10 @@ def _signaler_outils():
     for outil in ("nsz", "adb"):
         if shutil.which(outil):
             continue
-        print("%-4s absent — %s desactivee." % (outil, REMEDES[outil]["quoi"]))
+        _avis("%-4s absent — %s desactivee." % (outil, REMEDES[outil]["quoi"]))
         conseil = remede(outil)
         if conseil:
-            print("     %s" % conseil)
+            _avis("     %s" % conseil)
 
 
 def _verifier_jeton():
@@ -290,9 +305,9 @@ def _verifier_jeton():
     mefie pas.
     """
     if config.TOKEN and config.TOKEN.strip().lower() in config.JETONS_INTERDITS:
-        print("ROMULE_TOKEN vaut encore une valeur d'exemple : %r" % config.TOKEN)
-        print("Genere le tien :")
-        print("    python3 -c \"import secrets; print(secrets.token_urlsafe(32))\"")
+        _avis("ROMULE_TOKEN vaut encore une valeur d'exemple : %r" % config.TOKEN,
+              "Genere le tien :",
+              "    python3 -c \"import secrets; print(secrets.token_urlsafe(32))\"")
         sys.exit(1)
 
 
@@ -301,8 +316,8 @@ def _signaler_anciennes_variables():
     if not config.ANCIENNES_UTILISEES:
         return
     noms = sorted(set(config.ANCIENNES_UTILISEES))
-    print("Variables d'environnement a renommer : %s" % ", ".join(noms))
-    print("     %s" % ", ".join(n.replace("SWITCH_", "ROMULE_") for n in noms))
+    _avis("Variables d'environnement a renommer : %s" % ", ".join(noms),
+          "     %s" % ", ".join(n.replace("SWITCH_", "ROMULE_") for n in noms))
 
 
 # ---------------------------------------------------------------- depannage
