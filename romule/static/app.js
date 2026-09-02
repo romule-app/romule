@@ -16,13 +16,45 @@ let META = {};                  // {tid: {nom, resume}} — fiches officielles e
 let NANDST = [];                // MAJ/DLC et leur etat vis-a-vis d'Eden
 let NANDCONN = false;           // la console repond-elle ?
 let SYSTEMS = [];               // consoles/systemes disponibles
-let SYS = "switch";             // systeme affiche dans la bibliotheque
+// La bibliotheque s'ouvre sur TOUTES les plateformes : c'est ce qu'on possede,
+// et non l'une de ses parties. Le choix precedent de l'utilisateur prime — il
+// etait ECRIT dans le stockage local a chaque changement, mais n'etait jamais
+// relu, donc perdu a chaque ouverture.
+let SYS = (() => {
+  try { return localStorage.getItem('systeme') || 'all'; } catch (e) { return 'all'; }
+})();
 let SGAMES = [];                // jeux du systeme generique courant
 let SCONSOLE = [];              // noms de fichiers de ce systeme sur la console
 let SCONSOLE_PATHS = [];        // leurs chemins complets, pour pouvoir les retirer
 let SCONSOLE_TAILLES = {};      // taille par chemin : la fiche affichait 0 octet
 let SCONSOLE_TITRES = {};       // titre officiel par chemin, quand il est connu
 let SALL = [];                  // toutes les plateformes, pour la vue d'ensemble
+// Ce qu'on a deja recu, par plateforme. Un cache de SESSION : il ne survit pas
+// au rechargement de la page, et il est vide des que l'inventaire bouge —
+// fin de tache, « Actualiser », depot de fichiers. Un cache qu'on ne sait pas
+// invalider est un bug d'affichage a retardement.
+const CACHE_SYS = {};
+// Numero de la demande en cours : une reponse plus lente qu'un second clic ne
+// doit pas ecraser l'inventaire de la plateforme finalement choisie.
+let CHARGE_SYS = 0;
+
+function oublierCacheSysteme() {
+  for (const k of Object.keys(CACHE_SYS)) delete CACHE_SYS[k];
+}
+
+function appliquerSysteme(d) {
+  SALL = d.tout || [];
+  SGAMES = d.games || [];
+  SCONSOLE = (d.console || []).map(x => x.nom || x);
+  SCONSOLE_PATHS = (d.console || []).map(x => x.chemin || '').filter(Boolean);
+  SCONSOLE_TAILLES = {};
+  SCONSOLE_TITRES = {};
+  (d.console || []).forEach(x => {
+    if (!x.chemin) return;
+    SCONSOLE_TAILLES[x.chemin] = x.taille || 0;
+    SCONSOLE_TITRES[x.chemin] = x.titre || '';
+  });
+}
 
 const $ = id => document.getElementById(id);
 // Les unites binaires ne s'ecrivent pas pareil partout : « Gio » en francais,
@@ -3969,30 +4001,42 @@ const app = {
     })();
     return this._chargeSystems;
   },
+  // Changer de plateforme ne doit ni sauter, ni recharger ce qu'on a deja vu.
+  //
+  // L'ancienne version vidait `SGAMES`, `SCONSOLE` et `SALL` PUIS attendait un
+  // aller-retour reseau. Entre les deux, la grille etait vide : le contenu
+  // s'effondrait, la page remontait, puis tout revenait. Et rien n'etait garde,
+  // donc revenir sur une plateforme deja vue la retelechargait.
+  //
+  // Deux changements, et l'ordre compte : on garde l'affichage courant jusqu'a
+  // ce qu'on ait de quoi le remplacer, et on memorise ce qu'on a recu.
   async setSystem(key) {
-    SYS = key; dsel2.clear(); PAGE = 0; SGAMES = []; SCONSOLE = []; SCONSOLE_PATHS = [];
+    if (SYS === key && CACHE_SYS[key]) return;    // deja la, rien a faire
+    SYS = key; dsel2.clear(); PAGE = 0;
     localStorage.setItem('systeme', key);
-    if (vueTotale()) {
-      const r = await api('/api/library-all', {});
-      SALL = r.systemes || [];
+
+    const garde = CACHE_SYS[key];
+    if (garde) { appliquerSysteme(garde); renderLib(); return; }
+
+    // Rien en cache : on annonce le chargement SANS vider, pour que la hauteur
+    // de la grille ne bouge pas — c'est elle qui faisait sauter la page.
+    R.classe($('lib'), 'charge', true);
+    const jeton = ++CHARGE_SYS;
+    try {
+      const donnees = vueTotale()
+        ? {tout: (await api('/api/library-all', {})).systemes || []}
+        : isSwitch() ? {switch: true}
+                     : await api('/api/system-games', {system: key});
+      // Une reponse arrivee apres qu'on a change d'avis ne doit rien ecraser :
+      // deux clics rapides produisaient sinon l'inventaire de la PREMIERE
+      // plateforme sous le nom de la seconde.
+      if (jeton !== CHARGE_SYS) return;
+      CACHE_SYS[key] = donnees;
+      appliquerSysteme(donnees);
       renderLib();
-      return;
+    } finally {
+      if (jeton === CHARGE_SYS) R.classe($('lib'), 'charge', false);
     }
-    SALL = [];
-    if (!isSwitch()) {
-      const r = await api('/api/system-games', {system: key});
-      SGAMES = r.games || [];
-      SCONSOLE = (r.console || []).map(x => x.nom || x);
-      SCONSOLE_PATHS = (r.console || []).map(x => x.chemin || '').filter(Boolean);
-      SCONSOLE_TAILLES = {};
-      SCONSOLE_TITRES = {};
-      (r.console || []).forEach(x => {
-        if (!x.chemin) return;
-        SCONSOLE_TAILLES[x.chemin] = x.taille || 0;
-        SCONSOLE_TITRES[x.chemin] = x.titre || '';
-      });
-    }
-    renderLib();
   },
   // Une seule action principale hors Switch aussi : elle envoie vers la console
   // ce qui manque, et rapatrie ce qui n'existe que la-bas.
@@ -4950,6 +4994,7 @@ const app = {
   // plateforme, ou en vue « toutes les plateformes », le bouton semblait ne
   // rien faire. Il relit maintenant ce qui est REELLEMENT a l'ecran.
   async actualiser() {
+    oublierCacheSysteme();                        // c'est le geste qui dit « relis »
     await this.scan();                            // fichiers du serveur
     if (CONN.kind) {
       await this.explore();                       // ce qui est deja sur la console
@@ -5555,6 +5600,9 @@ const app = {
     renderTache(j);
     if (j.running) setTimeout(() => this.poll(), 900);
     else {
+      // Une tache qui se termine a presque toujours deplace, converti ou
+      // supprime des fichiers : ce qu'on garde en cache ne vaut plus rien.
+      oublierCacheSysteme();
       const soucis = (j.log || []).filter(e => e.n === 'error');
       const alertes = (j.log || []).filter(e => e.n === 'warn');
       if (soucis.length) {
@@ -5920,6 +5968,9 @@ function extensionAcceptee(nom) {
 // L'avancement est calcule sur le VOLUME total, pas sur le nombre de fichiers :
 // deposer un jeu de 12 Go et un patch de 30 Mo ne fait pas « 50 % » a mi-chemin.
 function uploadFiles(files) {
+  // Le depot ajoute des fichiers a la ludotheque : le cache est perime avant
+  // meme que le transfert ne se termine.
+  oublierCacheSysteme();
   let list = [...files].filter(f => extensionAcceptee(f.name));
   const rejetes = [...files].length - list.length;
   if (!list.length) {
@@ -7130,12 +7181,24 @@ majApparence();
     // echange.
     document.body.classList.remove('chargement');
     document.body.classList.add('pret');
+    // La vue « toutes les plateformes » montre DEJA les jeux Switch a cet
+    // instant : `jeuxTous()` part de `GAMES`, que `scan()` vient de remplir.
+    // Les autres plateformes s'ajoutent ensuite, sans que rien ne disparaisse
+    // entre-temps. On ne l'attend donc pas avant d'afficher : mesure a 21 ms a
+    // froid, mais une ludotheque avec quinze plateformes n'a aucune raison de
+    // retarder le premier ecran.
+    app.setSystem(SYS);
     // `DEMARRAGE` reste vrai : il ne dit pas « la page est visible » mais
     // « l'utilisateur n'a encore rien demande ». Le passer a faux ici ferait
     // remonter en notifications les messages de la console — « Console
     // détectée », « 152 fichiers sur la console » — que personne n'a
     // sollicites et qui sont deja au journal.
     await app.reveilConsole();     // etat de la console, puis ses fichiers
+    // La console est maintenant connue : `systems.tout()` peut lire son arbre,
+    // ce qu'il n'avait pas pu faire au premier appel. On refait donc UNE fois
+    // la vue d'ensemble, sinon les fichiers presents uniquement sur la console
+    // n'y apparaitraient jamais.
+    if (vueTotale() && CONN.kind) { oublierCacheSysteme(); app.setSystem('all'); }
   } finally {
     document.body.classList.remove('chargement');
     document.body.classList.add('pret');

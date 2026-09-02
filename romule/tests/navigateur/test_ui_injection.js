@@ -279,6 +279,44 @@ const actions = fs.readFileSync(path.join(RACINE, 'romule', 'actions.py'), 'utf8
 t('la fonction existe dans actions.py',
   !!appele && new RegExp('^def ' + appele + '\\(', 'm').test(actions), appele);
 
+console.log('   -- 7. setSystem ne vide pas avant d\'avoir de quoi remplir --');
+// Le « saut » au changement de plateforme venait de la : l'ancienne version
+// vidait `SGAMES`, `SCONSOLE` et `SALL` PUIS attendait le reseau. Entre les
+// deux, la grille etait vide, la page remontait, puis tout revenait.
+//
+// Ce controle est ICI, sur le source, et non dans un test navigateur — trois
+// versions de la mesure a l'execution (hauteur par image, nombre de cartes,
+// avec latence emulee puis retard force) sont restees VERTES sur le code
+// casse. Un controle qu'on n'a jamais vu echouer ne prouve rien. La regle,
+// elle, est nette et se lit : aucune affectation d'une liste vide avant le
+// premier `await`.
+function videAvantAttente(texte) {
+  const d = texte.indexOf('async setSystem(key)');
+  if (d < 0) return ['setSystem introuvable'];
+  const attente = texte.indexOf('await', d);
+  if (attente < 0) return ['aucun await dans setSystem'];
+  const tete = texte.slice(d, attente);
+  const out = [];
+  for (const nom of ['SGAMES', 'SCONSOLE', 'SCONSOLE_PATHS', 'SALL']) {
+    const re = new RegExp('\\b' + nom + '\\s*=\\s*\\[\\s*\\]');
+    if (re.test(tete)) out.push(nom);
+  }
+  return out;
+}
+const epreuvesVide = [
+  ['une liste videe avant l\'await -> detecte',
+   "async setSystem(key){ SGAMES = []; const r = await api(); }", true],
+  ['videe APRES l\'await -> ignore',
+   "async setSystem(key){ const r = await api(); SGAMES = []; }", false],
+  ['aucune affectation -> ignore',
+   "async setSystem(key){ const r = await api(); appliquer(r); }", false],
+];
+for (const [nom, extrait, attendu] of epreuvesVide)
+  t(nom, (videAvantAttente(extrait).length > 0) === attendu);
+const vides = videAvantAttente(src);
+t('setSystem ne vide aucune liste avant son premier await',
+  vides.length === 0, vides.join(', '));
+
 console.log('      ------------------------------------------------');
 console.log('      ' + ok + ' controles OK, ' + ko + ' echec(s)');
 process.exit(ko ? 1 : 0);

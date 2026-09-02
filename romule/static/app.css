@@ -223,6 +223,11 @@ img.vide{visibility:hidden}
 
 /* vue jaquettes (ancienne, conservee) */
 .covers{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:14px}
+/* Chargement d'une plateforme : on ATTENUE, on ne vide pas. Vider faisait
+   s'effondrer la grille, remonter la page, puis tout revenir — le « saut ».
+   La hauteur ne bouge plus, seul le contenu palit. */
+#lib.charge{opacity:.45;transition:opacity .12s var(--ease);pointer-events:none}
+@media (prefers-reduced-motion:reduce){#lib.charge{transition:none}}
 .cover{background:var(--panel);border:1px solid var(--rule);border-radius:11px;overflow:hidden;
   cursor:pointer;transition:transform .18s var(--ease),border-color .18s}
 .cover:hover{transform:translateY(-3px);border-color:var(--indigo)}
