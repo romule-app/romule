@@ -302,7 +302,8 @@ them. Those names are used only to say what the software works with.
 
 | Document | What it covers |
 |---|---|
-| [Documentation site](https://romule-app.github.io/romule/) | Install, first run, console setup, full configuration reference |
+| [Documentation site](https://romule-app.github.io/romule/) | Install, first run, console setup, full configuration reference — **in English and French** |
+| [Documentation en français](https://romule-app.github.io/romule/fr/) | La même, traduite intégralement |
 | [HTTP API](https://romule-app.github.io/romule/api/) | Keys, the fourteen routes, pagination, errors |
 | [Roles and access](https://romule-app.github.io/romule/roles/) | The two roles, the three modes, and OIDC group mapping |
 | [CHANGELOG.md](CHANGELOG.md) | What changed, release by release |
