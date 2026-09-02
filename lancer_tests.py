@@ -57,7 +57,8 @@ def unitaires():
                 "romule.tests.test_reseau",
                 "romule.tests.test_apikeys",
                 "romule.tests.test_reglages",
-                "romule.tests.test_rapprochement"):
+                "romule.tests.test_rapprochement",
+                "romule.tests.test_maj"):
         r = subprocess.run([sys.executable, "-m", mod], cwd=str(RACINE))
         print("   %-34s %s" % (mod, "OK" if r.returncode == 0 else "ECHEC"), flush=True)
         ok = (r.returncode == 0) and ok
