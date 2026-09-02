@@ -8,6 +8,27 @@ and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 Romule is at `0.x`: the HTTP API is **not** stable yet, and a minor release may
 change it. Breaking changes are always listed under **Changed** with the reason.
 
+## [Unreleased]
+
+### Added
+
+- **IGDB is now a second source for cover art.** SteamGridDB is a community
+  *artwork* database: rich on what gets played with a keyboard, thin on
+  handheld console catalogues. It does not have *Crazy Construction* — a real
+  3DS game — while IGDB does, with its cover. Romule already queried IGDB for
+  summaries and simply never asked it for images.
+
+### Fixed
+
+- **A cover source is consulted when there is no image, not when there is no
+  address.** A `nlib` or SteamGridDB URL that answers 404 is still a URL; the
+  fallback now runs after every candidate has been *downloaded* and rejected,
+  so it serves the games that need it most.
+- **The title, not the file name, is sent to IGDB.** `Crazy Construction
+  (Europe) (En,Fr,De).3ds` has `europe` and `3ds` among its distinctive words,
+  and the matching rule — which demands two thirds of them — rightly rejected
+  the correct game. The fallback searched, found, and refused.
+
 ## [0.2.0] — 2026-09-01
 
 ### Added

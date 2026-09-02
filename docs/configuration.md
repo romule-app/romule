@@ -116,11 +116,23 @@ All of these are edited from the interface. The names are the keys stored in
 | `cover_provider` | `nlib` | `nlib`, `steamgriddb`, or `custom` |
 | `cover_url` | nlib template | Used when `cover_provider` is `custom`. `{tid}` is substituted. |
 | `steamgriddb_key` | — | SteamGridDB API key |
-| `igdb_client_id` / `igdb_client_secret` | — | IGDB credentials |
+| `igdb_client_id` / `igdb_client_secret` | — | IGDB credentials. Used for summaries **and**, when the chosen provider has no artwork, as a second cover source. |
 | `meta_lang` | `en` | Language for titles and summaries |
 | `emuready` | `false` | Community compatibility ratings ([beta](beta.md)) |
 | `emuready_device` | — | Which device to match ratings against |
 | `emuready_device_nom` | — | Its display name, remembered so the list need not be fetched again |
+
+!!! info "Why covers have two sources"
+    SteamGridDB is a community *artwork* database — rich on what gets played
+    with a keyboard, thin on handheld console catalogues. IGDB is a game
+    database, and it publishes cover art too. Romule already asked it for
+    summaries; it now asks for artwork as well, but only after the chosen
+    provider has failed to return an **image** — not merely an address, since
+    a URL that answers 404 is still a URL.
+
+    Both sources go through the same matching rule: a candidate has to cover
+    two thirds of the distinctive words of the title. A cover that belongs to
+    another game is worse than no cover at all.
 
 ### Interface
 
