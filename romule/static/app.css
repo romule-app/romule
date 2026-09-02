@@ -2,6 +2,11 @@
    Les COULEURS sont declarees plus bas, dans la couche de composants — un seul
    endroit ou les redefinir pour changer de theme. */
 :root{
+  /* Une hauteur de controle et une gouttiere UNIQUES pour la barre de la
+     bibliotheque : c'est ce qui garantit que les rangees restent alignees
+     quand on y ajoute un bouton. */
+  --h-controle:44px;   /* la hauteur des pastilles et de la barre du haut */
+  --gouttiere:12px;
   --mono:"SF Mono",SFMono-Regular,Menlo,monospace;
   --disp:"Avenir Next Condensed","Helvetica Neue",sans-serif;
   --body:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
@@ -138,7 +143,8 @@ select{cursor:pointer}
 
 /* ---------------------------------------------------------------- bibliotheque v2 */
 .libbar{position:sticky;top:60px;z-index:10;display:flex;gap:10px;flex-wrap:wrap;align-items:center;
-  background:var(--verre);backdrop-filter:blur(8px);padding:12px 0;margin-bottom:14px}
+  background:var(--verre);backdrop-filter:blur(8px);padding:12px 0;
+  margin-bottom:var(--gouttiere)}
 /* La recherche : une loupe a gauche, le raccourci a droite. Le badge n'est pas
    decoratif — c'est la seule chose qui annonce que le clavier ouvre la
    recherche, et un raccourci que rien n'annonce n'existe pas. */
@@ -714,7 +720,28 @@ body{padding-bottom:env(safe-area-inset-bottom,0)}
    barre d'actions groupees et bouton d'ajout flottant. */
 
 /* --- barre d'outils : tri et taille d'affichage */
-.toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0 4px}
+/* Les trois rangees de la bibliotheque partagent une gouttiere et un axe.
+   Mesure avant correction : trois positions verticales dans la MEME rangee
+   (245, 249, 250 px) et des gouttieres de 14 puis 10 px.
+
+   Deux causes, et aucune n'etait visible a la lecture :
+   - `.tlbl` porte un `margin-bottom:10px` herite d'un autre contexte. Avec
+     `align-items:center`, la marge fait partie de la boite : celle-ci est
+     centree marge comprise, donc son CONTENU remonte de 5 px ;
+   - le groupe des tailles a une bordure que les autres controles n'ont pas,
+     ce qui le rend 2 px plus haut. */
+.toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  margin:var(--gouttiere) 0}
+.toolbar .tlbl{margin-bottom:0}
+/* `min-height` ne suffit pas : les menus font 34 px, les boutons 44 — c'est la
+   hauteur du reste de l'interface (pastilles, barre du haut) qui fait foi, et
+   ce sont donc les menus qui doivent grandir. On impose la hauteur exacte,
+   bordures comprises, sinon le groupe des tailles reste 2 px plus haut que
+   les autres a cause de sa bordure. */
+.toolbar > *,.toolbar .tlbl,.toolbar .tlbl select,.toolbar select,
+.toolbar .szbtn,.toolbar .sizes{
+  height:var(--h-controle);box-sizing:border-box}
+.toolbar .szbtn{display:inline-flex;align-items:center;justify-content:center}
 .tlbl{display:inline-flex;align-items:center;gap:8px;color:var(--mute);font-size:12.5px}
 .tlbl select{background:var(--panel2);color:var(--ink);border:1px solid var(--rule);
   border-radius:8px;padding:6px 9px;font-size:12.5px}
