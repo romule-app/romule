@@ -75,6 +75,11 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Fixed
 
+- **Two doc-versus-code checks could only be run in CI.** They lived as inline
+  YAML in the workflows, so the only way to find out was to push. They are
+  tools now (`outils/verifier-reglages-doc.py`), and `python3 lancer_tests.py`
+  runs them with everything else. `notif_destinations` was missing from the
+  settings reference — which is how this was noticed.
 - **Startup notices went to stdout.** `nsz absent — ...` was printed before
   every command, including ones whose output is meant to be read by a program:
   `VALUE=$(romule config get trash_days)` captured the notice along with the
