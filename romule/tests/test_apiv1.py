@@ -1,26 +1,25 @@
-"""L'API publique, par HTTP, de bout en bout.
+"""The public API, over HTTP, end to end.
 
-`test_apikeys.py` verifie le magasin de cles et la fonction de portee. Ici on
-verifie ce qui compte pour quelqu'un qui branche un tableau de bord : les
-routes repondent, la pagination tient, et **une cle ne peut pas sortir de
-`/api/v1/`**.
+`test_apikeys.py` checks the key store and the scope function. Here we check what
+matters to someone plugging in a dashboard: the routes answer, the pagination
+holds, and **a key cannot leave `/api/v1/`**.
 
-Ce dernier point est teste depuis l'exterieur, avec de vraies requetes, parce
-qu'une portee correcte en theorie et contournee par le routage reel serait
-exactement le genre de faille qu'on croit avoir ferme.
+That last point is tested from the outside, with real requests, because a scope
+correct in theory and bypassed by the real routing would be exactly the kind of
+hole you believe you have closed.
 
-Une propriete du dispositif merite d'etre dite, parce qu'elle n'est pas
-evidente et que c'est elle qui rend ces controles possibles depuis 127.0.0.1 :
-**presenter une cle ne DONNE pas des droits, cela choisit un regime.**
+One property of the arrangement is worth stating, because it is not obvious and
+because it is what makes these checks possible from 127.0.0.1: **presenting a key
+does not GRANT rights, it selects a regime.**
 
-Le serveur ecoute en local, donc `_local()` accorderait tout a n'importe quelle
-requete venue de la meme machine. Mais des qu'une requete porte `X-Api-Key`,
-c'est la branche des cles qui decide — et elle est portee a `/api/v1/`. Une cle
-ne peut donc pas servir a elargir un acces : au mieux elle le restreint.
+The server listens locally, so `_local()` would grant everything to any request
+coming from the same machine. But as soon as a request carries `X-Api-Key`, it is
+the key branch that decides — and it is scoped to `/api/v1/`. A key therefore
+cannot be used to widen access: at best it narrows it.
 
-C'est deliberé. Un client qui presente une cle annonce qu'il est un programme,
-pas un navigateur ; lui accorder au passage tout ce qu'un navigateur local
-obtiendrait ferait de la cle une porte derobee au lieu d'un laissez-passer.
+This is deliberate. A client presenting a key announces that it is a program, not
+a browser; granting it along the way everything a local browser would obtain
+would make the key a back door instead of a pass.
 """
 import json
 import os
@@ -63,7 +62,7 @@ for _ in range(120):
     except Exception:
         time.sleep(0.5)
 
-# La cle est creee dans le magasin du serveur : meme racine, donc meme fichier.
+# The key is created in the server's store: same root, so same file.
 os.environ["ROMULE_ROOT"] = RACINE
 from romule import apikeys, apiv1                  # noqa: E402
 apikeys.FICHIER = Path(RACINE) / "_romule-cles.json"
@@ -86,7 +85,7 @@ def t(nom, cond, detail=""):
 
 
 def demander(chemin, cle=CLE, methode="GET", entete=True):
-    """Rend (code, objet). Ne leve pas : un 403 est une reponse, pas une panne."""
+    """Returns (code, object). Does not raise: a 403 is an answer, not a fault."""
     url = BASE + chemin
     entetes = {}
     if cle and entete:
@@ -124,8 +123,8 @@ def test_contenu():
     t("library rend des fiches", len(lib.get("items") or []) == 7)
     prem = (lib.get("items") or [{}])[0]
     t("une fiche porte une cle", bool(prem.get("key")), prem)
-    # Le chemin absolu revele l'arborescence du serveur, donc souvent le nom de
-    # compte de la personne. Il ne doit pas sortir.
+    # The absolute path reveals the server's tree, and therefore often the
+    # person's account name. It must not go out.
     t("aucune fiche ne publie de chemin absolu",
       not any(str(v).startswith("/") for v in prem.values()), prem)
     t("aucune fiche ne contient la racine du serveur",
@@ -142,8 +141,8 @@ def test_pagination():
     t("une page hors bornes est vide, pas une erreur", vide["items"] == [])
     _, abusif = demander("/api/v1/library?limit=100000")
     t("limit est plafonne", abusif["limit"] == apiv1.LIMITE_MAX, abusif["limit"])
-    # Deux comportements distincts, et c'est voulu : illisible -> defaut,
-    # hors bornes -> ramene dans les bornes. La specification le dit.
+    # Two distinct behaviours, and that is deliberate: unreadable -> default,
+    # out of bounds -> brought back within bounds. The specification says so.
     _, illisible = demander("/api/v1/library?page=zero&limit=nimporte")
     t("une pagination illisible retombe sur le defaut",
       illisible["page"] == 1 and illisible["limit"] == apiv1.LIMITE_DEFAUT,
@@ -174,11 +173,11 @@ def test_route_inconnue():
 
 
 def test_la_specification_correspond_au_code():
-    """Une documentation qui derive du code est pire qu'absente.
+    """Documentation that drifts from the code is worse than absent.
 
-    On interroge chaque route decrite et on verifie qu'elle existe. L'inverse —
-    une route servie mais non decrite — est verifie par la liste explicite
-    ci-dessous, qui doit etre tenue a jour de pair avec `router()`.
+    We query every documented route and check it exists. The reverse — a route
+    served but not documented — is checked by the explicit list below, which must
+    be kept up to date alongside `router()`.
     """
     servies = {("GET", "/api/v1/" + n) for n in (
         "health", "openapi.json", "system", "stats", "library", "search",
@@ -198,7 +197,7 @@ def test_la_specification_correspond_au_code():
 
 
 def test_la_cle_ne_sort_pas_de_sa_portee():
-    """Le controle central. Une cle valide ne doit atteindre QUE `/api/v1/`."""
+    """The central check. A valid key must reach ONLY `/api/v1/`."""
     interdits = ["/api/comptes", "/api/config", "/api/scan", "/api/health",
                  "/api/compte-supprimer", "/", "/app.js", "/api/trash-list",
                  "/api/v1", "/api/v1x/library"]
@@ -221,22 +220,22 @@ def test_cle_en_parametre():
 
 
 def test_post_sans_origin():
-    """Un client en ligne de commande n'envoie pas d'`Origin`. Le controle
-    anti-CSRF ne doit pas le confondre avec un site tiers : c'est la cle
-    elle-meme qui joue ce role, puisqu'un navigateur ne l'attache jamais seul."""
+    """A command-line client sends no `Origin`. The anti-CSRF check must not
+    mistake it for a third-party site: the key itself plays that role, since a
+    browser never attaches one by itself."""
     code, corps = demander("/api/v1/scan", methode="POST")
     t("POST /scan est accepte sans Origin", code in (202, 409),
       "%s %s" % (code, corps))
-    # La tache lancee occupe le serveur : la seconde doit recevoir 409, et non
-    # une erreur qui laisserait croire a une requete mal formee.
+    # The task started occupies the server: the second must receive 409, and
+    # not an error suggesting a malformed request.
     code2, corps2 = demander("/api/v1/scan", methode="POST")
     t("une seconde tache recoit 409, pas 400",
       code2 in (202, 409), "%s %s" % (code2, corps2))
 
 
 def _local(chemin, corps=None):
-    """Sans cle : on est en 127.0.0.1, donc dans le regime local — celui de
-    l'interface. C'est par la que passent les trois routes de gestion."""
+    """Without a key: we are on 127.0.0.1, so in the local regime — the
+    interface's. That is where the three management routes go through."""
     donnees = json.dumps(corps or {}).encode() if corps is not None else None
     req = urllib.request.Request(
         BASE + chemin, data=donnees,
@@ -249,12 +248,11 @@ def _local(chemin, corps=None):
 
 
 def test_gestion_par_l_interface():
-    """Les trois routes que le bloc « Cles d'API » des Reglages utilise.
+    """The three routes the Settings' "API keys" block uses.
 
-    Elles sont INTERNES : l'interface est un navigateur avec une session, elle
-    ne peut pas passer par `/api/v1` qui exige justement une cle. Elles ne sont
-    donc pas figees — mais elles doivent marcher, et le seul moyen de le savoir
-    est de les appeler.
+    They are INTERNAL: the interface is a browser with a session, it cannot go
+    through `/api/v1`, which requires precisely a key. So they are not frozen —
+    but they must work, and the only way to know is to call them.
     """
     code, avant = _local("/api/cles")
     t("l'interface peut lister les cles", code == 200 and "cles" in avant, code)
@@ -267,8 +265,8 @@ def test_gestion_par_l_interface():
     t("la fiche rendue ne contient pas d'empreinte",
       "empreinte" not in json.dumps(cree.get("cle", {})), cree.get("cle"))
 
-    # Elle doit fonctionner tout de suite : une cle creee et inutilisable
-    # serait le pire des deux mondes.
+    # It must work straight away: a key created and unusable would be the worst
+    # of both worlds.
     code, _ = demander("/api/v1/system", cle=secret)
     t("la cle creee par l'interface fonctionne aussitot", code == 200, code)
 
