@@ -1,14 +1,13 @@
-"""Tous les comptes ne se valent pas.
+"""Not all accounts are equal.
 
-Avant, il n'existait aucun role : n'importe quel utilisateur connecte pouvait
-supprimer les autres, ou poster `auth_mode: "aucun"` et eteindre
-l'authentification pour tout le monde. Et deux routes — creation et
-suppression de compte — ne verifiaient meme pas qu'une session existait.
+There used to be no roles at all: any logged-in user could delete the others, or
+post `auth_mode: "aucun"` and switch authentication off for everybody. And two
+routes — creating and deleting an account — did not even check a session existed.
 
-Trois regles sont verifiees ici :
-  * le premier compte est administrateur, et se cree depuis la machine seule ;
-  * un utilisateur ordinaire ne touche ni aux reglages ni aux autres comptes ;
-  * il doit toujours rester un administrateur.
+Three rules are checked here:
+  * the first account is an administrator, and is created from the machine alone;
+  * an ordinary user touches neither the settings nor the other accounts;
+  * there must always remain one administrator.
 """
 import http.cookiejar, json, os, socket, subprocess, sys, tempfile, time
 import urllib.error, urllib.parse, urllib.request
@@ -41,8 +40,8 @@ def appel(op, chemin, corps=None, entetes=None, forme=False):
     e.update(entetes or {})
     d = None
     if corps is not None and forme:
-        # `/auth/connexion` recoit un formulaire, pas du JSON : c'est la page
-        # de connexion servie par le serveur lui-meme qui le poste.
+        # `/auth/connexion` receives a form, not JSON: it is the login page
+        # served by the server itself that posts it.
         d = urllib.parse.urlencode(corps).encode()
         e["Content-Type"] = "application/x-www-form-urlencoded"
     elif corps is not None:
@@ -112,11 +111,11 @@ try:
     t("il change SON mot de passe", c == 200, (c, js(b)))
 
     print("   -- ni lancer les actions destructives --")
-    # Le modele de roles annoncait trois reserves : la configuration, les
-    # comptes, et les actions destructives. Les deux premieres etaient tenues,
-    # la troisieme ne l'etait pas. La plus grave : restaurer une sauvegarde
-    # remet en place le FICHIER DES COMPTES, donc rend l'administration a qui
-    # l'avait perdue. Les deux autres effacent les traces.
+    # The role model announced three reserved areas: the configuration, the
+    # accounts, and the destructive actions. The first two were honoured, the
+    # third was not. The worst of them: restoring a backup puts the ACCOUNTS FILE
+    # back in place, so it hands administration back to whoever had lost it. The
+    # other two erase the traces.
     for route, corps, quoi in (
             ("/api/sauvegarde-restaurer", {"lot": "x"}, "restaurer une sauvegarde"),
             ("/api/journal-clear", {}, "effacer le journal"),
@@ -129,11 +128,11 @@ try:
         c, b = appel(lambda_, route, corps)
         t("il ne peut pas %s" % quoi, c == 403, (c, js(b)))
 
-    # Les sept routes ci-dessus etaient choisies a la main. Or la reserve en
-    # compte vingt-sept, et rien ne garantissait que les vingt autres la
-    # respectent : une route ajoutee a `RESERVE_ADMIN` sans etre eprouvee est
-    # une reserve que personne n'a verifiee. On les prend donc TOUTES, lues
-    # dans le serveur lui-meme pour que la liste ne puisse pas deriver.
+    # The seven routes above were chosen by hand. But the reserved set holds
+    # twenty-seven, and nothing guaranteed the other twenty honoured it: a route
+    # added to `RESERVE_ADMIN` without being exercised is a reserve nobody has
+    # checked. So we take them ALL, read from the server itself so the list
+    # cannot drift.
     print("   -- et aucune des routes reservees, sans exception --")
     sys.path.insert(0, RACINE_PROJET)
     from romule.server import Handler                              # noqa: E402
@@ -154,8 +153,8 @@ try:
     t("un compte ordinaire n'est pas administrateur", moi.get("admin") is False, moi)
     t("et il est bien reconnu comme connecte", moi.get("connecte") is True, moi)
 
-    # Et il garde ce qui releve de l'usage normal : sans cela, la reserve
-    # transformerait un compte ordinaire en spectateur.
+    # And it keeps what belongs to ordinary use: without that, the reserve
+    # would turn an ordinary account into a spectator.
     c, b = appel(lambda_, "/api/push-plan", {"paths": []})
     t("il peut toujours preparer un envoi", c == 200, (c, js(b)))
 
@@ -177,8 +176,8 @@ try:
     t("et l'interface le sait administrateur",
       (js(b).get("moi") or {}).get("admin") is True, js(b).get("moi"))
 
-    # Authentification eteinte : il n'existe plus d'identite a distinguer, et
-    # la reserve ne doit pas transformer le mode le plus courant en impasse.
+    # Authentication switched off: there is no identity left to tell apart, and
+    # the reserve must not turn the most common mode into a dead end.
     c, b = appel(chefnav, "/api/journal-clear", {})
     t("sans authentification, la reserve ne bloque plus", c == 200, (c, js(b)))
 finally:
