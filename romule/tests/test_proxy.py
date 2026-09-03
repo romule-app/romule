@@ -97,6 +97,38 @@ try:
     t("chaine de proxys : seul le client compte",
       appel(base2, "/api/job",
             {"X-Forwarded-For": "203.0.113.7, 127.0.0.1"}) in (401, 403))
+    autre.terminate(); autre = None
+
+    print("   -- proxy declare en CIDR --")
+    # Sous Docker, l'adresse du proxy est attribuee dynamiquement : une adresse
+    # exacte serait fausse au premier `docker compose down`. Le reglage que la
+    # documentation recommande etait donc impraticable dans le deploiement
+    # qu'elle recommande.
+    autre, base3 = demarrer(ROMULE_TRUSTED_PROXIES="127.0.0.0/8")
+    t("un pair dans le reseau declare est cru",
+      appel(base3, "/api/job", {"X-Forwarded-For": "127.0.0.1"}) == 200)
+    t("et il ne fait pas croire n'importe qui",
+      appel(base3, "/api/job", {"X-Forwarded-For": "203.0.113.7"}) in (401, 403))
+    autre.terminate(); autre = None
+
+    print("   -- la notation CIDR n'est pas une adresse --")
+    # Une notation de reseau n'est pas une adresse, et ne doit jamais etre
+    # comparee comme telle. Si « 10.0.0.0/8 » restait dans l'ensemble des
+    # adresses EXACTES, ecrire cette chaine dans X-Forwarded-For suffirait a
+    # y passer pour un relais declare — donc a choisir quel maillon Romule
+    # retient en remontant la chaine.
+    #
+    # Je n'ai pas montre d'exploitation reelle : derriere un vrai proxy,
+    # l'adresse de l'attaquant est ajoutee A DROITE et la remontee s'y arrete.
+    # C'est un defaut de comparaison, corrige comme tel — pas une faille dont
+    # je pretendrais avoir la preuve.
+    autre, base4 = demarrer(ROMULE_TRUSTED_PROXIES="127.0.0.1,10.0.0.0/8")
+    t("un maillon egal a la notation CIDR n'est pas un relais de confiance",
+      appel(base4, "/api/job",
+            {"X-Forwarded-For": "127.0.0.1, 10.0.0.0/8"}) in (401, 403))
+    t("mais une vraie adresse du reseau declare l'est",
+      appel(base4, "/api/job",
+            {"X-Forwarded-For": "127.0.0.1, 10.1.2.3"}) == 200)
 finally:
     for p in (srv, autre):
         if p: p.terminate()

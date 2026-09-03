@@ -425,14 +425,14 @@ class Handler(BaseHTTPRequestHandler):
         pair = self.client_address[0]
         if not self._relayee():
             return pair
-        if pair not in config.PROXYS_CONFIANCE:
+        if not config.proxy_de_confiance(pair):
             return None                     # quelqu'un relaie sans mandat
         # Le proxy declare a ajoute a droite le pair qu'il a vu. On remonte la
         # chaine en sautant les relais eux-memes declares.
         chaine = [a.strip() for a in
                   (self.headers.get("X-Forwarded-For") or "").split(",") if a.strip()]
         for adresse in reversed(chaine):
-            if adresse not in config.PROXYS_CONFIANCE:
+            if not config.proxy_de_confiance(adresse):
                 return adresse
         # Toute la chaine est faite d'adresses declarees. Cela arrive quand le
         # client est LUI-MEME sur la machine du proxy — le cas courant d'un
@@ -2174,12 +2174,17 @@ def _faits_de_demarrage(url, ip, jeton_auto):
             sys.version_info[2], sys.platform)),
         ("Interface", "%s   (Ctrl+C pour arreter)" % url),
     ]
-    if CFG.get("lan_access") and ip:
+    # La ligne suit ce que fait le SOCKET, pas le reglage `lan_access`. Les deux
+    # divergent dans le cas le plus courant : en conteneur, Romule ecoute sur
+    # 0.0.0.0 et se protege par un jeton — `lan_access` reste faux, et le
+    # bandeau annoncait « Reseau : desactive » deux lignes au-dessus de
+    # l'adresse par laquelle on vient d'etre invite a entrer.
+    if _adresse_ecoute() == "127.0.0.1":
+        faits.append(("Reseau", "cette machine seulement — ROMULE_BIND=0.0.0.0, "
+                                "ROMULE_LAN=1 ou un jeton, puis redemarrer"))
+    else:
         faits.append(("Reseau", "http://%s:%d   (telephone, console, tablette)"
-                      % (ip, config.PORT)))
-    elif not CFG.get("lan_access"):
-        faits.append(("Reseau", "desactive — ROMULE_BIND=0.0.0.0, ROMULE_LAN=1 "
-                                "ou un jeton, puis redemarrer"))
+                      % (ip or "<adresse-du-serveur>", config.PORT)))
     faits += [
         ("Acces", modes.get(CFG.get("auth_mode"), CFG.get("auth_mode"))
          + (" + jeton" if config.TOKEN and not jeton_auto else "")

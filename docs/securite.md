@@ -21,7 +21,8 @@ Romule therefore ignores `X-Forwarded-For` and `X-Real-IP` **unless you name
 the proxy yourself**:
 
 ```sh
-ROMULE_TRUSTED_PROXIES=127.0.0.1,::1
+ROMULE_TRUSTED_PROXIES=127.0.0.1,::1        # proxy on the host
+ROMULE_TRUSTED_PROXIES=172.16.0.0/12        # proxy in a container
 ```
 
 Without this, a forwarded header grants nothing — and a request arriving with

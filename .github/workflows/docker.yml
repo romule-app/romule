@@ -351,3 +351,123 @@ jobs:
       - name: Journal du conteneur
         if: always()
         run: docker logs romule || true
+
+  # Le piege du reverse proxy, verifie sur une VRAIE pile.
+  #
+  # Un proxy pose sur la meme machine fait paraitre toutes les requetes comme
+  # venant de 127.0.0.1, et Romule accorde tous les droits aux requetes
+  # locales. La promesse est donc double, et les deux moities se verifient :
+  # sans declaration, un en-tete transmis ne vaut rien ; avec, il ne vaut que
+  # ce que le proxy a REELLEMENT vu.
+  #
+  # Ceci ne peut pas se tester par une doublure : ce qu'on veut savoir est
+  # justement ce qu'un vrai Caddy ecrit dans `X-Forwarded-For`, et une
+  # doublure prouverait ce qu'elle a elle-meme ecrit.
+  proxy:
+    name: Derriere un reverse proxy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e  # v4.3.0
+
+      - name: Construction locale (l'image publiee est en retard sur la branche)
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a  # v7.3.0
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          tags: romule:proxy
+          cache-from: type=gha
+
+      - name: La pile d'exemple monte
+        working-directory: exemples/caddy
+        run: |
+          mkdir -p library
+          # On epingle l'image construite : l'exemple tire `latest`, qui est la
+          # version PUBLIEE et donc en retard sur ce qu'on est en train de
+          # tester. C'est exactement le piege qui m'a fait croire, la premiere
+          # fois, que le support CIDR ne marchait pas.
+          cat > /tmp/epingle.yml <<'YML'
+          services:
+            romule:
+              image: romule:proxy
+          YML
+          docker compose -p proxyci -f docker-compose.yml -f /tmp/epingle.yml \
+            up -d --no-build
+          for i in $(seq 1 90); do
+            etat=$(docker inspect -f '{{.State.Health.Status}}' romule 2>/dev/null || echo absent)
+            [ "$etat" = "healthy" ] && break
+            sleep 2
+          done
+          if [ "$etat" != "healthy" ]; then
+            echo "::error::la pile Caddy n'est jamais devenue saine ($etat)"
+            docker compose -p proxyci logs
+            exit 1
+          fi
+          echo "pile saine apres ${i} tentatives"
+
+      # Trois cas, dont deux ne different que par un en-tete. C'est cette
+      # difference qui porte toute la promesse.
+      - name: Un client reellement local est reconnu a travers le proxy
+        run: |
+          code=$(docker exec romule-caddy wget -q -S -O /dev/null http://127.0.0.1/ 2>&1 \
+                 | grep -o 'HTTP/1.1 [0-9]*' | head -1 | grep -o '[0-9]*$')
+          echo "client local via Caddy : HTTP $code"
+          # Caddy voit son pair a 127.0.0.1 et l'ecrit dans X-Forwarded-For ;
+          # Romule, qui a le droit de croire ce proxy, lit donc un client local.
+          [ "$code" = "200" ] || {
+            echo "::error title=Proxy::un client local a travers le proxy declare devrait passer, recu $code"
+            docker compose -p proxyci logs romule; exit 1; }
+
+      - name: Un en-tete forge ne donne PAS les droits locaux
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' \
+                 -H 'X-Forwarded-For: 127.0.0.1' http://127.0.0.1/)
+          echo "en-tete forge : HTTP $code"
+          # Caddy AJOUTE le pair reel a droite de la chaine. Romule la remonte
+          # par la droite : il lit l'adresse du client, pas celle qu'il a
+          # ecrite lui-meme. Si ce controle passe au vert avec 200, n'importe
+          # qui sur internet a les droits de la machine.
+          [ "$code" = "403" ] || {
+            echo "::error title=Proxy::un X-Forwarded-For forge a obtenu $code au lieu de 403"
+            docker compose -p proxyci logs romule; exit 1; }
+
+      - name: Un client externe ordinaire est refuse
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1/)
+          echo "client externe : HTTP $code"
+          [ "$code" = "403" ] || {
+            echo "::error title=Proxy::client externe : attendu 403, recu $code"; exit 1; }
+
+      # Le temoin negatif. Sans lui, les trois controles ci-dessus passeraient
+      # aussi sur un Romule qui refuse tout le monde — y compris a tort.
+      - name: Sans ROMULE_TRUSTED_PROXIES, plus rien n'est cru
+        working-directory: exemples/caddy
+        run: |
+          cat > /tmp/sans.yml <<'YML'
+          services:
+            romule:
+              image: romule:proxy
+              environment:
+                ROMULE_TRUSTED_PROXIES: ""
+          YML
+          docker compose -p proxyci -f docker-compose.yml -f /tmp/sans.yml up -d --no-build
+          for i in $(seq 1 90); do
+            etat=$(docker inspect -f '{{.State.Health.Status}}' romule 2>/dev/null || echo absent)
+            [ "$etat" = "healthy" ] && break
+            sleep 2
+          done
+          code=$(docker exec romule-caddy wget -q -S -O /dev/null http://127.0.0.1/ 2>&1 \
+                 | grep -o 'HTTP/1.1 [0-9]*' | head -1 | grep -o '[0-9]*$')
+          echo "meme client local, proxy NON declare : HTTP $code"
+          # Le meme client qui obtenait 200 doit maintenant etre refuse : c'est
+          # le reglage, et lui seul, qui autorise a croire l'en-tete.
+          [ "$code" = "403" ] || {
+            echo "::error title=Proxy::un relais non declare a ete cru ($code)"
+            docker compose -p proxyci logs romule; exit 1; }
+          echo "Le reglage est bien ce qui fait la difference : 200 avec, 403 sans."
+
+      - name: Journaux
+        if: always()
+        working-directory: exemples/caddy
+        run: docker compose -p proxyci logs || true

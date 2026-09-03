@@ -314,6 +314,11 @@ besoin d'un proxy qui termine le HTTPS devant lui.
     }
     ```
 
+    Une pile complète — Caddy devant, Romule non publié sur l'hôte — est dans
+    [`exemples/caddy/`](https://github.com/romule-app/romule/tree/main/exemples/caddy).
+    L'intégration continue la monte à chaque changement et vérifie qu'un
+    `X-Forwarded-For` forgé ne mène toujours nulle part.
+
 === "nginx"
 
     ```nginx
