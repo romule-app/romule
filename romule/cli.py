@@ -1,10 +1,10 @@
-"""Ligne de commande minimale, adossee au meme moteur que l'interface web.
+"""A minimal command line, backed by the same engine as the web interface.
 
-    python3 -m romule                 lance l'interface web (defaut)
-    python3 -m romule scan            affiche l'inventaire
-    python3 -m romule convert [--only MOTIF] [--dry-run]
-    python3 -m romule push [--only MOTIF]     envoie vers le handheld adb
-    python3 -m romule test            joue les tests unitaires
+    python3 -m romule                 start the web interface (default)
+    python3 -m romule scan            print the inventory
+    python3 -m romule convert [--only PATTERN] [--dry-run]
+    python3 -m romule push [--only PATTERN]   send to the adb handheld
+    python3 -m romule test            run the unit tests
 """
 
 import argparse
@@ -24,7 +24,7 @@ def _print_log(msg):
 
 
 class _PrintJob(JobRunner):
-    """JobRunner synchrone qui imprime au lieu de journaliser en tache de fond."""
+    """A synchronous JobRunner that prints instead of logging in the background."""
     def log(self, line):
         print("  " + line)
     def start(self, label, fn, *args):
@@ -125,11 +125,11 @@ def cmd_device(args):
 
 
 def cmd_apikey(args):
-    """Gerer les cles d'API sans navigateur.
+    """Manage API keys without a browser.
 
-    C'est ce qui rend l'API utilisable dans un conteneur : `docker compose exec
-    romule python3 -m romule apikey create tableau-de-bord` suffit, sans ouvrir
-    l'interface ni creer de compte.
+    This is what makes the API usable inside a container: `docker compose exec
+    romule python3 -m romule apikey create tableau-de-bord` is enough, with no
+    interface to open and no account to create.
     """
     from . import apikeys
     action = getattr(args, "action", None) or "list"
@@ -140,9 +140,9 @@ def cmd_apikey(args):
         print()
         print("  %s" % cle)
         print()
-        # Elle n'est stockee que hachee : ce n'est pas une precaution de style,
-        # c'est ce qui rend une fuite du fichier d'etat inoffensive. Le prix
-        # est qu'on ne peut pas la reafficher, et il faut le dire ici.
+        # It is only stored hashed: not a stylistic precaution, but what makes
+        # a leak of the state file harmless. The price is that it cannot be
+        # shown again, and that has to be said here.
         print("Note-la maintenant : elle n'est conservee que sous forme")
         print("d'empreinte et ne pourra pas etre reaffichee.")
         return
@@ -180,23 +180,21 @@ def cmd_serve(args):
 
 
 def _verifier_racine():
-    """Refuse de travailler sur un dossier qui n'est manifestement pas une
-    ludotheque.
+    """Refuse to work on a folder that is plainly not a game library.
 
-    L'outil deplace des fichiers, en cree, en met a la corbeille. Une racine
-    mal reglee — le dossier personnel, la racine du disque, un depot de code —
-    n'est pas une gene : c'est une perte de donnees. Mieux vaut refuser de
-    demarrer que de ranger des jeux dans `~`.
+    The tool moves files, creates them, trashes them. A mis-set root — the home
+    folder, the disk root, a code repository — is not an inconvenience: it is
+    data loss. Better to refuse to start than to file games into `~`.
     """
-    # L'ordre compte, et il a ete appris a la dure. L'heuristique passait en
-    # premier : elle regarde DANS le dossier, donc elle levait avant tout le
-    # reste des que le processus n'avait pas le droit d'y entrer. On etablit
-    # donc d'abord que le dossier existe et nous appartient, ensuite seulement
-    # on se demande s'il ressemble a une ludotheque.
+    # The order matters, and it was learnt the hard way. The heuristic came
+    # first: it looks INSIDE the folder, so it raised before everything else as
+    # soon as the process was not allowed in. So we first establish that the
+    # folder exists and is ours, and only then ask whether it looks like a game
+    # library.
     #
-    # La racine par defaut n'existe pas a la premiere ouverture, et son parent
-    # non plus : sans cette creation, tout nouvel utilisateur tombait sur un
-    # FileNotFoundError des le lancement.
+    # The default root does not exist on first launch, and neither does its
+    # parent: without this creation, every new user hit a FileNotFoundError on
+    # startup.
     if not os.path.isdir(config.ROOT):
         try:
             config.ROOT.mkdir(parents=True, exist_ok=True)
@@ -226,9 +224,8 @@ def _verifier_racine():
     sys.exit(1)
 
 
-# Conseils d'installation, par systeme. L'ancien message ne connaissait que
-# Homebrew : sur un NAS ou une machine Linux, il envoyait l'utilisateur nulle
-# part.
+# Installation advice, per system. The old message only knew Homebrew: on a
+# NAS or a Linux machine it sent the user nowhere.
 REMEDES = {
     "nsz": {
         "quoi": "conversion des .nsz/.xcz",
@@ -259,7 +256,7 @@ def _famille():
 
 
 def remede(outil):
-    """Comment installer un outil manquant, sur CETTE machine."""
+    """How to install a missing tool, on THIS machine."""
     r = REMEDES.get(outil) or {}
     return r.get(_famille()) or r.get("autre") or ""
 
@@ -267,25 +264,25 @@ def remede(outil):
 def _avis(*lignes):
     """Un avis preliminaire, sur STDERR.
 
-    Ces messages precedent chaque commande, y compris celles dont la sortie est
-    faite pour etre lue par un programme. Sur stdout, ils la polluaient :
-    `VALEUR=$(romule config get trash_days)` rapportait « nsz absent — ... »
-    colle a la valeur. C'est la CI qui l'a montre — la machine n'a pas `nsz`,
-    la mienne l'a, et le defaut ne se voyait donc que la-bas.
+    These messages precede every command, including the ones whose output is
+    meant to be read by a program. On stdout they polluted it:
+    `VALUE=$(romule config get trash_days)` reported "nsz absent — ..." stuck to
+    the value. CI is what showed it — that machine has no `nsz`, mine does, and
+    the defect was therefore only visible over there.
 
-    stderr est fait pour cela : visible dans un terminal, ecarte d'un tube.
+    stderr exists for this: visible in a terminal, out of the way of a pipe.
     """
     for ligne in lignes:
         print(ligne, file=sys.stderr)
 
 
 def _signaler_outils():
-    """Signale les outils absents sans empecher de demarrer.
+    """Report missing tools without preventing startup.
 
-    L'entree du programme s'arretait net quand `nsz` manquait, avec un conseil
-    Homebrew pour toute reponse. Or `nsz` ne sert qu'a convertir : sans lui, on
-    peut parfaitement consulter sa ludotheque, la ranger, la transferer. Un
-    outil absent desactive SA fonction, il n'interdit pas l'application.
+    The program's entry point used to stop dead when `nsz` was missing, with a
+    Homebrew hint for an answer. But `nsz` only serves conversion: without it
+    you can perfectly well browse your library, tidy it, transfer it. A missing
+    tool disables ITS feature, it does not forbid the application.
     """
     for outil in ("nsz", "adb"):
         if shutil.which(outil):
@@ -297,12 +294,12 @@ def _signaler_outils():
 
 
 def _verifier_jeton():
-    """Un jeton d'exemple n'est pas un jeton.
+    """An example token is not a token.
 
-    Le fichier compose en proposait un tout fait. Celui qui le laisse en place
-    croit son service protege alors que le mot de passe est ecrit dans le
-    depot public — c'est pire que pas de jeton du tout, parce qu'on ne s'en
-    mefie pas.
+    The compose file used to offer a ready-made one. Whoever leaves it in place
+    believes their service protected while the password is written in the
+    public repository — worse than no token at all, because nobody is wary of
+    it.
     """
     if config.TOKEN and config.TOKEN.strip().lower() in config.JETONS_INTERDITS:
         _avis("ROMULE_TOKEN vaut encore une valeur d'exemple : %r" % config.TOKEN,
@@ -312,7 +309,7 @@ def _verifier_jeton():
 
 
 def _signaler_anciennes_variables():
-    """Les noms SWITCH_* marchent encore, mais ils ne sont plus les bons."""
+    """The SWITCH_* names still work, but they are no longer the right ones."""
     if not config.ANCIENNES_UTILISEES:
         return
     noms = sorted(set(config.ANCIENNES_UTILISEES))
@@ -322,24 +319,24 @@ def _signaler_anciennes_variables():
 
 # ---------------------------------------------------------------- depannage
 #
-# Ces commandes existent pour le moment ou l'interface n'est PAS la reponse :
-# plus de mot de passe, plus de second facteur, un service qui ne demarre pas,
-# ou un conteneur sans navigateur. Jusqu'ici la seule issue etait d'editer
-# `_romule-comptes.json` a la main — c'est-a-dire d'y coller une empreinte
-# scrypt calculee ailleurs, ce que personne ne reussit du premier coup.
+# These commands exist for the moment when the interface is NOT the answer: no
+# password left, no second factor, a service that will not start, or a
+# container with no browser. Until now the only way out was editing
+# `_romule-comptes.json` by hand — that is, pasting an scrypt digest computed
+# elsewhere, which nobody gets right first time.
 #
-# Elles n'ouvrent aucun droit nouveau : qui peut lancer `romule` a deja les
-# droits du service, donc l'acces a ses fichiers. Elles rendent seulement
-# faisable, sans se tromper, ce que le systeme de fichiers permettait deja.
+# They grant no new rights: whoever can run `romule` already has the service's
+# rights, hence access to its files. They merely make doable, without mistakes,
+# what the filesystem already allowed.
 
 
 def _demander_mdp(invite="Nouveau mot de passe : "):
-    """Demande un mot de passe deux fois, sans echo.
+    """Ask for a password twice, with no echo.
 
-    Le lire en argument de commande le poserait dans l'historique du shell et
-    dans la liste des processus, ou n'importe qui sur la machine peut le voir.
-    `--mdp` existe quand meme, pour un script qui sait ce qu'il fait, mais ce
-    n'est pas le chemin par defaut.
+    Reading it as a command argument would put it in the shell history and in
+    the process list, where anyone on the machine can see it. `--mdp` exists
+    all the same, for a script that knows what it is doing, but it is not the
+    default path.
     """
     import getpass
     un = getpass.getpass(invite)
@@ -351,7 +348,7 @@ def _demander_mdp(invite="Nouveau mot de passe : "):
 
 
 def cmd_user(args):
-    """Comptes : lister, reinitialiser, promouvoir, retirer le second facteur."""
+    """Accounts: list, reset, promote, remove the second factor."""
     from . import comptes
     action = getattr(args, "action", None) or "list"
 
@@ -381,8 +378,8 @@ def cmd_user(args):
             print("Refuse : %s" % exc)
             return 1
         print("Mot de passe repose pour %s." % u["email"])
-        # Deux consequences que l'utilisateur doit connaitre AVANT de chercher
-        # pourquoi il a ete deconnecte partout.
+        # Two consequences the user needs to know BEFORE wondering why they
+        # were logged out everywhere.
         print("Toutes les sessions ouvertes de ce compte sont invalidees.")
         print("Le compteur d'echecs et le blocage eventuel sont remis a zero.")
         return
@@ -400,8 +397,8 @@ def cmd_user(args):
         try:
             comptes.promouvoir(u["id"], vise)
         except ValueError as exc:
-            # « On ne retire pas le dernier administrateur » : une instance que
-            # personne ne peut administrer se repare a la main, dans un fichier.
+            # "The last administrator cannot be removed": an instance nobody
+            # can administer is repaired by hand, in a file.
             print("Refuse : %s" % exc)
             return 1
         print("%s %s administrateur."
@@ -439,11 +436,11 @@ def cmd_user(args):
 
 
 def cmd_config(args):
-    """Lire et ecrire un reglage sans navigateur."""
+    """Read and write a setting without a browser."""
     from . import config as cfgmod
     cfg = cfgmod.load_config()
-    # Ce qui ne doit jamais s'afficher : une valeur secrete lue par-dessus
-    # l'epaule, ou copiee dans un rapport de bogue avec le reste de la sortie.
+    # What must never be displayed: a secret value read over a shoulder, or
+    # copied into a bug report along with the rest of the output.
     SECRETS = ("auth_secret", "jeton_auto", "steamgriddb_key",
                "igdb_client_secret", "oidc_client_secret")
 
@@ -468,8 +465,8 @@ def cmd_config(args):
             print("Reglage inconnu : %s" % args.cle)
             print("`romule config list` donne la liste.")
             return 1
-        # La valeur est lue en JSON quand c'est possible : sans cela `false`
-        # deviendrait la chaine « false », qui est vraie.
+        # The value is read as JSON when possible: without that, `false` would
+        # become the string "false", which is truthy.
         try:
             valeur = json.loads(args.valeur)
         except ValueError:
@@ -486,12 +483,12 @@ def cmd_config(args):
 
 
 def cmd_doctor(args):
-    """Tout ce qu'on demanderait dans un rapport de bogue, en une commande.
+    """Everything a bug report should contain, in one command.
 
-    L'audit repond « ce service est-il sur ». Celle-ci repond « pourquoi ne
-    fait-il pas ce que je crois » : quelle version, quels chemins, quels
-    droits, quels outils, quelle configuration reseau. Ce sont les questions
-    qu'on pose en premier a quelqu'un qui ouvre un ticket.
+    The audit answers "is this service safe". This one answers "why is it not
+    doing what I think": which version, which paths, which permissions, which
+    tools, which network configuration. Those are the first questions you ask
+    anyone opening a ticket.
     """
     import platform
     import socket
@@ -642,13 +639,13 @@ def main(argv):
 
     sub.add_parser("doctor", help="tout ce qu'un ticket devrait contenir")
 
-    # tolere les options globales inconnues (ex : --no-browser)
+    # tolerate unknown global options (e.g. --no-browser)
     args, _ = parser.parse_known_args([a for a in argv if a != "--no-browser"])
-    # Le code de retour est PROPAGE. Sans lui, `romule user passwd` affichait
-    # « Refuse : ... » et sortait quand meme sur 0 : un script ne pouvait pas
-    # distinguer un refus d'un succes, et un `&&` enchainait sur une commande
-    # qui n'avait rien fait. C'est le test des commandes de depannage qui l'a
-    # trouve — six refus parfaitement rediges, tous annonces comme reussis.
+    # The exit code is PROPAGATED. Without it, `romule user passwd` printed
+    # "Refused: ..." and exited 0 anyway: a script could not tell a refusal
+    # from a success, and an `&&` chained onto a command that had done nothing.
+    # The debug-commands test is what found it — six perfectly worded refusals,
+    # every one announced as a success.
     return {
         None: cmd_serve, "serve": cmd_serve, "scan": cmd_scan,
         "convert": cmd_convert, "push": cmd_push, "device": cmd_device,
