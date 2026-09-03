@@ -31,7 +31,7 @@ import sys
 from pathlib import Path
 
 # --- noms interdits ---------------------------------------------------------
-NOMS_INTERDITS = [
+FORBIDDEN_NAMES = [
     (re.compile(r"(^|/)(prod|title|dev)\.keys$", re.I), "console key"),
     (re.compile(r"\.(nsp|nsz|xci|xcz|iso|wbfs|rvz|chd|cia|gba|nds|3ds|sfc|smc|"
                 r"n64|z64|gen|wad)$", re.I), "game image"),
@@ -59,85 +59,85 @@ SECRETS = [
     (re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----"), "private key"),
 ]
 
-IP_PRIVEE = re.compile(r"\b(?:10\.\d{1,3}|192\.168|172\.(?:1[6-9]|2\d|3[01]))"
+PRIVATE_IP = re.compile(r"\b(?:10\.\d{1,3}|192\.168|172\.(?:1[6-9]|2\d|3[01]))"
                        r"\.\d{1,3}\.\d{1,3}\b")
 # Addresses quoted as examples in the documentation and the tests: a Docker
 # network's default gateway and a few documentation addresses.
-IP_TOLEREES = {"192.168.1.42", "192.168.1.50", "192.168.0.1", "172.18.0.1"}
+ALLOWED_IPS = {"192.168.1.42", "192.168.1.50", "192.168.0.1", "172.18.0.1"}
 
-BINAIRES = re.compile(r"\.(png|jpg|jpeg|gif|webp|ico|woff2?|zip|gz)$", re.I)
+BINARIES = re.compile(r"\.(png|jpg|jpeg|gif|webp|ico|woff2?|zip|gz)$", re.I)
 
 # A line carrying this marker is let through. It requires a justification
 # WRITTEN beside the code: that is what tells an exception from an oversight. A
 # list of allowed files, on the other hand, goes stale in silence.
-MARQUEUR = "fuite:ok"
+MARKER = "fuite:ok"
 
 
-def fichiers_suivis(tout):
-    if tout:
+def tracked_files(every):
+    if every:
         return [p for p in Path(".").rglob("*")
                 if p.is_file() and ".git/" not in str(p)]
-    sortie = subprocess.run(["git", "ls-files", "-z"], capture_output=True)
-    if sortie.returncode != 0:
+    out = subprocess.run(["git", "ls-files", "-z"], capture_output=True)
+    if out.returncode != 0:
         print("git ls-files failed: no repository?", file=sys.stderr)
         sys.exit(2)
-    return [Path(n) for n in sortie.stdout.decode().split("\0") if n]
+    return [Path(n) for n in out.stdout.decode().split("\0") if n]
 
 
-def examiner(chemins):
-    fautes, alertes = [], []
-    for p in chemins:
+def inspect_files(paths):
+    faults, warnings = [], []
+    for p in paths:
         rel = str(p)
         # The detector is made of secret patterns: inspecting itself would have
         # only one possible outcome.
         if rel.endswith("outils/verifier-fuite.py"):
             continue
-        for motif, quoi in NOMS_INTERDITS:
-            if motif.search(rel):
-                fautes.append((rel, "forbidden name: %s" % quoi))
-        if BINAIRES.search(rel):
+        for pattern, what in FORBIDDEN_NAMES:
+            if pattern.search(rel):
+                faults.append((rel, "forbidden name: %s" % what))
+        if BINARIES.search(rel):
             continue
         try:
-            brut = p.read_bytes()
+            raw = p.read_bytes()
         except OSError:
             continue
-        if b"\0" in brut:
-            fautes.append((rel, "null byte: git will take it for a binary"))
-        texte = brut.decode("utf-8", "replace")
-        lignes = texte.split("\n")
+        if b"\0" in raw:
+            faults.append((rel, "null byte: git will take it for a binary"))
+        text = raw.decode("utf-8", "replace")
+        lines = text.split("\n")
 
-        def exemptee(n, lignes=lignes):
+        def exempt(n, lines=lines):
             """The marker covers its own line or the one before it.
 
-            `lignes` is bound as a default: the function is indeed called within
+            `lines` is bound as a default: the function is indeed called within
             the same iteration, but binding it makes that guarantee visible
             rather than dependent on the order of the calls.
             """
             for i in (n - 1, n - 2):
-                if 0 <= i < len(lignes) and MARQUEUR in lignes[i]:
+                if 0 <= i < len(lines) and MARKER in lines[i]:
                     return True
             return False
 
-        for motif, quoi in SECRETS:
-            for m in motif.finditer(texte):
-                ligne = texte[:m.start()].count("\n") + 1
-                if exemptee(ligne):
+        for pattern, what in SECRETS:
+            for m in pattern.finditer(text):
+                line = text[:m.start()].count("\n") + 1
+                if exempt(line):
                     continue
-                fautes.append(("%s:%d" % (rel, ligne), quoi))
-        for m in IP_PRIVEE.finditer(texte):
-            if m.group(0) in IP_TOLEREES:
+                faults.append(("%s:%d" % (rel, line), what))
+        for m in PRIVATE_IP.finditer(text):
+            if m.group(0) in ALLOWED_IPS:
                 continue
-            ligne = texte[:m.start()].count("\n") + 1
-            if exemptee(ligne):
+            line = text[:m.start()].count("\n") + 1
+            if exempt(line):
                 continue
-            alertes.append(("%s:%d" % (rel, ligne),
+            warnings.append(("%s:%d" % (rel, line),
                             "private address %s" % m.group(0)))
-    return fautes, alertes
+    return faults, warnings
 
 
 def autotest():
     """A check that never bites protects against nothing."""
-    cas = [
+    cases = [
         ("keys/prod.keys", b"never mind", True),
         ("jeu.nsp", b"peu importe", True),
         ("_romule-config.json", b"{}", True),
@@ -155,18 +155,18 @@ def autotest():
     import tempfile
     ok = True
     with tempfile.TemporaryDirectory() as d:
-        for nom, contenu, doit_mordre in cas:
-            f = Path(d) / nom
+        for name, content, should_bite in cases:
+            f = Path(d) / name
             f.parent.mkdir(parents=True, exist_ok=True)
-            f.write_bytes(contenu)
-            fautes, _ = examiner([f])
-            mord = bool(fautes)
-            if mord != doit_mordre:
+            f.write_bytes(content)
+            faults, _ = inspect_files([f])
+            bites = bool(faults)
+            if bites != should_bite:
                 ok = False
                 print("  FAIL  %-34s expected %s, got %s"
-                      % (nom, doit_mordre, mord))
+                      % (name, should_bite, bites))
             else:
-                print("  OK    %-34s %s" % (nom, "detected" if mord else "let through"))
+                print("  OK    %-34s %s" % (name, "detected" if bites else "let through"))
     return 0 if ok else 1
 
 
@@ -174,16 +174,16 @@ def main(argv):
     if "--autotest" in argv:
         print("-- self-test of the detector --")
         return autotest()
-    fautes, alertes = examiner(fichiers_suivis("--tout" in argv))
-    for ou, quoi in alertes:
-        print("  warning %-52s %s" % (ou, quoi))
-    for ou, quoi in fautes:
-        print("  REFUSED %-52s %s" % (ou, quoi))
-    if fautes:
-        print("\n%d file(s) must not enter the repository." % len(fautes))
+    faults, warnings = inspect_files(tracked_files("--tout" in argv))
+    for where, what in warnings:
+        print("  warning %-52s %s" % (where, what))
+    for where, what in faults:
+        print("  REFUSED %-52s %s" % (where, what))
+    if faults:
+        print("\n%d file(s) must not enter the repository." % len(faults))
         return 1
     print("No personal data detected (%d warning(s) to check by eye)."
-          % len(alertes))
+          % len(warnings))
     return 0
 
 

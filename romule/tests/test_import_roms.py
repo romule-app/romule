@@ -1,11 +1,11 @@
-"""Le depot range chaque ROM dans le dossier de SA plateforme.
+"""The drop folder files each ROM into ITS platform's folder.
 
-Trois pieges rencontres en vrai, tous silencieux :
-  * un fichier sans title ID tombait dans la branche « INCONNU » et atterrissait
-    dans GAMES/, parmi les jeux Switch ;
-  * un retour anticipe sortait avant meme d'examiner les ROMs ;
-  * une extension partagee (.iso) n'etait pas listee du tout — le fichier
-    disparaissait de l'interface sans un mot.
+Three traps met for real, all of them silent:
+  * a file with no title ID fell into the "UNKNOWN" branch and landed in GAMES/,
+    among the Switch games;
+  * an early return left before the ROMs were even examined;
+  * a shared extension (.iso) was not listed at all — the file disappeared from
+    the interface without a word.
 """
 import os
 import sys

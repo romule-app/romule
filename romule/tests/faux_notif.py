@@ -1,9 +1,9 @@
-"""Faux Discord / Slack / Telegram / ntfy / Gotify, pour verifier la FORME.
+"""A fake Discord / Slack / Telegram / ntfy / Gotify, to check the SHAPE.
 
-Envoyer partout le meme JSON marcherait pour aucun de ces services : Discord
-veut `embeds`, Slack veut `text`, ntfy veut du texte brut avec le titre en
-en-tete. Un test qui se contenterait de « une requete est partie » laisserait
-passer cinq integrations muettes.
+Sending the same JSON everywhere would work for none of these services: Discord
+wants `embeds`, Slack wants `text`, ntfy wants plain text with the title in a
+header. A test content with "a request went out" would let five mute
+integrations through.
 """
 import json, sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer

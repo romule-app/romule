@@ -1,4 +1,4 @@
-"""Activer l'authentification ne doit JAMAIS enfermer dehors celui qui l'active."""
+"""Enabling authentication must NEVER lock out whoever enables it."""
 import http.cookiejar, json, os, socket, subprocess, sys, tempfile, time
 import urllib.error, urllib.parse, urllib.request
 from pathlib import Path
