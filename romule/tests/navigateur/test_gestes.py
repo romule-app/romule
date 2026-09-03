@@ -1,38 +1,38 @@
-"""Aucun element cliquable n'est inerte.
+"""No clickable element is inert.
 
-C'est le filet de la phase 4. On remplace 153 gestionnaires `on*=` en ligne
-par de la delegation ; le risque propre a cette operation est qu'un bouton
-cesse de repondre. Ce defaut-la est INVISIBLE cote serveur : aucune requete
-n'echoue, aucune trace n'est ecrite, rien ne casse — le bouton ne fait
-simplement plus rien. C'est deja arrive dans ce projet.
+This is phase 4's safety net. We replace 153 inline `on*=` handlers with
+delegation; the risk specific to that operation is that a button stops
+answering. That defect is INVISIBLE server-side: no request fails, no trace is
+written, nothing breaks — the button simply does nothing any more. It has
+already happened in this project.
 
-Le test doit donc exister AVANT la premiere conversion, et rester vert a
-chaque etape intermediaire, alors meme que les deux mecanismes coexistent.
+So the test must exist BEFORE the first conversion, and stay green at every
+intermediate step, even while the two mechanisms coexist.
 
-Comment on sait qu'un element repond
--------------------------------------
-Un gestionnaire en ligne se lit dans le DOM. Un ecouteur pose par
-`addEventListener` ne s'y lit pas : il n'existe nulle part dans l'arbre. On
-enveloppe donc `addEventListener` AVANT le chargement de la page et on note
-sur quels elements il est appele. Un element est couvert s'il porte un
-gestionnaire en ligne, s'il a recu un ecouteur en propre, ou s'il porte un
-`data-act` sous un ancetre qui en a recu un — la forme deleguee.
+How we know an element answers
+------------------------------
+An inline handler can be read from the DOM. A listener set by
+`addEventListener` cannot: it exists nowhere in the tree. So we wrap
+`addEventListener` BEFORE the page loads and note which elements it is called
+on. An element is covered if it carries an inline handler, if it received a
+listener of its own, or if it carries a `data-act` under an ancestor that
+received one — the delegated form.
 
-Le troisieme cas est le seul qui puisse mentir : une delegation posee sur
-`document` rendrait TOUT « couvert ». C'est pourquoi il exige `data-act`, et
-c'est pourquoi les deux controles suivants existent.
+The third case is the only one that can lie: a delegation set on `document`
+would make EVERYTHING "covered". That is why it requires `data-act`, and why the
+two checks that follow exist.
 
-Les deux controles qui empechent le filet de mentir
----------------------------------------------------
-Un `data-act` mal orthographie produit exactement le symptome qu'on cherche a
-eviter : l'element parait couvert, et ne fait rien. On verifie donc que chaque
-`data-act` present a l'ecran figure dans la liste blanche `app.ACTES`, et que
-chaque nom de cette liste designe une fonction qui existe reellement.
+The two checks that stop the net from lying
+-------------------------------------------
+A misspelled `data-act` produces exactly the symptom we are trying to avoid: the
+element looks covered, and does nothing. So we check that every `data-act`
+present on screen appears in the `app.ACTES` allow-list, and that every name in
+that list points at a function that really exists.
 
-La liste blanche n'est pas une precaution de style. Sans elle, la delegation
-serait `app[el.dataset.act]()` — un appel dynamique par nom, ou un attribut
-suffirait a atteindre n'importe quelle methode, y compris celles qui
-suppriment. C'est la meme famille de faille que l'XSS corrigee en 0.1.0.
+The allow-list is not a stylistic precaution. Without it, the delegation would be
+`app[el.dataset.act]()` — a dynamic call by name, where one attribute would be
+enough to reach any method, including the ones that delete. It is the same family
+of hole as the XSS fixed in 0.1.0.
 """
 
 import os
@@ -45,17 +45,16 @@ sys.path.insert(0, str(ICI))
 from cdp import Navigateur
 from ecrans import parcourir
 
-# `LUDO_URL` est OBLIGATOIRE, et il n'y a volontairement pas de defaut.
+# `LUDO_URL` is REQUIRED, and there is deliberately no default.
 #
-# Il y en avait un : `http://127.0.0.1:8799/`. Or c'est un port ou tourne
-# facilement une VRAIE instance — la mienne, en l'occurrence. Lance seul, ce
-# test pilotait donc la ludotheque de quelqu'un : il rapportait « 189
-# gestionnaires en ligne » parce qu'il examinait une version d'il y a trois
-# mois, et il cliquait dans de vraies donnees.
+# There used to be one: `http://127.0.0.1:8799/`. But that is a port where a REAL
+# instance easily runs — mine, as it happens. Run on its own, this test therefore
+# drove someone's library: it reported "189 inline handlers" because it was
+# examining a three-month-old version, and it clicked inside real data.
 #
-# Un defaut qui vise un service plausible est pire qu'une erreur : il donne un
-# resultat, et ce resultat parle d'autre chose. `lancer_tests.py` pose la
-# variable ; qui veut viser un serveur de developpement la pose lui-meme.
+# A default that aims at a plausible service is worse than an error: it gives a
+# result, and that result talks about something else. `lancer_tests.py` sets the
+# variable; whoever wants to aim at a development server sets it themselves.
 URL = os.environ.get("LUDO_URL", "")
 if not URL:
     print("LUDO_URL n'est pas posee. Lance `python3 lancer_tests.py "
@@ -76,8 +75,8 @@ def t(nom, cond, detail=""):
         print("      ECHEC %s   %s" % (nom, detail))
 
 
-# Pose avant tout script de la page : `addEventListener` doit etre enveloppe
-# avant qu'app.js n'ait eu l'occasion de l'appeler.
+# Set before any of the page's scripts: `addEventListener` must be wrapped
+# before app.js has had a chance to call it.
 MOUCHARD = r"""
 (function () {
   const vrai = EventTarget.prototype.addEventListener;
@@ -101,29 +100,27 @@ MOUCHARD = r"""
 })()
 """
 
-# Ce qui compte comme cliquable. Les balises d'abord, puis les elements que le
-# STYLE annonce comme cliquables : `cursor: pointer` est une promesse faite a
-# l'utilisateur, et c'est precisement sur ces div-boutons que l'inertie passe
-# inapercue.
+# What counts as clickable. The tags first, then the elements the STYLE
+# announces as clickable: `cursor: pointer` is a promise made to the user, and it
+# is precisely on those div-buttons that inertia goes unnoticed.
 #
-# Un element repond de CINQ facons, et les cinq sont necessaires — la premiere
-# version de ce test n'en connaissait qu'une et rapportait 54 faux positifs :
+# An element answers in FIVE ways, and all five are needed — this test's first
+# version knew only one and reported 54 false positives:
 #
-#   1. un attribut `on*=` : c'est ce que la phase 4 retire ;
-#   2. une PROPRIETE `el.onclick = fn`, posee en JavaScript. Elle n'apparait
-#      dans aucun attribut et `querySelectorAll('[onclick]')` ne la voit pas ;
-#   3. un ecouteur recu en propre, note par le mouchard ;
-#   4. la forme deleguee : une cle `data-*` connue, sous un ancetre qui ecoute ;
-#   5. son propre fonctionnement natif : un `select`, une case a cocher, ou le
-#      `<label>` qui les enveloppe. Le geste a un effet visible et la valeur
-#      est relue a l'enregistrement — l'element n'est pas inerte, il n'a
-#      simplement pas besoin de code.
+#   1. an `on*=` attribute: that is what phase 4 removes;
+#   2. a PROPERTY `el.onclick = fn`, set in JavaScript. It appears in no
+#      attribute and `querySelectorAll('[onclick]')` does not see it;
+#   3. a listener received in its own right, noted by the probe;
+#   4. the delegated form: a known `data-*` key, under a listening ancestor;
+#   5. its own native behaviour: a `select`, a checkbox, or the `<label>` that
+#      wraps them. The gesture has a visible effect and the value is read back on
+#      saving — the element is not inert, it simply needs no code.
 #
-# Le point 4 est le seul qui pourrait mentir : `document` porte un ecouteur de
-# clic (`cacherApercu`), donc « un ancetre ecoute » est vrai pour TOUT
-# l'arbre. C'est pourquoi la cle est exigee, et pourquoi elle est prise dans
-# une liste FERMEE. Les cles autres que `data-act` sont les delegations qui
-# existaient avant la phase 4 ; cette liste doit retrecir, jamais grandir.
+# Point 4 is the only one that could lie: `document` carries a click listener
+# (`cacherApercu`), so "an ancestor listens" is true for the WHOLE tree. That is
+# why the key is required, and why it is drawn from a CLOSED list. The keys other
+# than `data-act` are the delegations that existed before phase 4; this list must
+# shrink, never grow.
 INERTES = r"""
 (function () {
   const CLIQUABLE = 'button, [role=button], [onclick], [data-act], '
@@ -181,7 +178,7 @@ INERTES = r"""
 })()
 """
 
-# Le compteur d'avancement, et les deux controles sur la liste blanche.
+# The progress counter, and the two checks on the allow-list.
 RELEVE = r"""
 (function () {
   const enLigne = document.querySelectorAll(
@@ -210,13 +207,12 @@ def main():
                 break
             time.sleep(1.5)
 
-        t("le mouchard est en place", n.js("typeof window.__ecoute") == "function")
+        t("the probe is in place", n.js("typeof window.__ecoute") == "function")
 
-        print("   -- le detecteur voit-il ce qu'il pretend voir ? --")
-        # Un filet qu'on n'a jamais vu attraper quoi que ce soit ne prouve
-        # rien. On lui presente donc les cinq formes de couverture plus la
-        # forme nue, dans un coin de page reel, et on verifie qu'il ne rapporte
-        # QUE celle qui est reellement inerte.
+        print("   -- does the detector see what it claims to see? --")
+        # A net nobody has ever seen catch anything proves nothing. So we show it
+        # the five forms of coverage plus the bare form, in a real corner of the
+        # page, and check it reports ONLY the one that is really inert.
         n.js("""
           (function () {
             const b = document.createElement('div');
@@ -242,11 +238,11 @@ def main():
         t("un attribut on* -> ignore", not presente('e-attr'))
         t("une propriete el.onclick -> ignore", not presente('e-prop'))
         t("un ecouteur en propre -> ignore", not presente('e-propre'))
-        t("une delegation sur l'ancetre -> ignore", not presente('e-delegue'))
-        # `e-sanscle` n'a pas de cle `data-*` : l'ancetre a beau ecouter, rien
-        # ne dit qu'il le concerne. C'est exactement la fausse assurance que la
-        # liste fermee de cles est la pour empecher.
-        t("sous un ancetre qui ecoute mais sans cle -> rapporte",
+        t("a delegation on the ancestor -> ignored", not presente('e-delegue'))
+        # `e-sanscle` has no `data-*` key: the ancestor may well listen, but
+        # nothing says it concerns this element. That is exactly the false
+        # assurance the closed list of keys exists to prevent.
+        t("under a listening ancestor but with no key -> reported",
           presente('e-sanscle'), sorted(vu)[:4])
         n.js("document.getElementById('zone-essai').remove()")
 
@@ -255,14 +251,14 @@ def main():
         t("aucun element cliquable inerte", not inertes,
           "%d : %s" % (len(inertes), inertes[:4]))
 
-        print("   -- le fond de fenetre ferme, l'interieur non --")
-        # Quatre panneaux portaient `onclick="event.stopPropagation()"` pour
-        # empecher le clic d'atteindre le fond. La delegation ecoute sur
-        # `document` : arreter la propagation la n'aurait plus aucun effet.
-        # On l'a donc retire — en verifiant que le comportement tient, parce
-        # qu'il tient pour une AUTRE raison : `closeGame` et `closeDialog`
-        # comparent `e.target` a l'element precis du fond. Le test le prouve,
-        # au lieu de faire confiance a la lecture.
+        print("   -- the dialog backdrop closes, its inside does not --")
+        # Four panels carried `onclick="event.stopPropagation()"` to stop the
+        # click reaching the backdrop. The delegation listens on `document`:
+        # stopping propagation there would have no effect any more. So it was
+        # removed — while checking the behaviour holds, because it holds for
+        # ANOTHER reason: `closeGame` and `closeDialog` compare `e.target` to the
+        # backdrop's precise element. The test proves it, instead of trusting a
+        # reading.
         n.js("app.tab('jeux'); (function(){const c=document.querySelector("
              "'#lib .gcard'); if (c) app.openGame(c.dataset.key);})()")
         time.sleep(1.2)
@@ -277,16 +273,15 @@ def main():
         t("un clic sur le FOND la ferme",
           not n.js("document.getElementById('modal').classList.contains('open')"))
 
-        print("   -- la politique de contenu ne bloque rien --")
-        # Ce controle vient APRES le balayage : il doit avoir vu tous les
-        # ecrans se construire, puisque c'est au rendu qu'un script en ligne
-        # serait refuse.
+        print("   -- the content policy blocks nothing --")
+        # This check comes AFTER the sweep: it must have seen every screen being
+        # built, since it is at render time that an inline script would be
+        # refused.
         viol = n.js("window.__csp || []") or []
-        t("aucune violation de la politique de contenu", not viol, viol[:3])
-        # Vert ne veut rien dire tant qu'on n'a pas vu rouge. On provoque donc
-        # une violation : un script en ligne ajoute a la page. S'il s'execute,
-        # c'est que l'en-tete n'arrive pas — et le controle ci-dessus ne
-        # prouvait rien.
+        t("no content-policy violation", not viol, viol[:3])
+        # Green means nothing until red has been seen. So we provoke a violation:
+        # an inline script added to the page. If it runs, the header is not
+        # arriving — and the check above proved nothing.
         n.js("""
           (function () {
             window.__temoin = 'pas execute';
@@ -302,10 +297,10 @@ def main():
           len(n.js("window.__csp || []") or []) > len(viol),
           n.js("window.__csp || []"))
 
-        print("   -- liste blanche des actions --")
-        # `app.ACTES` n'existe pas encore au debut de la phase 4 : tant qu'il
-        # n'y a aucun `data-act`, il n'y a rien a verifier, et exiger la liste
-        # ferait echouer le filet avant meme la premiere conversion.
+        print("   -- the actions' allow-list --")
+        # `app.ACTES` does not exist yet at the start of phase 4: as long as
+        # there is no `data-act`, there is nothing to check, and requiring the
+        # list would fail the net before the first conversion.
         vus = set()
         restants = 0
         for code in __import__("ecrans").ETAPES:
@@ -318,8 +313,8 @@ def main():
             vus |= set(r.get("actes") or [])
             restants = max(restants, r.get("enLigne", 0))
 
-        # Une action speciale est une entree de table, pas une methode : elle
-        # est autorisee au meme titre, et c'est la table qui la definit.
+        # A special action is a table entry, not a method: it is allowed on the
+        # same footing, and the table is what defines it.
         blanche = set(n.js("Array.from(app.ACTES || [])") or []) \
             | set(n.js("Object.keys(app.ACTES_SPECIAUX || {})") or [])
         if vus or blanche:
