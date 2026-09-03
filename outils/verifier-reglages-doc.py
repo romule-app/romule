@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Chaque reglage du code a-t-il sa ligne dans la reference ?
+"""Does every setting in the code have its line in the reference?
 
-Une documentation qui derive du code est pire qu'absente : elle fait chercher
-un champ qui n'existe pas, ou passer a cote d'un champ qui existe.
+Documentation that drifts from the code is worse than absent: it sends you
+looking for a field that does not exist, or past a field that does.
 
-Ce controle vivait en YAML dans le workflow, donc nulle part sur une machine de
-developpement. Resultat previsible : on le decouvre en integration continue,
-apres avoir pousse. Un controle qu'on ne peut pas lancer avant de pousser est
-un controle qu'on subit.
+This check lived as YAML inside the workflow, so nowhere on a development
+machine. The predictable result: you find out about it in continuous
+integration, after pushing. A check you cannot run before pushing is a check you
+merely endure.
 """
 import os
 import re
@@ -23,7 +23,7 @@ from romule import config                                        # noqa: E402
 
 
 def epreuve():
-    """Le detecteur voit-il une absence, et se tait-il sur une presence ?"""
+    """Does the detector see an absence, and keep quiet about a presence?"""
     doc = "| `un_reglage` | ... |"
     cites = set(re.findall(r"`([a-z][a-z_]+)`", doc))
     if "un_reglage" not in cites:
