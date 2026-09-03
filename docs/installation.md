@@ -175,13 +175,13 @@ docker logs romule              # the URL with your access token
 ```
 
 !!! tip "Available tags"
-    `latest` follows the newest release. `0.2.0` pins an exact version and
-    `0.2` follows its patches — pin one of those if you would rather choose
+    `latest` follows the newest release. `0.3.0` pins an exact version and
+    `0.3` follows its patches — pin one of those if you would rather choose
     when you upgrade. The image is multi-arch (`amd64` and `arm64`) and needs
     no authentication.
 
     ```sh
-    docker pull ghcr.io/romule-app/romule:0.2.0
+    docker pull ghcr.io/romule-app/romule:0.3.0
     ```
 
     You can also build it yourself — `docker compose up -d --build` produces
