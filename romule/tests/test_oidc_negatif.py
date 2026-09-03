@@ -1,24 +1,23 @@
-"""Ce qu'un jeton d'identite FORGE doit se voir refuser.
+"""What a FORGED identity token must be refused.
 
-La suite SSO existante ne prouvait qu'une chose : un jeton valide, emis par un
-fournisseur qui fonctionne, est accepte. C'est le chemin nominal — celui qui
-n'interesse pas un attaquant.
+The existing SSO suite proved one thing only: a valid token, issued by a working
+provider, is accepted. That is the nominal path — the one an attacker takes no
+interest in.
 
-Un verificateur de JWT est exactement le genre de code ou une erreur discrete
-est une faille et non un plantage. Chaque controle ci-dessous correspond a une
-attaque connue et documentee :
+A JWT verifier is exactly the kind of code where a quiet mistake is a hole and
+not a crash. Every check below matches a known and documented attack:
 
-  * `alg: none`        — le jeton dicte son propre algorithme, et se dispense
-                         de signature ;
-  * confusion RS256/HS — la cle PUBLIQUE, connue de tous, sert de secret HMAC ;
-  * mauvais emetteur   — un jeton valide d'un AUTRE fournisseur ;
-  * mauvais public     — un jeton valide destine a une AUTRE application ;
-  * jeton expire       — rejoue plus tard ;
-  * charge alteree     — les claims changes, la signature d'origine gardee ;
-  * kid inconnu        — une cle que le fournisseur n'a jamais publiee.
+  * `alg: none`        — the token dictates its own algorithm, and skips the
+                         signature;
+  * RS256/HS confusion — the PUBLIC key, known to all, serves as the HMAC secret;
+  * wrong issuer       — a valid token from ANOTHER provider;
+  * wrong audience     — a valid token meant for ANOTHER application;
+  * expired token      — replayed later;
+  * altered payload    — the claims changed, the original signature kept;
+  * unknown kid        — a key the provider has never published.
 
-Le dernier controle verifie qu'un jeton VALIDE passe : une suite qui refuse
-tout ne prouve rien.
+The last check verifies that a VALID token passes: a suite that refuses
+everything proves nothing.
 """
 import base64
 import hashlib
@@ -57,7 +56,7 @@ def b64u(b):
 
 
 def signer(claims, entete=None, cle=None):
-    """Forge un jeton avec l'entete et la cle demandees."""
+    """Forges a token with the requested header and key."""
     e = dict({"alg": "RS256", "kid": "test"}, **(entete or {}))
     e64 = b64u(json.dumps(e).encode())
     c64 = b64u(json.dumps(claims).encode())
@@ -79,7 +78,7 @@ def claims_valides(**remplace):
 
 
 def refuse(nom, jeton, nonce="N0NCE"):
-    """Le jeton doit etre refuse — et par une ValueError, pas par un plantage."""
+    """The token must be refused — and by a ValueError, not by a crash."""
     try:
         auth.verifier_id_token(jeton, DOC, "ludotheque", nonce)
     except ValueError as exc:
@@ -109,14 +108,14 @@ try:
     DOC = {"issuer": BASE, "jwks_uri": BASE + "/jwks"}
 
     print("   -- 1. l'algorithme annonce par le jeton ne fait pas foi --")
-    # `alg: none` : la faille de reference. La signature est vide, et une
-    # bibliotheque naive fait confiance a l'entete pour savoir quoi verifier.
+    # `alg: none`: the reference hole. The signature is empty, and a naive
+    # library trusts the header to know what to verify.
     sans_sig = (b64u(json.dumps({"alg": "none", "kid": "test"}).encode()) + "."
                 + b64u(json.dumps(claims_valides()).encode()) + ".")
     refuse("alg: none refuse", sans_sig)
 
-    # Confusion RS256/HS256 : la cle PUBLIQUE est connue de tous. Si le
-    # verificateur suit l'entete, elle devient un secret HMAC partage.
+    # RS256/HS256 confusion: the PUBLIC key is known to all. If the verifier
+    # follows the header, it becomes a shared HMAC secret.
     e64 = b64u(json.dumps({"alg": "HS256", "kid": "test"}).encode())
     c64 = b64u(json.dumps(claims_valides()).encode())
     import hmac as _hmac
@@ -130,17 +129,17 @@ try:
     print("   -- 2. la signature doit tenir --")
     jeton = signer(claims_valides())
     e, c, s = jeton.split(".")
-    # Un octet retourne dans la signature
+    # One byte flipped in the signature
     brut = bytearray(base64.urlsafe_b64decode(s + "=" * (-len(s) % 4)))
     brut[0] ^= 0x01
     refuse("signature alteree refusee", "%s.%s.%s" % (e, c, b64u(bytes(brut))))
 
-    # Charge remplacee, signature d'origine conservee : l'attaque la plus
-    # directe une fois un jeton legitime intercepte.
+    # Payload replaced, original signature kept: the most direct attack once a
+    # legitimate token has been intercepted.
     autre = b64u(json.dumps(claims_valides(sub="admin", email="pirate@ailleurs")).encode())
     refuse("charge alteree, signature d'origine refusee", "%s.%s.%s" % (e, autre, s))
 
-    # Signe avec une AUTRE cle RSA, du bon format mais inconnue du fournisseur
+    # Signed with ANOTHER RSA key, of the right shape but unknown to the provider
     import random as _r
     rnd = _r.Random(4321)
     p2, q2 = fp.premier(512, rnd), fp.premier(512, rnd)
@@ -178,14 +177,14 @@ try:
         t("fournisseur sans jwks_uri refuse", True)
 
     print("   -- 6. temoin : un jeton valide passe --")
-    # Sans ce controle, une suite qui refuse tout aurait l'air parfaite.
+    # Without this check, a suite that refuses everything would look perfect.
     try:
         c = auth.verifier_id_token(signer(claims_valides()), DOC, "ludotheque", "N0NCE")
         t("jeton valide accepte", c.get("email") == "dino@exemple.fr", c)
     except ValueError as exc:
         t("jeton valide accepte", False, str(exc))
 
-    # Le nonce n'est controle que s'il a ete demande.
+    # The nonce is only checked if it was requested.
     try:
         auth.verifier_id_token(signer(claims_valides(nonce=None)), DOC, "ludotheque", "")
         t("nonce non demande : non exige", True)

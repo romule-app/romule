@@ -1,13 +1,12 @@
-"""Les cles d'API : ce qu'elles ouvrent, et surtout ce qu'elles n'ouvrent pas.
+"""API keys: what they open, and above all what they do not.
 
-Le controle qui compte n'est pas « une cle valide ouvre `/api/v1` » — il est
-« une cle valide ne peut PAS atteindre `/api/comptes` ». Un test qui verifie
-seulement la premiere moitie laisserait passer une cle qui ouvre tout, ce qui
-est exactement le defaut qu'une cle d'API est censee eviter : donner a un
-tableau de bord le droit de supprimer des comptes.
+The check that matters is not "a valid key opens `/api/v1`" — it is "a valid key
+CANNOT reach `/api/comptes`". A test that checks only the first half would let
+through a key that opens everything, which is exactly the defect an API key is
+meant to avoid: giving a dashboard the right to delete accounts.
 
-La portee est verifiee ici sur la fonction de decision elle-meme ; le parcours
-complet par HTTP l'est dans `test_apiv1.py`.
+The scope is checked here on the decision function itself; the full HTTP journey
+is checked in `test_apiv1.py`.
 """
 import sys
 import tempfile
@@ -15,8 +14,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-# Le magasin doit vivre dans un dossier jetable : ce test cree et revoque des
-# cles, et il n'a rien a faire dans le fichier d'etat de l'utilisateur.
+# The store must live in a throwaway folder: this test creates and revokes keys,
+# and it has no business inside the user's state file.
 _TMP = Path(tempfile.mkdtemp(prefix="romule-cles-"))
 from romule import apikeys                                      # noqa: E402
 apikeys.FICHIER = _TMP / "_romule-cles.json"
@@ -42,8 +41,8 @@ def test_creation():
     t("le prefixe est court", len(fiche["prefixe"]) == 12, fiche["prefixe"])
     t("la cle en clair n'est PAS dans la fiche",
       cle not in repr(fiche), repr(fiche)[:80])
-    # Le fichier d'etat ne doit contenir aucune cle en clair : c'est ce qui
-    # rend sa fuite inoffensive pour les cles elles-memes.
+    # The state file must hold no key in the clear: that is what makes its leak
+    # harmless for the keys themselves.
     brut = apikeys.FICHIER.read_text(encoding="utf-8")
     t("le fichier ne contient pas la cle en clair", cle not in brut)
     t("le fichier contient une empreinte", "empreinte" in brut)
@@ -64,8 +63,8 @@ def test_verification():
     t("None est refuse", apikeys.verifier(None) is None)
     t("un secret sans marqueur est refuse",
       apikeys.verifier(cle[4:]) is None)
-    # Le meme secret a un caractere pres : la comparaison porte sur
-    # l'empreinte entiere, pas sur le prefixe qui sert a retrouver la fiche.
+    # The same secret to within one character: the comparison is on the whole
+    # fingerprint, not on the prefix that serves to find the record.
     faux = cle[:-1] + ("a" if cle[-1] != "a" else "b")
     t("un caractere different suffit a refuser", apikeys.verifier(faux) is None)
 
@@ -76,8 +75,8 @@ def test_revocation():
     t("la revocation reussit", apikeys.revoquer(fiche["id"]))
     t("refusee apres revocation", apikeys.verifier(cle) is None)
     t("revoquer deux fois ne reussit pas", not apikeys.revoquer(fiche["id"]))
-    # Revoquee, pas supprimee : « cette cle a-t-elle servi apres que je l'ai
-    # retiree ? » est une question qu'on se pose apres coup.
+    # Revoked, not deleted: "was this key used after I withdrew it?" is a
+    # question one asks after the fact.
     ids = [k["id"] for k in apikeys.liste(avec_revoquees=True)]
     t("la cle revoquee reste consultable", fiche["id"] in ids)
     t("elle ne figure plus dans la liste courante",
@@ -93,12 +92,12 @@ def test_dernier_usage():
 
 
 def test_portee():
-    """Une cle n'ouvre QUE `/api/v1/`. C'est le controle central."""
+    """A key opens ONLY `/api/v1/`. This is the central check."""
     from romule import apiv1
     ouverts = ["/api/v1/library", "/api/v1/health", "/api/v1/jobs/abc"]
     fermes = ["/api/comptes", "/api/compte-supprimer", "/api/config",
               "/api/scan", "/", "/app.js", "/auth/connexion",
-              # Les formes qui contournent une comparaison naive de prefixe.
+              # The shapes that bypass a naive prefix comparison.
               "/api/v1", "/api/v1x/library", "/api/../api/comptes",
               "//api/v1/library", "/API/V1/library"]
     for p in ouverts:
@@ -114,12 +113,12 @@ def test_le_fichier_est_prive():
 
 
 def test_pas_de_scrypt():
-    """Le durcissement lent est correct pour un mot de passe et faux ici.
+    """Slow hardening is right for a password and wrong here.
 
-    scrypt N=2^17 mobilise ~128 Mio par calcul. Une cle est presentee a CHAQUE
-    requete : une sonde de tableau de bord deviendrait un moyen de saturer la
-    memoire du serveur. Un secret aleatoire de 256 bits n'a de toute facon
-    aucune surface de force brute a proteger.
+    scrypt N=2^17 commits ~128 MiB per computation. A key is presented on EVERY
+    request: a dashboard's probe would become a way to exhaust the server's
+    memory. A random 256-bit secret has no brute-force surface to protect
+    anyway.
     """
     src = (Path(__file__).resolve().parent.parent / "apikeys.py").read_text(
         encoding="utf-8")
