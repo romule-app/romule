@@ -1,15 +1,14 @@
-/* Polices et courbe d'animation : invariants de l'interface, hors theme.
-   Les COULEURS sont declarees plus bas, dans la couche de composants — un seul
-   endroit ou les redefinir pour changer de theme. */
+/* Fonts and easing curve: invariants of the interface, outside the theme.
+   The COLOURS are declared further down, in the component layer — one single
+   place to redefine them to change theme. */
 :root{
-  /* Une hauteur de controle et une gouttiere UNIQUES pour la barre de la
-     bibliotheque : c'est ce qui garantit que les rangees restent alignees
-     quand on y ajoute un bouton. */
-  --h-controle:44px;   /* la hauteur des pastilles et de la barre du haut */
-  /* Deux largeurs, parce que deux besoins opposes. La grille de jaquettes
-     gagne a occuper l'ecran : une colonne de plus, c'est une rangee de moins
-     a faire defiler. Une colonne de TEXTE, elle, devient penible a lire
-     au-dela d'une certaine largeur — les Reglages restent donc etroits. */
+  /* ONE control height and ONE gutter for the library bar: that is what
+     guarantees the rows stay aligned when a button is added to them. */
+  --h-controle:44px;   /* the height of the pills and of the top bar */
+  /* Two widths, because two opposite needs. The cover grid gains from filling
+     the screen: one more column is one fewer row to scroll. A column of TEXT,
+     on the other hand, becomes painful to read past a certain width — so the
+     Settings stay narrow. */
   --largeur-page:1600px;
   --largeur-texte:1180px;
   --gouttiere:12px;
@@ -51,34 +50,34 @@ nav.tabs button.active{background:var(--panel2);color:var(--amber);
 
 /* ---------------------------------------------------------------- panneaux */
 main{max-width:var(--largeur-page);margin:0 auto;padding:22px}
-/* La prose et les formulaires gardent une colonne lisible. */
+/* Prose and forms keep a readable column. */
 #panel-settings,#panel-jeux .vide{max-width:var(--largeur-texte);margin:0 auto}
 .panel{display:none}
 .panel.active{display:block;animation:enter .35s var(--ease)}
 @keyframes enter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 section{margin-bottom:30px}
-/* Le titre de section domine clairement les boutons et le corps de texte. */
+/* The section title clearly dominates the buttons and the body text. */
 h2{font-family:var(--disp);font-size:19px;letter-spacing:.01em;color:var(--ink);
   margin:0 0 5px;font-weight:600}
 .lead{color:var(--mute);font-size:12.5px;margin:0 0 14px;max-width:70ch;line-height:1.55}
 
 /* ---------------------------------------------------------------- boutons */
 .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
-/* Les boutons doivent se distinguer nettement des champs de saisie :
-   fond plus clair, texte plein contraste, jamais l'aspect d'un input vide. */
+/* Buttons must stand clearly apart from input fields: lighter background,
+   full-contrast text, never the look of an empty input. */
 button{font-family:var(--body);font-size:13px;font-weight:500;padding:8px 14px;border-radius:7px;
   cursor:pointer}
   /* fond, texte, trait et transitions : voir la couche de composants */
 
-/* Tous les types de champ texte, pas seulement `text` : un champ mot de passe
-   laisse de cote s'affichait en BLANC, avec la bordure du navigateur — le
-   defaut sautait aux yeux mais aucune regle ne le couvrait. */
+/* Every kind of text field, not only `text`: a password field left out was
+   displayed in WHITE, with the browser's own border — the defect leapt to the
+   eye but no rule covered it. */
 input[type=text],input[type=password],input[type=email],input[type=search],
 input[type=url],input[type=number],select,textarea{
   font-family:var(--mono);font-size:12.5px;
   padding:9px 11px;border-radius:7px;border:1px solid var(--rule);background:var(--panel);
   color:var(--ink);transition:border-color .15s;max-width:100%;min-width:0}
-/* les champs s'adaptent au conteneur : jamais de debordement sur petit ecran */
+/* fields fit their container: never an overflow on a small screen */
 input[type=text],input[type=password],input[type=email],input[type=search],
 input[type=url]{flex:1 1 260px}
 input:focus,select:focus,textarea:focus{outline:0;border-color:var(--indigo)}
@@ -109,17 +108,16 @@ input[type=radio]{accent-color:var(--amber);cursor:pointer}
 .row:hover{background:var(--surface-2)}
 .grow{flex:1;min-width:0}
 .fname{font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-/* signature : le title ID segmente montre POURQUOI le fichier est classe ainsi */
-/* Deux classes, une seule apparence, deux sens.
-   `.tid` porte une DONNEE — un title ID — que traduire n'aurait aucun sens ;
-   elle figure a ce titre dans CLASSES_DONNEES cote JavaScript.
-   `.mono` porte du TEXTE en petites capitales grises. La confusion entre les
-   deux tenait 49 phrases hors de portee du controle de traduction : elles
-   restaient en francais dans une interface anglaise, sans que rien ne le
-   signale. */
-/* `tid-vide` porte le LIBELLE affiche quand il n'y a pas de title ID. Il a la
-   meme apparence que `tid`, mais pas son role : `tid` est marquee « ne jamais
-   traduire », ce libelle doit l'etre. Meme separation que `cnom` / `cvide`. */
+/* signature: the segmented title ID shows WHY the file is filed this way */
+/* Two classes, one appearance, two meanings.
+   `.tid` carries DATA — a title ID — which it would make no sense to translate;
+   on that basis it appears in CLASSES_DONNEES on the JavaScript side.
+   `.mono` carries TEXT in small grey capitals. Confusing the two kept 49
+   sentences out of the translation check's reach: they stayed in French inside
+   an English interface, with nothing to say so. */
+/* `tid-vide` carries the LABEL shown when there is no title ID. It looks the
+   same as `tid`, but does not share its role: `tid` is marked "never
+   translate", this label must be. The same separation as `cnom` / `cvide`. */
 .tid,.tid-vide,.mono{font-family:var(--mono);font-size:11px;color:var(--mute);letter-spacing:.04em}
 .tid b{color:var(--amber);font-weight:700;background:var(--primary-doux);padding:0 2px;border-radius:2px}
 .tag{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.09em;
@@ -153,9 +151,9 @@ select{cursor:pointer}
 .libbar{position:sticky;top:60px;z-index:10;display:flex;gap:10px;flex-wrap:wrap;align-items:center;
   background:var(--verre);backdrop-filter:blur(8px);padding:12px 0;
   margin-bottom:var(--gouttiere)}
-/* La recherche : une loupe a gauche, le raccourci a droite. Le badge n'est pas
-   decoratif — c'est la seule chose qui annonce que le clavier ouvre la
-   recherche, et un raccourci que rien n'annonce n'existe pas. */
+/* The search: a magnifier on the left, the shortcut on the right. The badge is
+   not decorative — it is the only thing announcing that the keyboard opens the
+   search, and a shortcut nothing announces does not exist. */
 .champ-recherche{position:relative;display:flex;align-items:center;flex:1 1 260px;min-width:180px}
 .champ-recherche .loupe{position:absolute;left:11px;color:var(--mute);pointer-events:none}
 .champ-recherche .search{width:100%;padding-left:32px;padding-right:38px}
@@ -183,11 +181,11 @@ select{cursor:pointer}
 
 /* grille de jeux (jaquettes systematiques) */
 .games{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:16px}
-/* Le SURVOL n'est plus decrit ici : il appartient a la section APPARENCE, en
-   fin de fichier, qui le derive du reglage choisi par l'utilisateur. Trois
-   blocs se disputaient auparavant cette regle et c'est celui charge le plus
-   tard qui gagnait — d'ou un survol qui changeait de comportement selon la
-   largeur d'ecran. Ne pas redeclarer `.gcard:hover` ailleurs. */
+/* The HOVER is no longer described here: it belongs to the APPEARANCE section
+   at the end of the file, which derives it from the setting the user chose.
+   Three blocks used to fight over this rule and the one loaded last won — hence
+   a hover whose behaviour changed with the screen width. Do not redeclare
+   `.gcard:hover` anywhere else. */
 .gcard{background:var(--panel);border:1px solid var(--rule);border-radius:12px;overflow:hidden;
   cursor:pointer}
 .gcard .art{position:relative;aspect-ratio:3/4;background:var(--art-fond);
@@ -196,37 +194,37 @@ select{cursor:pointer}
 .gcard .ph{position:absolute;font-family:var(--disp);font-size:46px;color:var(--line-fort)}
 .gcard .badge{position:absolute;left:8px;bottom:8px;font-size:10.5px;font-weight:600;
   padding:3px 9px;border-radius:20px;backdrop-filter:blur(4px);background:var(--capot)}
-/* REGLE : une classe b-* ne porte QUE de la couleur, jamais de cadre.
-   Ces classes servent aussi bien a une pastille qu'a une ligne de texte ; y
-   attacher un box-shadow encadrait le texte partout ou on les reutilisait.
-   Le cadre, quand il est voulu, appartient a l'element (.badge, .flag), pas
-   a la couleur. Ne pas revenir en arriere. */
+/* RULE: a b-* class carries ONLY colour, never a frame.
+   These classes serve a pill as much as a line of text; attaching a box-shadow
+   to them framed the text everywhere they were reused. The frame, when it is
+   wanted, belongs to the element (.badge, .flag), not to the colour. Do not go
+   back on this. */
 .b-upd{color:var(--amber)}
 .b-conv{color:var(--indigo)}
 .b-dlc{color:var(--text-2)}
 .b-clean,.b-orph{color:var(--red)}
 .b-ok{color:var(--green)}
 .gcard.sel{border-color:var(--amber);box-shadow:0 0 0 1px var(--amber)}
-/* jeu deja pret : rien a faire dessus, on le montre sans le proposer */
+/* a game already ready: nothing to do to it, we show it without offering it */
 .gcard.fige{cursor:default;opacity:.62}
 .gcard.fige:hover{transform:none;border-color:var(--rule);box-shadow:none}
 .gcard .cap{padding:10px 11px}
 .gcard .gname{font-size:12.5px;font-weight:600;line-height:1.3;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .gcard .meta{margin-top:5px;font-family:var(--mono);font-size:10.5px;color:var(--mute)}
-/* carte d'envoi : coche de selection + bouton infos */
+/* a push card: selection tick + info button */
 .pcheck{position:absolute;top:7px;right:7px;width:22px;height:22px;border-radius:50%;
   border:2px solid var(--rule);background:var(--capot);display:flex;align-items:center;
   justify-content:center;font-size:13px;color:var(--on-primary);transition:background .15s,border-color .15s}
 .pcheck.on{background:var(--amber);border-color:var(--amber);font-weight:700}
 .gcard .pinfo{margin-top:8px;width:100%;padding:5px;font-size:11.5px;background:var(--panel2)}
 
-/* fenetre de detail */
-/* Deux fenetres partagent cette couche : la fiche d'un jeu et la liste des
-   versions. A z-index egal, c'est l'ordre du DOM qui tranche — et la liste
-   vient apres. Ouvrir une fiche DEPUIS cette liste la laissait donc derriere,
-   invisible, alors que c'est exactement le geste qu'on vient de faire.
-   `devant` est pose sur la derniere ouverte, et sur elle seule. */
+/* the detail dialog */
+/* Two dialogs share this layer: a game's detail view and the version list. At
+   equal z-index, the DOM order decides — and the list comes after. Opening a
+   detail view FROM that list therefore left it behind, invisible, although that
+   is exactly the gesture just made. `devant` is set on the last one opened, and
+   on it alone. */
 .modal.devant{z-index:51}
 .modal{position:fixed;inset:0;z-index:50;background:var(--rideau);backdrop-filter:blur(3px);
   display:none;align-items:flex-start;justify-content:center;padding:40px 18px;overflow:auto}
@@ -235,8 +233,8 @@ select{cursor:pointer}
   overflow:hidden}
 .sheet .top{display:flex;gap:16px;padding:18px;background:var(--panel2);border-bottom:1px solid var(--rule)}
 .sheet .cover{width:104px;aspect-ratio:3/4;border-radius:9px;object-fit:cover;background:var(--creux);flex-shrink:0}
-/* Une jaquette absente ou en cours de reessai : on garde la place et le
-   fond, jamais le rectangle brise du navigateur. */
+/* A cover missing or being retried: we keep the space and the background,
+   never the browser's broken rectangle. */
 img.vide{visibility:hidden}
 .sheet h3{margin:0 0 6px;font-size:17px}
 .sheet .sub2{font-family:var(--mono);font-size:11px;color:var(--mute)}
@@ -256,9 +254,9 @@ img.vide{visibility:hidden}
 
 /* vue jaquettes (ancienne, conservee) */
 .covers{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:14px}
-/* Chargement d'une plateforme : on ATTENUE, on ne vide pas. Vider faisait
-   s'effondrer la grille, remonter la page, puis tout revenir — le « saut ».
-   La hauteur ne bouge plus, seul le contenu palit. */
+/* Loading a platform: we DIM, we do not empty. Emptying made the grid
+   collapse, the page scroll up, then everything come back — the "jump". The
+   height no longer moves, only the content fades. */
 #lib.charge{opacity:.45;transition:opacity .12s var(--ease);pointer-events:none}
 @media (prefers-reduced-motion:reduce){#lib.charge{transition:none}}
 .cover{background:var(--panel);border:1px solid var(--rule);border-radius:11px;overflow:hidden;
@@ -300,13 +298,13 @@ img.vide{visibility:hidden}
 .obt{font-family:var(--disp);text-transform:uppercase;letter-spacing:.12em;font-size:15px;
   margin:0 0 6px;color:var(--amber)}
 .obox>.lead{margin-bottom:16px}
-/* Utilisees par la liste d'audit, qui a survecu a l'ancien assistant. */
+/* Used by the audit list, which outlived the old wizard. */
 .odesc{font-size:12px;color:var(--mute);margin-top:2px;line-height:1.5}
 .oaide{font-family:var(--mono);font-size:11px;color:var(--amber);margin-top:6px;
   background:var(--puits);border-radius:6px;padding:7px 9px;word-break:break-word}
 @media (max-width:640px){.obox{padding:18px}}
 
-/* invitation a ajouter l'app a l'ecran d'accueil (affichee a distance seulement) */
+/* invitation to add the app to the home screen (shown remotely only) */
 .a2hs{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px;padding:13px 16px;
   border:1px solid var(--indigo);border-radius:11px;background:var(--panneau-relief);
   animation:enter .35s var(--ease)}
@@ -316,14 +314,14 @@ img.vide{visibility:hidden}
 .a2hs button{padding:6px 12px;font-size:12.5px}
 @media (max-width:640px){.a2hs{padding:12px 13px}.a2hs .grow{flex-basis:100%}}
 
-/* bandeau : comment la console est reliee */
+/* banner: how the console is connected */
 .conn{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;
   background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:12px 15px;font-size:13px}
 .conn b{font-weight:600}
 .cdot{width:9px;height:9px;border-radius:50%;background:var(--mute);flex-shrink:0}
 .cdot.on{background:var(--green);box-shadow:0 0 0 3px var(--success-doux)}
 .cdot.off{background:var(--red);box-shadow:0 0 0 3px var(--danger-doux)}
-/* parcours d'appairage sans fil */
+/* the wireless pairing journey */
 .pairbox{background:var(--panel);border:1px solid var(--amber);border-radius:10px;
   padding:16px 18px;margin-top:12px;animation:enter .3s var(--ease)}
 .pairbox h3{margin:0 0 6px;font-size:14px}
@@ -342,7 +340,7 @@ img.vide{visibility:hidden}
 .crumb .sep{color:var(--mute)}
 .brow.up{background:var(--creux)}
 .brow.up .ic{color:var(--indigo)}
-/* simulation de l'arborescence GAMES/UPDATE/DLC */
+/* a preview of the GAMES/UPDATE/DLC tree */
 .tree{margin-top:12px}
 .tree:empty{margin:0}
 .treebox{background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:14px 16px}
@@ -361,7 +359,7 @@ img.vide{visibility:hidden}
 .dlg .dico{font-size:22px;line-height:1.2;flex-shrink:0}
 .dlg h3{margin:0 0 4px;font-size:15.5px}
 .dlg .dmsg{margin:0;font-size:13px;color:var(--mute);line-height:1.6}
-/* options a cocher : tout se decide dans une seule fenetre */
+/* tick-box options: everything is decided in one dialog */
 .dopts{display:flex;flex-direction:column;gap:8px;padding:14px 20px 0}
 .dopt{display:flex;gap:11px;align-items:flex-start;padding:11px 13px;cursor:pointer;
   border:1px solid var(--rule);border-radius:9px;background:var(--panel2);
@@ -386,14 +384,14 @@ img.vide{visibility:hidden}
 .dlg.d-ok{border-color:var(--success-trait)}
 @media (max-width:640px){.dlg .dhead{padding:16px 16px 6px}.dlg .ddet{margin:10px 16px 0}}
 
-/* ------------------------------------------------- PASTILLES DE SECTION
-   Deux pastilles, deux messages qu'il ne faut pas confondre :
+/* ---------------------------------------------------- SECTION PILLS
+   Two pills, two messages that must not be confused:
 
-     .portee  « ceci ne concerne que telle plateforme » — une information ;
-     .beta    « ceci peut mal se comporter » — une mise en garde.
+     .portee  "this only concerns that platform" — information;
+     .beta    "this may misbehave" — a warning.
 
-   Elles partageaient la meme classe. Une portee et un avertissement rendus
-   identiques, c'est apprendre a l'utilisateur a ignorer les deux. */
+   They used to share the same class. A scope and a warning rendered identically
+   teach the user to ignore both. */
 .portee,.beta{display:inline-block;font-family:var(--body);font-size:9.5px;
   font-weight:700;text-transform:uppercase;letter-spacing:.08em;padding:2px 6px;
   border-radius:4px;vertical-align:middle;margin-left:6px}
@@ -407,7 +405,7 @@ img.vide{visibility:hidden}
 .erbadge.b-upd{color:var(--amber)}
 .erbadge.b-orph{color:var(--red)}
 .erbadge.b-dlc{color:var(--mute)}
-/* bloc des rapports dans la fiche d'un jeu */
+/* the reports block inside a game's detail view */
 .erbox{background:var(--panel2);border:1px solid var(--rule);border-radius:9px;
   padding:12px 14px;margin-bottom:14px}
 .erbox>b{font-size:12.5px}
@@ -420,7 +418,7 @@ img.vide{visibility:hidden}
   background:var(--capot-leger)}
 .errow button{padding:4px 10px;font-size:11.5px}
 
-/* resume de l'activation des MAJ/DLC dans Eden */
+/* summary of the update/DLC activation in Eden */
 .nandsum{font-size:12.5px;color:var(--mute);background:var(--panel);border:1px solid var(--rule);
   border-radius:9px;padding:10px 14px;margin-bottom:12px}
 .nandsum b{font-family:var(--disp);font-size:15px;color:var(--ink);margin-right:2px}
@@ -432,7 +430,7 @@ img.vide{visibility:hidden}
 #nand .badge{position:static;font-size:10.5px;padding:2px 8px;border-radius:20px;
   background:var(--capot-leger)}
 
-/* ligne d'information discrete : une action secondaire sans bloc encombrant */
+/* a quiet information line: a secondary action without a bulky block */
 .hintline{display:flex;align-items:center;gap:11px;flex-wrap:wrap;padding:10px 14px;
   border:1px solid var(--rule);border-radius:9px;background:var(--panel);
   font-size:12.5px;color:var(--mute);margin-top:12px}
@@ -443,7 +441,7 @@ img.vide{visibility:hidden}
 .hinthelp{font-size:12.5px;color:var(--mute);line-height:1.6;padding:11px 14px;margin-top:8px;
   border-left:2px solid var(--indigo);background:var(--panel);border-radius:0 8px 8px 0}
 
-/* section repliee « aller plus loin » : un vrai titre, pas une ligne perdue */
+/* the folded "go further" section: a real heading, not a stray line */
 .advanced{margin-top:10px;border-top:1px solid var(--rule);padding-top:18px}
 .advanced>summary{cursor:pointer;list-style:none;padding:4px 0}
 .advanced>summary::-webkit-details-marker{display:none}
@@ -463,7 +461,7 @@ img.vide{visibility:hidden}
 .brow.file .fn{color:var(--mute)}
 .brow.game .ic{color:var(--green)}
 
-/* legende des pastilles */
+/* the pill legend */
 .legend{margin-bottom:18px;border:1px solid var(--rule);border-radius:9px;background:var(--panel);padding:0 14px}
 .legend summary{cursor:pointer;padding:11px 0;font-size:12.5px;color:var(--mute);list-style:none}
 .legend summary::-webkit-details-marker{display:none}
@@ -473,7 +471,7 @@ img.vide{visibility:hidden}
 .legrid span{font-size:12px;color:var(--mute);display:flex;align-items:center;gap:8px}
 .legend .flag{font-style:normal;flex-shrink:0}
 
-/* manifeste de transfert : montre le routage GAMES / UPDATE / DLC */
+/* the transfer manifest: shows the GAMES / UPDATE / DLC routing */
 .manifest{background:var(--panel);border:1px solid var(--rule);border-radius:10px;
   padding:14px;margin-top:12px;animation:enter .3s var(--ease)}
 .mfhead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;
@@ -488,9 +486,9 @@ img.vide{visibility:hidden}
   display:flex;justify-content:space-between;gap:12px}
 .mfitem span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
-/* ---------------------------------------------------------------- reglages */
-/* Patron classique d'un ecran de reglages : une colonne lisible, groupee par
-   theme, chaque ligne = libelle a gauche / controle a droite. */
+/* ---------------------------------------------------------------- settings */
+/* The classic settings-screen pattern: one readable column, grouped by topic,
+   each row = label on the left / control on the right. */
 .setwrap{max-width:820px;margin:0 auto}
 .setgroup{background:var(--panel);border:1px solid var(--rule);border-radius:12px;
   margin-bottom:16px;overflow:hidden}
@@ -502,9 +500,9 @@ img.vide{visibility:hidden}
 .setgroup>.setrow:first-of-type,.setgt+.setrow{border-top:0}
 .setrow:hover{background:var(--surface-2)}
 .setlab{flex:1 1 auto;min-width:0}
-/* `>` volontaire : seul le TITRE de la ligne est un bloc. Sans cela, une
-   emphase <b> dans la description passait a la ligne — « Le dossier parent de
-   / toutes / tes plateformes… ». */
+/* `>` is deliberate: only the row's TITLE is a block. Without it, a <b>
+   emphasis inside the description broke onto its own line — "The parent folder
+   of / all / your platforms…". */
 .setlab > b{display:block;font-size:13.5px;font-weight:600;margin-bottom:3px}
 .setlab span b{font-weight:600;color:var(--ink)}
 .setlab span{display:block;font-size:12px;color:var(--mute);line-height:1.55}
@@ -514,22 +512,22 @@ img.vide{visibility:hidden}
 .setctl input[type=url],.setctl select,.setctl textarea{width:100%}
 .setctl input[type=number]{width:88px;text-align:center}
 .setctl button{white-space:nowrap}
-/* reglage visible mais sans effet avec l'option courante : on l'estompe et on
-   explique pourquoi, plutot que de le faire disparaitre */
+/* a setting visible but inert with the current option: we dim it and explain
+   why, rather than make it disappear */
 .setrow.inactive .setlab b,.setrow.inactive .setctl{opacity:.5}
-/* La note etait engendree par `content: attr(data-note)`. Un texte produit par
-   le CSS n'est jamais un noeud du document : ni l'observateur de traduction, ni
-   le test qui cherche du francais a l'ecran, ni aucun outil ne peut le voir. Il
-   ne pouvait donc pas etre traduit, et personne ne pouvait s'en apercevoir.
-   C'est maintenant un vrai element, `.setnote`, rempli par `textContent`. */
+/* The note used to be generated by `content: attr(data-note)`. Text produced
+   by the CSS is never a node of the document: neither the translation observer,
+   nor the test that looks for French on screen, nor any tool can see it. So it
+   could not be translated, and nobody could notice. It is now a real element,
+   `.setnote`, filled through `textContent`. */
 .setrow.inactive .setlab .setnote{color:var(--amber);opacity:.85}
 .setnote:empty{display:none}
-/* Plusieurs controles pour UN reglage (deux identifiants, un bouton de test).
-   `.setctl` est une rangee : sans ce variant, les champs se partageaient la
-   largeur et le premier tombait a 24 px. */
+/* Several controls for ONE setting (two identifiers, a test button). `.setctl`
+   is a row: without this variant, the fields shared the width and the first one
+   dropped to 24 px. */
 .setctl.pile{flex-direction:column;align-items:stretch;gap:8px}
-/* `flex:1 1 260px` porte sur la LARGEUR en rangee, sur la HAUTEUR en colonne :
-   sans cette remise a plat, le premier champ montait a 260 px de haut. */
+/* `flex:1 1 260px` applies to the WIDTH in a row, to the HEIGHT in a column:
+   without this reset, the first field grew to 260 px tall. */
 .setctl.pile > *{width:100%;flex:0 0 auto}
 .setctl.pile button{width:auto;align-self:flex-start}
 
@@ -541,13 +539,13 @@ img.vide{visibility:hidden}
 .setadv>summary::-webkit-details-marker{display:none}
 .setadv>summary::after{content:" ▸";color:var(--mute)}
 .setadv[open]>summary::after{content:" ▾"}
-/* La confirmation d'enregistrement s'affiche dans le sommaire colle. */
+/* The save confirmation is shown in the sticky table of contents. */
 .setnav-etat{margin-left:auto;align-self:center;padding:0 12px;
   font-family:var(--mono);font-size:11px;color:var(--green);
   opacity:0;transition:opacity .2s var(--ease)}
 .setnav-etat.okflash{opacity:1}
 
-/* interrupteur : plus lisible qu'une case a cocher pour un oui/non */
+/* a switch: more readable than a checkbox for a yes/no */
 .sw{position:relative;display:inline-block;width:44px;height:25px;cursor:pointer;flex-shrink:0}
 .sw input{opacity:0;width:0;height:0;position:absolute}
 .sw span{position:absolute;inset:0;border-radius:25px;background:var(--rule);
@@ -568,14 +566,13 @@ img.vide{visibility:hidden}
 
 /* ------------------------------------------------------- mise a jour
 
-   Une invitation, pas une alerte. La pastille n'apparait que lorsqu'il y a
-   VRAIMENT quelque chose a lire, et elle n'empeche rien : on peut l'ignorer
-   pendant des semaines.
+   An invitation, not an alert. The pill only appears when there is REALLY
+   something to read, and it blocks nothing: it can be ignored for weeks.
 
-   L'animation est une respiration lente, pas un clignotement : un element qui
-   clignote se lit comme une panne, et on finit par ne plus le voir. Elle
-   s'arrete au survol — le regard est deja dessus — et elle n'existe pas du
-   tout pour qui demande moins de mouvement. */
+   The animation is a slow breath, not a blink: an element that blinks reads as
+   a fault, and you end up not seeing it any more. It stops on hover — the eye
+   is already on it — and it does not exist at all for whoever asks for less
+   motion. */
 .majpuce{display:inline-flex;align-items:center;gap:7px;
   padding:5px 11px 5px 9px;border-radius:20px;cursor:pointer;
   border:1px solid var(--amber);background:var(--primary-doux);
@@ -591,24 +588,24 @@ img.vide{visibility:hidden}
   50%{opacity:.55;box-shadow:0 0 0 5px transparent}
 }
 @media (prefers-reduced-motion:reduce){.majpoint{animation:none}}
-/* Sur un petit ecran, le mot disparait : le point suffit a dire qu'il se passe
-   quelque chose, et la place manque. */
+/* On a small screen the word disappears: the dot is enough to say something is
+   happening, and the room is not there. */
 @media (max-width:700px),(max-height:560px){.majpuce .majtxt{display:none}
   .majpuce{padding:6px}}
 
-/* Les notes de version : du texte brut rendu lisible, jamais du HTML. */
+/* The release notes: plain text made readable, never HTML. */
 .majnotes{margin:0;max-height:46vh;overflow:auto;white-space:pre-wrap;
   font-size:12.5px;line-height:1.65;color:var(--mute)}
 .majnotes strong{color:var(--ink);font-weight:600}
 
-/* ---------------------------------------------------------------- dock bas */
-/* pastille : du nouveau dans le journal, sans l'ouvrir de force */
+/* --------------------------------------------------------------- bottom dock */
+/* a pill: something new in the log, without forcing it open */
 #journalbtn.news{border-color:var(--amber);color:var(--amber)}
 #journalbtn.news::after{content:"";display:inline-block;width:6px;height:6px;margin-left:6px;
   border-radius:50%;background:var(--amber);vertical-align:middle}
 #journal{max-width:var(--largeur-page);margin:0 auto;padding:0 22px;max-height:0;overflow:hidden;
   transition:max-height .35s var(--ease)}
-/* hauteur relative : le journal ne monopolise jamais un petit ecran */
+/* a relative height: the log never takes over a small screen */
 .jbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 0}
 .jbar .chip{padding:4px 10px;font-size:11.5px}
 .jbar .chip b{font-size:11.5px;margin-left:4px}
@@ -632,14 +629,15 @@ img.vide{visibility:hidden}
 .jempty{padding:16px;text-align:center;color:var(--mute);font-size:12px}
 
 /* ---------------------------------------------------------------- toasts */
-/* Une notification informe, elle ne se manipule pas : elle ne doit jamais
-   capter un appui. Sur telephone, la pile couvrait les cartes et le bouton
-   « Détails » ne repondait plus pendant plusieurs secondes. */
+/* A notification informs, it is not operated: it must never catch a tap. On a
+   phone, the stack covered the cards and the "Details" button stopped answering
+   for several seconds. */
 .toasts{position:fixed;right:18px;bottom:64px;z-index:40;display:flex;flex-direction:column;
   gap:9px;max-width:340px;pointer-events:none}
 .toast{pointer-events:none}
-/* Un toast qui porte une action doit pouvoir etre clique : les autres sont
-   volontairement transparents au pointeur pour ne jamais gener un geste. */
+/* A toast that carries an action must be clickable: the others are
+   deliberately transparent to the pointer so as never to get in a gesture's
+   way. */
 .toast.agir{pointer-events:auto;display:flex;align-items:center;gap:12px}
 .toast.agir button{flex:0 0 auto}
 .toast{background:var(--panel2);border:1px solid var(--rule);border-left:3px solid var(--indigo);
@@ -659,29 +657,27 @@ img.vide{visibility:hidden}
   #sysel{min-width:140px}
 }
 
-/* Le bouton de repli n'existe que sur telephone. */
+/* The fold button only exists on a phone. */
 .replier{display:none}
 
-/* telephone et petits ecrans de console */
-/* Le repli se declenche sur la largeur OU sur la HAUTEUR.
-   La virgule est un « ou ». Une console portable fait 720 px de large — elle
-   passait donc a cote du seuil de 700 — mais seulement 405 px de haut : les
-   trois rangees de reglages y remplissaient l'ecran entier et AUCUN jeu
-   n'etait visible. Trouve en fabriquant la maquette du README, pas par un
-   test : l'audit responsive verifie ce qui est atteignable, pas ce qu'on voit
-   en arrivant. */
+/* phones and small handheld screens */
+/* The fold triggers on the width OR on the HEIGHT.
+   The comma is an "or". A handheld is 720 px wide — so it slipped past the
+   700 px threshold — but only 405 px tall: the three setting rows filled the
+   whole screen there and NO game was visible. Found while building the README's
+   mockup, not by a test: the responsive audit checks what is reachable, not
+   what you see on arrival. */
 @media (max-width:700px), (max-height:560px){
-  /* Mesure : 19 controles entre le haut de l'ecran et la premiere jaquette.
-     On fait defiler un panneau de reglages pour atteindre le contenu. Les
-     rangees de filtre et de tri se replient donc derriere un seul bouton, et
-     la recherche reste, elle, toujours accessible. */
+  /* Measured: 19 controls between the top of the screen and the first cover.
+     You scroll through a settings panel to reach the content. So the filter and
+     sort rows fold behind a single button, while the search itself stays
+     reachable at all times. */
   .replier{display:inline-flex;align-items:center}
   #filters,#toolbar{display:none}
-  /* « Actualiser » et « Fiches manquantes » ne sont pas des gestes du
-     quotidien : sur un ecran de 405 px de haut, ils repoussaient la premiere
-     jaquette hors de la vue. Ils rejoignent le repli, et reapparaissent avec
-     lui. Restent trois controles avant le contenu : la plateforme, la
-     recherche, et le bouton qui ouvre le reste. */
+  /* "Refresh" and "Missing entries" are not everyday gestures: on a 405 px
+     tall screen, they pushed the first cover out of sight. They join the fold,
+     and reappear with it. Three controls remain before the content: the
+     platform, the search, and the button that opens the rest. */
   .repliable{display:none}
   body.filtres-ouverts .repliable{display:inline-flex}
   body.filtres-ouverts #filters{display:flex}
@@ -708,7 +704,7 @@ img.vide{visibility:hidden}
   h2{font-size:11.5px}
   .steps{padding-left:16px}
   .steps input{margin:6px 0 0;display:block;width:100%}
-  /* reglages : le controle passe sous son libelle, en pleine largeur */
+  /* settings: the control moves under its label, full width */
   .setrow{flex-direction:column;align-items:stretch;gap:10px;padding:14px}
   .setctl{width:100%;max-width:100%;justify-content:flex-start}
   .setctl button{width:100%}
@@ -716,7 +712,7 @@ img.vide{visibility:hidden}
   .setgt{padding:12px 14px}
 }
 
-/* ecrans tactiles : cibles plus larges, pas d'effets de survol trompeurs */
+/* touch screens: larger targets, no misleading hover effects */
 @media (pointer:coarse){
   button{padding:11px 15px;font-size:13.5px}
   .chip{padding:9px 14px}
@@ -725,30 +721,30 @@ img.vide{visibility:hidden}
   .row{padding:12px 14px}
   .brow{padding:13px}
 
-  /* `.gcard:hover` n'est plus neutralise ici : la section APPARENCE enferme
-     desormais toute l'animation de carte dans `@media (hover:hover)`, qui est
-     la question reellement posee — « le survol existe-t-il ? » — la ou
-     `pointer:coarse` demandait « le doigt est-il gros ? ». Un portable a
-     ecran tactile repondait oui aux deux et perdait l'animation. */
+  /* `.gcard:hover` is no longer neutralised here: the APPEARANCE section now
+     encloses the whole card animation in `@media (hover:hover)`, which is the
+     question actually being asked — "does hovering exist?" — where
+     `pointer:coarse` asked "is the finger large?". A laptop with a touch screen
+     answered yes to both and lost the animation. */
   .tile:hover{transform:none}
 }
 
-/* plus de barre en bas : on garde seulement la marge d'encoche */
+/* no bar at the bottom any more: only the notch margin is kept */
 body{padding-bottom:env(safe-area-inset-bottom,0)}
 
-/* ------------------------------------------------- comportement d'application
+/* ------------------------------------------------------- app-like behaviour
 
-   Romule s'installe : le manifeste declare `standalone`, et sur telephone
-   comme sur console portable elle s'ouvre alors sans barre de navigateur. Il
-   reste trois gestes qui trahissent la page web a chaque manipulation. */
+   Romule installs: the manifest declares `standalone`, and on a phone as on a
+   handheld it then opens without a browser bar. Three gestures remain that give
+   the web page away at every touch. */
 
-/* L'elastique et le « tirer pour recharger ». Dans une application, tirer vers
-   le bas au sommet d'une liste ne recharge rien et ne decolle pas la page. */
+/* The rubber-banding and the "pull to refresh". In an app, pulling down at the
+   top of a list reloads nothing and does not lift the page. */
 html,body{overscroll-behavior:none}
 #journal,.favpop,#lib{overscroll-behavior:contain}
 
-/* Le rectangle gris que pose Android sur chaque appui. Aucune application n'en
-   met : le retour visuel vient du style du bouton, pas du systeme. */
+/* The grey rectangle Android puts on every tap. No app has one: the visual
+   feedback comes from the button's own style, not from the system. */
 html{-webkit-tap-highlight-color:transparent}
 
 /* Un appui long qui surligne « Réglages » n'arrive dans aucune application.
