@@ -105,6 +105,39 @@ def test_le_cache_evite_les_appels():
         maj.CACHE.unlink(missing_ok=True)
 
 
+def test_le_prefixe_du_tag_est_retire():
+    """« Version v0.3.0 disponible » fait doublon a l'ecran.
+
+    GitHub nomme ses tags `v0.3.0` ; l'interface ecrit deja le mot « Version »
+    devant. On retire donc le prefixe a l'AFFICHAGE — sans toucher a la
+    comparaison, qui ne l'a jamais lu.
+    """
+    import io
+
+    class Fausse(io.BytesIO):
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+
+    corps = json.dumps({"tag_name": "v9.9.9", "name": "Essai",
+                        "body": "notes", "html_url": "https://exemple.fr",
+                        "published_at": "2026-01-01T00:00:00Z"}).encode()
+    vrai = maj.reseau.ouvrir
+    maj.reseau.ouvrir = lambda *a, **k: Fausse(corps)
+    try:
+        r = maj.etat({"maj_check": True}, forcer=True)
+        t("le `v` du tag ne remonte pas a l'interface", r["version"] == "9.9.9",
+          r["version"])
+        t("et la version reste reconnue comme plus recente",
+          r["disponible"] is True, r)
+        # Le prefixe n'a jamais gene la comparaison : `_triplet` l'ignore. Le
+        # verifier evite de croire que ce nettoyage la corrige.
+        t("la comparaison acceptait deja le prefixe",
+          maj.plus_recente("v9.9.9", "0.1.0") is True)
+    finally:
+        maj.reseau.ouvrir = vrai
+        maj.CACHE.unlink(missing_ok=True)
+
+
 def test_la_sortie_est_gardee():
     """Toute sortie reseau de Romule passe par `reseau.ouvrir()`, qui refuse
     les schemas autres que http/https. Ce module ne doit pas y echapper."""
@@ -116,6 +149,7 @@ def test_la_sortie_est_gardee():
 
 for fn in (test_comparaison, test_le_reglage_coupe_avant_le_reseau,
            test_une_panne_ne_se_voit_pas, test_le_cache_evite_les_appels,
+           test_le_prefixe_du_tag_est_retire,
            test_la_sortie_est_gardee):
     fn()
 print("  %d controles OK, %d echec(s)" % (ok, ko))

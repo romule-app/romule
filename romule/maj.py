@@ -77,7 +77,10 @@ def _demander():
                          "User-Agent": "romule"})
     with reseau.ouvrir(req, timeout=8) as r:
         d = json.loads(r.read().decode("utf-8"))
-    return {"version": str(d.get("tag_name") or ""),
+    # Le `v` du tag est retire : l'interface ecrit deja « Version %s
+    # disponible », et « Version v0.3.0 disponible » fait doublon. La
+    # comparaison, elle, ne s'en soucie pas — `_triplet` ignore le prefixe.
+    return {"version": str(d.get("tag_name") or "").lstrip("vV"),
             "titre": str(d.get("name") or ""),
             "notes": str(d.get("body") or "")[:MAX_NOTES],
             "url": str(d.get("html_url") or ""),

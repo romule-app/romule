@@ -8,6 +8,15 @@ and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 Romule is at `0.x`: the HTTP API is **not** stable yet, and a minor release may
 change it. Breaking changes are always listed under **Changed** with the reason.
 
+## [Unreleased]
+
+### Fixed
+
+- **The update notice no longer reads "Version v0.3.0 available".** GitHub
+  names its tags `v0.3.0` and the interface already writes the word *Version*
+  in front. The prefix is stripped for display only — the comparison never read
+  it. Noticed by running the notifier against the first real release.
+
 ## [0.3.0] — 2026-09-03
 
 The release about the parts you touch. 0.2.0 made Romule publishable — public
