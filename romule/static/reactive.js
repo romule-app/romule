@@ -1,40 +1,40 @@
 "use strict";
-/* Rendu de listes par reconciliation — ~120 lignes, aucune dependance.
+/* List rendering by reconciliation — ~120 lines, no dependency.
 
-   Pourquoi ce fichier existe
-   --------------------------
-   Toute l'interface reconstruisait ses listes en reecrivant `innerHTML`. Trois
-   defauts en decoulaient, tous rencontres pour de vrai :
-     - l'animation d'entree rejouait a chaque changement, donnant l'impression
-       que la page se rechargeait ;
-     - l'etat visuel (coche, classe « selectionne ») devait etre resynchronise
-       a la main, et on oubliait des cas ;
-     - le defilement et le focus sautaient.
-   La parade etait de rustiner : signature de rendu, mise a jour manuelle du
-   DOM… Autant de code fragile pour un probleme deja resolu.
+   Why this file exists
+   --------------------
+   The whole interface rebuilt its lists by rewriting `innerHTML`. Three defects
+   followed from that, all of them met for real:
+     - the entry animation replayed on every change, giving the impression the
+       page was reloading;
+     - the visual state (the tick, the "selected" class) had to be resynchronised
+       by hand, and cases were forgotten;
+     - the scroll position and the focus jumped.
+   The answer was to patch around it: a render signature, manual DOM updates…
+   All of it fragile code for a problem already solved.
 
-   Ce que ca fait
-   --------------
-   `liste()` compare la liste demandee aux noeuds deja presents, en s'appuyant
-   sur une CLE stable. Un element inchange n'est pas touche ; un element modifie
-   est mis a jour en place ; seuls les vrais ajouts creent un noeud (et donc
-   animent). C'est le minimum utile d'un framework, sans build ni dependance.
+   What it does
+   ------------
+   `liste()` compares the requested list to the nodes already present, relying on
+   a stable KEY. An unchanged element is not touched; a modified element is
+   updated in place; only real additions create a node (and therefore animate).
+   It is the useful minimum of a framework, with no build and no dependency.
 
-   Ce que ca ne fait pas
-   ---------------------
-   Ni etat global, ni templates, ni routage. Si un besoin depasse ce fichier,
-   c'est le signe qu'il faut en discuter, pas l'etendre en douce.
+   What it does not do
+   -------------------
+   No global state, no templates, no routing. If a need outgrows this file, that
+   is a sign it should be discussed, not quietly extended.
 */
 
 (function (global) {
 
-  /* Applique une liste d'elements a un conteneur.
-       conteneur : l'element parent
-       items     : tableau de donnees
-       o.cle     : (item) -> identifiant stable et unique
-       o.creer   : (item) -> HTMLElement  (appele uniquement pour un nouvel item)
-       o.majEl   : (el, item) -> void     (appele pour chaque item conserve)
-     Renvoie le nombre de noeuds crees : utile pour les tests et la mise au point. */
+  /* Applies a list of items to a container.
+       conteneur : the parent element
+       items     : an array of data
+       o.cle     : (item) -> a stable and unique identifier
+       o.creer   : (item) -> HTMLElement  (called only for a new item)
+       o.majEl   : (el, item) -> void     (called for every kept item)
+     Returns how many nodes were created: useful for tests and debugging. */
   function liste(conteneur, items, o) {
     if (!conteneur) return 0;
     const existants = new Map();
@@ -45,7 +45,7 @@
     }
 
     let crees = 0;
-    let ancre = null;                   // noeud apres lequel inserer
+    let ancre = null;                   // the node to insert after
     for (const item of items) {
       const k = String(o.cle(item));
       let el = existants.get(k);
@@ -58,35 +58,35 @@
         el.dataset.rkey = k;
         crees++;
       }
-      // place le noeud juste apres l'ancre s'il n'y est pas deja
+      // put the node right after the anchor if it is not already there
       const attendu = ancre ? ancre.nextSibling : conteneur.firstChild;
       if (el !== attendu) conteneur.insertBefore(el, attendu);
       ancre = el;
     }
-    // ce qui reste n'est plus dans la liste
+    // whatever remains is no longer in the list
     for (const el of existants.values()) el.remove();
     return crees;
   }
 
-  /* Pose une classe seulement si elle change : evite de relancer une transition
-     CSS pour rien, et rend les mises a jour idempotentes. */
+  /* Sets a class only if it changes: avoids restarting a CSS transition for
+     nothing, and makes the updates idempotent. */
   function classe(el, nom, actif) {
     if (!el) return;
     if (el.classList.contains(nom) !== !!actif) el.classList.toggle(nom, !!actif);
   }
 
-  /* Ecrit un texte seulement s'il differe : ne casse pas la selection en cours. */
+  /* Writes text only if it differs: does not break a selection in progress. */
   function texte(el, valeur) {
     if (el && el.textContent !== String(valeur)) el.textContent = String(valeur);
   }
 
-  /* Ecrit du HTML seulement s'il differe. A reserver aux fragments que l'on
-     construit soi-meme : le contenu doit deja etre echappe par l'appelant. */
+  /* Writes HTML only if it differs. To be kept for fragments we build
+     ourselves: the content must already be escaped by the caller. */
   function html(el, valeur) {
     if (el && el.innerHTML !== valeur) el.innerHTML = valeur;
   }
 
-  /* Pose un attribut, ou le retire si la valeur est nulle/false. */
+  /* Sets an attribute, or removes it if the value is null/false. */
   function attr(el, nom, valeur) {
     if (!el) return;
     if (valeur == null || valeur === false) {
@@ -96,8 +96,8 @@
     }
   }
 
-  /* Fabrique un element depuis une chaine HTML. Le contenu doit etre echappe
-     en amont : cette fonction ne desinfecte rien, elle ne fait que parser. */
+  /* Builds an element from an HTML string. The content must be escaped
+     upstream: this function sanitises nothing, it only parses. */
   function depuisHtml(s) {
     const t = document.createElement('template');
     t.innerHTML = String(s).trim();
