@@ -1,13 +1,12 @@
-"""Sauvegarde de la configuration et des comptes.
+"""Backing up the configuration and the accounts.
 
-Ces deux fichiers ne sont pas reconstituables : la configuration porte des
-cles d'API et le secret de signature des sessions, le fichier des comptes
-porte les empreintes de mots de passe. Ils tiennent en quelques kilo-octets,
-donc on garde un historique plutot qu'une seule copie ecrasee a chaque fois —
-une sauvegarde unique corrompue ne vaut rien.
+Neither file can be reconstructed: the configuration carries API keys and the
+session signing secret, the accounts file carries password digests. They weigh
+a few kilobytes, so we keep a history rather than one copy overwritten every
+time — a single corrupt backup is worth nothing.
 
-Rien de tout cela ne touche aux jeux : ils sont trop gros et deja presents en
-deux exemplaires (serveur et console).
+None of this touches the games: they are too large and already exist in two
+copies (server and console).
 """
 
 import json
@@ -28,14 +27,14 @@ def _sources():
 
 
 _DERNIERE_AUTO = [0.0]
-DELAI_AUTO = 3600.0        # au plus une sauvegarde automatique par heure
+DELAI_AUTO = 3600.0        # at most one automatic backup an hour
 
 
 def auto(motif="auto"):
-    """Sauvegarde declenchee par un changement, mais pas a chaque frappe.
+    """A backup triggered by a change, but not by every keystroke.
 
-    Sans limite, chaque bascule d'interrupteur creerait un lot : l'historique
-    se remplirait de bruit et les vraies versions seraient chassees.
+    Without a limit, every toggle would create a batch: the history would fill
+    with noise and the real versions would be pushed out.
     """
     if time.time() - _DERNIERE_AUTO[0] < DELAI_AUTO:
         return None
@@ -47,7 +46,7 @@ def auto(motif="auto"):
 
 
 def creer(motif="manuelle"):
-    """Copie les fichiers sensibles dans un lot horodate. Renvoie le lot."""
+    """Copy the sensitive files into a timestamped batch. Returns the batch."""
     DOSSIER.mkdir(exist_ok=True)
     os.chmod(DOSSIER, 0o700)
     lot = DOSSIER / (time.strftime("%Y-%m-%d_%H%M%S") + "_" + motif)
@@ -91,7 +90,7 @@ def listing():
 
 
 def restaurer(lot):
-    """Remet en place les fichiers d'un lot, apres en avoir sauvegarde l'etat actuel."""
+    """Restore a batch's files, after backing up the current state first."""
     d = DOSSIER / lot
     try:
         d.resolve().relative_to(DOSSIER.resolve())
@@ -99,7 +98,7 @@ def restaurer(lot):
         raise ValueError("Lot invalide.") from exc
     if not d.is_dir():
         raise ValueError("Lot introuvable.")
-    creer("avant-restauration")          # on ne perd jamais l'etat courant
+    creer("avant-restauration")          # the current state is never lost
     remis = []
     for src in _sources():
         copie = d / Path(src).name

@@ -1,26 +1,24 @@
-"""Vues enregistrees — une combinaison de filtres qu'on retrouve d'un clic.
+"""Saved views — a combination of filters you find again in one click.
 
-Trois filtres cohabitent dans la bibliotheque : la recherche, la pastille
-d'etat, et les filtres avances. Ils se composent, mais les rejouer demande de
-refaire les trois gestes a chaque fois. Une vue les garde ensemble.
+Three filters coexist in the library: the search, the status chip, and the
+advanced filters. They compose, but replaying them means repeating all three
+gestures every time. A view keeps them together.
 
-Ce qu'une vue retient, et ce qu'elle ne retient pas
----------------------------------------------------
-Elle retient ce qui DEFINIT un sous-ensemble de la ludotheque : la plateforme,
-la recherche, l'etat, les filtres avances.
+What a view remembers, and what it does not
+--------------------------------------------
+It remembers what DEFINES a subset of the library: the platform, the search,
+the status, the advanced filters.
 
-Elle ne retient ni le tri, ni la taille des vignettes, ni la pagination. Ce
-sont des preferences d'AFFICHAGE : elles valent pour tout ce qu'on regarde, et
-les enfermer dans une vue rendrait celle-ci surprenante — on rappellerait
-« Jeux a convertir » et l'ordre de la grille changerait sans qu'on l'ait
-demande.
+It remembers neither the sort order, nor the tile size, nor the pagination.
+Those are DISPLAY preferences: they apply to everything you look at, and
+locking them into a view would make it surprising — you would recall "Games to
+convert" and the grid order would change without being asked.
 
-Cote serveur, et pas dans le navigateur
-----------------------------------------
-Le tri et la taille vivent dans `localStorage` : ils sont propres a l'ecran
-qu'on a sous les yeux. Une vue est un objet qu'on a construit, qu'on veut
-retrouver sur le telephone comme sur le poste, et qui ne doit pas disparaitre
-parce qu'on a vide son navigateur.
+On the server, not in the browser
+----------------------------------
+Sort order and tile size live in `localStorage`: they belong to the screen in
+front of you. A view is something you built, that you want back on your phone
+as on your desk, and that must not vanish because you cleared your browser.
 """
 
 import json
@@ -33,12 +31,12 @@ from . import config
 
 FICHIER = config.fichier_etat("_romule-vues.json", "_romule-vues.json")
 
-# Ce qu'on accepte d'enregistrer. Une liste FERMEE : le navigateur envoie ce
-# qu'il veut, et sans cette barriere une version future du client pourrait
-# faire grossir le fichier d'etat avec n'importe quoi.
+# What we agree to store. A CLOSED list: the browser sends whatever it likes,
+# and without this barrier a future client version could grow the state file
+# with anything at all.
 CHAMPS = ("systeme", "recherche", "etat", "avances")
 
-MAX_VUES = 50           # au-dela, c'est une liste, plus un raccourci
+MAX_VUES = 50           # past this it is a list, not a shortcut
 _LOCK = threading.RLock()
 
 
@@ -62,7 +60,7 @@ def _ecrire(d):
 
 
 def _propre(filtres):
-    """Ne garde que les champs connus, et borne ce qui peut l'etre."""
+    """Keep only the known fields, and bound what can be bounded."""
     f = filtres if isinstance(filtres, dict) else {}
     out = {
         "systeme": str(f.get("systeme") or "all")[:40],
@@ -79,7 +77,7 @@ def liste():
 
 
 def creer(nom, filtres):
-    """Rend la vue creee, ou None si la limite est atteinte."""
+    """Return the created view, or None if the limit is reached."""
     nom = (nom or "").strip()[:60] or "Sans nom"
     with _LOCK:
         d = _lire()

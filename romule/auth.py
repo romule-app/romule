@@ -1,28 +1,27 @@
-"""Authentification OpenID Connect (SSO), sans aucune dependance.
+"""OpenID Connect (SSO) authentication, with no dependency at all.
 
-Flux retenu : « Authorization Code + PKCE », le seul recommande aujourd'hui pour
-une application qui detient un secret ET tourne dans un navigateur. Il fonctionne
-avec tous les fournisseurs auto-heberges courants — Authentik, Keycloak, Zitadel,
-Authelia, Pocket ID — car il ne repose que sur la decouverte standard
-`/.well-known/openid-configuration`.
+The chosen flow is "Authorization Code + PKCE", the only one recommended today
+for an application that holds a secret AND runs in a browser. It works with
+every common self-hosted provider — Authentik, Keycloak, Zitadel, Authelia,
+Pocket ID — because it relies only on the standard
+`/.well-known/openid-configuration` discovery document.
 
-Ce qui est verifie a chaque connexion, dans cet ordre :
-  1. `state`  : la reponse correspond bien a une demande que NOUS avons emise
-     (protege du CSRF sur le point de retour) ;
-  2. le code est echange contre des jetons, en TLS, en presentant le
-     `code_verifier` (PKCE) : un code intercepte ne suffit pas ;
-  3. la signature RS256 de l'`id_token` est verifiee contre la cle publique
-     publiee par le fournisseur (JWKS) ;
-  4. `iss`, `aud`, `exp`, `iat` et `nonce` sont controles ;
-  5. si une liste d'utilisateurs autorises est configuree, l'identite doit y
-     figurer — un fournisseur peut authentifier bien plus de monde que ce que
-     l'on veut laisser entrer ici.
+What is checked on every login, in this order:
+  1. `state`  : the response matches a request WE issued (protects the return
+     point against CSRF);
+  2. the code is exchanged for tokens, over TLS, presenting the
+     `code_verifier` (PKCE): an intercepted code is not enough;
+  3. the `id_token`'s RS256 signature is verified against the public key the
+     provider publishes (JWKS);
+  4. `iss`, `aud`, `exp`, `iat` and `nonce` are checked;
+  5. if a list of allowed users is configured, the identity must appear in it —
+     a provider can authenticate far more people than we want to let in here.
 
-La session tient dans un cookie signe (HMAC-SHA256) : pas d'etat serveur, donc
-un redemarrage ne deconnecte personne, et rien n'est stocke sur disque hormis le
-secret de signature.
+The session lives in a signed cookie (HMAC-SHA256): no server-side state, so a
+restart logs nobody out, and nothing is stored on disk beyond the signing
+secret.
 
-Rien de tout cela ne s'active tant que `auth_mode` ne vaut pas "oidc".
+None of this activates until `auth_mode` is set to "oidc".
 """
 
 import base64
@@ -36,12 +35,12 @@ import urllib.request
 
 from . import config, reseau
 
-DUREE_SESSION = 12 * 3600      # au-dela, il faut repasser par le fournisseur
-# Duree du « pont » remis a celui qui vient d'activer
-# l'authentification : juste de quoi finir de se configurer.
+DUREE_SESSION = 12 * 3600      # past this, back through the provider
+# How long the "bridge" handed to whoever just switched authentication on
+# lasts: just enough to finish configuring themselves.
 DUREE_PONT = 30 * 60
-DUREE_TRANSIT = 10 * 60        # duree de vie d'une demande de connexion en cours
-_DECOUVERTE = {}               # cache {issuer: (expiration, document)}
+DUREE_TRANSIT = 10 * 60        # lifetime of a login request in flight
+_DECOUVERTE = {}               # cache {issuer: (expiry, document)}
 _JWKS = {}                     # cache {uri: (expiration, cles)}
 
 
@@ -57,7 +56,7 @@ def _b64url(b):
 
 
 def _secret():
-    """Secret de signature des cookies, cree une fois puis conserve."""
+    """Cookie signing secret, created once and then kept."""
     cfg = config.load_config()
     s = cfg.get("auth_secret") or ""
     if not s:
@@ -68,14 +67,14 @@ def _secret():
 
 
 def _signer(charge):
-    """Encode un dict en jeton signe `corps.signature`, sans etat serveur."""
+    """Encode a dict as a signed `body.signature` token, with no server state."""
     corps = _b64url(json.dumps(charge, separators=(",", ":")).encode("utf-8"))
     sig = _b64url(hmac.new(_secret(), corps.encode("ascii"), hashlib.sha256).digest())
     return corps + "." + sig
 
 
 def _verifier(jeton):
-    """Renvoie la charge si la signature ET l'expiration tiennent, sinon None."""
+    """Return the payload if BOTH signature and expiry hold, otherwise None."""
     try:
         corps, sig = str(jeton).split(".", 1)
     except ValueError:
@@ -104,7 +103,7 @@ def _http_json(url, donnees=None, entetes=None, timeout=15):
 # --------------------------------------------------------------- decouverte
 
 def decouverte(issuer, force=False):
-    """Document de configuration du fournisseur, mis en cache une heure."""
+    """The provider's configuration document, cached for an hour."""
     issuer = (issuer or "").rstrip("/")
     if not issuer:
         raise ValueError("Aucune adresse de fournisseur configuree.")
@@ -120,8 +119,8 @@ def decouverte(issuer, force=False):
 
 
 def _cles(uri, kid, force=False):
-    """Cle publique JWKS correspondant au `kid`, avec un rafraichissement unique
-    si la cle est inconnue : les fournisseurs font tourner leurs cles."""
+    """The JWKS public key matching `kid`, with a single refresh if the key is
+    unknown: providers rotate their keys."""
     cache = _JWKS.get(uri)
     if not cache or force or cache[0] <= time.time():
         doc = _http_json(uri)
@@ -135,15 +134,15 @@ def _cles(uri, kid, force=False):
 
 # --------------------------------------------------------------- verification JWT
 
-# Prefixe DER d'un DigestInfo SHA-256 (RFC 8017, EMSA-PKCS1-v1_5).
+# DER prefix of a SHA-256 DigestInfo (RFC 8017, EMSA-PKCS1-v1_5).
 _DER_SHA256 = bytes.fromhex("3031300d060960864801650304020105000420")
 
 
 def _rs256_ok(signe, signature, jwk):
-    """Verifie une signature RS256 avec la seule bibliotheque standard.
+    """Verify an RS256 signature using the standard library alone.
 
-    RSA en verification se resume a `sig^e mod n`, puis a comparer le resultat
-    au bourrage PKCS#1 v1.5 attendu. La comparaison est faite en temps constant.
+    RSA verification comes down to `sig^e mod n`, then comparing the result to
+    the expected PKCS#1 v1.5 padding. The comparison is constant-time.
     """
     try:
         n = int.from_bytes(_b64url_decode(jwk["n"]), "big")
@@ -175,8 +174,8 @@ def verifier_id_token(jeton, doc, client_id, nonce):
 
     alg = entete.get("alg")
     if alg != "RS256":
-        # On refuse tout le reste, `none` en premier lieu : accepter l'algorithme
-        # annonce par le jeton lui-meme est la faille classique de JWT.
+        # Everything else is refused, `none` first of all: trusting the
+        # algorithm the token itself announces is the classic JWT hole.
         raise ValueError("Algorithme de signature non pris en charge : %s." % alg)
     jwks_uri = doc.get("jwks_uri")
     if not jwks_uri:
@@ -204,13 +203,13 @@ def verifier_id_token(jeton, doc, client_id, nonce):
 # --------------------------------------------------------------- flux
 
 def actif(cfg=None):
-    """L'authentification n'est active que si elle est UTILISABLE.
+    """Authentication is only active when it is USABLE.
 
-    Un mode « oidc » sans fournisseur renseigne — ou un mode « interne » sans
-    aucun compte — refuserait tout le monde sans offrir de moyen de se
-    connecter : l'utilisateur serait enferme dehors, y compris depuis sa propre
-    machine. Une authentification a moitie configuree n'en est pas une : on la
-    considere inactive tant qu'il n'existe pas un chemin d'entree reel.
+    An "oidc" mode with no provider filled in — or an "interne" mode with no
+    account at all — would refuse everybody while offering no way to log in:
+    the user would be locked out, including from their own machine. A
+    half-configured authentication is not one: we treat it as inactive until a
+    real way in exists.
     """
     cfg = cfg or config.load_config()
     mode = cfg.get("auth_mode")
@@ -230,7 +229,7 @@ def mode(cfg=None):
 
 
 def incomplet(cfg=None):
-    """Mode demande, mais configuration insuffisante : a signaler."""
+    """Mode requested, but the configuration is insufficient: worth flagging."""
     cfg = cfg or config.load_config()
     return cfg.get("auth_mode") in ("oidc", "interne") and not actif(cfg)
 
@@ -244,7 +243,7 @@ def _reglages(cfg):
 
 
 def demarrer(cfg, redirect_uri):
-    """Prepare une connexion. Renvoie (url_du_fournisseur, cookie_de_transit)."""
+    """Prepare a login. Returns (provider_url, transit_cookie)."""
     issuer, client_id, _ = _reglages(cfg)
     doc = decouverte(issuer)
     etat = secrets.token_urlsafe(24)
@@ -267,9 +266,9 @@ def demarrer(cfg, redirect_uri):
 
 
 def terminer(cfg, params, cookie_transit, redirect_uri):
-    """Traite le retour du fournisseur. Renvoie (cookie_session, identite).
+    """Handle the provider's callback. Returns (session_cookie, identity).
 
-    Leve ValueError avec un message affichable en cas de refus.
+    Raises ValueError with a displayable message on refusal.
     """
     if params.get("error"):
         raise ValueError("Le fournisseur a refuse la connexion : %s."
@@ -293,8 +292,8 @@ def terminer(cfg, params, cookie_transit, redirect_uri):
     entetes = {"Accept": "application/json",
                "Content-Type": "application/x-www-form-urlencoded"}
     if secret:
-        # `client_secret_basic` est la methode par defaut du standard ; on
-        # bascule sur `client_secret_post` si le fournisseur l'exige.
+        # `client_secret_basic` is the standard's default method; we switch
+        # to `client_secret_post` when the provider demands it.
         methodes = doc.get("token_endpoint_auth_methods_supported") or ["client_secret_basic"]
         if "client_secret_basic" in methodes:
             jeton = base64.b64encode(
@@ -321,12 +320,12 @@ def terminer(cfg, params, cookie_transit, redirect_uri):
     }
     _verifier_autorisation(cfg, identite)
     identite["admin"] = est_admin_oidc(cfg, identite)
-    # Le role est fige DANS le jeton, donc pour la duree de la session (12 h).
-    # Le relire a chaque requete demanderait de rappeler le fournisseur : ici
-    # on inscrit ce qu'il a dit au moment de la connexion. Retirer quelqu'un
-    # d'un groupe le declasse a sa prochaine session, pas au milieu de
-    # celle-ci — c'est le comportement de la plupart des SSO, et il est dit
-    # dans la documentation plutot que suppose.
+    # The role is frozen INSIDE the token, hence for the session's lifetime
+    # (12 h). Re-reading it on every request would mean calling the provider
+    # again; here we write down what it said at login time. Removing someone
+    # from a group demotes them at their next session, not in the middle of
+    # this one — the behaviour of most SSO integrations, and stated in the
+    # documentation rather than assumed.
     session = _signer({"sub": identite["sub"], "nom": identite["nom"],
                        "email": identite["email"], "src": "oidc",
                        "admin": bool(identite["admin"]),
@@ -335,15 +334,15 @@ def terminer(cfg, params, cookie_transit, redirect_uri):
 
 
 def est_admin_oidc(cfg, identite):
-    """Ce compte SSO a-t-il le role d'administrateur ?
+    """Does this SSO account hold the administrator role?
 
-    `oidc_groupes` dit QUI PEUT ENTRER ; `oidc_admin_groupes` dit QUI
-    ADMINISTRE. Ce sont deux questions differentes, et les confondre donnerait
-    l'administration a tout le monde — c'est l'erreur qui rendrait le modele de
-    roles decoratif.
+    `oidc_groupes` says WHO MAY ENTER; `oidc_admin_groupes` says WHO
+    ADMINISTERS. Two different questions, and confusing them would hand
+    administration to everybody — the mistake that would make the role model
+    decorative.
 
-    Sans `oidc_admin_groupes`, AUCUNE session SSO n'est administratrice. Le
-    defaut refuse : un reglage vide ne doit jamais valoir « tout le monde ».
+    Without `oidc_admin_groupes`, NO SSO session is an administrator. The
+    default refuses: an empty setting must never mean "everybody".
     """
     voulus = [x.strip().lower()
               for x in str(cfg.get("oidc_admin_groupes") or "")
@@ -355,8 +354,8 @@ def est_admin_oidc(cfg, identite):
 
 
 def _verifier_autorisation(cfg, identite):
-    """Authentifie n'est pas autorise : le fournisseur connait souvent bien plus
-    de comptes que ceux qui doivent acceder a CET outil."""
+    """Authenticated is not authorised: the provider usually knows far more
+    accounts than those meant to reach THIS tool."""
     def liste(cle):
         v = cfg.get(cle) or ""
         return [x.strip().lower() for x in str(v).replace(";", ",").split(",") if x.strip()]
@@ -372,11 +371,11 @@ def _verifier_autorisation(cfg, identite):
 
 
 def session_interne(u):
-    """Cookie de session pour un compte interne.
+    """Session cookie for an internal account.
 
-    `mdp` porte l'instant du dernier changement de mot de passe. Toute session
-    signee avant ce moment est refusee : changer son mot de passe deconnecte
-    donc les autres appareils, y compris celui d'un intrus.
+    `mdp` carries the moment of the last password change. Any session signed
+    before that instant is refused: changing the password therefore logs out
+    the other devices, an intruder's included.
     """
     return _signer({"sub": u["id"], "nom": u.get("nom") or u["email"],
                     "email": u["email"], "src": "interne",
@@ -394,8 +393,8 @@ def session(cookie_header):
         if d and d.get("src") == "interne":
             from . import comptes
             u = comptes.par_id(d.get("sub"))
-            # Compte supprime, ou mot de passe change depuis : la session
-            # signee ne vaut plus rien, meme si sa signature est bonne.
+            # Account deleted, or password changed since: the signed session
+            # is worth nothing any more, even with a valid signature.
             if not u or u.get("maj_mdp", 0) != d.get("mdp"):
                 return None
             d["photo"] = bool(u.get("photo"))
@@ -430,7 +429,7 @@ def transit(cookie_header):
 
 
 def tester(cfg):
-    """Verifie que le fournisseur repond et publie ce qu'il faut."""
+    """Check that the provider answers and publishes what it must."""
     issuer, client_id, secret = _reglages(cfg)
     doc = decouverte(issuer, force=True)
     cles = []

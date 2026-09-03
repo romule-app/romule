@@ -1,4 +1,4 @@
-"""Corbeille : rien n'est supprime, tout est deplace et restaurable."""
+"""Trash: nothing is deleted, everything is moved and restorable."""
 
 import re
 import shutil
@@ -41,7 +41,7 @@ def _new_run_dir():
 
 
 def move(paths, reason, log=lambda m: None):
-    """Deplace des fichiers vers une corbeille horodatee. Renvoie (n, dossier_rel)."""
+    """Move files into a timestamped trash batch. Returns (n, relative_dir)."""
     d = _new_run_dir()
     moved = 0
     with (d / "manifeste.tsv").open("a") as man:
@@ -91,7 +91,7 @@ def _age_jours(d):
 
 
 def resume():
-    """Chiffres globaux : de quoi decider sans lire une liste de 50 lignes."""
+    """Overall figures: enough to decide without reading a 50-line list."""
     lots = listing()
     return {"lots": len(lots),
             "fichiers": sum(l["count"] for l in lots),
@@ -100,11 +100,11 @@ def resume():
 
 
 def purge(jours, log=lambda m: None):
-    """Supprime definitivement les lots plus vieux que `jours`. 0 = jamais.
+    """Permanently delete batches older than `jours`. 0 = never.
 
-    C'est la seule fonction de l'outil qui efface reellement des donnees : elle
-    n'agit que sur la corbeille, et uniquement sur des lots que l'utilisateur a
-    lui-meme choisi de laisser vieillir au-dela du delai qu'il a fixe.
+    This is the only function in the tool that really erases data: it acts on
+    the trash alone, and only on batches the user chose to let age past the
+    delay they set themselves.
     """
     jours = int(jours or 0)
     if jours <= 0 or not config.TRASH.is_dir():
@@ -114,7 +114,7 @@ def purge(jours, log=lambda m: None):
         if not d.is_dir() or not STAMP_RE.match(d.name):
             continue
         if not (d / "manifeste.tsv").is_file():
-            continue          # dossier inattendu : on n'y touche pas
+            continue          # unexpected folder: we leave it alone
         if _age_jours(d) < jours:
             continue
         taille = _taille(d)
