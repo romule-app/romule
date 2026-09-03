@@ -195,9 +195,9 @@ def _tenter(cible, donnees, entetes):
     # know which one failed.
     nom = cible["nom"] or cible["service"]
     if reussi:
-        console.evenement("Notification envoyee a %s" % nom, "debug", "notifs")
+        console.event("Notification envoyee a %s" % nom, "debug", "notifs")
     else:
-        console.evenement("Notification vers %s echouee (%s)" % (nom, raison),
+        console.event("Notification vers %s echouee (%s)" % (nom, raison),
                           "warn", "notifs")
     return reussi
 

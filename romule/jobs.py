@@ -97,7 +97,7 @@ class JobRunner:
         # it `docker logs romule` showed only the startup banner: everything
         # that happened afterwards existed for a browser only — that is, for
         # nobody on a server administered over ssh.
-        console.evenement(entree["m"], niveau, self.module)
+        console.event(entree["m"], niveau, self.module)
         if self.logfile:
             try:
                 _rotate(self.logfile)
@@ -206,7 +206,7 @@ class JobRunner:
                     from . import notifs
                     notifs.envoyer(evt, "Romule — %s" % label, resume, niveau)
                 except Exception as exc:      # never fatal: this is a convenience
-                    console.evenement("Notification impossible : %s" % exc,
+                    console.event("Notification impossible : %s" % exc,
                                       "warn", "notifs")
 
         threading.Thread(target=wrap, daemon=True).start()
