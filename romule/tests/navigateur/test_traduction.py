@@ -1,11 +1,11 @@
-"""Traduction : l'interface entiere bascule, les DONNEES ne bougent pas.
+"""Translation: the whole interface switches, the DATA does not move.
 
-Le francais est la cle (principe gettext) et la traduction s'applique au DOM.
-Deux risques a surveiller, que seul un vrai navigateur revele :
+French is the key (the gettext principle) and the translation applies to the DOM.
+Two risks to watch for, which only a real browser reveals:
 
-  * une phrase d'interface oubliee — elle resterait en francais ;
-  * une DONNEE traduite par erreur — un nom de jeu, un chemin, une adresse
-    email. C'est le defaut le plus grave : il rendrait la bibliotheque fausse.
+  * a forgotten interface sentence — it would stay in French;
+  * a piece of DATA translated by mistake — a game's name, a path, an email
+    address. That is the worse defect: it would make the library wrong.
 """
 
 import json
@@ -19,17 +19,16 @@ sys.path.insert(0, str(ICI))
 from cdp import Navigateur
 from ecrans import parcourir
 
-# `LUDO_URL` est OBLIGATOIRE, et il n'y a volontairement pas de defaut.
+# `LUDO_URL` is REQUIRED, and there is deliberately no default.
 #
-# Il y en avait un : `http://127.0.0.1:8799/`. Or c'est un port ou tourne
-# facilement une VRAIE instance — la mienne, en l'occurrence. Lance seul, ce
-# test pilotait donc la ludotheque de quelqu'un : il rapportait « 189
-# gestionnaires en ligne » parce qu'il examinait une version d'il y a trois
-# mois, et il cliquait dans de vraies donnees.
+# There used to be one: `http://127.0.0.1:8799/`. But that is a port where a REAL
+# instance easily runs — mine, as it happens. Run on its own, this test therefore
+# drove someone's library: it reported "189 inline handlers" because it was
+# examining a three-month-old version, and it clicked inside real data.
 #
-# Un defaut qui vise un service plausible est pire qu'une erreur : il donne un
-# resultat, et ce resultat parle d'autre chose. `lancer_tests.py` pose la
-# variable ; qui veut viser un serveur de developpement la pose lui-meme.
+# A default that aims at a plausible service is worse than an error: it gives a
+# result, and that result talks about something else. `lancer_tests.py` sets the
+# variable; whoever wants to aim at a development server sets it themselves.
 URL = os.environ.get("LUDO_URL", "")
 if not URL:
     print("LUDO_URL n'est pas posee. Lance `python3 lancer_tests.py "
@@ -51,29 +50,29 @@ def t(nom, cond, detail=""):
         print("      ECHEC %s   %s" % (nom, detail))
 
 
-# Ce que ce test cherche a change de nature.
+# What this test looks for has changed in nature.
 #
-# `outils/verifier-traduction.py` couvre desormais 100 % du CODE : aucune
-# phrase francaise n'y echappe au catalogue, et la CI bloque si l'une
-# reapparait. Chercher ici des chaines manquantes ferait donc doublon.
+# `outils/verifier-traduction.py` now covers 100 % of the CODE: no French
+# sentence there escapes the catalogue, and CI blocks if one reappears. Looking
+# for missing strings here would therefore be a duplicate.
 #
-# Ce que le statique ne peut PAS voir, en revanche :
+# What the static check CANNOT see, on the other hand:
 #
-#   * une phrase assemblee a l'execution — chaque morceau est au catalogue,
-#     mais le tout n'y est pas ;
-#   * un noeud qui echappe a l'observateur — insere autrement qu'en
-#     `childList`, ou porteur d'un attribut pose apres coup ;
-#   * une valeur interpolee restee en francais dans un modele traduit, comme
-#     « — used only with “URL personnalisée” » ;
-#   * une DONNEE traduite par erreur, ce qui est le defaut symetrique.
+#   * a sentence assembled at runtime — every piece is in the catalogue, but the
+#     whole is not;
+#   * a node that escapes the observer — inserted otherwise than through
+#     `childList`, or carrying an attribute set after the fact;
+#   * an interpolated value left in French inside a translated template, such as
+#     "— used only with “URL personnalisée”";
+#   * a piece of DATA translated by mistake, which is the symmetric defect.
 #
-# C'est cela qu'on regarde : ce qui est reellement A L'ECRAN.
+# That is what we look at: what is really ON SCREEN.
 #
-# Deux corrections par rapport a la version precedente. Elle s'aveuglait sur
-# `.gcard`, `#modal`, `.erdit`, `.sub2` et `.gdesc` — c'est-a-dire sur la fiche
-# de jeu et sur la prose d'EmuReady et du SSO, les deux ecrans les plus denses.
-# Et elle ne reconnaissait le francais qu'a ses ACCENTS, laissant passer
-# « Convertir les », « Rien dans », « Aucun jeu trouve ».
+# Two corrections compared to the previous version. It blinded itself to
+# `.gcard`, `#modal`, `.erdit`, `.sub2` and `.gdesc` — that is, to the game's
+# detail view and to EmuReady's and the SSO's prose, the two densest screens. And
+# it recognised French only by its ACCENTS, letting "Convertir les", "Rien dans",
+# "Aucun jeu trouve" -- anglais:ok, quoted French samples -- through.
 RESTE_FR = r"""
 (function () {
   const IGNORE = new Set(['CODE','PRE','SCRIPT','STYLE','TEXTAREA']);
@@ -141,9 +140,9 @@ RESTE_FR = r"""
 })()
 """
 
-# Les ecrans sont decrits une seule fois, dans `ecrans.py` : ce test et
-# `test_gestes.py` balayent tous deux le DOM rendu, et un ecran ajoute a un
-# seul des deux serait un angle mort silencieux.
+# The screens are described once, in `ecrans.py`: this test and `test_gestes.py`
+# both sweep the rendered DOM, and a screen added to only one of them would be a
+# silent blind spot.
 def main():
     origine = "fr"
     n = Navigateur(port=9401, largeur=1500, hauteur=1300, dpr=1)
@@ -159,19 +158,19 @@ def main():
         print("   -- catalogue --")
         en = json.loads((LOCALES / "en.json").read_text(encoding="utf-8"))
         fr = json.loads((LOCALES / "fr.json").read_text(encoding="utf-8"))
-        t("en.json fourni", len(en) > 300, len(en))
-        t("fr.json couvre le meme catalogue",
+        t("en.json is shipped", len(en) > 300, len(en))
+        t("fr.json covers the same catalogue",
           set(en) - {"_meta"} <= set(fr), sorted(set(en) - set(fr))[:3])
         t("aucune valeur vide", all(v for k, v in en.items() if k != "_meta"))
 
-        # La langue est un REGLAGE persistant : on note celle de l'utilisateur
-        # pour la remettre a la fin. Un test ne doit rien laisser derriere lui.
-        # On repartira du francais : c'est la langue source du projet, et un
-        # essai precedent laisse en anglais ferait « restaurer » l'anglais.
+        # The language is a persistent SETTING: we note the user's own to put
+        # it back at the end. A test must leave nothing behind. We start from
+        # French: it is the project's source language, and an earlier run left in
+        # English would "restore" English.
         origine = "fr"
 
         def basculer(code):
-            """`setLang` recharge la page : on attend qu'elle soit de nouveau prete."""
+            """`setLang` reloads the page: we wait for it to be ready again."""
             n.js("app.setLang('%s')" % code)
             time.sleep(2)
             for _ in range(40):
@@ -188,33 +187,33 @@ def main():
         basculer("en")
         t("onglet traduit",
           n.js("document.querySelector('#tabs button').textContent") == "Games")
-        # Le titre est le NOM DU PRODUIT : il ne se traduit pas, et il ne
-        # doit pas bouger d'une langue a l'autre. C'est l'inverse du
-        # controle precedent, et c'est aussi important.
-        t("le titre reste le nom du produit",
+        # The title is the PRODUCT NAME: it is not translated, and it must not
+        # move from one language to another. This is the reverse of the previous
+        # check, and just as important.
+        t("the title stays the product's name",
           n.js("document.title") == "Romule", n.js("document.title"))
 
-        # gabarit : une phrase construite a l'execution
+        # a template: a sentence built at runtime
         n.js("app.tab('settings')")
         time.sleep(1.2)
         d = n.js("(document.getElementById('d-plateforme')||{}).textContent") or ""
         t("phrase a variable traduite", "settings block" in d, d[:60])
 
         reste = parcourir(n, RESTE_FR)
-        # Les titres de jeux sont des donnees : ils gardent leurs accents.
+        # Game titles are data: they keep their accents.
         vrais = [x for x in reste if "Pok" not in x and "™" not in x]
         t("plus aucune phrase d'interface en francais", not vrais, vrais[:3])
 
         print("   -- les donnees restent intactes --")
         n.js("app.tab('jeux')")
         time.sleep(1.2)
-        # Cette assertion exigeait que la ludotheque contienne « Pokemon »,
-        # « Mario » ou « Animal Crossing » — c'est-a-dire les jeux de l'auteur.
-        # Elle ne testait donc rien chez quelqu'un d'autre, et elle est
-        # justement le genre de dependance que ce decor fixe supprime.
+        # This assertion required the library to hold "Pokemon", "Mario" or
+        # "Animal Crossing" — that is, the author's own games. So it tested
+        # nothing at anyone else's, and it is exactly the kind of dependency this
+        # fixed fixture removes.
         #
-        # Ce qu'on veut verifier est plus fort et ne suppose aucun titre : un
-        # nom de jeu ne doit pas CHANGER quand on bascule de langue.
+        # What we want to check is stronger and assumes no title: a game's name
+        # must not CHANGE when the language is switched.
         noms = n.js("[...document.querySelectorAll('.gname')].map(e=>e.textContent).slice(0,6)")
         t("des noms de jeux sont affiches", bool(noms), noms)
         basculer("fr")
