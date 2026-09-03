@@ -45,7 +45,24 @@ sys.path.insert(0, str(ICI))
 from cdp import Navigateur
 from ecrans import parcourir
 
-URL = os.environ.get("LUDO_URL", "http://127.0.0.1:8799/")
+# `LUDO_URL` est OBLIGATOIRE, et il n'y a volontairement pas de defaut.
+#
+# Il y en avait un : `http://127.0.0.1:8799/`. Or c'est un port ou tourne
+# facilement une VRAIE instance — la mienne, en l'occurrence. Lance seul, ce
+# test pilotait donc la ludotheque de quelqu'un : il rapportait « 189
+# gestionnaires en ligne » parce qu'il examinait une version d'il y a trois
+# mois, et il cliquait dans de vraies donnees.
+#
+# Un defaut qui vise un service plausible est pire qu'une erreur : il donne un
+# resultat, et ce resultat parle d'autre chose. `lancer_tests.py` pose la
+# variable ; qui veut viser un serveur de developpement la pose lui-meme.
+URL = os.environ.get("LUDO_URL", "")
+if not URL:
+    print("LUDO_URL n'est pas posee. Lance `python3 lancer_tests.py "
+          "--navigateur`,\nou vise explicitement un serveur d'essai :\n"
+          "    LUDO_URL=http://127.0.0.1:9871/ python3 %s"
+          % __file__, file=sys.stderr)
+    raise SystemExit(2)
 ok = ko = 0
 
 

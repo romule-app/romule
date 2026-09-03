@@ -1,9 +1,14 @@
 """Verifie le mode « comptes internes » de bout en bout, sur une racine jetable."""
+import socket
 import atexit, json, os, subprocess, sys, tempfile, time, http.cookiejar
 import urllib.error, urllib.parse, urllib.request
 
 RACINE = tempfile.mkdtemp(prefix="ludo-test-")
-PORT = "8811"
+# Demande au systeme plutot qu'un numero fige : un port fixe finit par
+# rencontrer autre chose, et le test s'adresse alors a ce service-la.
+with socket.socket() as _s:
+    _s.bind(("127.0.0.1", 0))
+    PORT = str(_s.getsockname()[1])
 BASE = "http://127.0.0.1:" + PORT
 env = dict(os.environ, ROMULE_ROOT=RACINE, ROMULE_WEB_PORT=PORT, ROMULE_NO_BROWSER="1")
 subprocess.run(["bash", "-c",
