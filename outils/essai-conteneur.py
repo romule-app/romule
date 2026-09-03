@@ -1,34 +1,32 @@
 #!/usr/bin/env python3
-"""Essai grandeur nature : Romule dans un conteneur, du build a l'API.
+"""A full-scale trial: Romule in a container, from the build to the API.
 
-Pourquoi un OUTIL et pas une session de terminal
-------------------------------------------------
-Un essai qu'on ne peut pas refaire ne prouve rien la deuxieme fois. Celui-ci
-est rejouable, il dit ce qu'il verifie, et il nettoie derriere lui.
+Why a TOOL and not a terminal session
+-------------------------------------
+A trial you cannot repeat proves nothing the second time. This one is
+replayable, it says what it checks, and it cleans up after itself.
 
-Ce qu'il couvre, et que les suites de tests ne couvrent PAS :
+What it covers, and that the test suites do NOT:
 
-  * l'image se construit et demarre — les suites tournent contre `python3 -m
-    romule`, jamais contre le conteneur livre ;
-  * la sonde de sante passe a *healthy*. Elle a deja ete cassee pendant des
-    mois : elle interrogeait une route declaree en POST seulement, et le
-    conteneur ne pouvait donc jamais etre declare sain ;
-  * le jeton d'acces apparait dans les journaux et survit a un redemarrage ;
-  * l'API repond DEPUIS L'EXTERIEUR du conteneur, avec une cle creee par
-    `docker compose exec` — c'est le parcours reel de quelqu'un qui branche un
-    tableau de bord ;
-  * une cle revoquee est refusee, et une cle valide n'atteint pas `/api/comptes`.
-    C'est la promesse de portee, verifiee sur le vrai routage.
+  * the image builds and starts — the suites run against `python3 -m romule`,
+    never against the shipped container;
+  * the health probe reaches *healthy*. It was broken for months: it queried a
+    route declared POST-only, so the container could never be declared healthy;
+  * the access token appears in the logs and survives a restart;
+  * the API answers FROM OUTSIDE the container, with a key created through
+    `docker compose exec` — the real journey of someone plugging in a dashboard;
+  * a revoked key is refused, and a valid key does not reach `/api/comptes`.
+    That is the scope promise, checked on the real routing.
 
-Par defaut l'essai construit l'image DEPUIS LES SOURCES. `--image` la tire au
-contraire du registre : ce n'est pas la meme question. Construire prouve que le
-`Dockerfile` tient ; tirer prouve que ce qui a ete PUBLIE demarre — deux choses
-qui se separent des qu'une etape de publication existe.
+By default the trial builds the image FROM SOURCE. `--image` pulls it from the
+registry instead: that is not the same question. Building proves the
+`Dockerfile` holds; pulling proves that what was PUBLISHED starts — two things
+that part company as soon as a publishing step exists.
 
-Usage :
-    python3 outils/essai-conteneur.py            # construit, essaie, nettoie
-    python3 outils/essai-conteneur.py --garder   # laisse la pile debout
-    python3 outils/essai-conteneur.py --image    # tire ghcr.io/...:latest
+Usage:
+    python3 outils/essai-conteneur.py            # builds, tries, cleans up
+    python3 outils/essai-conteneur.py --garder   # leaves the stack standing
+    python3 outils/essai-conteneur.py --image    # pulls ghcr.io/...:latest
     python3 outils/essai-conteneur.py --image ghcr.io/romule-app/romule:0.2.0
 """
 
@@ -69,12 +67,12 @@ def titre(x):
 
 
 def dc(*args, **kw):
-    """`docker compose` dans le dossier du projet, avec la surcouche d'essai.
+    """`docker compose` in the project's folder, with the trial overlay.
 
-    `docker-compose.yml` laisse a dessein l'utilisateur designer son dossier de jeux
-    depuis l'interface. Un conteneur neuf a donc une bibliotheque VIDE, ce qui
-    est correct et rend un essai automatique aveugle : la surcouche fige
-    `ROMULE_LIBRARY`, avec la variable que `docker-compose.yml` documente deja.
+    `docker-compose.yml` deliberately lets the user point at their games folder
+    from the interface. A fresh container therefore has an EMPTY library, which
+    is correct and leaves an automatic trial blind: the overlay pins
+    `ROMULE_LIBRARY`, with the variable `docker-compose.yml` already documents.
     """
     fichiers = ["-f", "docker-compose.yml", "-f", "outils/compose.essai.yaml"]
     if IMAGE:
@@ -101,11 +99,10 @@ def http(chemin, entetes=None, methode="GET", timeout=15):
 
 
 def preparer():
-    """Les deux dossiers que le fichier compose monte, et de quoi scanner.
+    """The two folders the compose file mounts, and something to scan.
 
-    La bibliotheque d'essai est SYNTHETIQUE : des fichiers vides aux noms
-    plausibles. Aucun jeu reel n'entre ici, et l'essai doit pouvoir tourner sur
-    la machine de n'importe qui.
+    The trial library is SYNTHETIC: empty files with plausible names. No real
+    game enters here, and the trial must be able to run on anyone's machine.
     """
     jeux = RACINE / "library" / "GAMES"
     jeux.mkdir(parents=True, exist_ok=True)
@@ -118,7 +115,7 @@ def preparer():
 
 
 def attendre_sain(limite=180):
-    """La sonde du conteneur, pas la notre : c'est elle qui doit passer."""
+    """The container's probe, not ours: it is the one that must pass."""
     debut = time.time()
     dernier = ""
     while time.time() - debut < limite:
@@ -135,8 +132,8 @@ def attendre_sain(limite=180):
 
 
 def jeton_des_journaux():
-    """Romule engendre un jeton au premier demarrage et l'affiche avec l'URL.
-    Si on ne le retrouve pas ici, personne ne peut entrer."""
+    """Romule generates a token on the first start and prints it with the URL.
+    If it cannot be found here, nobody can get in."""
     sortie = dc("logs", "romule").stdout or ""
     m = re.search(r"token=([A-Za-z0-9_\-]{16,})", sortie)
     return m.group(1) if m else None
@@ -150,9 +147,9 @@ def main(argv):
         i = argv.index("--image")
         suite = argv[i + 1] if len(argv) > i + 1 else ""
         IMAGE = suite if suite and not suite.startswith("--") else PUBLIEE
-        # `image:` remplace `build:` dans la surcouche. Ecrit ici plutot que
-        # livre en fichier fige : la reference change a chaque version, et un
-        # fichier qui la contient serait perime des la publication suivante.
+        # `image:` replaces `build:` in the overlay. Written here rather than
+        # shipped as a frozen file: the reference changes with every version, and
+        # a file holding it would be stale from the next release on.
         EPINGLE.write_text("services:\n  romule:\n    image: %s\n" % IMAGE,
                            encoding="utf-8")
 
@@ -164,14 +161,14 @@ def main(argv):
     jeux = preparer()
     print("   bibliotheque d'essai : %s (%d fichiers)"
           % (jeux, len(list(jeux.glob("*.nsp")))))
-    dc("down", "-v")                       # repartir d'une ardoise propre
+    dc("down", "-v")                       # start from a clean slate
 
     if IMAGE:
         titre("tirage de l'image publiee")
         print("   %s" % IMAGE)
         r = dc("pull", "romule")
-        # Un tirage refuse est la panne qu'on vient verifier : elle merite un
-        # controle a elle, pas d'etre noyee dans l'echec de `up`.
+        # A refused pull is the failure we came to check: it deserves a check
+        # of its own, rather than being drowned in `up`'s failure.
         if not t("l'image se tire SANS authentification", r.returncode == 0,
                  (r.stderr or "")[-300:]):
             return 1
@@ -194,10 +191,10 @@ def main(argv):
     jeton = jeton_des_journaux()
     t("le jeton d'acces est affiche dans les journaux", bool(jeton),
       "aucun `token=` dans `docker compose logs`")
-    # DEPUIS L'HOTE, la requete ne vient pas de 127.0.0.1 mais du pont Docker :
-    # elle n'est donc PAS locale, et le jeton est exige. C'est precisement ce
-    # qu'on veut verifier — un conteneur publie sur le reseau qui repondrait
-    # sans jeton serait le defaut, pas l'inverse.
+    # FROM THE HOST, the request does not come from 127.0.0.1 but from the
+    # Docker bridge: it is therefore NOT local, and the token is required. That
+    # is precisely what we want to check — a container published on the network
+    # that answered without a token would be the defect, not the reverse.
     code, _ = http("/api/health")
     t("sans jeton, l'hote est refuse", code in (401, 403), code)
     q = "?token=" + (jeton or "")
@@ -210,7 +207,7 @@ def main(argv):
     t("avec le jeton, l'interface est servie", code == 200, code)
 
     titre("cle d'API creee depuis le conteneur")
-    # C'est le parcours reel : pas de navigateur dans un conteneur.
+    # This is the real journey: there is no browser inside a container.
     r = dc("exec", "-T", "romule", "python3", "-m", "romule", "apikey",
            "create", "essai-conteneur")
     m = re.search(r"(rml_[A-Za-z0-9_\-]+)", r.stdout or "")
@@ -278,8 +275,8 @@ def main(argv):
         dc("down", "-v")
         shutil.rmtree(RACINE / "library", ignore_errors=True)
         cles = RACINE / "keys"
-        # On ne retire `keys/` que s'il est vide : quelqu'un peut y avoir
-        # depose son propre `prod.keys` avant de lancer l'essai.
+        # We only remove `keys/` if it is empty: someone may have dropped their
+        # own `prod.keys` in there before starting the trial.
         if cles.is_dir() and not any(cles.iterdir()):
             cles.rmdir()
         print("   pile arretee, volumes et bibliotheque d'essai supprimes")
