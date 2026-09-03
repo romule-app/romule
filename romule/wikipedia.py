@@ -1,24 +1,25 @@
-"""Descriptions de jeu dans la langue de l'utilisateur, via Wikidata + Wikipédia.
+"""Game descriptions in the user's language, via Wikidata + Wikipedia.
 
-IGDB ne publie ses resumes qu'en anglais : ses `game_localizations` ne
-traduisent que le TITRE. Pour une description en francais, la seule source
-libre et sans cle qui couvre toutes les plateformes est Wikipédia.
+IGDB only publishes its summaries in English: its `game_localizations`
+translate the TITLE and nothing else. For a description in French, the only
+free, key-less source covering every platform is Wikipedia.
 
-La difficulte n'est pas de lire l'article, c'est de trouver le BON. Une
-recherche directe sur fr.wikipedia repond « Mario Kart » (la serie) quand on
-cherche « Mario Kart: Super Circuit », et « Sonic the Hedgehog » quand on
-cherche « Sonic the Hedgehog 2 ». On passe donc par Wikidata :
+The hard part is not reading the article, it is finding the RIGHT one. A direct
+search on fr.wikipedia answers "Mario Kart" (the series) when you look for
+"Mario Kart: Super Circuit", and "Sonic the Hedgehog" when you look for "Sonic
+the Hedgehog 2". So we go through Wikidata:
 
-  1. chercher l'entite par son titre anglais — celui qu'IGDB nous a donne ;
-  2. ne garder que celles qui sont **un jeu video** (P31) ;
-  3. suivre le lien vers l'article de la langue voulue.
+  1. find the entity by its English title — the one IGDB gave us;
+  2. keep only those that are **a video game** (P31);
+  3. follow the link to the article in the language we want.
 
-Le titre anglais sert de pivot : il evite d'avoir a deviner la traduction.
-« Kirby & The Amazing Mirror » mene ainsi a « Kirby et le Labyrinthe des
-Miroirs », ce qu'aucune comparaison de chaines n'aurait trouve.
+The English title is the pivot: it saves us guessing the translation. "Kirby &
+The Amazing Mirror" leads to the French article "Kirby et le Labyrinthe des
+Miroirs" -- anglais:ok, that is the French title being quoted -- which no
+string comparison would ever have found.
 
-Aucune cle n'est necessaire. Les deux API demandent en revanche un
-`User-Agent` identifiable et un rythme raisonnable.
+No key is needed. Both APIs do, however, expect an identifiable `User-Agent`
+and a reasonable pace.
 """
 
 import json
@@ -28,27 +29,28 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-# Wikimedia exige un `User-Agent` qui identifie l'outil ET donne un moyen de
-# joindre son auteur : un projet distribue a des inconnus ne peut pas se
-# presenter comme « ludotheque personnelle » sans contact. Une adresse trop
-# vague fait limiter, puis bloquer, tout le monde d'un coup.
+# Wikimedia requires a `User-Agent` that identifies the tool AND gives a way
+# to reach its author: a project handed to strangers cannot present itself as
+# "personal game library" with no contact. Too vague an identity gets everyone
+# rate-limited, then blocked, all at once.
 from . import SOURCE_URL, __version__, reseau
 
 AGENT = "Romule/%s (%s)" % (__version__, SOURCE_URL)
 WIKIDATA = "https://www.wikidata.org/w/api.php"
 
-# Wikidata : « jeu video » et ses sous-classes courantes. Sans ce filtre, une
-# recherche ramene aussi bien un film qu'un personnage portant le meme nom.
+# Wikidata: "video game" and its common subclasses. Without this filter, a
+# search brings back a film or a character bearing the same name just as
+# readily.
 JEU_VIDEO = {
-    "Q7889",      # jeu video
-    "Q865493",    # jeu video de role
-    "Q4393107",   # serie de jeux video (accepte : souvent le seul article)
-    "Q16070115",  # jeu video de plateforme
-    "Q17517379",  # jeu video d'action
-    "Q28058561",  # jeu video de course
+    "Q7889",      # video game
+    "Q865493",    # role-playing video game
+    "Q4393107",   # video game series (accepted: often the only article)
+    "Q16070115",  # platform video game
+    "Q17517379",  # action video game
+    "Q28058561",  # racing video game
 }
 
-INTERVALLE = 0.7          # les API Wikimedia repondent 429 si on insiste
+INTERVALLE = 0.7          # the Wikimedia APIs answer 429 if you push
 _RYTHME = threading.Lock()
 _DERNIERE = [0.0]
 _ECHECS = set()
@@ -80,7 +82,7 @@ def _lire(url, essais=3):
 
 
 def _article(titre_anglais, langue):
-    """(identifiant Wikidata, titre de l'article) dans la langue voulue."""
+    """(Wikidata identifier, article title) in the language we want."""
     q = urllib.parse.urlencode({
         "action": "wbsearchentities", "format": "json", "language": "en",
         "uselang": "en", "type": "item", "limit": 6, "search": titre_anglais})
@@ -93,7 +95,7 @@ def _article(titre_anglais, langue):
         "action": "wbgetentities", "format": "json", "ids": "|".join(ids),
         "props": "claims|sitelinks", "sitefilter": site})
     e = _lire(WIKIDATA + "?" + q2)
-    for i in ids:                       # l'ordre de la recherche fait foi
+    for i in ids:                       # the search order is authoritative
         ent = ((e or {}).get("entities") or {}).get(i) or {}
         types = {(c.get("mainsnak", {}).get("datavalue", {}).get("value") or {}).get("id")
                  for c in (ent.get("claims") or {}).get("P31", [])}
@@ -106,7 +108,7 @@ def _article(titre_anglais, langue):
 
 
 def _intro(article, langue, phrases=3):
-    """Introduction de l'article, en texte brut."""
+    """The article's introduction, as plain text."""
     q = urllib.parse.urlencode({
         "action": "query", "format": "json", "titles": article,
         "prop": "extracts", "exintro": 1, "explaintext": 1, "redirects": 1})
@@ -115,8 +117,8 @@ def _intro(article, langue, phrases=3):
         texte = " ".join((p.get("extract") or "").split())
         if not texte:
             return ""
-        # Trois phrases suffisent sur une carte de jeu ; l'article entier
-        # deborderait largement.
+        # Three sentences are enough on a game card; the whole article would
+        # overflow it by a mile.
         bouts, out = texte.split(". "), []
         for b in bouts:
             out.append(b)
@@ -127,15 +129,15 @@ def _intro(article, langue, phrases=3):
 
 
 def resume(titre_anglais, langue="fr"):
-    """(texte, url) dans la langue demandee, ou ("", "") si rien n'est trouve.
+    """(text, url) in the requested language, or ("", "") if nothing is found.
 
-    On ne renvoie jamais l'anglais par ce chemin : l'appelant garde alors le
-    resume d'IGDB, qui est deja anglais. Retourner deux fois la meme langue par
-    deux sources differentes n'apporterait rien.
+    English is never returned through this path: the caller then keeps IGDB's
+    summary, which is already English. Returning the same language twice from
+    two different sources would add nothing.
 
-    L'URL n'est pas un supplement : le texte de Wikipedia est sous CC BY-SA, et
-    cette licence demande de citer la source. La rendre ici est le seul moyen
-    pour l'interface de le faire.
+    The URL is not a bonus: Wikipedia text is CC BY-SA, and that licence
+    requires citing the source. Returning it here is the only way the interface
+    can do so.
     """
     titre_anglais = (titre_anglais or "").strip()
     if not titre_anglais or langue in ("", "en"):

@@ -1,18 +1,18 @@
-"""Fiches de jeu pour les plateformes autres que la Switch, via IGDB.
+"""Game details for platforms other than the Switch, via IGDB.
 
-nlib ne connait que la Switch, et SteamGridDB ne sert que des visuels et des
-titres. IGDB est la seule base gratuite qui couvre toutes les plateformes avec
-un resume redige. L'acces demande un identifiant Twitch (gratuit) :
+nlib only knows the Switch, and SteamGridDB only serves artwork and titles.
+IGDB is the only free database covering every platform with a written summary.
+Access needs a (free) Twitch application:
 
-    1. https://dev.twitch.tv/console/apps  -> « Register Your Application »
-    2. noter le Client ID et le Client Secret
-    3. les coller dans Reglages > Jaquettes et fiches
+    1. https://dev.twitch.tv/console/apps  -> "Register Your Application"
+    2. note the Client ID and the Client Secret
+    3. paste them into Settings > Covers and details
 
-Sans ces identifiants le module reste inerte : il ne bloque rien, il ne
-telecharge rien, et l'outil se comporte comme avant.
+Without those credentials the module stays inert: it blocks nothing, downloads
+nothing, and the tool behaves exactly as before.
 
-Le jeton d'acces est obtenu par « client credentials » et garde en memoire
-jusqu'a son expiration : IGDB limite le nombre de demandes de jeton.
+The access token is obtained through "client credentials" and kept in memory
+until it expires: IGDB limits how often a token may be requested.
 """
 
 import json
@@ -30,7 +30,7 @@ API_URL = "https://api.igdb.com/v4"
 
 _JETON = {"valeur": "", "expire": 0.0}
 _LOCK = threading.Lock()
-_ECHECS = set()          # noms cherches en vain : on ne reessaie pas en boucle
+_ECHECS = set()          # names searched in vain: we do not retry in a loop
 
 
 def configure(cfg=None):
@@ -40,7 +40,7 @@ def configure(cfg=None):
 
 
 def _base(cfg):
-    """Adresse de base, surchargeable pour les tests."""
+    """Base address, overridable for tests."""
     return (cfg.get("igdb_url") or "").strip().rstrip("/") or API_URL
 
 
@@ -49,7 +49,7 @@ def _url_jeton(cfg):
 
 
 def jeton(cfg=None, force=False):
-    """Jeton d'application, renouvele seulement quand il expire."""
+    """Application token, renewed only when it expires."""
     cfg = cfg or config.load_config()
     if not configure(cfg):
         return ""
@@ -72,12 +72,12 @@ def jeton(cfg=None, force=False):
         return _JETON["valeur"]
 
 
-# IGDB accepte 4 requetes par seconde. Sans espacement, une recuperation de
-# 80 fiches en envoie 80 d'un coup : la moitie repart en 429, et ces echecs
-# etaient ensuite pris pour des « jeu introuvable ».
+# IGDB accepts 4 requests a second. Without spacing, fetching 80 entries sends
+# 80 at once: half come back 429, and those failures were then mistaken for
+# "game not found".
 INTERVALLE = 0.26
 _DERNIERE = [0.0]
-# Verrou distinct : dormir en tenant celui du jeton bloquerait tout le reste.
+# A separate lock: sleeping while holding the token's would block everything else.
 _RYTHME = threading.Lock()
 
 
@@ -90,11 +90,11 @@ def _attendre_son_tour():
 
 
 def _requete(cfg, chemin, corps, essais=3):
-    """Renvoie la liste des resultats, ou None si la requete a ECHOUE.
+    """Return the list of results, or None if the request FAILED.
 
-    La distinction compte : une liste vide veut dire « ce jeu n'existe pas chez
-    IGDB » et merite d'etre memorisee ; None veut dire « on n'a pas pu
-    demander » et doit pouvoir etre reessaye.
+    The distinction matters: an empty list means "IGDB does not have this game"
+    and is worth remembering; None means "we could not ask" and must be
+    retryable.
     """
     t = jeton(cfg)
     if not t:
@@ -111,10 +111,10 @@ def _requete(cfg, chemin, corps, essais=3):
                 d = json.loads(r.read().decode("utf-8", "replace"))
             return d if isinstance(d, list) else []
         except urllib.error.HTTPError as exc:
-            if exc.code == 401:                 # jeton perime avant l'heure
+            if exc.code == 401:                 # token expired ahead of time
                 t = jeton(cfg, force=True)
                 continue
-            if exc.code == 429:                 # trop vite : on laisse retomber
+            if exc.code == 429:                 # too fast: let it settle
                 time.sleep(1.0 + essai)
                 continue
             return None
@@ -128,11 +128,10 @@ def _echapper(s):
 
 
 def chercher(nom, cfg=None):
-    """Fiche d'un jeu : {nom, resume, annee, editeur} ou None.
+    """A game's details: {nom, resume, annee, editeur} or None.
 
-    On demande le resume court (`summary`) plutot que l'article complet
-    (`storyline`) : sur une carte de jeu, trois lignes valent mieux qu'un
-    paragraphe tronque.
+    We ask for the short summary (`summary`) rather than the full article
+    (`storyline`): on a game card, three lines beat a truncated paragraph.
     """
     cfg = cfg or config.load_config()
     if not configure(cfg) or not (nom or "").strip():
@@ -149,7 +148,7 @@ def chercher(nom, cfg=None):
         return None                    # echec technique : on reessaiera
     if not jeux:
         with _LOCK:
-            _ECHECS.add(cle)           # vraiment introuvable
+            _ECHECS.add(cle)           # genuinely not found
         return None
     j = _meilleur(jeux, nom)
     if j is None:
@@ -171,25 +170,23 @@ def chercher(nom, cfg=None):
             "annee": annee, "editeur": editeur}
 
 
-# `t_cover_big_2x` rend 528 x 704 : la taille d'une jaquette de carte, sans
-# aller chercher l'original qui peut peser plusieurs megaoctets pour rien.
+# `t_cover_big_2x` returns 528 x 704: the size of a card's cover, without
+# fetching the original, which can weigh several megabytes for nothing.
 IMAGE = "https://images.igdb.com/igdb/image/upload/t_cover_big_2x/%s.jpg"
 
 
 def jaquette(nom, cfg=None):
-    """Adresse de la jaquette IGDB d'un jeu, ou None.
+    """The IGDB cover URL for a game, or None.
 
-    IGDB publie des jaquettes, et Romule ne les lui demandait jamais : il ne
-    l'interrogeait que pour les resumes, et s'en remettait a SteamGridDB pour
-    les images. Or SteamGridDB est une base de VISUELS communautaires, riche
-    sur ce qui se joue au clavier et pauvre sur les catalogues de consoles
-    portables — « Crazy Construction », un jeu 3DS parfaitement reel, n'y
-    figure pas, quand IGDB le connait avec sa jaquette.
+    IGDB publishes cover art, and Romule never asked for it: it only queried
+    IGDB for summaries and relied on SteamGridDB for images. But SteamGridDB is
+    a community ARTWORK database, rich on what gets played with a keyboard and
+    thin on handheld console catalogues — "Crazy Construction", a perfectly
+    real 3DS game, is not in it, while IGDB knows it and has its cover.
 
-    Ce n'est donc pas un secours de derniere chance : c'est une seconde source,
-    consultee quand la premiere n'a rien. Elle passe par le meme rapprochement,
-    pour la meme raison : une jaquette qui n'est pas celle du jeu est pire
-    qu'une pochette vide.
+    So this is not a last-ditch fallback: it is a second source, consulted when
+    the first has nothing. It goes through the same matching rule, for the same
+    reason: a cover that is not the game's is worse than an empty sleeve.
     """
     cfg = cfg or config.load_config()
     if not configure(cfg) or not (nom or "").strip():
@@ -197,7 +194,7 @@ def jaquette(nom, cfg=None):
     cle = nom.strip().lower()
     with _LOCK:
         if cle in _ECHECS:
-            return None       # IGDB ne connait pas ce jeu : pas de jaquette non plus
+            return None       # IGDB does not know this game: no cover either
     corps = ('search "%s"; fields name,cover.image_id; limit 10;'
              % _echapper(nom))
     jeux = _requete(cfg, "games", corps)
@@ -205,20 +202,20 @@ def jaquette(nom, cfg=None):
         return None                    # echec technique : on reessaiera
     if not jeux:
         with _LOCK:
-            _ECHECS.add(cle)           # vraiment introuvable
+            _ECHECS.add(cle)           # genuinely not found
         return None
-    # On ecarte les jeux sans jaquette AVANT de rapprocher, pour qu'un jeu sans
-    # image ne prive pas Romule de celle d'une edition voisine qui en a une.
+    # Games without a cover are dropped BEFORE matching, so that one without
+    # an image does not deny Romule the cover of a neighbouring edition.
     #
-    # Un jeu connu mais depourvu d'image ne rejoint PAS `_ECHECS` : il existe,
-    # et `chercher()` doit continuer a pouvoir en tirer un resume.
+    # A known game that simply has no image does NOT join `_ECHECS`: it exists,
+    # and `chercher()` must still be able to get a summary out of it.
     avec = [j for j in jeux if (j.get("cover") or {}).get("image_id")]
     j = rapprochement.meilleur(avec, nom, nom=lambda x: x.get("name") or "")
     return IMAGE % j["cover"]["image_id"] if j else None
 
 
-# Noms de plateformes chez IGDB -> cles de l'outil. IGDB en connait des
-# centaines ; on ne mappe que celles qu'on sait ranger.
+# IGDB platform names -> our keys. IGDB knows hundreds of them; we only map
+# the ones we know how to file.
 _PLATEFORMES = {
     "nintendo switch": "switch", "nintendo switch 2": "switch",
     "playstation 2": "ps2", "playstation": "psx", "playstation 3": "ps3",
@@ -239,11 +236,10 @@ _PLATEFORMES = {
 
 
 def plateformes(nom, cfg=None):
-    """Plateformes sur lesquelles ce jeu est sorti, d'apres IGDB.
+    """The platforms this game was released on, according to IGDB.
 
-    Sert a trancher quand l'extension ne suffit pas : un `.iso` peut etre une
-    PS2, une Wii ou une Xbox, mais « Metal Gear Solid 3 » n'est sorti que sur
-    l'une d'elles.
+    Used to decide when the extension is not enough: an `.iso` may be a PS2, a
+    Wii or an Xbox, but "Metal Gear Solid 3" only came out on one of them.
     """
     cfg = cfg or config.load_config()
     if not configure(cfg) or not (nom or "").strip():
@@ -263,11 +259,10 @@ def plateformes(nom, cfg=None):
     return out
 
 
-# Categories IGDB : 0 = jeu principal, 3 = compilation, 5 = mod, 6 = fan game…
-# Le premier resultat d'une recherche est souvent un HACK portant presque le
-# meme nom : « Castlevania: Aria of Sorrow » ramenait ainsi le resume d'une
-# version modifiee. On privilegie donc le jeu principal, puis le titre le plus
-# proche.
+# IGDB categories: 0 = main game, 3 = bundle, 5 = mod, 6 = fan game…
+# The first search result is often a HACK bearing almost the same name:
+# "Castlevania: Aria of Sorrow" used to return the summary of a modified
+# version. So we prefer the main game, then the closest title.
 JEU_PRINCIPAL = 0
 _MOTS = __import__("re").compile(r"[a-z0-9]+")
 
@@ -284,8 +279,8 @@ def _meilleur(jeux, cherche):
     def score(j):
         t = _tokens(j.get("name"))
         commun = len(vise & t)
-        # un titre qui ajoute beaucoup de mots (« … Randomizer », « … Hack »)
-        # s'eloigne de ce qu'on cherche
+        # a title that piles on words ("… Randomizer", "… Hack") strays from
+        # what we asked for
         penalite = len(t - vise)
         principal = 1 if j.get("category", JEU_PRINCIPAL) == JEU_PRINCIPAL else 0
         avec_resume = 1 if (j.get("summary") or "").strip() else 0
@@ -293,14 +288,14 @@ def _meilleur(jeux, cherche):
                 -(j.get("category") or 0))
 
     retenu = max(jeux, key=score)
-    # « Au moins un mot en commun » etait trop permissif : « Crazy » passait
-    # pour « Crazy Construction ». Il faut couvrir la MAJORITE des mots
-    # distinctifs — meme regle que pour SteamGridDB, meme raison.
+    # "At least one word in common" was far too permissive: "Crazy" passed for
+    # "Crazy Construction". A candidate must cover the MAJORITY of distinctive
+    # words — same rule as for SteamGridDB, same reason.
     return retenu if rapprochement.assez_proche(retenu.get("name"), cherche) else None
 
 
 def tester(cfg=None):
-    """Verifie que les identifiants fonctionnent, sans rien enregistrer."""
+    """Check that the credentials work, without saving anything."""
     cfg = cfg or config.load_config()
     if not configure(cfg):
         raise ValueError("Client ID et Client Secret Twitch sont necessaires.")
