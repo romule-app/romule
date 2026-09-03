@@ -8,10 +8,58 @@ and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 Romule is at `0.x`: the HTTP API is **not** stable yet, and a minor release may
 change it. Breaking changes are always listed under **Changed** with the reason.
 
-## [Unreleased]
+## [0.3.0] — 2026-09-03
+
+The release about the parts you touch. 0.2.0 made Romule publishable — public
+repository, frozen API, strict CSP. This one is about the library itself: how
+fast it answers, how it behaves on a phone and on a handheld, who is allowed to
+do what, and what happens when something goes wrong at three in the morning
+with no browser in reach.
 
 ### Added
 
+- **The library opens on every platform at once, and switching is instant.**
+  `setSystem` used to empty the grid *then* wait for a round trip: the content
+  collapsed, the page jumped back to the top, and everything reappeared. The
+  current view now holds until its replacement arrives, and each platform is
+  kept in memory — going back is free. The cache is dropped on the only three
+  events that change the inventory: a task ending, *Refresh*, and a file drop.
+  A cache you cannot invalidate is a display bug on a timer.
+- **Search that keeps up with typing.** Measured before, on 5 000 titles: 20.4 ms
+  per keystroke, above the frame budget — the field felt sticky. The unified
+  list only changes when the data, the platform or the sort order change, so it
+  is memoised on exactly those; typing no longer rebuilds and re-sorts the whole
+  library. The field is sticky, answers `/` and `⌘K`, and searches **all**
+  platforms in the all-platforms view.
+- **Saved filter views, kept on the server.** Search, status chip and advanced
+  filters combine, and the combination can be named and found again — on your
+  phone as on your desk. Sort order and tile size stay in the browser: those
+  belong to the screen in front of you, not to the set of games.
+- **One click clears every filter.** Three mechanisms filtered the library and
+  nothing said how many were active; you could hunt for a while wondering why
+  the grid was empty because of a chip set the day before. The button now
+  carries the count of all three, and *Clear all* appears only when there is
+  something to clear.
+- **Two roles, SSO included.** The model existed by halves: the first account
+  was administrator and 27 routes were reserved server-side, but the interface
+  hid nothing, and an SSO session could **never** administer. `oidc_groupes`
+  says who may enter; `oidc_admin_groupes` says who may administer. Empty means
+  nobody — an empty setting must never mean everyone.
+- **It behaves like an application, not a web page.** `100dvh`,
+  `overscroll-behavior`, no tap highlight, safe-area insets, no long-press
+  selection on chrome. The three gestures that gave away the web page are gone.
+- **The D-pad walks the grid.** Retro handhelds are Android devices with a
+  browser, a short screen and buttons rather than a precise finger. Arrow keys
+  move card to card, Enter opens, Escape closes, and the focus ring is finally
+  visible.
+- **Ten device profiles in the responsive audit**, five of them handhelds:
+  Anbernic RG35XX, Retroid Pocket 5, AYN Odin 2 / Thor, the Thor's second
+  screen (360 × 413 — the only viewport taller than wide), and a Steam Deck.
+- **An update notice.** A quiet pill in the header when a newer version exists,
+  opening the release notes. It is an invitation, not an alarm: it appears only
+  when there is something to read, blocks nothing, and can be ignored for
+  weeks. One request to GitHub a day, and a setting to switch it off — the only
+  time Romule reaches the internet unasked.
 - **Notifications to Discord, Slack, Telegram, ntfy, Gotify — or any webhook.**
   Paste an address in Settings → Access; the service is worked out from it.
   Comparable tools reach for Apprise, which is a dependency; Romule has none,
@@ -37,9 +85,42 @@ change it. Breaking changes are always listed under **Changed** with the reason.
   exist only on the command line: whoever can run them already has the
   service's files, so they grant nothing new — they only make it doable without
   mistakes.
+- **Add a platform Romule does not know.** Twenty-three are recognised out of
+  the box; a display name, a folder and a list of extensions adds any other.
+  The feature existed and a button carried it — nothing said so.
+- **A bilingual documentation site**, twelve pages in English and French, with
+  CI checks that the settings reference, the environment variables, the OpenAPI
+  specification, the numbers cited in prose and the two translation catalogues
+  all still match the code.
 
 ### Changed
 
+- **Plurals are real plurals.** 98 occurrences of `file(s)` — the most visible
+  flaw in the interface, and on nearly every screen. A single rule would have
+  traded one mistake for another: French puts 0 and 1 in the singular, English
+  only 1. The template carries both forms, `{singular|plural}`, and the
+  language picks — one catalogue key per sentence, and a translator writes the
+  two forms of *their* language without needing to know French.
+- **Undo instead of confirm.** The trash *is* the undo. Asking "are you sure?"
+  charged the price of a mistake that costs nothing. The action happens, and
+  the toast offers *Undo* for eight seconds. What genuinely cannot be undone —
+  emptying the trash, clearing the log, revoking a key — still asks first.
+- **On a phone, the content comes before the settings.** Nineteen controls used
+  to sit between the top of the screen and the first cover. Filter and sort
+  rows fold behind one button below 700 px; search stays reachable.
+- **The library toolbar is aligned, and measured.** Three vertical axes in the
+  same row — 245, 249 and 250 px — and three heights. `aria-expanded` carries
+  the state and the CSS reads *that*, so there is one source of truth rather
+  than a class to keep in step with what screen readers announce.
+- **Installing no longer starts with `git clone`.** The container image is
+  public on `ghcr.io/romule-app/romule` — `latest`, `0.3`, `0.3.0`, multi-arch,
+  no authentication — so the recommended path is a Compose file you paste, with
+  one line to change.
+- **IGDB is now a second source for cover art.** SteamGridDB is a community
+  *artwork* database: rich on what gets played with a keyboard, thin on
+  handheld console catalogues. It does not have *Crazy Construction* — a real
+  3DS game — while IGDB does, with its cover. Romule already queried IGDB for
+  summaries and simply never asked it for images.
 - **The library scan no longer uses `pathlib` in its hot loop.** Answering
   *"should this be in SQLite?"* honestly meant profiling it, and the profile
   said the bottleneck was never storage: on 20 000 titles, `Path.relative_to`
@@ -50,82 +131,56 @@ change it. Breaking changes are always listed under **Changed** with the reason.
   differences. Written up in
   [Storage and performance](https://romule-app.github.io/romule/stockage/).
 
-- **IGDB is now a second source for cover art.** SteamGridDB is a community
-  *artwork* database: rich on what gets played with a keyboard, thin on
-  handheld console catalogues. It does not have *Crazy Construction* — a real
-  3DS game — while IGDB does, with its cover. Romule already queried IGDB for
-  summaries and simply never asked it for images.
-
-### Changed
-
-- **Installing no longer starts with `git clone`.** The container image is
-  public on `ghcr.io/romule-app/romule` — `latest`, `0.2`, `0.2.0`, multi-arch,
-  no authentication — so the recommended path is now a Compose file you paste,
-  with one line to change. Cloning remains the answer for building it yourself.
-- **`outils/essai-conteneur.py --image`** runs the whole thirty-two-check
-  suite against the *published* image instead of a locally built one. Building
-  proves the `Dockerfile` holds; pulling proves what was published starts —
-  two different questions as soon as there is a publish step. Verified against
-  `latest`, logged out of the registry: 32 checks, 0 failures.
-- **Key features in the README are a bullet list**, and the platform list no
-  longer reads as a limit: twenty-three are recognised out of the box, and
-  *Settings → Your console → Add a platform…* takes any other — a display name,
-  a folder and a list of extensions. The feature existed and a button carried
-  it; nothing said so.
-
 ### Fixed
 
-- **Two doc-versus-code checks could only be run in CI.** They lived as inline
-  YAML in the workflows, so the only way to find out was to push. They are
-  tools now (`outils/verifier-reglages-doc.py`), and `python3 lancer_tests.py`
-  runs them with everything else. `notif_destinations` was missing from the
-  settings reference — which is how this was noticed.
+- **A wrong entry is worse than a missing one.** `covers.sgdb_infos()` took
+  `found["data"][0]` — SteamGridDB's first autocomplete result, unchecked. On
+  *Crazy Construction* it returns a game called *Crazy*, and since that title
+  is then the pivot for the IGDB lookup, the card inherited both the name and
+  the summary of a different game. One unchecked `[0]` produced both defects.
+  Both sources now go through the same rule: a candidate must cover two thirds
+  of the distinctive words of the title.
+- **A cover source is consulted when there is no image, not when there is no
+  address.** A `nlib` or SteamGridDB URL that answers 404 is still a URL; the
+  fallback now runs after every candidate has been *downloaded* and rejected.
+- **The title, not the file name, is sent to IGDB.** `Crazy Construction
+  (Europe) (En,Fr,De).3ds` has `europe` and `3ds` among its distinctive words,
+  so the matching rule rightly rejected the correct game. The fallback
+  searched, found, and refused.
+- **Two stray braces disabled half the stylesheet.** A lone `}` raises nothing
+  visible: the browser resynchronises and silently drops everything up to the
+  next safe point. The settings bar rendered as a vertical list on a 1500 px
+  screen because its `display:flex` rule was simply no longer applied. Nothing
+  caught it — not the tests, not CI, not me. I saw it by *looking at a
+  screenshot*.
+- **Commands exited 0 when they refused.** `romule user passwd` printed
+  *"Refused: ..."* and reported success, so a script could not tell a refusal
+  from a completed job. Found by the new tests — six perfectly worded refusals,
+  all announced as successes.
 - **Startup notices went to stdout.** `nsz absent — ...` was printed before
   every command, including ones whose output is meant to be read by a program:
   `VALUE=$(romule config get trash_days)` captured the notice along with the
-  value. They go to stderr now — visible in a terminal, out of the way of a
-  pipe. Found by CI, on a machine that has no `nsz`; mine has one, so the
-  defect was invisible locally. The test now removes the tools from `PATH`
-  itself rather than hoping they are missing.
-- **Commands exited 0 when they refused.** `romule user passwd` printed
-  *"Refused: ..."* and reported success, so a script could not tell a refusal
-  from a completed job and `&&` chained onto a command that had done nothing.
-  Found by the new tests — six perfectly worded refusals, all announced as
-  successes.
+  value. They go to stderr now. Found by CI, on a machine that has no `nsz`.
 - **The documentation home page rendered its own markdown as text.** The card
   grid is written inside a `<div>`, and without the `md_in_html` extension
   everything in an HTML block is left verbatim. `--strict` cannot see it: it is
-  not a MkDocs warning, it is a page that reads badly. `outils/verifier-rendu.py`
-  now scans the *built* site for markdown that survived into the prose.
+  not a MkDocs warning, it is a page that reads badly.
 - **Numbers cited in the documentation are checked against the code.** The
-  README claimed 37 settings when there were 40, and the roles page listed five
-  families of admin-only routes when there are six.
-  `outils/verifier-chiffres.py` ties each sentence to the `len()` that produces
-  it, in digits or spelled out, in either language.
-- **Two checks that guard against drift could not see it.** The
-  settings-reference and numbers checks lived in the documentation workflow,
-  filtered on `docs/**`: adding a setting without touching the docs never ran
-  them. They moved to the unfiltered CI job.
+  README claimed 37 settings when there were 41, and the roles page listed five
+  families of admin-only routes when there are seven.
+- **Two checks that guard against drift could not see it.** The settings
+  reference and numbers checks lived in workflows filtered on `docs/**`: adding
+  a setting without touching the docs never ran them. They moved to the
+  unfiltered CI job, and `lancer_tests.py` now runs them locally too.
 - **The access token and the activity log were documented in the wrong
   folder** — they live in the service data folder, not next to your games.
 - **`beta.md` said the audit report and login pages were "English-only"** two
   lines above stating they are in French. They are in French, and so is the
-  command line — now said once, correctly, in both languages.
+  command line.
 - **The contributing page still taught `'%d game(s) found'`**, the notation
-  0.3.0 replaced with `{singular|plural}` and that a check now refuses.
-- **`homarr` was used as an example API key name** without ever saying what it
-  is. Replaced with `dashboard` / `tableau-de-bord`, which need no gloss.
+  this release replaced with `{singular|plural}`.
 - **Anchors are validated at build time.** A renamed heading used to leave
-  `page.md#old-title` pointing nowhere, silently; the first build with
-  validation on found one.
-- **A cover source is consulted when there is no image, not when there is no
-  address.** A `nlib` or SteamGridDB URL that answers 404 is still a URL; the
-  fallback now runs after every candidate has been *downloaded* and rejected,
-  so it serves the games that need it most.
-- **The title, not the file name, is sent to IGDB.** `Crazy Construction
-  (Europe) (En,Fr,De).3ds` has `europe` and `3ds` among its distinctive words,
-  and the matching rule — which demands two thirds of them — rightly rejected
-  the correct game. The fallback searched, found, and refused.
+  `page.md#old-title` pointing nowhere, silently.
 
 ## [0.2.0] — 2026-09-01
 
