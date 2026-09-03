@@ -1,16 +1,16 @@
-"""Une fiche fausse est pire qu'une fiche absente.
+"""A wrong entry is worse than a missing one.
 
-`covers.sgdb_infos()` prenait le PREMIER resultat de l'autocompletion, sans
-rien verifier. Sur « Crazy Construction », SteamGridDB rend d'abord un jeu
-nomme « Crazy » — et comme ce titre sert ensuite de pivot pour interroger IGDB,
-la carte affichait le nom ET le resume d'un autre jeu.
+`covers.sgdb_infos()` took the FIRST autocomplete result, checking nothing. On
+"Crazy Construction", SteamGridDB returns a game called "Crazy" first — and since
+that title then serves as the pivot for querying IGDB, the card displayed the
+name AND the summary of a different game.
 
-Une fiche absente se VOIT : la carte reste sobre, le filtre « sans jaquette »
-la trouve. Une fiche fausse se CROIT, et jette un doute sur toute la grille.
+A missing entry is SEEN: the card stays plain, and the "no cover" filter finds
+it. A wrong entry is BELIEVED, and casts doubt over the whole grid.
 
-Le seuil est severe a dessein. Ce test tient les deux moities : ce qui doit
-etre accepte l'est, et ce qui doit etre rejete l'est — sinon on aurait
-simplement echange un defaut contre l'autre.
+The threshold is deliberately strict. This test holds both halves: what must be
+accepted is, and what must be rejected is — otherwise one defect would simply
+have been traded for the other.
 """
 import sys
 from pathlib import Path
@@ -31,7 +31,7 @@ def t(nom, cond, detail=""):
         print("  ECHEC %s   %s" % (nom, detail))
 
 
-# (candidat, ce qu'on cherchait, doit-on l'accepter, pourquoi)
+# (candidate, what was being searched for, should it be accepted, why)
 CAS = [
     ("Crazy", "Crazy Construction", False,
      "le cas reel : un mot sur deux ne suffit pas"),
@@ -64,8 +64,8 @@ def test_le_seuil():
 
 
 def test_le_meilleur_est_le_plus_court():
-    """A couverture egale, le titre qui ajoute le moins de mots gagne : c'est
-    ce qui separe « Mario Kart 8 » d'un pass de contenu additionnel."""
+    """At equal coverage, the title that adds the fewest words wins: that is
+    what separates "Mario Kart 8" from a downloadable-content pass."""
     candidats = [{"n": "Mario Kart 8 Deluxe Booster Course Pass"},
                  {"n": "Mario Kart 8 Deluxe"}]
     choix = r.meilleur(candidats, "Mario Kart 8 Deluxe", nom=lambda c: c["n"])
@@ -84,17 +84,17 @@ def test_liste_vide():
 
 
 def test_les_deux_sources_utilisent_la_regle():
-    """Le rapprochement doit servir aux DEUX sources de titre. Cablé dans une
-    seule, l'autre continuerait de rendre le mauvais jeu."""
+    """The matching must serve BOTH title sources. Wired into only one, the
+    other would go on returning the wrong game."""
     racine = Path(__file__).resolve().parent.parent
     for fichier in ("covers.py", "igdb.py"):
         src = (racine / fichier).read_text(encoding="utf-8")
         t("%s passe par le rapprochement" % fichier,
           "rapprochement." in src, fichier)
     src = (racine / "covers.py").read_text(encoding="utf-8")
-    # C'est le resultat de la RECHERCHE qui ne doit plus etre pris en aveugle.
-    # Le `[0]` qui reste porte sur les jaquettes d'un jeu DEJA identifie : a ce
-    # stade, prendre la premiere image est le bon geste.
+    # It is the SEARCH's result that must no longer be taken blind. The `[0]`
+    # that remains is about the covers of an ALREADY identified game: at that
+    # stage, taking the first image is the right move.
     t("covers.py ne prend plus le premier resultat de recherche en aveugle",
       'found["data"][0]' not in src)
 

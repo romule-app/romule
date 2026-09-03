@@ -17,8 +17,8 @@ sys.path.insert(0, RACINE_PROJET)
 
 
 def _port_libre():
-    """Port attribue par le systeme : un test ne doit pas echouer parce qu'un
-    autre processus occupait un numero fixe."""
+    """A port assigned by the system: a test must not fail because another
+    process happened to occupy a fixed number."""
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
         return str(s.getsockname()[1])
@@ -77,8 +77,8 @@ try:
     c, b = appel("/auth/connexion",
                  {"email": "d@e.fr", "mdp": MDP, "code": "123456"}, forme=True)
     t("code faux refuse", c == 401, c)
-    # L'activation vient de consommer le code de la fenetre courante : on prend
-    # celui de la fenetre suivante, comme le ferait un utilisateur 30 s plus tard.
+    # Enabling has just consumed the current window's code: we take the next
+    # window's, as a user would 30 s later.
     code = totp.code(secret, time.time() + 30)
     c, b = appel("/auth/connexion", {"email": "d@e.fr", "mdp": MDP, "code": code}, forme=True)
     t("code valide accepte", c == 200, c)
@@ -88,25 +88,25 @@ try:
     c, b = appel("/auth/connexion", {"email": "d@e.fr", "mdp": MDP, "code": code}, forme=True)
     t("le MEME code ne peut pas etre rejoue", c == 401, c)
 
-    # La TOLERANCE d'horloge (plus ou moins une fenetre) se verifie dans
-    # test_totp_unite.py, ou l'instant est fourni. Ici, le test ne peut pas
-    # savoir si la fenetre precedente a deja servi : quand une frontiere de
-    # fenetre tombait entre la connexion ci-dessus et le controle, le code
-    # designait une fenetre consommee et se faisait refuser comme un rejeu.
-    # L'echec ressemblait alors a un defaut de tolerance, une fois sur cinq.
-    time.sleep(4)                     # laisse retomber la temporisation par IP
-    # On se reconnecte AVANT les essais volontairement faux qui suivent : chaque
-    # echec repousse exponentiellement la prochaine tentative, et la reconnexion
-    # se retrouvait derriere un blocage qu'elle avait elle-meme provoque. Une
-    # connexion reussie remet ce compteur a zero.
+    # Clock TOLERANCE (plus or minus one window) is checked in
+    # test_totp_unite.py, where the instant is supplied. Here, the test cannot
+    # know whether the previous window has already been used: when a window
+    # boundary fell between the login above and the check, the code named a
+    # consumed window and was refused as a replay. The failure then looked like a
+    # tolerance defect, one time in five.
+    time.sleep(4)                     # lets the per-IP back-off settle
+    # We log in again BEFORE the deliberately wrong attempts that follow: every
+    # failure pushes the next attempt back exponentially, and the login ended up
+    # behind a lockout it had caused itself. A successful login resets that
+    # counter.
     #
-    # Le passage de frontiere garantit par ailleurs que ce code appartient a une
-    # fenetre strictement posterieure a toutes celles deja consommees : il ne
-    # peut donc pas etre pris pour un rejeu.
-    # Franchir UNE frontiere ne suffit pas : la connexion precedente avait
-    # utilise le code de la fenetre SUIVANTE, c'est donc exactement dans
-    # celle-la qu'on atterrit. On vise la fenetre d'apres, qui n'a jamais servi
-    # et reste dans la tolerance de plus ou moins une.
+    # Crossing the boundary also guarantees this code belongs to a window
+    # strictly later than every window already consumed: it therefore cannot be
+    # taken for a replay.
+    # Crossing ONE boundary is not enough: the previous login used the NEXT
+    # window's code, so that is exactly the window we land in. We aim at the one
+    # after, which has never been used and stays within the plus-or-minus-one
+    # tolerance.
     time.sleep(31 - (time.time() % 30))
     c, b = appel("/auth/connexion",
                  {"email": "d@e.fr", "mdp": MDP,
