@@ -1,7 +1,7 @@
-"""Tests de la logique title ID — le coeur du classement.
+"""Tests of the title-ID logic — the heart of the filing.
 
-Lancer :  python3 -m romule.tests.test_titleid
-(ou avec pytest si installe)
+Run with:  python3 -m romule.tests.test_titleid
+(or with pytest if it is installed)
 """
 
 import sys
@@ -33,7 +33,7 @@ def test_base():
     assert t.tid_base(UPD_POKE) == BASE_POKE
     assert t.tid_base(DLC_POKE) == BASE_POKE
     assert t.tid_base(DLC_DIGI) == BASE_DIGI
-    assert t.tid_base(BASE_POKE) == BASE_POKE  # une base reste elle-meme
+    assert t.tid_base(BASE_POKE) == BASE_POKE  # a base stays itself
 
 
 def test_patch():
@@ -42,7 +42,7 @@ def test_patch():
 
 
 def test_dlc_prefix():
-    # les DLC de Pokemon partagent 0100f43008c4 + '5'
+    # Pokemon's DLC share 0100f43008c4 + '5'
     assert DLC_POKE.startswith(t.dlc_prefix(BASE_POKE))
     assert DLC_DIGI.startswith(t.dlc_prefix(BASE_DIGI))
 

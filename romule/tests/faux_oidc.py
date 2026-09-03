@@ -1,7 +1,8 @@
-"""Faux fournisseur OIDC minimal, pour tester le flux de bout en bout.
+"""A minimal fake OIDC provider, to test the flow end to end.
 
-Il expose la decouverte, un point d'autorisation qui redirige aussitot, un point
-de jetons qui signe un vrai id_token RS256, et le JWKS correspondant.
+It exposes the discovery document, an authorisation endpoint that redirects
+straight away, a token endpoint that signs a real RS256 id_token, and the
+matching JWKS.
 """
 import base64, hashlib, json, random, sys, urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -88,7 +89,7 @@ class H(BaseHTTPRequestHandler):
         if code not in DEMANDES:
             return self._j({"error": "invalid_grant"}, 400)
         nonce, defi = DEMANDES.pop(code)
-        # PKCE : le verifieur doit correspondre au defi annonce au depart
+        # PKCE: the verifier must match the challenge announced at the start
         calcul = b64u(hashlib.sha256(d.get("code_verifier", "").encode()).digest())
         if defi and calcul != defi:
             return self._j({"error": "invalid_grant", "error_description": "PKCE"}, 400)
