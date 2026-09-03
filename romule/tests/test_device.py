@@ -1,6 +1,6 @@
-"""Tests des parsers adb (purs, sans appareil).
+"""Tests of the adb parsers (pure, with no device).
 
-Lancer :  python3 -m romule.tests.test_device
+Run with:  python3 -m romule.tests.test_device
 """
 
 import sys
@@ -71,11 +71,11 @@ def test_is_wireless():
 def test_pick_prefers_usb():
     devs = [{"serial": "192.168.1.42:5555", "state": "device"},
             {"serial": "58974b87", "state": "device"}]
-    # les deux liens presents : l'USB gagne, il est bien plus rapide
+    # both links present: USB wins, it is far faster
     assert d._pick(devs)["serial"] == "58974b87"
-    # avec preference explicite : on respecte le choix
+    # with an explicit preference: the choice is honoured
     assert d._pick(devs, "192.168.1.42:5555")["serial"] == "192.168.1.42:5555"
-    # wifi seul : on le prend
+    # wifi alone: we take it
     assert d._pick([devs[0]])["serial"] == "192.168.1.42:5555"
 
 

@@ -1,9 +1,9 @@
-"""Les profils d'emulateur decrivent des chemins : ils doivent tous se resoudre.
+"""The emulator profiles describe paths: all of them must resolve.
 
-Sans materiel, on ne peut pas prouver qu'un profil FONCTIONNE — d'ou le drapeau
-`verifie`, vrai pour Eden seul. On peut en revanche prouver qu'aucun profil
-n'est incoherent : chemins bien formes, paquets renseignes quand un dossier de
-donnees les reclame, et format de reglages connu ou franchement absent.
+Without hardware, one cannot prove a profile WORKS — hence the `verifie` flag,
+true for Eden alone. What can be proved is that no profile is inconsistent:
+well-formed paths, packages filled in when a data folder calls for them, and a
+settings format either known or frankly absent.
 """
 import sys
 from pathlib import Path
