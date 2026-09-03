@@ -32,8 +32,8 @@ import time
 
 # Increasing order of severity. `debug` is the lowest: it only shows for the
 # styles that ask for it.
-NIVEAUX = ("debug", "info", "ok", "warn", "error")
-_RANG = {n: i for i, n in enumerate(NIVEAUX)}
+LEVELS = ("debug", "info", "ok", "warn", "error")
+_RANK = {n: i for i, n in enumerate(LEVELS)}
 
 STYLES = ("quiet", "normal", "verbose", "debug", "json")
 
@@ -44,20 +44,20 @@ STYLES = ("quiet", "normal", "verbose", "debug", "json")
 # logged at `debug`. A `verbose` that showed them would bury the task events
 # under dozens of lines a second — that is, make unreadable exactly what you
 # opened it to read.
-_SEUIL = {"quiet": _RANG["error"], "normal": _RANG["warn"],
-          "verbose": _RANG["info"], "debug": _RANG["debug"],
-          "json": _RANG["debug"]}
+_THRESHOLD = {"quiet": _RANK["error"], "normal": _RANK["warn"],
+          "verbose": _RANK["info"], "debug": _RANK["debug"],
+          "json": _RANK["debug"]}
 
 _C = {"debug": "\033[90m", "info": "\033[0m", "ok": "\033[32m",
       "warn": "\033[33m", "error": "\033[31m",
-      "gras": "\033[1m", "or": "\033[38;5;214m", "gris": "\033[90m",
-      "fin": "\033[0m"}
+      "bold": "\033[1m", "gold": "\033[38;5;214m", "grey": "\033[90m",
+      "reset": "\033[0m"}
 
-DEBUT = time.monotonic()
-_VERROU = threading.Lock()
+START = time.monotonic()
+_LOCK = threading.Lock()
 
 
-def _style_demande():
+def _requested_style():
     v = (os.environ.get("ROMULE_LOG") or os.environ.get("SWITCH_LOG") or "").strip().lower()
     if v in STYLES:
         return v
@@ -67,10 +67,10 @@ def _style_demande():
             "": "normal"}.get(v, "normal")
 
 
-STYLE = _style_demande()
+STYLE = _requested_style()
 
 
-def _couleur_possible():
+def _colour_possible():
     if os.environ.get("NO_COLOR") is not None:
         return False
     if STYLE == "json":
@@ -81,30 +81,30 @@ def _couleur_possible():
         return False
 
 
-COULEUR = _couleur_possible()
+COLOUR = _colour_possible()
 
 
-def relire():
+def reload_env():
     """Re-read the environment. For tests, which set the variable afterwards."""
-    global STYLE, COULEUR
-    STYLE = _style_demande()
-    COULEUR = _couleur_possible()
+    global STYLE, COLOUR
+    STYLE = _requested_style()
+    COLOUR = _colour_possible()
     return STYLE
 
 
-def _c(texte, quoi):
-    return "%s%s%s" % (_C[quoi], texte, _C["fin"]) if COULEUR else texte
+def _c(text, what):
+    return "%s%s%s" % (_C[what], text, _C["reset"]) if COLOUR else text
 
 
-def montre(niveau):
+def shows(level):
     """Should this level show at the current style?"""
-    return _RANG.get(niveau, _RANG["info"]) >= _SEUIL.get(STYLE, _SEUIL["normal"])
+    return _RANK.get(level, _RANK["info"]) >= _THRESHOLD.get(STYLE, _THRESHOLD["normal"])
 
 
 # `ROMULE` in block letters. A service starting up should name itself: in a
 # log where ten containers write, this is the only marker that separates one
 # startup from the next.
-_BANNIERE = r"""
+_BANNER = r"""
   ██████   ██████  ███    ███ ██    ██ ██      ███████
   ██   ██ ██    ██ ████  ████ ██    ██ ██      ██
   ██████  ██    ██ ██ ████ ██ ██    ██ ██      █████
@@ -113,91 +113,91 @@ _BANNIERE = r"""
 """
 
 
-def banniere(faits):
+def banner(facts):
     """The startup banner: the name, then the facts, aligned.
 
-    `faits` is a list of (label, value) pairs. An empty value is not shown: a
+    `facts` is a list of (label, value) pairs. An empty value is not shown: a
     line reading "Console:" followed by nothing teaches less than its absence.
     """
     if STYLE == "json":
-        evenement("demarrage", **{k.lower().replace(" ", "_"): v
-                                  for k, v in faits if v})
+        event("demarrage", **{k.lower().replace(" ", "_"): v
+                                  for k, v in facts if v})
         return
     if STYLE == "quiet":
         return
-    sys.stdout.write(_c(_BANNIERE, "or"))
-    large = max((len(k) for k, v in faits if v), default=0)
-    for cle, valeur in faits:
-        if not valeur:
+    sys.stdout.write(_c(_BANNER, "gold"))
+    width = max((len(k) for k, v in facts if v), default=0)
+    for key, value in facts:
+        if not value:
             continue
-        sys.stdout.write("  %s %s\n" % (_c((cle + " ").ljust(large + 1) + ":", "gris"),
-                                        valeur))
+        sys.stdout.write("  %s %s\n" % (_c((key + " ").ljust(width + 1) + ":", "grey"),
+                                        value))
     sys.stdout.write("\n")
     sys.stdout.flush()
 
 
-def evenement(message, niveau="info", module="", **champs):
+def event(message, level="info", module="", **fields):
     """One log line on standard output.
 
     Never raises: a service must not die because it could not complain. A
     closed output — an interrupted `docker logs`, a broken pipe — is the normal
     case, not a fault.
     """
-    if not montre(niveau):
+    if not shows(level):
         return
     try:
-        with _VERROU:
+        with _LOCK:
             if STYLE == "json":
-                d = {"t": time.strftime("%FT%T"), "niveau": niveau,
+                d = {"t": time.strftime("%FT%T"), "level": level,
                      "message": str(message)}
                 if module:
                     d["module"] = module
-                d.update(champs)
+                d.update(fields)
                 sys.stdout.write(_json.dumps(d, ensure_ascii=False) + "\n")
             else:
-                sys.stdout.write(_ligne(message, niveau, module, champs))
+                sys.stdout.write(_line(message, level, module, fields))
             sys.stdout.flush()
     except (OSError, ValueError):
         pass
 
 
-_ETIQUETTE = {"debug": "DEBUG", "info": "INFO ", "ok": "OK   ",
+_LABEL = {"debug": "DEBUG", "info": "INFO ", "ok": "OK   ",
               "warn": "WARN ", "error": "ERROR"}
 
 
-def _ligne(message, niveau, module, champs):
-    bouts = [_c(time.strftime("%H:%M:%S"), "gris"),
-             _c(_ETIQUETTE.get(niveau, "INFO "), niveau)]
+def _line(message, level, module, fields):
+    parts = [_c(time.strftime("%H:%M:%S"), "grey"),
+             _c(_LABEL.get(level, "INFO "), level)]
     if STYLE == "debug":
         # Who spoke, from which thread, and at what second of the service's
         # life. The three answer different questions: "which module", "which
         # concurrent task", "before or after the scan".
-        bouts.append(_c("%7.2fs" % (time.monotonic() - DEBUT), "gris"))
-        bouts.append(_c("%-14s" % (module or "-")[:14], "gris"))
-        bouts.append(_c("%-12s" % threading.current_thread().name[:12], "gris"))
-    ligne = " ".join(bouts) + " " + str(message)
-    if champs and STYLE == "debug":
-        ligne += _c("  " + " ".join("%s=%s" % kv for kv in sorted(champs.items())),
-                    "gris")
-    return ligne + "\n"
+        parts.append(_c("%7.2fs" % (time.monotonic() - START), "grey"))
+        parts.append(_c("%-14s" % (module or "-")[:14], "grey"))
+        parts.append(_c("%-12s" % threading.current_thread().name[:12], "grey"))
+    line = " ".join(parts) + " " + str(message)
+    if fields and STYLE == "debug":
+        line += _c("  " + " ".join("%s=%s" % kv for kv in sorted(fields.items())),
+                    "grey")
+    return line + "\n"
 
 
-def dit(message, niveau="info", module=""):
+def say(message, level="info", module=""):
     """A STARTUP fact: shown whatever the style, except in `quiet`.
 
-    Distinct from `evenement()`, which obeys the severity threshold. "Library:
+    Distinct from `event()`, which obeys the severity threshold. "Library:
     /library" is neither a warning nor an error, yet it must appear in
     `normal` — it is in fact the first thing you read when working out why the
     service cannot find your games.
     """
-    if STYLE == "quiet" and niveau != "error":
+    if STYLE == "quiet" and level != "error":
         return
     if STYLE == "json":
-        evenement(message, niveau, module)
+        event(message, level, module)
         return
     try:
-        with _VERROU:
-            sys.stdout.write(_ligne(message, niveau, module, {}))
+        with _LOCK:
+            sys.stdout.write(_line(message, level, module, {}))
             sys.stdout.flush()
     except (OSError, ValueError):
         pass
