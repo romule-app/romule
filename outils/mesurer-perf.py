@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
-"""Mesure le cout d'affichage sur une ludotheque synthetique.
+"""Measures the cost of displaying a synthetic library.
 
-Pourquoi cet outil existe : `/api/scan` est passe de 3 871 ms a 60 ms le jour
-ou les title IDs lus dans les conteneurs ont ete mis en cache. Rien ne garde ce
-gain. Une regression de ce type ne casse aucun test — elle rend juste le
-produit desagreable, et on s'en apercoit trois versions plus tard.
+Why this tool exists: `/api/scan` went from 3 871 ms to 60 ms the day the title
+IDs read inside the containers were cached. Nothing guards that gain. A
+regression of that kind breaks no test — it merely makes the product unpleasant,
+and you notice three versions later.
 
-    python3 outils/mesurer-perf.py                  # 500 titres, affiche les temps
+    python3 outils/mesurer-perf.py                  # 500 titles, prints the times
     python3 outils/mesurer-perf.py --titres 2000
-    python3 outils/mesurer-perf.py --strict         # sort en erreur si un seuil saute
-    python3 outils/mesurer-perf.py --json           # pour la CI
+    python3 outils/mesurer-perf.py --strict         # exits in error if a threshold breaks
+    python3 outils/mesurer-perf.py --json           # for CI
 
-Les mesures portent sur une ludotheque FABRIQUEE, faite de fichiers vides : on
-mesure le cout du parcours, de l'appariement et de la serialisation, pas celui
-du disque. C'est justement ce qui regresse quand une boucle devient quadratique.
+The measurements are taken on a FABRICATED library, made of empty files: we
+measure the cost of the walk, the matching and the serialisation, not the disk's.
+That is precisely what regresses when a loop becomes quadratic.
 """
 import argparse
 import json
@@ -31,14 +31,14 @@ from pathlib import Path
 
 RACINE = Path(__file__).resolve().parent.parent
 
-# Seuils. Volontairement larges : ils attrapent un effondrement, pas une
-# variation de 20 % entre deux machines. Un seuil serre sur un runner partage
-# ne signale que du bruit, et on finit par ignorer le job.
+# Thresholds. Deliberately wide: they catch a collapse, not a 20 % variation
+# between two machines. A tight threshold on a shared runner reports nothing but
+# noise, and the job ends up ignored.
 SEUILS = {
-    "demarrage_ms": 4000,      # import du paquet + premier inventaire
-    "scan_froid_ms": 6000,     # premier /api/scan, caches vides
-    "scan_chaud_ms": 1200,     # les suivants : c'est ce que paie chaque affichage
-    "page_ms": 1500,           # HTML + JS + CSS servis
+    "demarrage_ms": 4000,      # importing the package + the first inventory
+    "scan_froid_ms": 6000,     # the first /api/scan, caches empty
+    "scan_chaud_ms": 1200,     # the following ones: what every display pays
+    "page_ms": 1500,           # HTML + JS + CSS served
 }
 
 JEUX = ["Adventure", "Kingdom", "Racer", "Puzzle", "Chronicles", "Legends",
@@ -48,8 +48,8 @@ RETRO = [("megadrive", ".md"), ("snes", ".sfc"), ("gba", ".gba"),
 
 
 def fabriquer(racine, titres):
-    """Une ludotheque plausible : des jeux, leurs mises a jour, quelques DLC."""
-    alea = random.Random(1234)          # meme ludotheque a chaque execution
+    """A plausible library: games, their updates, a few DLC."""
+    alea = random.Random(1234)          # the same library on every run
     games = racine / "GAMES"
     games.mkdir(parents=True, exist_ok=True)
     n = 0
@@ -58,7 +58,7 @@ def fabriquer(racine, titres):
         nom = "%s %s %d" % (alea.choice(JEUX), alea.choice(JEUX), i)
         (games / ("%s [%s][v0].nsp" % (nom, tid))).touch()
         n += 1
-        if i % 3 == 0:                  # une mise a jour sur trois titres
+        if i % 3 == 0:                  # one update per three titles
             maj = tid[:-3] + "800"
             (games / ("%s [%s][v131072].nsp" % (nom, maj))).touch()
             n += 1
@@ -91,7 +91,7 @@ def mesurer(racine, port, repetitions):
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     base = "http://127.0.0.1:%d" % port
     try:
-        for _ in range(600):            # jusqu'a 60 s : le premier inventaire compte
+        for _ in range(600):            # up to 60 s: the first inventory counts
             try:
                 urllib.request.urlopen(base + "/api/health", timeout=3).read()
                 break
@@ -106,16 +106,16 @@ def mesurer(racine, port, repetitions):
 
         froid = _appel(base + "/api/scan")
         chauds = [_appel(base + "/api/scan") for _ in range(repetitions)]
-        # Ce que coute reellement un affichage : la page ET les deux fichiers
-        # sans lesquels elle ne montre rien. Mesurer « / » seul renvoyait 0 ms
-        # et ne prouvait que la vitesse d'un `sendfile`.
+        # What a display really costs: the page AND the two files without which
+        # it shows nothing. Measuring "/" alone returned 0 ms and proved nothing
+        # but the speed of a `sendfile`.
         pages = [sum(_appel(base + c) for c in ("/", "/app.js", "/app.css"))
                  for _ in range(repetitions)]
         return {
             "demarrage_ms": round(demarrage),
             "scan_froid_ms": round(froid),
-            # la mediane, pas la moyenne : une pause du ramasse-miettes ne doit
-            # pas decider a elle seule si la version passe ou non
+            # the median, not the mean: one garbage-collector pause must not
+            # decide on its own whether the version passes
             "scan_chaud_ms": round(statistics.median(chauds)),
             "scan_chaud_max_ms": round(max(chauds)),
             "page_ms": round(statistics.median(pages)),

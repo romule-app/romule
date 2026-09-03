@@ -1,18 +1,18 @@
-"""Le dossier des jeux se choisit depuis l'interface, pas dans un fichier compose.
+"""The games folder is chosen from the interface, not in a compose file.
 
-`ROOT` melangeait deux choses : l'espace de travail du service (configuration,
-comptes, journaux, jaquettes) et la ludotheque (les jeux). Les separer permet
-de designer la seconde depuis l'ecran de reglages sans toucher a la premiere —
-donc sans perdre ses comptes en changeant de disque.
+`ROOT` mixed two things: the service's workspace (configuration, accounts, logs,
+covers) and the library (the games). Separating them makes it possible to point
+at the second from the settings screen without touching the first — so without
+losing your accounts when you change disk.
 
-Ce qui est verifie ici :
-  * le defaut ne bouge pas : sans reglage, la ludotheque EST la racine ;
-  * le navigateur de dossiers ne rend que des dossiers, et compte les jeux ;
-  * changer de ludotheque change l'inventaire, et rien d'autre ;
-  * la corbeille et le depot suivent les JEUX, pas la configuration ;
-  * le choix survit a un redemarrage ;
-  * il est reserve a l'administrateur ;
-  * `ROMULE_LIBRARY` et `ROMULE_BASES` sont respectees.
+What is checked here:
+  * the default does not move: with no setting, the library IS the root;
+  * the folder browser returns only folders, and counts the games;
+  * changing library changes the inventory, and nothing else;
+  * the trash and the drop folder follow the GAMES, not the configuration;
+  * the choice survives a restart;
+  * it is reserved to the administrator;
+  * `ROMULE_LIBRARY` and `ROMULE_BASES` are honoured.
 """
 import http.cookiejar, json, os, socket, subprocess, sys, tempfile, time
 import urllib.error, urllib.parse, urllib.request
@@ -54,7 +54,7 @@ def js(b):
 
 
 def demarrer(racine, extra=None):
-    """Lance un serveur et attend qu'il reponde. Renvoie (processus, base)."""
+    """Starts a server and waits for it to answer. Returns (process, base)."""
     port = libre()
     base = "http://127.0.0.1:" + port
     env = dict(os.environ, ROMULE_ROOT=racine, ROMULE_WEB_PORT=port,
@@ -73,7 +73,7 @@ def demarrer(racine, extra=None):
 
 
 def jeu(dossier, nom, tid):
-    """Un fichier qui ressemble a un jeu. Le scan lit le NOM, pas le contenu."""
+    """A file that looks like a game. The scan reads the NAME, not the content."""
     dossier.mkdir(parents=True, exist_ok=True)
     f = dossier / ("%s [%s][v0].nsp" % (nom, tid))
     f.write_bytes(b"\0" * 32)
@@ -90,22 +90,22 @@ def t(n, c, d=""):
 
 
 def temporaire(prefixe):
-    """Dossier temporaire, chemin REEL.
+    """A temporary folder, with its REAL path.
 
-    Sur macOS, /var est un lien vers /private/var : `mkdtemp` rend la forme
-    courte, le serveur resout la forme longue, et toute comparaison de chemins
-    echoue pour une raison qui n'a rien a voir avec ce qu'on teste.
+    On macOS, /var is a link to /private/var: `mkdtemp` returns the short form,
+    the server resolves the long one, and any path comparison fails for a reason
+    that has nothing to do with what is being tested.
     """
     return str(Path(tempfile.mkdtemp(prefix=prefixe)).resolve())
 
 
-# Trois emplacements distincts, pour que rien ne puisse se confondre.
+# Three distinct locations, so that nothing can be confused.
 DONNEES = temporaire("ludo-donnees-")
 JEUX = temporaire("ludo-jeux-")
 VIDE = temporaire("ludo-vide-")
 
-# Un jeu dans la racine du service, trois dans l'autre dossier : les deux
-# inventaires doivent etre visiblement differents.
+# One game in the service's root, three in the other folder: the two inventories
+# must be visibly different.
 jeu(Path(DONNEES) / "GAMES", "Jeu Racine", "0100000000001000")
 for i, nom in enumerate(("Alpha", "Beta", "Gamma")):
     jeu(Path(JEUX) / "GAMES", nom, "010000000000%d000" % (2 + i))
@@ -129,7 +129,7 @@ try:
     t("il dit si c'est ecrivable", r.get("ecrivable") is True, r.get("ecrivable"))
     t("il propose un parent", bool(r.get("parent")), r.get("parent"))
     t("il propose des raccourcis", len(r.get("raccourcis", [])) >= 2, r.get("raccourcis"))
-    # Ce qui NE doit PAS sortir : des noms de fichiers.
+    # What must NOT come out: file names.
     t("il ne rend aucun fichier",
       all(not d["nom"].endswith(".nsp") for d in r.get("dossiers", [])),
       r.get("dossiers"))
@@ -161,9 +161,9 @@ try:
       sorted(p.name for p in Path(JEUX).iterdir()))
 
     print("   -- la corbeille suit les jeux, pas la configuration --")
-    # Une corbeille rangee a cote de la configuration serait souvent sur un
-    # autre disque : ecarter un jeu cesserait d'etre un renommage pour devenir
-    # une recopie de plusieurs gigaoctets.
+    # A trash kept beside the configuration would often be on another disk:
+    # setting a game aside would stop being a rename and become a copy of
+    # several gigabytes.
     cible = str(Path(JEUX) / "GAMES" / "Alpha [0100000000002000][v0].nsp")
     c, b = appel(BASE, nav, "/api/trash", {"paths": [cible]})
     t("l'ecart repond", c == 200, (c, js(b)))
@@ -235,8 +235,8 @@ try:
     t("le parent de la base aussi", bool(js(b).get("error")), js(b))
     c, b = appel(BASE, nav, "/api/ludotheque", {"chemin": VIDE})
     t("et on ne peut pas s'y installer", c == 400, (c, js(b)))
-    # La ludotheque par defaut (le dossier de donnees) est ici HORS des bases :
-    # ouvrir la fenetre sans argument doit quand meme mener quelque part.
+    # The default library (the data folder) is here OUTSIDE the bases: opening
+    # the dialog with no argument must still lead somewhere.
     c, b = appel(BASE, nav, "/api/parcourir", {})
     r = js(b)
     t("sans argument, on retombe sur la base", r.get("chemin") == JEUX, r)

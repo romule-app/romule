@@ -1,19 +1,18 @@
 #!/usr/bin/env python3
-"""Le site construit n'affiche-t-il pas du markdown a l'ecran ?
+"""Does the built site display markdown on screen?
 
-`mkdocs build --strict` attrape les liens morts, pas ceci : un bloc place dans
-une balise HTML sans l'extension `md_in_html` est rendu TEL QUEL. La page
-d'accueil affichait ainsi sa grille de cartes en clair — `**[Installation]
-(installation.md)** — Docker...` — pendant plusieurs versions. Ce n'est pas un
-avertissement de MkDocs, c'est du texte qui s'affiche mal, et rien ne le
-regardait.
+`mkdocs build --strict` catches dead links, not this: a block placed inside an
+HTML tag without the `md_in_html` extension is rendered AS IT STANDS. The home
+page displayed its card grid in the clear that way — `**[Installation]
+(installation.md)** — Docker...` — for several versions. It is not a MkDocs
+warning, it is text that displays badly, and nothing was watching for it.
 
-Le controle lit le site CONSTRUIT plutot que les sources : c'est ce que voit un
-lecteur, et c'est la seule facon d'attraper une extension manquante, une
-indentation d'admonition fausse, ou un onglet mal ferme — trois pannes dont
-aucune n'est visible dans le markdown.
+The check reads the BUILT site rather than the sources: that is what a reader
+sees, and it is the only way to catch a missing extension, a wrong admonition
+indent, or a badly closed tab — three failures, none of them visible in the
+markdown.
 
-Les zones de code sont ecartees : `**` et `[x](y)` y sont du texte legitime.
+Code areas are set aside: `**` and `[x](y)` are legitimate text there.
 """
 import re
 import sys
@@ -23,7 +22,7 @@ from pathlib import Path
 RACINE = Path(__file__).resolve().parent.parent
 SITE = RACINE / "site"
 
-# Ce que ces balises contiennent n'est pas de la prose : on ne le juge pas.
+# What these tags contain is not prose: we do not judge it.
 MUETTES = {"pre", "code", "script", "style", "textarea"}
 
 MOTIFS = [
@@ -37,7 +36,7 @@ MOTIFS = [
 
 
 class Prose(HTMLParser):
-    """Le texte visible d'une page, sans ce que portent les balises muettes."""
+    """A page's visible text, without what the mute tags carry."""
 
     def __init__(self):
         super().__init__(convert_charrefs=True)
@@ -61,7 +60,7 @@ class Prose(HTMLParser):
 
 
 def fautes(html):
-    """Les motifs de markdown brut trouves dans la prose d'une page."""
+    """The raw-markdown patterns found in a page's prose."""
     p = Prose()
     p.feed(html)
     texte = p.texte()
@@ -85,11 +84,11 @@ MAUVAIS = """<article><div class="grid cards">
 
 
 def epreuve():
-    """Le detecteur est-il capable d'echouer ?
+    """Is the detector capable of failing?
 
-    Un controle qu'on n'a jamais vu tomber ne prouve rien. Celui-ci est donc
-    passe sur une page saine ET sur la panne exacte qu'il doit attraper, a
-    chaque execution, avant d'etre cru.
+    A check nobody has ever seen fall proves nothing. So this one is run against
+    a healthy page AND against the exact failure it must catch, on every run,
+    before being believed.
     """
     if fautes(BON):
         print("   EPREUVE ECHOUEE : une page saine est signalee — %s"

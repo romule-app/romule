@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
-"""Les nombres cites dans la documentation valent-ils encore ?
+"""Are the numbers quoted in the documentation still true?
 
-« Vingt-sept routes reservees », « 37 reglages », « quatorze routes » : ces
-nombres sont ce qui rend un texte credible, et ils derivent en silence. Le
-README annoncait 37 reglages quand le code en avait 40 — personne ne pouvait le
-voir, parce qu'aucun controle ne relie une phrase francaise a un `len()`.
+"Twenty-seven reserved routes", "37 settings", "fourteen routes": those numbers
+are what makes a text credible, and they drift in silence. The README announced
+37 settings when the code had 40 — nobody could see it, because no check ties a
+sentence to a `len()`.
 
-Chaque affirmation est donc rattachee a la valeur qui la produit. Ajouter un
-reglage ou une route fait desormais tomber la construction tant que la phrase
-n'a pas suivi.
+Every claim is therefore tied to the value that produces it. Adding a setting or
+a route now brings the build down until the sentence has followed.
 
-Les nombres ecrits en toutes lettres sont acceptes : c'est ainsi qu'on ecrit
-dans un texte, et les interdire pousserait a ecrire moins bien.
+Numbers written out in words are accepted: that is how one writes in a text, and
+forbidding them would push towards writing worse.
 """
 import os
 import re
@@ -23,10 +22,9 @@ RACINE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RACINE))
 os.environ.setdefault("ROMULE_ROOT", tempfile.mkdtemp(prefix="chiffres-"))
 
-# Les nombres ecrits en toutes lettres, de 1 a 40 : au-dela, un texte les
-# ecrit en chiffres de toute facon. Une table partielle se retourne contre son
-# auteur — la premiere version ignorait « seventeen » et signalait une phrase
-# parfaitement juste.
+# Numbers written out in words, from 1 to 40: past that, a text writes them as
+# digits anyway. A partial table turns against its author — the first version did
+# not know "seventeen" and reported a perfectly correct sentence.
 _UNITES_EN = ["", "one", "two", "three", "four", "five", "six", "seven",
               "eight", "nine", "ten", "eleven", "twelve", "thirteen",
               "fourteen", "fifteen", "sixteen", "seventeen", "eighteen",
@@ -58,25 +56,26 @@ MOTS = {n: (_en(n), _fr(n)) for n in range(1, 41)}
 
 
 def formes(n):
-    """Les ecritures acceptables d'un nombre : chiffres, anglais, francais.
+    """The acceptable spellings of a number: digits, English, French.
 
-    Toutes les variantes, parce que ce controle existe pour attraper une
-    DERIVE, pas pour dicter l'orthographe. « trente et une routes » est le bon
-    francais — *route* est feminin — et la reforme de 1990 admet aussi
-    « trente-et-une ». Un outil qui n'accepterait qu'une seule graphie ferait
-    reecrire la phrase pour lui plaire, ce qui est le contraire du but.
+    Every variant, because this check exists to catch DRIFT, not to dictate
+    spelling. "trente et une routes" -- anglais:ok, a French example -- is the
+    correct French (*route* is feminine) and the 1990 reform also admits
+    "trente-et-une". A tool that accepted only one spelling would have the
+    sentence rewritten to please it, which is the opposite of the point.
     """
     f = {str(n)}
     for mot in MOTS.get(n, ()):
         variantes = {mot, mot.replace("-et-", " et ")}
-        # Accord en genre : « vingt et une routes », « trente et une lignes ».
+        # Gender agreement: "vingt et une routes", "trente et une lignes" --
+        # anglais:ok, French examples.
         variantes |= {v[:-2] + "une" for v in list(variantes) if v.endswith("un")}
         f |= variantes | {v.capitalize() for v in variantes}
     return f
 
 
 def valeurs():
-    """Ce que le code dit reellement, au moment ou l'on regarde."""
+    """What the code really says, at the moment we look."""
     from romule import apiv1, config, systems
     sys.path.insert(0, str(RACINE / "romule" / "tests" / "navigateur"))
     import ecrans
@@ -97,8 +96,8 @@ def valeurs():
     }
 
 
-# Chaque motif porte un `%s` a la place du nombre. Le fichier est fautif si le
-# motif ne s'y trouve avec AUCUNE ecriture de la valeur attendue.
+# Every pattern carries a `%s` where the number goes. The file is at fault if the
+# pattern is not found there with ANY spelling of the expected value.
 CLAIMS = [
     ("README.md", "reglages", r"All %s settings in the configuration file"),
     ("docs/roles.md", "routes_admin", r"%s routes are reserved server-side"),
@@ -115,7 +114,7 @@ CLAIMS = [
 
 
 def controler(claims, attendues, ecrire=print):
-    """Rend la liste des affirmations qui ne collent plus au code."""
+    """Returns the list of claims that no longer match the code."""
     fautes = []
     for fichier, cle, motif in claims:
         p = RACINE / fichier
@@ -126,8 +125,8 @@ def controler(claims, attendues, ecrire=print):
         n = attendues[cle]
         if any(re.search(motif % re.escape(f), texte, re.I) for f in formes(n)):
             continue
-        # La phrase existe-t-elle avec un AUTRE nombre ? On le dit, c'est plus
-        # utile que « introuvable » : le lecteur saura quoi corriger.
+        # Does the sentence exist with ANOTHER number? We say so, which is more
+        # useful than "not found": the reader will know what to correct.
         large = re.search(motif % r"([\w-]+)", texte, re.I)
         trouve = large.group(1) if large else "phrase absente"
         fautes.append((fichier, cle, "%s, attendu %d" % (trouve, n)))
@@ -139,7 +138,7 @@ EPREUVE_OK = [("README.md", "x", r"All %s settings in the configuration file")]
 
 
 def epreuve():
-    """Le controle est-il capable de tomber, et de se taire a bon escient ?"""
+    """Can the check fall, and can it keep quiet when it should?"""
     faux = RACINE / "outils" / "__epreuve_chiffres.md"
     faux.write_text("Vingt-sept routes are reserved server-side.\n", encoding="utf-8")
     try:
