@@ -1998,19 +1998,19 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
 .sectitre::after{content:"";display:block;width:44px;height:2px;margin-top:9px;
   border-radius:2px;background:var(--amber);opacity:.75}
 
-/* Les groupes d'une meme section se suivent sans marge propre : c'est la
-   section qui porte l'espacement. */
+/* The groups of one section follow each other with no margin of their own: the
+   section is what carries the spacing. */
 .setsection > .setgroup{margin:0}
 #pf-specifique{margin:0 0 4px}
 
 @media (max-width:640px){
-  /* `margin-right` : la poignee du journal est fixee au bord droit et passe
-     par-dessus le contenu. Sans cette marge, le dernier onglet de cette barre
-     se pose dessous et devient inatteignable — trouve par l'audit responsive
-     sur le second ecran de l'AYN Thor (360 x 413, presque carre), le seul
-     viewport plus haut que large de la liste.
-     Une MARGE et non un remplissage : le remplissage ajoute de l'espace apres
-     le dernier element sans le deplacer, donc ne change rien. */
+  /* `margin-right`: the log's handle is fixed to the right edge and passes
+     over the content. Without this margin, this bar's last tab lands under it
+     and becomes unreachable — found by the responsive audit on the AYN Thor's
+     second screen (360 x 413, nearly square), the only viewport in the list
+     taller than it is wide.
+     A MARGIN and not padding: padding adds space after the last element without
+     moving it, so it changes nothing. */
   .setnav{gap:2px;padding:4px;margin-bottom:18px;margin-right:42px;
     overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch}
   .setnav a{white-space:nowrap;padding:9px 12px;font-size:11px}
@@ -2018,9 +2018,9 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
   .setsection{gap:12px;margin-bottom:34px}
 }
 
-/* ------------------------------------------------- choix de plateforme
-   Une ligne par fichier, le choix a droite : on voit d'un coup ce qui reste
-   a trancher, sans enchainer les fenetres. */
+/* -------------------------------------------------- platform choice
+   One row per file, the choice on the right: you see at once what is left to
+   decide, without a chain of dialogs. */
 .classer{display:flex;flex-direction:column;gap:2px;padding:14px 20px 0;
   max-height:min(52vh,420px);overflow:auto}
 .classer-l{display:flex;align-items:center;gap:14px;padding:11px 0;
@@ -2034,10 +2034,10 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
   .classer-l select{width:100%}
 }
 
-/* ------------------------------------------------- fiche en cours d'arrivee
-   Un jeu importe a l'instant n'a ni titre officiel ni jaquette. Une carte vide
-   laisse croire a un echec : on montre que la recherche est en cours, et le
-   voile disparait de lui-meme quand la fiche arrive. */
+/* ------------------------------------------------------ entry on its way
+   A game imported a moment ago has neither official title nor cover. An empty
+   card suggests a failure: we show the search is under way, and the veil
+   disappears by itself when the entry arrives. */
 .gcard.sansfiche .art{position:relative}
 .gcard.sansfiche .art::after{content:"";position:absolute;inset:0;z-index:4;
   background:linear-gradient(100deg,transparent 20%,var(--eclat) 45%,
@@ -2053,19 +2053,19 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
   .gcard.sansfiche .art::after{animation:none;background:var(--eclat-faible)}
 }
 
-/* Un fichier dont on ne sait pas encore sur quelle plateforme il va : il
-   attend une decision, ce que la couleur dit sans avoir a le lire. */
+/* A file whose platform is not known yet: it is waiting for a decision, which
+   the colour says without having to be read. */
 .drow.aclasser{background:var(--primary-voile)}
 .drow.aclasser .grow{color:var(--ink)}
 .tag.t-AMBIGU{color:var(--amber);border-color:var(--primary-halo)}
 #btnclasser[hidden]{display:none}
 
 /* ====================================================================== 
-   INDEX ALPHABÉTIQUE
+   ALPHABETICAL INDEX
    ======================================================================
-   Une bande de lettres le long de la grille, comme dans une médiathèque. Elle
-   n'apparaît que sur un tri par nom : sauter à « M » dans une liste triée par
-   taille n'aurait aucun sens. */
+   A strip of letters along the grid, as in a media library. It only appears on
+   a sort by name: jumping to "M" in a list sorted by size would make no
+   sense. */
 .libzone{display:flex;align-items:flex-start;gap:14px}
 .libzone > #lib{flex:1;min-width:0}
 
@@ -2080,16 +2080,16 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
   transition:color .15s,background .15s,transform .15s var(--ease)}
 .alpha:hover:not(:disabled){color:var(--ink);background:var(--panel2);
   transform:translateX(-2px)}
-/* Une lettre sans jeu reste visible mais éteinte : la faire disparaître ferait
-   sauter la colonne à chaque filtre. */
+/* A letter with no game stays visible but unlit: making it disappear would make
+   the column jump on every filter. */
 .alpha.vide{opacity:.22;cursor:default}
 .alpha.on{color:var(--amber);background:var(--panel2);
   box-shadow:inset 0 0 0 1px var(--rule)}
 
-/* Repère bref sur la carte visée : sans lui, on ne sait pas laquelle des dix
-   cartes visibles est celle qu'on cherchait. */
-/* L'en-tete est colle : sans cette marge, la carte visee atterrit DESSOUS et
-   l'index designe deja la lettre suivante. */
+/* A brief marker on the targeted card: without it, you cannot tell which of the
+   ten visible cards is the one you were looking for. */
+/* The header is sticky: without this margin, the targeted card lands UNDER it
+   and the index already points at the next letter. */
 .gcard{scroll-margin-top:calc(var(--tete-h,60px) + 18px)}
 .gcard.visee{animation:carte-visee 1.4s var(--ease)}
 @keyframes carte-visee{
@@ -2098,8 +2098,8 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
   70%{box-shadow:0 0 0 3px var(--primary-trait)}
 }
 
-/* Sur téléphone la bande passe à l'horizontale, au-dessus de la grille : une
-   colonne de 26 lettres mangerait la largeur utile. */
+/* On a phone the strip turns horizontal, above the grid: a column of 26 letters
+   would eat the usable width. */
 @media (max-width:640px){
   .libzone{flex-direction:column;gap:8px}
   .alphabet{flex-direction:row;flex-wrap:nowrap;overflow-x:auto;width:100%;
@@ -2112,48 +2112,48 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
 }
 
 /* ================================================================================
-   APPARENCE — themes, mouvement, animation des cartes
+   APPEARANCE — themes, motion, card animation
    --------------------------------------------------------------------------------
-   Cette section est la DERNIERE du fichier, et c'est voulu : elle a le dernier
-   mot sur le survol des cartes et sur les couleurs. Trois blocs se disputaient
-   auparavant `.gcard:hover`, et celui qui gagnait annulait le mouvement decrit
-   par les deux autres — d'ou un survol qui semblait changer de comportement
-   selon l'ecran. Ne pas redeclarer `.gcard:hover` ailleurs.
+   This section is the LAST of the file, and that is deliberate: it has the final
+   word on the cards' hover and on the colours. Three blocks used to fight over
+   `.gcard:hover`, and whichever won cancelled the movement described by the
+   other two — hence a hover that seemed to change behaviour with the screen. Do
+   not redeclare `.gcard:hover` anywhere else.
 
-   Trois reglages, tous poses par l'utilisateur sur <html> :
+   Three settings, all set by the user on <html>:
 
-     data-theme  sombre | clair | auto      (auto = suit le systeme)
-     data-carte  aucune | 0 1 2 3 4 5       (animation de la jaquette)
-     data-mvt    complet | reduit | aucun   (tout le reste du mouvement)
+     data-theme  sombre | clair | auto      (auto = follows the system)
+     data-carte  aucune | 0 1 2 3 4 5       (the cover's animation)
+     data-mvt    complet | reduit | aucun   (all the rest of the motion)
 
-   Ils sont ecrits avant le premier rendu par le script en tete de index.html :
-   les lire depuis app.js aurait fait clignoter la page en sombre avant de
-   passer au clair.
+   They are written before the first render by the script at the top of
+   index.html: reading them from app.js would have flashed the page in dark
+   before switching to light.
 
-   Ajouter un theme = redefinir les jetons ci-dessous sous un selecteur de
-   portee. Aucun composant n'a besoin d'etre touche : tout passe par var().
+   Adding a theme = redefining the tokens below under a scoping selector. No
+   component needs to be touched: everything goes through var().
    ================================================================================ */
 
-/* ---------------------------------------------------------------- JETONS
-   Le theme SOMBRE est la reference : graphite chaud, un seul laiton pour
-   l'action, un ardoise froid pour l'information neutre. */
+/* ---------------------------------------------------------------- TOKENS
+   The DARK theme is the reference: warm graphite, one brass for the action, a
+   cold slate for neutral information. */
 :root, :root[data-theme="sombre"]{
   color-scheme:dark;
 
-  --bg:#141216;              /* graphite chaud, pas bleu */
+  --bg:#141216;              /* warm graphite, not blue */
   --panel:#1c191f;
   --panel2:#241f28;
   --rule:#332c39;
-  --ink:#ece6e2;             /* blanc casse chaud, moins agressif que #fff */
+  --ink:#ece6e2;             /* warm off-white, less aggressive than #fff */
   --mute:#8d8492;
-  --amber:#e0a340;           /* laiton : identite ET action, une seule */
-  --indigo:#8496ad;          /* ardoise : information neutre (ex-violet) */
+  --amber:#e0a340;           /* brass: identity AND action, one single colour */
+  --indigo:#8496ad;          /* slate: neutral information (formerly violet) */
   --green:#6fbf8b;
   --red:#e8695c;
 
-  --surface:#1c191f;         /* fond des elements poses sur le fond de page */
-  --surface-2:#241f28;       /* fond au repos des controles */
-  --surface-3:#2e2833;       /* fond au survol */
+  --surface:#1c191f;         /* background of the elements laid on the page */
+  --surface-2:#241f28;       /* the controls' background at rest */
+  --surface-3:#2e2833;       /* background on hover */
   --line:#332c39;
   --line-fort:#453c4d;
 
@@ -2189,7 +2189,7 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
   /* profondeur */
   --ombre:#000;
   --ombre-trait:rgba(0,0,0,.22);
-  --eclat:rgba(255,255,255,.07);        /* filet de lumiere en haut d'un relief */
+  --eclat:rgba(255,255,255,.07);        /* a thread of light at the top of a relief */
   --eclat-fort:rgba(255,255,255,.14);
   --eclat-faible:rgba(255,255,255,.04);
 
@@ -2197,14 +2197,14 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
   --verre:rgba(18,16,22,.92);           /* en-tete et barres collantes */
   --verre-plein:rgba(21,19,25,.97);
   --panneau-relief:linear-gradient(135deg,#241f28,#1a171d);
-  --puits:#0e0c11;                      /* journal, blocs de code : en creux */
-  --creux:#171419;                      /* emplacement d'image vide */
+  --puits:#0e0c11;                      /* the log, code blocks: sunk in */
+  --creux:#171419;                      /* an empty image slot */
   --art-fond:linear-gradient(140deg,#241f28,#141216);
 }
 
-/* Le theme CLAIR n'est pas l'inverse du sombre : c'est un papier chaud. Le
-   laiton #e0a340 y tomberait a 1,9:1 sur blanc — illisible. Il est donc
-   assombri en bronze, et le texte pose dessus devient clair. */
+/* The LIGHT theme is not the dark one inverted: it is a warm paper. The brass
+   #e0a340 would fall there to 1.9:1 on white — unreadable. So it is darkened
+   into bronze, and the text laid on it becomes light. */
 :root[data-theme="clair"]{
   color-scheme:light;
 
@@ -2253,9 +2253,9 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
   --info-doux:rgba(74,93,115,.13);
   --info-trait:rgba(74,93,115,.4);
 
-  /* Sur papier, la profondeur vient d'une ombre douce et coloree, pas d'un
-     noir pur qui salirait le fond. Le « filet de lumiere » s'inverse : c'est
-     une ligne sombre. */
+  /* On paper, depth comes from a soft coloured shadow, not from a pure black
+     that would dirty the background. The "thread of light" inverts: it becomes
+     a dark line. */
   --ombre:rgba(58,44,66,.42);
   --ombre-trait:rgba(58,44,66,.14);
   --eclat:rgba(34,28,38,.07);
@@ -2270,13 +2270,13 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
   --art-fond:linear-gradient(140deg,#e8e0d7,#d7cdc2);
 }
 
-/* Ces trois-la ne suivent PAS le theme : ils se posent sur une jaquette, donc
-   sur une image dont on ne sait rien. Un capot clair sur une pochette claire
-   rendrait le texte illisible. */
+/* These three do NOT follow the theme: they sit on a cover, so on an image we
+   know nothing about. A light hood on a light sleeve would make the text
+   unreadable. */
 :root{
   --capot:rgba(14,12,16,.8);
   --capot-leger:rgba(14,12,16,.6);
-  --rideau:rgba(8,7,10,.72);            /* voile derriere une modale */
+  --rideau:rgba(8,7,10,.72);            /* the veil behind a modal */
   --rideau-leger:rgba(8,7,10,.55);
   --sur-image:#f7f2ee;
 }
@@ -2285,8 +2285,8 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
   --rideau-leger:rgba(38,30,44,.3);
 }
 
-/* AUTO : le systeme decide. `data-theme` est toujours pose par le script de
-   tete, mais la regle vaut aussi sans lui (JavaScript coupe). */
+/* AUTO: the system decides. `data-theme` is always set by the head script, but
+   the rule holds without it too (JavaScript turned off). */
 @media (prefers-color-scheme:light){
   :root[data-theme="auto"]{
     color-scheme:light;
@@ -2320,30 +2320,30 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
   }
 }
 
-/* Le changement de theme se fait en fondu, mais SEULEMENT pendant la seconde
-   qui suit le clic : laisser une transition permanente sur `background` et
-   `color` rendrait poisseux chaque survol de ligne de l'interface. */
+/* The theme change fades, but ONLY during the second that follows the click:
+   leaving a permanent transition on `background` and `color` would make every
+   row hover in the interface feel sticky. */
 :root.vire, :root.vire *{
   transition:background-color .38s var(--ease), color .38s var(--ease),
              border-color .38s var(--ease) !important;
 }
 
-/* ------------------------------------------------------------- MOUVEMENT
-   Une seule echelle de durees, consommee partout. Baisser le reglage revient
-   a raccourcir ces trois valeurs — aucune regle n'a besoin d'etre reecrite. */
+/* ---------------------------------------------------------------- MOTION
+   One single scale of durations, consumed everywhere. Lowering the setting comes
+   down to shortening these three values — no rule needs rewriting. */
 :root{
   --t-court:.15s;
   --t-moyen:.26s;
   --t-long:.44s;
-  --t-cascade:34ms;          /* ecart entre deux cartes qui entrent */
-  --amplitude:1;             /* multiplie les deplacements */
+  --t-cascade:34ms;          /* the gap between two cards coming in */
+  --amplitude:1;             /* multiplies the movements */
 }
 :root[data-mvt="reduit"]{
   --t-court:.1s; --t-moyen:.14s; --t-long:.18s;
   --t-cascade:0ms; --amplitude:.4;
 }
-/* Le systeme a le dernier mot : quelqu'un qui a demande moins de mouvement a
-   l'echelle de sa machine ne devrait pas avoir a le redemander ici. */
+/* The system has the final word: someone who asked for less motion at their
+   machine's level should not have to ask again here. */
 @media (prefers-reduced-motion:reduce){
   :root:not([data-mvt="complet"]){
     --t-court:.1s; --t-moyen:.14s; --t-long:.18s;
@@ -2360,61 +2360,58 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
 }
 
 /* ================================================================================
-   ANIMATION DE LA CARTE — six variantes, une seule active
+   CARD ANIMATION — six variants, one active
    --------------------------------------------------------------------------------
-   Tout est enferme dans `@media (hover:hover)` : c'est la vraie question posee
-   (« le survol existe-t-il ? »), la ou `pointer:coarse` demandait « le doigt
-   est-il gros ? ». Un portable a ecran tactile repondait oui aux deux et
-   perdait l'animation.
+   Everything is enclosed in `@media (hover:hover)`: that is the real question
+   ("does hovering exist?"), where `pointer:coarse` asked "is the finger large?".
+   A laptop with a touch screen answered yes to both and lost the animation.
    ================================================================================ */
 
-/* La grille garde de l'air sous la barre collante. Une carte de la premiere
-   rangee grandit d'environ 20 px vers le haut quand elle se souleve : sans
-   cette reserve, elle venait buter dans « Trier par » et s'y faisait couper,
-   ce qui donnait l'impression que l'animation debordait sur l'en-tete. */
+/* The grid keeps air under the sticky bar. A card in the first row grows about
+   20 px upwards when it lifts: without this reservation, it ran into "Trier par"
+   and got clipped there, which gave the impression the animation was spilling
+   over the header. */
 .games{padding-top:18px}
 
-/* Une carte survolee passe devant ses voisines — mais reste DERRIERE les
-   barres collantes (`.toolbar` est a 10, l'en-tete a 20). Une valeur plus
-   haute ferait passer une jaquette par-dessus l'en-tete, ce qui serait pire
-   que le probleme d'origine. */
+/* A hovered card comes in front of its neighbours — but stays BEHIND the sticky
+   bars (`.toolbar` is at 10, the header at 20). A higher value would send a
+   cover over the header, which would be worse than the original problem. */
 @media (hover:hover){ .gcard:hover{z-index:3} }
 
-/* socle commun a toutes les variantes */
+/* the base shared by every variant */
 .gcard{position:relative;border-radius:10px;
   transition:transform var(--t-moyen) var(--ease),
              border-color var(--t-moyen) var(--ease),
              box-shadow var(--t-moyen) var(--ease)}
 .gcard .art img{transition:transform var(--t-long) var(--ease),
                            filter var(--t-long) var(--ease)}
-/* un jeu deja pret n'a rien a proposer : il ne reagit pas */
+/* a game already ready has nothing to offer: it does not react */
 .gcard.fige:hover{transform:none !important;border-color:var(--rule);
   box-shadow:none}
 
 @media (hover:hover){
 
-/* --- 0 : SOBRE — le repere historique ------------------------------------ */
+/* --- 0: PLAIN — the historical reference --------------------------------- */
 :root[data-carte="0"] .gcard:hover{
   transform:translateY(calc(-3px * var(--amplitude)));
   border-color:var(--indigo);
   box-shadow:0 12px 28px -16px var(--ombre)}
 :root[data-carte="0"] .gcard:hover .art img{transform:scale(1.045)}
 
-/* --- 1 : AFFICHE INCLINEE + REFLET  (defaut) ------------------------------
-   `:root:not([data-carte])` couvre le cas ou le script de tete n'a pas tourne :
-   sans lui, aucune variante ne s'appliquerait et le survol serait mort. */
-/* Pas de `perspective` sur la grille : son point de fuite serait le CENTRE de
-   la grille entiere, a plusieurs centaines de pixels sous la premiere rangee.
-   Une carte du haut poussee vers l'oeil s'en eloignait donc vers le haut, et
-   montait de 23 px de plus — c'est ce qui la faisait passer derriere la barre
-   d'outils. La perspective est deja dans la transformation de la carte, ou
-   son point de fuite est le pivot de la carte elle-meme.
+/* --- 1: TILTED POSTER + REFLECTION  (default) ----------------------------
+   `:root:not([data-carte])` covers the case where the head script did not run:
+   without it, no variant would apply and the hover would be dead. */
+/* No `perspective` on the grid: its vanishing point would be the CENTRE of the
+   whole grid, several hundred pixels below the first row. A card at the top
+   pushed towards the eye therefore moved away from it upwards, and rose 23 px
+   more — that is what sent it behind the toolbar. The perspective is already in
+   the card's own transform, where the vanishing point is the card's own pivot.
 
-   Le pivot est remonte au tiers superieur plutot qu'au centre : l'effet se
-   developpe alors davantage vers le bas, ou il y a de la place. Plus haut
-   (12 %) la carte penchait de facon bancale, le bas chassant tout seul ;
-   plus bas, elle recommencait a mordre sur la barre d'outils. C'est le seul
-   des six effets assez ample pour poser la question. */
+   The pivot is raised to the upper third rather than the centre: the effect then
+   develops more towards the bottom, where there is room. Higher (12 %) the card
+   leaned lopsidedly, the bottom swinging out on its own; lower, it started
+   biting into the toolbar again. It is the only one of the six effects wide
+   enough to raise the question. */
 :root:not([data-carte]) .gcard,
 :root[data-carte="1"] .gcard{transform-origin:50% 32%}
 :root:not([data-carte]) .gcard:hover,
@@ -2426,7 +2423,7 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
             scale(calc(1 + .04 * var(--amplitude)));
   border-color:var(--line-fort);
   box-shadow:calc(-14px * var(--amplitude)) 22px 46px -18px var(--ombre)}
-/* le reflet speculaire : un degre qui traverse la jaquette une fois */
+/* the specular reflection: a gradient that crosses the cover once */
 :root:not([data-carte]) .gcard .art::after,
 :root[data-carte="1"] .gcard .art::after{
   content:"";position:absolute;inset:-40%;pointer-events:none;z-index:2;
@@ -2451,9 +2448,9 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
 :root[data-carte="2"] .gcard:hover .art img{
   transform:scale(1.06);filter:saturate(1.18) brightness(1.05)}
 
-/* --- 3 : REVELATION DU TITRE ----------------------------------------------
-   La legende passe PAR-DESSUS la jaquette : la carte perd la hauteur de son
-   texte, donc la grille montre environ 30 % de jeux en plus. */
+/* --- 3: TITLE REVEAL ------------------------------------------------------
+   The caption moves ON TOP of the cover: the card loses the height of its text,
+   so the grid shows about 30 % more games. */
 :root[data-carte="3"] .gcard .cap{
   position:absolute;left:0;right:0;bottom:0;z-index:3;
   background:linear-gradient(to top,var(--capot) 55%,transparent);
@@ -2466,11 +2463,11 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
   transform:translateY(calc(-4px * var(--amplitude)));
   box-shadow:0 16px 34px -18px var(--ombre)}
 :root[data-carte="3"] .gcard:hover .art img{transform:scale(1.08)}
-/* Un jeu sans jaquette deviendrait un rectangle vide et anonyme : sa legende
-   reste donc affichee, quel que soit le reglage. */
+/* A game without a cover would become an empty anonymous rectangle: so its
+   caption stays displayed, whatever the setting. */
 :root[data-carte="3"] .gcard.sansfiche .cap{transform:none}
 
-/* --- 4 : LISERE QUI TOURNE ------------------------------------------------ */
+/* --- 4: TURNING EDGE ------------------------------------------------------ */
 @property --ang{syntax:"<angle>";initial-value:0deg;inherits:false}
 :root[data-carte="4"] .gcard{isolation:isolate}
 :root[data-carte="4"] .gcard::before{
@@ -2504,17 +2501,17 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
 
 }  /* fin @media (hover:hover) */
 
-/* --- AUCUNE : le survol ne fait plus que marquer la cible ----------------- */
+/* --- NONE: the hover does nothing but mark the target -------------------- */
 :root[data-carte="aucune"] .gcard:hover{
   transform:none;border-color:var(--line-fort);box-shadow:none}
 
-/* --------------------------------------------------------- AU DOIGT
-   Sur la console, il n'y a pas de survol : sans ces regles, le reglage
-   d'animation serait purement decoratif la ou l'outil est le plus utilise.
-   L'appui rejoue donc l'effet choisi, en plus court et en plus sage — un
-   geste tactile dure quelques dizaines de millisecondes, pas une demi-seconde.
-   La variante 3 est volontairement absente : elle cache le titre jusqu'au
-   survol, et sur un ecran tactile ce survol n'arrive jamais. */
+/* ------------------------------------------------------ WITH A FINGER
+   On the handheld there is no hover: without these rules, the animation setting
+   would be purely decorative exactly where the tool is used most. So a tap
+   replays the chosen effect, shorter and quieter — a touch gesture lasts a few
+   tens of milliseconds, not half a second. Variant 3 is deliberately absent: it
+   hides the title until the hover, and on a touch screen that hover never
+   comes. */
 @media (hover:none){
   .gcard{transition:transform .12s var(--ease),box-shadow .12s var(--ease)}
   :root[data-carte="0"] .gcard:active{transform:translateY(-2px)}
@@ -2535,17 +2532,17 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
 }
 
 /* ================================================================================
-   LE RESTE DU MOUVEMENT
+   THE REST OF THE MOTION
    --------------------------------------------------------------------------------
-   Une animation ne se justifie que si elle repond a une question que
-   l'utilisateur se pose : « qu'est-ce qui vient de changer ? », « ou suis-je
-   arrive ? », « est-ce que ca travaille ? ». Les autres sont du bruit.
+   An animation is only justified if it answers a question the user is asking:
+   "what has just changed?", "where have I landed?", "is it working?". The others
+   are noise.
    ================================================================================ */
 
-/* --- entree de la grille : la liste se pose, elle n'apparait pas d'un bloc.
-   L'ecart est fixe par rang plutot que par un `--i` calcule en JavaScript :
-   au-dela de la premiere fournee, l'oeil ne suit plus la cascade de toute
-   facon, et 24 regles coutent moins qu'un attribut ecrit sur 300 cartes. */
+/* --- the grid's entry: the list settles, it does not appear all at once.
+   The offset is fixed per rank rather than by an `--i` computed in JavaScript:
+   past the first batch the eye no longer follows the cascade anyway, and 24
+   rules cost less than an attribute written on 300 cards. */
 @keyframes cardin{
   from{opacity:0;transform:translateY(calc(14px * var(--amplitude))) scale(.985)}
   to{opacity:1;transform:none}
@@ -2571,36 +2568,36 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
 .gcard:nth-child(18){animation-delay:calc(var(--t-cascade) * 17)}
 .gcard:nth-child(n+19){animation-delay:calc(var(--t-cascade) * 18)}
 
-/* --- la jaquette arrive en fondu plutot qu'en a-coup */
+/* --- the cover arrives by fading rather than by a jerk */
 @keyframes imgin{from{opacity:0}to{opacity:1}}
 .gcard .art img{animation:imgin var(--t-moyen) var(--ease) backwards}
 
-/* --- l'emplacement porte deja la couleur de la pochette
-   `--jaq` est pose par le script des que la couleur dominante du jeu est
-   connue (elle est calculee une fois puis rangee dans le navigateur). Tant
-   qu'elle ne l'est pas, on retombe sur le degrade neutre. Resultat : au
-   defilement, la grille se remplit de couleurs plutot que de trous gris, et
-   l'arrivee de l'image ne fait plus sauter la carte. */
+/* --- the slot already carries the sleeve's colour
+   `--jaq` is set by the script as soon as the game's dominant colour is known
+   (it is computed once then stored in the browser). Until it is, we fall back
+   on the neutral gradient. The result: while scrolling, the grid fills with
+   colours rather than grey holes, and the image's arrival no longer makes the
+   card jump. */
 .gcard .art{background:var(--jaq,var(--art-fond))}
 .gcard .art::before{content:"";position:absolute;inset:0;z-index:0;
   background:linear-gradient(155deg,var(--eclat-fort),transparent 60%);
   pointer-events:none}
 .gcard .art img{position:relative;z-index:1}
 
-/* --- la fiche prend la couleur du jeu
-   La teinte reste tres diluee : la pochette doit rester le seul aplat franc
-   de la fenetre, et le texte de l'en-tete doit rester lisible quelle que
-   soit la couleur tiree — d'ou le melange avec la surface du theme plutot
-   qu'une couleur posee telle quelle. */
+/* --- the detail view takes the game's colour
+   The tint stays very dilute: the sleeve must remain the dialog's only solid
+   block of colour, and the header's text must stay readable whatever colour is
+   drawn — hence the mix with the theme's surface rather than a colour laid on
+   as is. */
 .sheet .top{
   background:color-mix(in srgb, var(--jaq,var(--panel2)) 22%, var(--panel2));
   transition:background var(--t-long) var(--ease)}
 .sheet .cover{box-shadow:0 10px 26px -14px var(--ombre)}
-/* un filet de la couleur du jeu ferme l'en-tete, comme une tranche de boitier */
+/* a rule in the game's colour closes the header, like a case's spine */
 .sheet .top{border-bottom:1px solid
   color-mix(in srgb, var(--jaq,var(--rule)) 45%, var(--rule))}
 
-/* --- onglets : un curseur glisse d'un onglet a l'autre, le panneau se pose */
+/* --- tabs: a cursor slides from one tab to the next, the panel settles */
 nav.tabs{position:relative}
 @keyframes panneau-entre{
   from{opacity:0;transform:translateY(calc(8px * var(--amplitude)))}
@@ -2608,12 +2605,12 @@ nav.tabs{position:relative}
 }
 .panel.active{animation:panneau-entre var(--t-moyen) var(--ease)}
 
-/* Quand le navigateur sait le faire, le changement d'onglet devient un fondu
-   croise reel plutot que deux animations independantes. */
-/* Les deux transitions de vue de l'application ne se ressemblent pas : un
-   changement d'onglet remplace la page, l'ouverture d'une fiche fait grandir
-   une jaquette par-dessus. Sans ce cloisonnement, l'ouverture d'une fiche
-   heritait du glissement vertical prevu pour les onglets. */
+/* When the browser can do it, the tab change becomes a real cross-fade rather
+   than two independent animations. */
+/* The app's two view transitions are nothing alike: a tab change replaces the
+   page, opening a detail view grows a cover on top of it. Without this
+   partitioning, opening a detail view inherited the vertical slide meant for the
+   tabs. */
 @media (prefers-reduced-motion:no-preference){
   :root.vt-onglet::view-transition-old(root){animation:vt-sort var(--t-court) var(--ease) both}
   :root.vt-onglet::view-transition-new(root){animation:vt-entre var(--t-moyen) var(--ease) both}
@@ -2623,29 +2620,29 @@ nav.tabs{position:relative}
 @keyframes vt-sort{to{opacity:0}}
 @keyframes vt-entre{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
-/* Pendant que la jaquette grandit, la fenetre ne doit PAS jouer sa propre
-   entree : les deux mouvements se superposeraient et l'image partirait de
-   travers. `sansentree` prend le relais APRES la transition — sans elle, le
-   retrait de `vt-fiche` rendait son animation a la fenetre, qui se mettait
-   alors a entrer une seconde fois, une fois deja en place. */
+/* While the cover grows, the dialog must NOT play its own entry: the two
+   movements would overlap and the image would set off crooked. `sansentree`
+   takes over AFTER the transition — without it, removing `vt-fiche` gave the
+   dialog its animation back, and it then started entering a second time, once
+   already in place. */
 :root.vt-fiche .modal.open,
 :root.vt-fiche .modal.open .sheet,
 .modal.sansentree.open,
 .modal.sansentree.open .sheet{animation:none}
 
-/* --- modales : elles arrivent de la ou on a clique, elles ne clignotent pas */
+/* --- modals: they arrive from where you clicked, they do not flash */
 @keyframes voile-entre{from{opacity:0}to{opacity:1}}
 @keyframes feuille-entre{
   from{opacity:0;transform:translateY(calc(18px * var(--amplitude))) scale(.97)}
   to{opacity:1;transform:none}
 }
-/* `#dialog` et `#modal` sont les deux seuls voiles : la fiche d'un jeu vit
-   dans `.modal .sheet`, les questions dans `#dialog .sheet.dlg`. */
+/* `#dialog` and `#modal` are the only two veils: a game's detail view lives in
+   `.modal .sheet`, the questions in `#dialog .sheet.dlg`. */
 .modal.open,#dialog.open{animation:voile-entre var(--t-court) var(--ease)}
 .modal.open .sheet,#dialog.open .dlg{
   animation:feuille-entre var(--t-moyen) var(--ease)}
-/* fermeture : sans cela la modale disparait d'un coup, ce qui se lit comme un
-   bug plutot que comme une fermeture */
+/* closing: without this the modal disappears at once, which reads as a bug
+   rather than as a closing */
 @keyframes feuille-sort{
   to{opacity:0;transform:translateY(calc(10px * var(--amplitude))) scale(.985)}
 }
@@ -2653,15 +2650,15 @@ nav.tabs{position:relative}
 .modal.ferme .sheet,#dialog.ferme .dlg{
   animation:feuille-sort var(--t-court) var(--ease) both}
 
-/* --- journal : chaque ligne arrive par le bas, comme un vrai terminal */
+/* --- the log: each line arrives from the bottom, like a real terminal */
 @keyframes jline-entre{
   from{opacity:0;transform:translateY(calc(6px * var(--amplitude)))}
   to{opacity:1;transform:none}
 }
 .jline.neuve{animation:jline-entre var(--t-court) var(--ease)}
 
-/* --- squelettes : pendant une attente, la forme de ce qui arrive vaut mieux
-   qu'un trou. Le balayage indique que ca travaille encore. */
+/* --- skeletons: during a wait, the shape of what is coming beats a hole. The
+   sweep says it is still working. */
 @keyframes squelette{to{background-position:-140% 0}}
 .squelette{
   background:linear-gradient(100deg,var(--surface-2) 20%,var(--surface-3) 42%,
