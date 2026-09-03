@@ -1,4 +1,4 @@
-"""Le SSO fonctionne-t-il toujours apres l'ajout des comptes internes ?"""
+"""Does SSO still work after the internal accounts were added?"""
 import atexit, http.cookiejar, json, os, subprocess, sys, tempfile, time
 import urllib.error, urllib.parse, urllib.request
 
@@ -16,12 +16,12 @@ atexit.register(lambda: (fp.kill(), srv.kill()))
 pot = http.cookiejar.CookieJar()
 op = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(pot))
 
-# Un SECOND navigateur, garde intact : c'est celui qui a active le SSO, et le
-# serveur lui remet un « pont » d'anti-verrouillage de 30 minutes pour finir de
-# se configurer. Sans lui, activer un SSO sans groupe d'administration rendrait
-# l'instance inadministrable — y compris par celui qui vient de l'activer. Ce
-# pont existe deja dans le serveur ; ce test l'emprunte, et prouve du meme coup
-# qu'il fait son office.
+# A SECOND browser, kept intact: it is the one that enabled SSO, and the server
+# hands it a 30-minute anti-lockout "bridge" to finish configuring itself.
+# Without it, enabling an SSO with no administration group would make the
+# instance unadministrable — including by whoever has just enabled it. That
+# bridge already exists in the server; this test takes it, and proves along the
+# way that it does its job.
 pont = http.cookiejar.CookieJar()
 op_pont = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(pont))
 
@@ -52,7 +52,7 @@ c,b = appel("/auth/moi")
 t("SSO actif", json.loads(b).get("mode")=="oidc", b[:120])
 pot.clear()
 c,b = appel("/api/job"); t("refuse sans session", c==401, c)
-c,b = appel("/auth/login")           # suit les redirections jusqu'au callback
+c,b = appel("/auth/login")           # follows the redirects to the callback
 t("flux de connexion complet", c==200, c)
 c,b = appel("/auth/moi")
 s=(json.loads(b) or {}).get("session") or {}
@@ -61,17 +61,17 @@ c,b = appel("/api/job"); t("acces accorde", c==200, c)
 c,b = appel("/api/comptes", {})
 t("comptes internes vides en mode SSO", json.loads(b)["comptes"]==[], b[:80])
 
-# ---------------------------------------------------------------- le role
+# ----------------------------------------------------------------- the role
 #
-# `oidc_groupes` dit QUI PEUT ENTRER. `oidc_admin_groupes` dit QUI ADMINISTRE.
-# Ce sont deux questions differentes : les confondre donnerait l'administration
-# a tout le monde, et rendrait le modele de roles decoratif.
+# `oidc_groupes` says WHO MAY ENTER. `oidc_admin_groupes` says WHO ADMINISTERS.
+# Those are two different questions: confusing them would hand administration to
+# everyone, and make the role model decorative.
 #
-# Le faux fournisseur place cet utilisateur dans le groupe « ludo ».
+# The fake provider puts this user in the "ludo" group.
 print("   -- le role vient des groupes, et le defaut refuse --")
 
-# Par defaut, `oidc_admin_groupes` est vide : personne n'administre. Un reglage
-# vide ne doit JAMAIS valoir « tout le monde ».
+# By default, `oidc_admin_groupes` is empty: nobody administers. An empty
+# setting must NEVER mean "everybody".
 c,b = appel("/api/scan")
 moi = (json.loads(b) or {}).get("moi") or {}
 t("sans groupe d'administration, la session SSO ne l'est pas",
@@ -80,9 +80,9 @@ t("elle est bien reconnue comme session SSO", moi.get("source")=="oidc", moi)
 c,b = appel("/api/journal-clear", {})
 t("et elle est refusee sur une route reservee", c==403, c)
 
-# Le groupe « ludo » donne l'administration. Il faut se reconnecter : le role
-# est inscrit dans le JETON a la connexion, il ne change pas en cours de
-# session — c'est le comportement de la plupart des SSO, et il est documente.
+# The "ludo" group grants administration. You have to log in again: the role is
+# written into the TOKEN at login, it does not change mid-session — that is how
+# most SSOs behave, and it is documented.
 pot.clear()
 c,_ = appel("/api/config", {"oidc_admin_groupes":"ludo"}, avec=op_pont)
 t("le pont d'anti-verrouillage permet encore de configurer", c==200, c)
@@ -93,8 +93,8 @@ t("le groupe d'administration donne le role", moi.get("admin") is True, moi)
 c,b = appel("/api/journal-clear", {})
 t("et la route reservee s'ouvre", c==200, c)
 
-# Retire du groupe : la session EN COURS garde son role — c'est ce qu'on a
-# annonce — mais la suivante ne l'a plus.
+# Removed from the group: the CURRENT session keeps its role — that is what was
+# announced — but the next one does not.
 appel("/api/config", {"oidc_admin_groupes":"autre-groupe"}, avec=op_pont)
 c,b = appel("/api/scan")
 t("la session en cours conserve son role",

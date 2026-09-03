@@ -1,15 +1,15 @@
-"""Scenarios d'attaque, joues contre un vrai serveur.
+"""Attack scenarios, played against a real server.
 
-Les autres suites verifient des fonctions ; celle-ci envoie des requetes
-hostiles a un serveur qui tourne, et regarde ce qu'il en fait. Chaque scenario
-correspond a un point du plan de securite, et devient un controle permanent :
-une protection qu'on ne rejoue pas est une protection qu'on perd sans le voir.
+The other suites check functions; this one sends hostile requests to a running
+server and watches what it does with them. Each scenario matches a point of the
+security plan, and becomes a permanent check: a protection nobody replays is a
+protection you lose without noticing.
 
-  1. Traversee de chemin par une plateforme ajoutee a la main.
-  2. Injection de commande par une extension de fichier.
-  3. Force brute sur le jeton d'acces.
-  4. Depot surdimensionne.
-  5. Connexion lente qui garde un fil ouvert.
+  1. Path traversal through a hand-added platform.
+  2. Command injection through a file extension.
+  3. Brute force on the access token.
+  4. An oversized upload.
+  5. A slow connection holding a thread open.
 """
 import json
 import os
@@ -45,10 +45,10 @@ def libre():
 
 
 def adresse_reseau():
-    """L'adresse de cette machine SUR le reseau, ou None.
+    """This machine's address ON the network, or None.
 
-    Interroger 127.0.0.1 ne prouve rien contre un jeton : cette adresse est
-    locale, donc autorisee d'office. Un jeton ne garde que les autres.
+    Querying 127.0.0.1 proves nothing about a token: that address is local, so
+    allowed outright. A token only guards the others.
     """
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
@@ -100,7 +100,7 @@ def appel(base, chemin, corps=None, entetes=None, donnees=None):
 
 racine = tempfile.mkdtemp(prefix="ludo-intrusion-")
 port = libre()
-# Plafonds abaisses pour rendre les limites observables en quelques secondes.
+# Ceilings lowered to make the limits observable within a few seconds.
 srv, base = demarrer(racine, port, ROMULE_TOKEN=JETON,
                      ROMULE_UPLOAD_MAX="4096", ROMULE_TIMEOUT="2")
 AUTH = {"X-Token": JETON}
@@ -122,8 +122,8 @@ try:
       not Path("/tmp/evade-romule").exists())
 
     print("   -- 2. injection de commande par une extension --")
-    # Les extensions finissent dans un `find` execute sur la console : une
-    # apostrophe ou un point-virgule y casserait la mise entre guillemets.
+    # The extensions end up in a `find` run on the console: an apostrophe or a
+    # semicolon there would break the quoting.
     _, b = appel(base, "/api/config", {"systemes_perso": [{
         "key": "inject", "name": "Inject",
         "folder": "inject",
@@ -136,8 +136,8 @@ try:
     if not reseau:
         print("      (pas d'adresse reseau sur cette machine : scenario non joue)")
     else:
-        # Serveur dedie : brider la cadence sur le serveur principal ferait
-        # echouer les scenarios suivants pour une raison sans rapport.
+        # A dedicated server: throttling the main one would fail the following
+        # scenarios for an unrelated reason.
         r2 = tempfile.mkdtemp(prefix="ludo-brute-")
         p2 = libre()
         s2, _ = demarrer(r2, p2, ROMULE_TOKEN=JETON, ROMULE_BIND="0.0.0.0",
@@ -151,7 +151,7 @@ try:
               "%d refus sur 20" % refus)
             t("le bon jeton, lui, passe",
               appel(distant, "/api/health", entetes=AUTH)[0] == 200)
-            # Sans limiteur, un jeton se devine a la vitesse du reseau.
+            # Without a limiter, a token is guessed at network speed.
             codes = [appel(distant, "/api/health",
                            entetes={"X-Token": "faux"})[0] for _ in range(40)]
             t("le limiteur de cadence finit par couper", 429 in codes,
@@ -174,8 +174,8 @@ try:
     t("sous le plafond, accepte", c == 200, c)
 
     print("   -- 5. connexion lente --")
-    # Un client qui ouvre une connexion et n'envoie rien immobilise un fil.
-    # Sans delai d'attente, quelques dizaines suffisent a bloquer le service.
+    # A client that opens a connection and sends nothing ties up a thread.
+    # Without a timeout, a few dozen are enough to block the service.
     s = socket.create_connection(("127.0.0.1", int(port)), timeout=30)
     s.sendall(b"GET /api/health HTTP/1.1\r\nHost: x\r\n")   # requete inachevee
     debut = time.time()
