@@ -2924,8 +2924,8 @@ function erSection(g) {
 
 // -------------------------------------------- a game's state on the console
 // A game is "ready" when its playable files are on the console AND
-// ses mises a jour / DLC sont actifs dans Eden. On fusionne les deux sources.
-const dsel2 = new Set();                 // jeux selectionnes pour le deploiement
+// its updates and DLC are active in Eden. We merge the two sources.
+const dsel2 = new Set();                 // games selected for deployment
 
 function nandParChemin() {
   const m = {};
@@ -2933,12 +2933,12 @@ function nandParChemin() {
   return m;
 }
 
-// Un seul vocabulaire pour toute l'interface. Avant, la bibliotheque parlait de
-// « MAJ dispo / a convertir / a nettoyer » et la console de « a completer /
-// prets » : deux echelles pour les memes jeux, d'ou les doublons a l'ecran.
-// Les deux sens de transfert doivent se lire sans effort. « À importer » se
-// comprenait a l'envers : on dit maintenant OU le jeu manque, et le bouton dit
-// quoi faire. Le badge constate, l'action decide.
+// One vocabulary for the whole interface. Before, the library spoke of "update
+// available / to convert / to clean" and the console of "to complete / ready":
+// two scales for the same games, hence the duplicates on screen.
+// Both directions of transfer must read effortlessly. "To import" was
+// understood backwards: we now say WHERE the game is missing, and the button
+// says what to do. The badge states, the action decides.
 const ETATS = {
   probleme: ['b-orph', 'Problème'],
   importer: ['b-conv', 'Pas sur le serveur'],
@@ -2948,13 +2948,14 @@ const ETATS = {
   pret:     ['b-ok',   'Prêt'],
   local:    ['b-dlc',  'Sur le serveur'],
 };
-// Ces etats n'ont de sens que si la console a repondu : sans elle on ne peut pas
-// savoir ce qui y manque, et afficher « 0 » serait une reponse inventee.
+// These states only make sense once the console has answered: without it we
+// cannot know what is missing there, and showing "0" would be an invented
+// answer.
 const ETATS_CONSOLE = ['envoyer', 'activer', 'importer'];
 
-// La console n'est « lue » que lorsqu'on a vraiment liste ses fichiers. Se
-// contenter de NANDCONN (Eden repond) laisserait croire, le temps que la liste
-// arrive, qu'aucun jeu n'est sur la console : tout s'afficherait « a envoyer ».
+// The console counts as "read" only once its files have really been listed.
+// Settling for NANDCONN (Eden answers) would suggest, while the list is on its
+// way, that no game is on the console: everything would show as "to send".
 function consoleLue() { return CONSET.size > 0; }
 
 function etatDuJeu(g, nmap) {
@@ -2969,7 +2970,7 @@ function etatDuJeu(g, nmap) {
 
   const aEnvoyer = consoleLue() ? jouables.filter(f => !surLaConsole(f)) : [];
 
-  // fichiers incomplets : soit signales par le serveur, soit vus dans la NAND
+  // incomplete files: either flagged by the server, or seen in the NAND
   const casses = g.files.filter(f => f.broken);
   const aActiver = [];
   extras.forEach(f => {
@@ -2978,14 +2979,14 @@ function etatDuJeu(g, nmap) {
     if (['incomplet', 'illisible'].includes(e.etat)) { if (!f.broken) casses.push(f); }
     else if (['absent', 'partiel'].includes(e.etat)) aActiver.push(f);
   });
-  // Un jeu ne devient « Probleme » que si c'est SA BASE qui est atteinte. Une
-  // mise a jour cassee n'empeche pas d'y jouer : elle merite une remarque, pas
-  // un drapeau rouge sur un jeu qui tourne.
+  // A game only becomes "Problem" when ITS BASE is affected. A broken update
+  // does not stop you playing: it deserves a remark, not a red flag on a game
+  // that runs.
   const cassesBase = casses.filter(f => f.type === 'BASE');
   const cassesExtra = casses.filter(f => f.type !== 'BASE');
 
-  // Un etat « Probleme » sans motif oblige a ouvrir la fiche pour comprendre :
-  // on porte donc toujours la raison avec l'etat.
+  // A "Problem" status with no reason forces you to open the detail view to
+  // understand: so the reason always travels with the status.
   let etat, raison = '', note = '';
   if (cassesExtra.length) {
     note = cassesExtra.length === 1
@@ -3008,9 +3009,9 @@ function etatDuJeu(g, nmap) {
   else if (aActiver.length) etat = 'activer';
   else if (g.needsConvert) etat = 'convert';
   else etat = 'pret';
-  // Ou se trouve le jeu : deux faits independants, que l'etat seul ne dit pas.
-  // « Prêt » n'indiquait pas qu'il est des deux cotes, et une presence partielle
-  // ne se distinguait pas d'une absence.
+  // Where the game is: two independent facts the status alone does not give.
+  // "Ready" did not say it was on both sides, and a partial presence was
+  // indistinguishable from an absence.
   const presence = {
     mac: true,
     console: !consoleLue() ? 'inconnu'
@@ -3021,26 +3022,26 @@ function etatDuJeu(g, nmap) {
           taille: aEnvoyer.reduce((s, f) => s + f.size, 0)};
 }
 
-// Jeux presents sur la console mais absents de la bibliotheque : ils rejoignent
-// la meme liste au lieu d'avoir leur propre section.
+// Games present on the console but absent from the library: they join the same
+// list instead of having a section of their own.
 function jeuxConsoleSeuls() {
   if (!DGAMES.length) return [];
   const connus = new Set(GAMES.map(g => g.key));
-  // Le nom de fichier tranche quand le title ID manque ou ment : sans lui, un
-  // jeu deja dans la bibliotheque se retrouverait annonce « a importer ».
+  // The file name decides when the title ID is missing or lying: without it, a
+  // game already in the library would be announced as "to import".
   const nomsLib = new Set();
   GAMES.forEach(g => g.files.forEach(f => nomsLib.add(baseName(f))));
-  // Un jeu de la bibliotheque peut porter un nom different sur la console :
-  // le titre reduit reste le seul point commun fiable.
+  // A library game may carry a different name on the console: the reduced
+  // title stays the only reliable common ground.
   const titresLib = new Set(GAMES.map(g => titreNormalise(g.name)));
   const dejaLa = f => f.in_library || nomsLib.has(String(f.name || '').toLowerCase())
                    || titresLib.has(titreNormalise(f.name));
   const bruts = groupDeviceGames(DGAMES)
     .filter(grp => !connus.has(grp.key) && !grp.files.some(dejaLa));
 
-  // Un pack .xci sans title ID et la mise a jour du meme jeu formaient deux
-  // groupes distincts : le jeu apparaissait deux fois. On les rapproche par
-  // leur titre reduit.
+  // An .xci pack with no title ID and the same game's update formed two
+  // separate groups: the game appeared twice. We match them on their reduced
+  // title.
   const parTitre = new Map();
   bruts.forEach(grp => {
     const t = titreNormalise(grp.name);
@@ -3052,9 +3053,9 @@ function jeuxConsoleSeuls() {
     deja.updCount += grp.updCount;
     deja.dlcCount += grp.dlcCount;
     deja.hasBase = deja.hasBase || grp.hasBase;
-    // Le nom affiche doit etre celui du JEU, pas celui d'une mise a jour. Un
-    // pack .xci sans title ID est classe INCONNU alors qu'il contient le jeu :
-    // on considere donc « porteur du jeu » tout fichier qui n'est ni MAJ ni DLC.
+    // The displayed name must be the GAME's, not an update's. An .xci pack with
+    // no title ID is classed INCONNU although it contains the game: so we treat
+    // as "carrying the game" any file that is neither an update nor a DLC.
     const porteJeu = g => g.files.some(f => !['UPDATE', 'DLC'].includes(f.type));
     const a = porteJeu(grp), b = porteJeu(deja);
     if (a && !b) deja.name = grp.name;
@@ -3064,21 +3065,21 @@ function jeuxConsoleSeuls() {
   return [...parTitre.values()]
     .map(grp => ({
       key: grp.key, name: grp.name, files: grp.files, size: grp.size,
-      // title ID du JEU, pas du fichier : une jaquette n'existe que pour la base
+      // the GAME's title ID, not the file's: a cover only exists for the base
       tid: (f => f ? tidBase(f.tid) : null)(grp.files.find(x => x.tid)),
       updCount: grp.updCount, dlcCount: grp.dlcCount, hasBase: grp.hasBase,
       paths: grp.paths, console: true,
     }));
 }
 
-// Tri : chaque critere repond a une question concrete que l'on se pose devant
-// sa ludotheque (« lequel est le plus gros ? », « qu'est-ce qui coince ? »).
-// L'annee vient d'IGDB : elle n'existait pas avant, d'ou l'absence de ce tri.
+// Sorting: each criterion answers a concrete question you ask in front of your
+// library ("which is the biggest?", "what is stuck?"). The year comes from IGDB:
+// it did not exist before, hence the absence of that sort.
 function anneeJeu(g) {
   if (!g) return 0;
-  // Switch : l'annee vient de nlib, via META. Autres plateformes : d'IGDB, et
-  // elle voyage avec le jeu. Sans les deux chemins, le tri par annee ne voyait
-  // qu'une poignee de titres.
+  // Switch: the year comes from nlib, through META. Other platforms: from
+  // IGDB, and it travels with the game. Without both paths, the sort by year
+  // saw only a handful of titles.
   const m = g.tid && META[String(g.tid).toLowerCase()];
   const f = (g.files && g.files[0]) || {};
   const a = parseInt((m && m.annee) || g.annee || f.annee || 0, 10);
@@ -3101,9 +3102,9 @@ const TRIS = {
 const ORDRE_ETAT = {probleme: 0, envoyer: 1, importer: 2, activer: 3,
                     convert: 4, local: 5, pret: 6};
 const TAILLES = {compact: ['Compact', 112], moyen: ['Moyen', 158], grand: ['Grand', 230]};
-// Le nombre par page etait impose par la taille des vignettes : on le choisit
-// desormais, y compris « tout afficher » pour une grande ludotheque.
-const PAR_PAGE = [24, 48, 96, 200, 0];   // 0 = tout
+// The page size used to be dictated by the tile size: it is now chosen,
+// including "show everything" for a large library.
+const PAR_PAGE = [24, 48, 96, 200, 0];   // 0 = everything
 
 let TRI = localStorage.getItem('tri') || 'etat';
 let SENS = localStorage.getItem('sens') === '-1' ? -1 : 1;   // 1 croissant, -1 inverse
@@ -3111,11 +3112,11 @@ let TAILLE = localStorage.getItem('taille') || 'moyen';
 let PARPAGE = parseInt(localStorage.getItem('parpage'), 10);
 if (!PAR_PAGE.includes(PARPAGE)) PARPAGE = 48;
 let PAGE = 0;
-let VUS_PAGE = [];          // cles affichees sur la page courante (selection par plage)
-let DERNIER_CLIC = null;    // ancre du Maj+clic
+let VUS_PAGE = [];          // keys shown on the current page (range selection)
+let DERNIER_CLIC = null;    // anchor for Shift+click
 
-// Filtres avances, cumulables avec l'etat. Ils repondent a des questions que le
-// seul etat ne couvre pas : « lesquels ont des DLC ? », « lesquels sont gros ? »
+// Advanced filters, combinable with the status. They answer questions the
+// status alone does not cover: "which have DLC?", "which are large?"
 const FAVANCES = {
   maj:      ['Avec mise à jour', x => x.g.updCount > 0],
   sansmaj:  ['Sans mise à jour', x => !x.g.updCount],
@@ -3129,9 +3130,9 @@ const FAVANCES = {
               const b = x.g.console ? null : erBadge(x.g.tid);
               return !b || b[0] === 'inconnu';
             }],
-  // Depuis qu'on connait l'annee et le resume, deux questions deviennent
-  // possibles : « qu'est-ce qui est recent ? » et « a quoi manque-t-il une
-  // fiche ? ». La seconde est la plus utile : elle montre le travail restant.
+  // Now that the year and the summary are known, two questions become
+  // possible: "what is recent?" and "what is missing its details?". The second
+  // is the more useful: it shows the work left to do.
   recent:   ['Sorti après 2015',  x => anneeJeu(x.g) >= 2015],
   retro:    ['Sorti avant 2000',  x => { const a = anneeJeu(x.g); return a && a < 2000; }],
   sansfiche: ['Sans description', x => !resumeJeu(x.g)],
@@ -3139,9 +3140,9 @@ const FAVANCES = {
 };
 let FAV = new Set(JSON.parse(localStorage.getItem('fav') || '[]'));
 
-// Un jeu d'une autre console prend la MEME forme qu'un jeu Switch, pour passer
-// dans le meme rendu : memes jaquettes, meme selection, memes actions groupees.
-// Sans cela les autres systemes heritaient d'une vue au rabais.
+// A game from another console takes the SAME shape as a Switch game, so it goes
+// through the same render: same covers, same selection, same bulk actions.
+// Without that the other systems inherited a second-rate view.
 function jeuxSysteme() {
   const surConsole = new Set(SCONSOLE.map(n => String(n).toLowerCase()));
   const locaux = SGAMES.map(f => ({
@@ -3156,8 +3157,8 @@ function jeuxSysteme() {
     systeme: SYS, sysNom: libelleSysteme(SYS),
     _surConsole: surConsole.has(String(f.file || '').toLowerCase()),
   }));
-  // Presents sur la console mais pas sur le serveur : sans eux, 19 jeux GBA
-  // n'apparaissaient nulle part et ne pouvaient pas etre rapatries.
+  // Present on the console but not on the server: without them, 19 GBA games
+  // appeared nowhere and could not be brought back.
   const nomsLocaux = new Set(SGAMES.map(f => String(f.file || '').toLowerCase()));
   const distants = SCONSOLE_PATHS
     .filter(p => !nomsLocaux.has(p.split('/').pop().toLowerCase()))
@@ -3176,8 +3177,8 @@ function jeuxSysteme() {
 }
 
 function etatSysteme(g) {
-  // Pas de mises a jour ni de DLC hors Switch : l'etat se resume a « ou est le
-  // jeu ? ». Inventer d'autres etats serait mentir.
+  // No updates and no DLC off the Switch: the status comes down to "where is
+  // the game?". Inventing other states would be lying.
   if (g.console)
     return {etat: 'importer', raison: '', note: '', txt: ETATS.importer[1],
             aEnvoyer: [], aActiver: [], casses: [], taille: 0,
@@ -3190,19 +3191,19 @@ function etatSysteme(g) {
           presence: {mac: true, console: !lue ? 'inconnu' : (g._surConsole ? 'oui' : 'non')}};
 }
 
-// Etat d'un jeu, quelle que soit sa plateforme.
+// A game's status, whatever its platform.
 function etatDe(g) {
   return (g.systeme && g.systeme !== 'switch') ? etatSysteme(g) : etatDuJeu(g, nandParChemin());
 }
 
-// En vue d'ensemble, SCONSOLE est vide : l'appartenance console est portee par
-// le jeu lui-meme, pas par la plateforme selectionnee.
+// In the overview, SCONSOLE is empty: console membership is carried by the game
+// itself, not by the selected platform.
 function consoleLuePour(g) {
   return vueTotale() ? !!CONN.kind : (isSwitch() ? consoleLue() : SCONSOLE.length > 0);
 }
 
-// Toutes les plateformes reunies. Chaque jeu porte le nom de la sienne, sans
-// quoi une liste de 200 titres melanges serait illisible.
+// Every platform together. Each game carries the name of its own, without which
+// a list of 200 mixed titles would be unreadable.
 function jeuxTous() {
   const out = [];
   GAMES.concat(jeuxConsoleSeuls()).forEach(g => {
@@ -3213,8 +3214,8 @@ function jeuxTous() {
     const surConsole = new Set(sys.console.map(x => String(x.nom).toLowerCase()));
     const nomsLocaux = new Set(sys.games.map(f => String(f.file || '').toLowerCase()));
     sys.games.forEach(f => {
-      // resume / annee / editeur voyagent avec le jeu : sans eux, la vue
-      // « toutes les plateformes » perdait ce que le serveur avait envoye.
+      // summary, year and publisher travel with the game: without them, the
+      // "all platforms" view lost what the server had sent.
       const g = {key: f.path, name: f.name, tid: null, titre: f.titre || '',
                  resume: f.resume || '', annee: f.annee || '', editeur: f.editeur || '',
                  files: [{...f, type: 'BASE'}],
@@ -3239,20 +3240,20 @@ function jeuxTous() {
   return out;
 }
 
-// Reconstruire ET RETRIER toute la bibliotheque a chaque rendu coute 16,5 ms
-// sur 5 000 titres — mesure. Comme `renderLib()` est appele a chaque frappe
-// dans la recherche, chaque touche depassait le budget d'une image (16 ms) et
-// la saisie accrochait.
+// Rebuilding AND RE-SORTING the whole library on every render costs 16.5 ms on
+// 5 000 titles — measured. Since `renderLib()` is called on every keystroke in
+// the search, each key exceeded a frame's budget (16 ms) and the typing
+// stuttered.
 //
-// Or rien de tout cela ne depend de la RECHERCHE : la liste unifiee ne change
-// que si les donnees, la plateforme ou le tri changent. On la garde donc, et
-// `jeuxFiltres()` n'a plus qu'a filtrer — ce qui est de l'ordre du dixieme de
-// milliseconde.
+// Yet none of that depends on the SEARCH: the unified list only changes when
+// the data, the platform or the sort order change. So we keep it, and
+// `jeuxFiltres()` only has to filter — which is on the order of a tenth of a
+// millisecond.
 //
-// La signature inclut `DONNEES_V`, incremente partout ou l'inventaire est
-// remplace. Oublier un de ces endroits afficherait une liste perimee : c'est
-// le risque de tout cache, et c'est pourquoi il n'y en a qu'UN seul endroit
-// qui incremente, appele depuis les trois sites d'affectation.
+// The signature includes `DONNEES_V`, incremented everywhere the inventory is
+// replaced. Forgetting one of those places would show a stale list: that is the
+// risk with any cache, and it is why there is only ONE place that increments,
+// called from the three assignment sites.
 let DONNEES_V = 0;
 let _uniCle = null, _uniListe = null;
 
@@ -3279,24 +3280,23 @@ function jeuxUnifies() {
 /* ============================================================================
    VARIANTES REGIONALES
    ----------------------------------------------------------------------------
-   Dix des trente-quatre cartes Switch de cette ludotheque sont DEUX jeux :
-   Pokémon FireRed et LeafGreen, chacun en cinq langues. Un tiers de la grille
-   pour deux titres.
+   Ten of this library's thirty-four Switch cards are TWO games: Pokémon FireRed
+   and LeafGreen, each in five languages. A third of the grid for two titles.
 
-   Les regrouper par leur nom AFFICHE est impossible : la version allemande
-   s'appelle « Pokémon Feuerrote Edition », l'italienne « Versione Rosso
-   Fuoco ». Aucune comparaison de chaines ne les rapproche, et il faudrait une
-   table de traduction par jeu.
+   Grouping them by their DISPLAYED name is impossible: the German version is
+   called "Pokémon Feuerrote Edition", the Italian one "Versione Rosso Fuoco".
+   No string comparison brings them together, and it would take a translation
+   table per game.
 
-   Le nom de FICHIER, lui, porte la relation :
+   The FILE name, however, carries the relation:
 
        Pokémon FireRed Version (German Ver.)
        Pokémon FireRed Version (English Ver.)
        Pokémon FireRed Version (Japanese Ver.)
 
-   On retire donc le marqueur final quand il ne contient QUE des noms de
-   langue ou de region. Cette condition est essentielle : sans elle, « Mario
-   Party (2019) » et « Mario Party » fusionneraient, ce qui serait faux.
+   So we strip the trailing marker when it holds ONLY language or region names.
+   That condition is essential: without it, "Mario Party (2019)" and "Mario
+   Party" would merge, which would be wrong.
    ========================================================================== */
 const LANGUES_REGIONS = new Set((
   'german english spanish french italian japanese korean chinese dutch ' +
@@ -3304,7 +3304,7 @@ const LANGUES_REGIONS = new Set((
   'deutsch francais italiano espanol japonais nederlands portugues ' +
   'usa europe eur jpn jap japan world us eu jp en fr de es it nl pt ru kr cn ' +
   'multi multi3 multi5 pal ntsc intl international rev').split(' '));
-// Mots de decor : ils accompagnent le marqueur sans le caracteriser.
+// Decorative words: they accompany the marker without characterising it.
 const MOTS_DECOR = new Set(['ver', 'version', 'edition', 'ed', 'v']);
 const MARQUEUR_FINAL = /\s*[([]([^)\]]{1,28})[)\]]\s*$/;
 
@@ -3312,7 +3312,7 @@ const MARQUEUR_FINAL = /\s*[([]([^)\]]{1,28})[)\]]\s*$/;
 function baseSansMarqueur(nom) {
   let base = String(nom || '').trim();
   let trouve = false;
-  // Un fichier peut en porter deux : « Jeu (English Ver.) [EUR] ».
+  // A file may carry two: "Game (English Ver.) [EUR]".
   for (let tour = 0; tour < 3; tour++) {
     const m = base.match(MARQUEUR_FINAL);
     if (!m) break;
@@ -3321,8 +3321,8 @@ function baseSansMarqueur(nom) {
       .split(/[\s,+._\-/]+/).filter(Boolean)
       .map(w => w.replace(/\.$/, ''))
       .filter(w => !MOTS_DECOR.has(w));
-    // Un marqueur vide (« (Ver.) ») ou contenant autre chose qu'une langue
-    // arrete le decoupage : on ne devine pas.
+    // An empty marker ("(Ver.)") or one holding anything other than a language
+    // stops the splitting: we do not guess.
     if (!mots.length || !mots.every(w => LANGUES_REGIONS.has(w))) break;
     base = base.slice(0, m.index).trim();
     trouve = true;
@@ -3330,18 +3330,17 @@ function baseSansMarqueur(nom) {
   return [base.toLowerCase(), trouve];
 }
 
-/* ---------------------------------------------------------------- LANGUES
-   Aucune source de fiches ne donne les langues d'un jeu : ni nlib, ni IGDB
-   dans ce qu'on leur demande. Le NOM DE FICHIER, lui, les porte — c'est la
-   convention des jeux de ROMs :
+/* -------------------------------------------------------------- LANGUAGES
+   No details source gives a game's languages: neither nlib nor IGDB, in what we
+   ask them for. The FILE NAME does carry them — it is the ROM-set convention:
 
        Zen Pinball 3D (Europe) (En,Fr,De,Es,It) (eShop).3ds
        Pokémon FireRed Version (French Ver.)
 
-   On ne lit donc que ce qui est ecrit, et on n'affiche rien quand rien n'est
-   ecrit : deviner « probablement anglais » serait inventer une information que
-   l'utilisateur croirait verifiee. */
-const CODES_LANGUE = new Set(('en fr de es it ja nl pt sv no da fi ko zh ru pl ' +  // i18n:ok - codes de langue
+   So we only read what is written, and show nothing when nothing is: guessing
+   "probably English" would invent a piece of information the user would take
+   for verified. */
+const CODES_LANGUE = new Set(('en fr de es it ja nl pt sv no da fi ko zh ru pl ' +  // i18n:ok - language codes
   'cs hu tr el ca').split(' '));
 const MOT_VERS_CODE = {
   french: 'fr', german: 'de', deutsch: 'de', english: 'en', spanish: 'es',
@@ -3362,8 +3361,8 @@ function languesJeu(g) {
   const vues = [];
   for (const groupe of String((g && g.name) || '').match(GROUPES_NOM) || []) {
     const dedans = groupe.slice(1, -1).trim();
-    // « En,Fr,De,Es,It » : le groupe ENTIER doit etre fait de codes connus,
-    // sinon « (US) » ou « (v1.0.1) » passeraient pour des langues.
+    // "En,Fr,De,Es,It": the WHOLE group must be made of known codes, otherwise
+    // "(US)" or "(v1.0.1)" would pass for languages.
     const bouts = dedans.split(',').map(x => x.trim().toLowerCase()).filter(Boolean);
     if (bouts.length && bouts.every(x => CODES_LANGUE.has(x))) {
       for (const b of bouts) if (!vues.includes(b)) vues.push(b);
@@ -3378,9 +3377,9 @@ function languesJeu(g) {
   return vues;
 }
 
-// Une seule langue : son code, court et sans ambiguite. Plusieurs : « MULTI »,
-// parce qu'aligner cinq codes sur une jaquette de 158 px la rendrait illisible
-// — le detail va dans l'infobulle et dans la fiche.
+// One language: its code, short and unambiguous. Several: "MULTI", because
+// lining up five codes on a 158 px cover would make it unreadable — the detail
+// goes in the tooltip and in the detail view.
 function etiquetteLangues(g) {
   const codes = languesJeu(g);
   if (!codes.length) return null;
@@ -3391,9 +3390,9 @@ function etiquetteLangues(g) {
 }
 
 
-// Quelle version represente le groupe : celle de la langue de l'interface si
-// elle existe, sinon l'anglaise, sinon la premiere venue. Montrer la version
-// japonaise d'un jeu a un utilisateur francophone serait un choix arbitraire.
+// Which version represents the group: the one in the interface's language when
+// it exists, else the English one, else the first to hand. Showing a game's
+// Japanese version to a French-reading user would be an arbitrary choice.
 const LANGUE_MARQUEUR = {fr: 'french', en: 'english'};
 
 function representantGroupe(membres) {
@@ -3407,9 +3406,9 @@ function representantGroupe(membres) {
   return membres.reduce((a, b) => (noteDe(b) > noteDe(a) ? b : a), membres[0]);
 }
 
-// Les membres de chaque groupe, tels que la derniere liste affichee les a
-// vus. La fenetre des versions les relit : elle montre exactement ce que la
-// bibliotheque contient au moment ou on l'ouvre, filtres compris.
+// Each group's members, as the last displayed list saw them. The versions
+// dialog reads them back: it shows exactly what the library holds at the moment
+// you open it, filters included.
 let GROUPES = new Map();
 
 function regrouper(liste) {
@@ -3422,16 +3421,16 @@ function regrouper(liste) {
     p.marque = p.marque || marque;
     paquets.set(base, p);
   }
-  // Un groupe n'existe que si plusieurs jeux le composent ET qu'au moins l'un
-  // d'eux portait vraiment un marqueur de langue.
+  // A group only exists when several games make it up AND at least one of them
+  // really carried a language marker.
   GROUPES = new Map();
   for (const [base, p] of paquets)
     if (p.membres.length > 1 && p.marque) GROUPES.set(base, p.membres);
   if (!GROUPES.size) return liste;
 
-  // Le groupe occupe UNE carte, toujours. Deplier les versions au milieu de la
-  // grille les melangeait aux autres jeux : rien ne disait ou le groupe
-  // commencait ni ou il finissait. Elles ont maintenant leur fenetre.
+  // A group takes ONE card, always. Expanding the versions in the middle of the
+  // grid mixed them with the other games: nothing said where the group began or
+  // ended. They now have their own dialog.
   const sortie = [], vus = new Set();
   for (const x of liste) {
     const [base] = baseSansMarqueur(x.g.name);
@@ -3450,7 +3449,7 @@ function regrouper(liste) {
 // Liste effectivement affichee : recherche + etat + filtres avances cumules.
 function jeuxFiltres(tous) {
   const q = ($('filter').value || '').toLowerCase();
-  // la recherche porte sur les DEUX noms : celui du fichier et le titre officiel
+  // the search covers BOTH names: the file name and the official title
   let l = tous.filter(({g}) => !q || g.name.toLowerCase().includes(q)
                             || nomJeu(g).toLowerCase().includes(q));
   if (FILTER !== 'all') l = l.filter(({e}) => e.etat === FILTER);
@@ -3460,11 +3459,12 @@ function jeuxFiltres(tous) {
 
 
 
-// Tout ce que la selection permet de faire, dans les deux sens : ce qui manque
-// sur la console, ce qui manque sur le serveur, et ce qu'on peut retirer de chaque cote.
+// Everything the selection allows, in both directions: what is missing on the
+// console, what is missing on the server, and what can be removed from each
+// side.
 function deployCibles() {
-  // Hors Switch : pas de NAND ni de MAJ, mais les memes gestes — envoyer,
-  // retirer de la console, mettre a la corbeille.
+  // Off the Switch: no NAND and no updates, but the same gestures — send,
+  // remove from the console, move to the trash.
   if (!isSwitch()) {
     const envoyer = [], supprConsole = [], local = [], importer = [];
     let poids = 0;
@@ -3505,9 +3505,9 @@ function deployCibles() {
 }
 
 
-// ---------------------------------------------------------------- reglages
-// Description affichee sous chaque menu : l'utilisateur voit l'effet de son
-// choix sans avoir a deplier trois pavés de texte.
+// ---------------------------------------------------------------- settings
+// The description shown under each menu: the user sees the effect of their
+// choice without unfolding three walls of text.
 const SET_DESC = {
   'd-layout': {type: 'Chaque fichier est classé selon sa nature. Le plus clair pour l\'émulateur.',
                game: 'Reproduit l\'arborescence du serveur : un dossier par jeu.',
@@ -3521,8 +3521,8 @@ const SET_DESC = {
               steamgriddb: 'Jaquettes verticales de qualité. Nécessite une clé API.',
               custom: 'Ton propre modèle d\'URL.'},
 };
-// Les champs du SSO n'ont de sens qu'en mode SSO : on les masque sinon, plutot
-// que de laisser une dizaine de champs inertes a l'ecran.
+// The SSO fields only make sense in SSO mode: we hide them otherwise, rather
+// than leaving a dozen inert fields on screen.
 function majBlocAuth() {
   const sel = $('s-authmode'), bloc = $('blocoidc'), interne = $('blocinterne');
   if (!sel || !bloc) return;
@@ -3530,8 +3530,8 @@ function majBlocAuth() {
   bloc.style.display = mode === 'oidc' ? '' : 'none';
   if (interne) interne.hidden = mode !== 'interne';
   const c = DATA.config || {};
-  // Un mode annonce mais inutilisable ne protege rien : le dire franchement
-  // vaut mieux que de laisser croire que l'acces est verrouille.
+  // A mode announced but unusable protects nothing: saying so plainly beats
+  // letting someone believe the access is locked.
   const sansFournisseur = mode === 'oidc'
     && !((c.oidc_issuer || '').trim() && (c.oidc_client_id || '').trim());
   const sansCompte = mode === 'interne' && !COMPTES.length;
@@ -3557,12 +3557,11 @@ function majBlocAuth() {
   chargerNotifs();
 }
 
-// ------------------------------------------------------------------ cles d'API
-// Elles ne sont montrees qu'une fois. Le magasin n'en garde qu'une empreinte,
-// ce qui rend une fuite du fichier d'etat inoffensive — mais interdit de les
-// reafficher. Toute l'ergonomie de ce bloc decoule de cette contrainte : la
-// cle apparait en grand a la creation, avec un bouton copier, et l'utilisateur
-// est prevenu qu'elle ne reviendra pas.
+// -------------------------------------------------------------- API keys
+// They are shown once. The store keeps only a digest, which makes a leak of the
+// state file harmless — but forbids showing them again. This block's whole
+// ergonomics follow from that constraint: the key appears large at creation,
+// with a copy button, and the user is warned it will not come back.
 let CLES = [];
 
 async function chargerCles() {
@@ -3593,11 +3592,11 @@ function dessinerCles() {
 }
 
 function dateCle(t0) {
-  // « jamais » est un fait a signaler, pas une absence a masquer : une cle
-  // creee pour un essai et jamais utilisee ouvre toujours l'API.
+  // "never" is a fact worth reporting, not an absence to hide: a key created
+  // for a trial and never used still opens the API.
   if (!t0) return t('jamais utilisée');
-  // Les etiquettes de langue ne sont pas du texte d'interface : elles ne
-  // se traduisent pas, elles se choisissent.
+  // Locale tags are not interface text: they are not translated, they are
+  // chosen.
   const etiquette = LANGUE === 'fr' ? 'fr-FR' : 'en-GB';   // i18n:ok
   return new Date(t0 * 1000).toLocaleDateString(etiquette);
 }
@@ -3624,9 +3623,9 @@ async function creerCle() {
     actions: [{libelle: t('Copier'), principal: true, faire: () => {
       navigator.clipboard.writeText(r.secret)
         .then(() => toast(t('Clé copiée.'), 'ok'))
-        // Le presse-papiers est refuse hors contexte securise : sans ce
-        // rattrapage le bouton ne ferait rien, sans un mot. La cle reste
-        // lisible dans le detail de la fenetre, donc selectionnable a la main.
+        // The clipboard is refused outside a secure context: without this
+        // fallback the button would do nothing, without a word. The key stays
+        // readable in the dialog's detail, hence selectable by hand.
         .catch(() => toast(t('Copie refusée par le navigateur : '
                              + 'sélectionne la clé dans le détail.'), 'warn'));
     }}],
@@ -3651,10 +3650,10 @@ async function revoquerCle(id) {
 
 // ------------------------------------------------------ notifications sortantes
 //
-// L'adresse n'est JAMAIS rendue par le serveur : un webhook Discord est un
-// secret porteur, et l'afficher le poserait dans l'historique du navigateur et
-// sur la moindre capture d'ecran des reglages. On n'en montre que l'hote, ce
-// qui suffit a reconnaitre laquelle est laquelle.
+// The address is NEVER returned by the server: a Discord webhook is a bearer
+// secret, and showing it would put it in the browser history and on any
+// screenshot of the settings. We only show the host, which is enough to tell
+// which is which.
 let NOTIFS = [], NOTIF_EVTS = {};
 
 async function chargerNotifs() {
@@ -3715,8 +3714,8 @@ async function supprimerNotif(id) {
 function _direResultatNotif(r) {
   if (!r) return;
   if (r.ok) toast(t('Envoyé. Regarde ton salon.'), 'ok');
-  // Le detail porte le code HTTP ou le nom de l'erreur : sans lui, « échec »
-  // ne dit pas si l'adresse est fausse ou le service en panne.
+  // The detail carries the HTTP code or the error's name: without it, "failed"
+  // does not say whether the address is wrong or the service is down.
   else toast(phrase('Échec : %s', r.detail || r.error || '?'), 'warn');
 }
 
@@ -3751,8 +3750,8 @@ function dessinerComptes() {
       R.texte(el.querySelector('.compte-mail'),
               c.email + (c.id === MOI ? ' — toi' : ''));
       const b = el.querySelector('button');
-      // On ne propose pas de retirer le dernier compte : plus personne ne
-      // pourrait entrer.
+      // We do not offer to remove the last account: nobody could get in any
+      // more.
       b.hidden = COMPTES.length < 2;
       b.onclick = () => supprimerCompte(c);
     };
@@ -3789,8 +3788,8 @@ function dessinerComptes() {
     + '</div></div>';
   const av = carte.querySelector('.avatar');
   if (moi.photo) {
-    // `?v=` : sans lui, le navigateur reafficherait l'ancienne photo apres
-    // un changement, la reponse etant mise en cache.
+    // `?v=`: without it the browser would show the old photo again after a
+    // change, the response being cached.
     av.style.backgroundImage = "url('/photo/" + moi.id + "?v=" + Date.now() + "')";  // i18n:ok - URL CSS
   } else {
     av.textContent = (moi.nom || moi.email).slice(0, 1).toUpperCase();
@@ -3805,9 +3804,9 @@ function dessinerComptes() {
   carte.querySelectorAll('[data-a]').forEach(b => { b.onclick = actions[b.dataset.a]; });
 }
 
-// Les routes de compte renvoient leurs refus en clair (mot de passe trop
-// court, email deja pris...) : on les montre tels quels plutot que de laisser
-// remonter la fenetre d'erreur generique.
+// The account routes return their refusals in plain words (password too short,
+// email already taken...): we show them as-is rather than letting the generic
+// error dialog come up.
 async function envoiCompte(chemin, corps, apres) {
   const r = await api(chemin, corps, true);
   if (!r) return false;
