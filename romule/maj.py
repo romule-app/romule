@@ -1,22 +1,23 @@
-"""Y a-t-il une version plus recente, et qu'apporte-t-elle ?
+"""Is there a newer version, and what does it bring?
 
-Un outil auto-heberge qu'on installe une fois et qu'on oublie finit par tourner
-pendant des mois sur une version qui a recu des correctifs de securite. Rien
-dans l'interface ne le disait.
+A self-hosted tool you install once and forget ends up running for months on a
+version that has since received security fixes. Nothing in the interface said
+so.
 
-Trois choses valent d'etre expliquees, parce qu'aucune ne va de soi.
+Three things are worth explaining, because none of them is obvious.
 
-**On interroge une seule fois par jour, et jamais au demarrage.** GitHub limite
-les requetes anonymes a soixante par heure et par adresse : plusieurs
-instances derriere la meme adresse publique se les partagent. Le resultat est
-donc garde sur disque, avec l'heure de sa lecture.
+**We ask once a day, and never at startup.** GitHub limits anonymous requests
+to sixty an hour per address, and several instances behind the same public
+address share that budget. The answer is therefore kept on disk, along with
+the time it was read.
 
-**Le reseau ne doit jamais faire attendre l'interface.** La verification est
-paresseuse : la route rend ce qu'elle sait, et ne va sur le reseau que si le
-cache est perime. Une panne de GitHub rend « je ne sais pas », pas une erreur.
+**The network must never make the interface wait.** The check is lazy: the
+route returns what it knows, and only goes out when the cache has expired. A
+GitHub outage answers "I don't know", not an error.
 
-**Cela se coupe.** Certains hebergent precisement pour ne parler a personne.
-Le reglage `maj_check` existe, il est documente, et l'audit dit ce qu'il fait.
+**It can be switched off.** Some people self-host precisely so as to talk to
+nobody. The `maj_check` setting exists, it is documented, and the audit
+reports what it does.
 """
 
 import json
@@ -26,14 +27,14 @@ import time
 from . import config, reseau
 from . import __version__
 
-# Version publiee : `v0.2.0` ou `0.2.0`, suivie eventuellement d'un suffixe.
+# Published version: `v0.2.0` or `0.2.0`, possibly followed by a suffix.
 _VERSION = re.compile(r"^v?(\d+)\.(\d+)\.(\d+)")
 
 SOURCE = "https://api.github.com/repos/romule-app/romule/releases/latest"
 CACHE = config.fichier_etat("_romule-maj.json", "_romule-maj.json")
 DUREE = 24 * 3600
-# Au-dela, la note de version est tronquee : elle s'affiche dans une fenetre,
-# pas dans un navigateur de documentation.
+# Past this, the release note is truncated: it shows in a dialog, not in a
+# documentation browser.
 MAX_NOTES = 4000
 
 
@@ -43,11 +44,11 @@ def _triplet(v):
 
 
 def plus_recente(publiee, courante=None):
-    """`publiee` est-elle strictement posterieure a `courante` ?
+    """Is `publiee` strictly newer than `courante`?
 
-    Compare des NOMBRES, pas des chaines : « 0.10.0 » est posterieure a
-    « 0.9.0 », ce qu'une comparaison lexicale rend faux. Une version qu'on ne
-    sait pas lire ne declenche rien — mieux vaut se taire que crier a tort.
+    Compares NUMBERS, not strings: "0.10.0" comes after "0.9.0", which a
+    lexical comparison gets wrong. A version we cannot read triggers nothing —
+    better to stay silent than to cry out wrongly.
     """
     a, b = _triplet(publiee), _triplet(courante or __version__)
     return bool(a and b and a > b)
@@ -67,19 +68,19 @@ def _ecrire_cache(d):
         CACHE.write_text(json.dumps(d, indent=2, ensure_ascii=False) + "\n",
                          encoding="utf-8")
     except OSError:
-        pass                      # un disque plein ne doit pas casser l'interface
+        pass                      # a full disk must not break the interface
 
 
 def _demander():
-    """Interroge GitHub. Rend un dictionnaire, ou leve."""
+    """Ask GitHub. Returns a dict, or raises."""
     req = reseau.urllib.request.Request(
         SOURCE, headers={"Accept": "application/vnd.github+json",
                          "User-Agent": "romule"})
     with reseau.ouvrir(req, timeout=8) as r:
         d = json.loads(r.read().decode("utf-8"))
-    # Le `v` du tag est retire : l'interface ecrit deja « Version %s
-    # disponible », et « Version v0.3.0 disponible » fait doublon. La
-    # comparaison, elle, ne s'en soucie pas — `_triplet` ignore le prefixe.
+    # The tag's `v` is stripped: the interface already writes "Version %s
+    # available", and "Version v0.3.0 available" reads twice. The comparison
+    # does not care either way — `_triplet` ignores the prefix.
     return {"version": str(d.get("tag_name") or "").lstrip("vV"),
             "titre": str(d.get("name") or ""),
             "notes": str(d.get("body") or "")[:MAX_NOTES],
@@ -88,11 +89,11 @@ def _demander():
 
 
 def etat(cfg=None, forcer=False):
-    """Ce qu'on sait de la derniere version. Ne leve jamais.
+    """What we know about the latest version. Never raises.
 
-    Rend toujours les memes cles, pour que l'interface n'ait pas a distinguer
-    « pas encore verifie » de « erreur » : dans les deux cas `disponible` est
-    faux et il n'y a rien a montrer.
+    Always returns the same keys, so the interface need not tell "not checked
+    yet" from "error": in both cases `disponible` is false and there is nothing
+    to show.
     """
     cfg = cfg or config.load_config()
     reponse = {"courante": __version__, "disponible": False, "version": "",
@@ -109,8 +110,8 @@ def etat(cfg=None, forcer=False):
             cache["verifie"] = int(time.time())
             _ecrire_cache(cache)
         except Exception:
-            # Reseau coupe, GitHub indisponible, quota atteint : on garde ce
-            # qu'on avait. Une verification ratee n'est pas un evenement.
+            # Network down, GitHub unavailable, quota reached: keep what we
+            # had. A failed check is not an event.
             if not cache:
                 return reponse
 

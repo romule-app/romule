@@ -1,13 +1,13 @@
-"""Decodage des title ID Switch — LA source unique de verite.
+"""Decoding Switch title IDs — THE single source of truth.
 
-Convention Nintendo (16 hexa, 64 bits), 13e nibble = index 12 :
-  BASE   : 13e nibble pair, 3 derniers = 000
-  UPDATE : base | 0x800            -> 3 derniers = 800
-  DLC    : base + 0x1000 + index   -> 13e nibble impair (base pair + 1)
+Nintendo convention (16 hex digits, 64 bits), 13th nibble = index 12:
+  BASE   : 13th nibble even, last three = 000
+  UPDATE : base | 0x800            -> last three = 800
+  DLC    : base + 0x1000 + index   -> 13th nibble odd (even base + 1)
 
-Les bases ayant toujours un 13e nibble pair, l'incrementation vers le DLC
-(+1) ne provoque jamais de retenue au-dela de ce nibble pour un nombre de
-DLC realiste (< 4096), donc l'heuristique est stable.
+Since bases always have an even 13th nibble, stepping up to a DLC (+1) never
+carries past that nibble for any realistic DLC count (< 4096), so the
+heuristic is stable.
 """
 
 import os
@@ -22,25 +22,24 @@ def is_valid(tid):
 
 
 def from_name(name):
-    """Extrait le title ID d'un nom de fichier, ou None."""
+    """Extract the title ID from a file name, or None."""
     m = TID_RE.search(name)
     return m.group(0).lower() if m else None
 
 
 def version_from_name(name):
-    """Extrait le numero de version de [vN], ou None."""
+    """Extract the version number from [vN], or None."""
     m = VER_RE.search(name)
     return int(m.group(1)) if m else None
 
 
 def pretty_name(name):
-    """Nom lisible : on coupe a partir du crochet de title ID.
+    """Readable name: cut from the title-ID bracket onwards.
 
-    `os.path.splitext` plutot que `Path(name).stem` : cette fonction est
-    appelee une fois par fichier de la ludotheque, a chaque affichage. Sur
-    39 525 fichiers, construire un objet `Path` pour lire un attribut et le
-    jeter coutait 137 ms — pour un decoupage de chaine que la bibliotheque
-    standard fait sans allouer.
+    `os.path.splitext` rather than `Path(name).stem`: this runs once per file
+    in the library, on every render. Across 39 525 files, building a `Path`
+    object to read one attribute and throw it away cost 137 ms — for a string
+    split the standard library does without allocating.
     """
     stem = os.path.splitext(name)[0]
     return re.sub(r"\s*\[0100.*", "", stem).strip() or stem
@@ -62,7 +61,7 @@ def tid_type(tid):
 
 
 def tid_base(tid):
-    """Title ID du jeu de base correspondant a un update ou un DLC."""
+    """Title ID of the base game an update or a DLC belongs to."""
     t = tid.lower()
     n = _nibble(t)
     if n % 2 == 1:
@@ -71,19 +70,19 @@ def tid_base(tid):
 
 
 def tid_patch(tid):
-    """Title ID du patch (update) d'un jeu de base."""
+    """Title ID of a base game's patch (update)."""
     t = tid.lower()
     return "%s%s800" % (t[:12], t[12])
 
 
 def dlc_prefix(base_tid):
-    """Prefixe (13 hexa) que partagent tous les DLC d'un jeu de base."""
+    """Prefix (13 hex digits) shared by every DLC of a base game."""
     t = base_tid.lower()
     return "%s%x" % (t[:12], _nibble(t) + 1)
 
 
 def revision(version):
-    """Version Nintendo -> numero de revision lisible (v0, rev 3...)."""
+    """Nintendo version -> readable revision number (v0, rev 3...)."""
     if version and version > 0:
         return "rev %d" % (version // 65536)
     return "v0"
