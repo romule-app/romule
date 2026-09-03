@@ -1016,7 +1016,7 @@ function renderTache(j) {
   $('bar').style.width = (pct == null ? 0 : pct) + '%';
   R.classe(el, 'indetermine', pct == null);   // total inconnu : barre en va-et-vient
 
-  // avancement : le compte d'abord, le detail du serveur (debit) ensuite
+  // progress: the count first, the server's detail (rate) second
   const bouts = [];
   if (j.total) bouts.push(j.done + ' / ' + j.total + (pct != null ? '  ·  ' + pct + ' %' : ''));
   if (j.detail) bouts.push(j.detail);
@@ -1038,9 +1038,9 @@ function renderTache(j) {
   majPanneauTaches(j);
 }
 
-// Le panneau du bouton « + » : ce qui tourne, ou l'on en est, et combien de
-// temps il reste. Le journal, lui, raconte ce qui S'EST passe — les deux ne se
-// recouvrent pas.
+// The "+" button's panel: what is running, how far along, and how much time is
+// left. The log, for its part, tells what HAS happened — the two do not
+// overlap.
 function majPanneauTaches(j) {
   const bloc = $('tache'), vide = $('tachevide');
   if (!bloc || !vide) return;
@@ -1062,8 +1062,8 @@ function majPanneauTaches(j) {
   R.texte($('tachedetail'), (j && j.detail) ? j.detail : '');
 }
 
-// `label` porte le nom de la fonction Python qui tourne : il ne parle qu'au
-// code. On le traduit en une phrase courte, reconnaissable d'un coup d'oeil.
+// `label` carries the name of the running Python function: it speaks to the
+// code alone. We turn it into a short phrase, recognisable at a glance.
 const NOMS_TACHE = {
   analyser_console:    'Analyse de la console',
   apply_eden_config:   'Réglages Eden',
@@ -1094,11 +1094,11 @@ function nomTache(j) {
 
 // ---------------------------------------------------------------- regroupement
 function groupGames() {
-  // Un fichier sans title ID exploitable (pack .xci, nom mal forme) etait
-  // regroupe par DOSSIER. Deux consequences, toutes deux vues en vrai :
-  // deux jeux differents du meme dossier atterrissaient sur une seule carte,
-  // et un jeu apparaissait deux fois des lors qu'il avait par ailleurs une
-  // mise a jour correctement nommee. On rapproche donc par titre reduit.
+  // A file with no usable title ID (an .xci pack, a malformed name) was
+  // grouped by FOLDER. Two consequences, both seen for real: two different
+  // games from the same folder landed on one card, and a game appeared twice
+  // as soon as it also had a correctly named update. So we match on the
+  // reduced title instead.
   const parTitre = {};
   DATA.files.forEach(f => { if (f.tid) parTitre[titreNormalise(f.name)] = tidBase(f.tid); });
 
@@ -1113,12 +1113,13 @@ function groupGames() {
   });
   return Object.values(games).map(g => {
     const base = g.files.find(f => f.type === 'BASE');
-    // Nom de repli quand un jeu n'en a aucun : il est AFFICHE, donc traduit.
-  // La recherche de jaquette par nom n'aurait de toute facon rien trouve.
+    // A fallback name when a game has none: it is DISPLAYED, hence translated.
+  // A cover search by name would have found nothing anyway.
   g.name = g.baseName || (g.files[0] && g.files[0].name) || t('Inconnu');
-    // Un pack .xci qui fusionne jeu, MAJ et DLC ne porte pas de title ID : il est
-    // classe INCONNU alors qu'il CONTIENT le jeu. Le compter comme base evite
-    // d'annoncer « le jeu de base manque » sur un jeu parfaitement jouable.
+    // An .xci pack merging game, updates and DLC carries no title ID: it is
+    // classed INCONNU although it CONTAINS the game. Counting it as a base
+    // avoids announcing "the base game is missing" for a perfectly playable
+    // game.
     g.hasBase = !!base || g.files.some(f =>
       ['nsp', 'xci'].includes(f.ext) && !['UPDATE', 'DLC'].includes(f.type));
     g.needsConvert = g.files.some(f => f.needs_convert);
@@ -1134,11 +1135,11 @@ function groupGames() {
 }
 
 function coverImg(g, cls, attrs) {
-  // Sans title ID, on demande quand meme la jaquette : le serveur sait chercher
-  // par nom. Renvoyer '' condamnait les packs XCI a une vignette vide.
+  // With no title ID we still ask for the cover: the server can search by
+  // name. Returning '' condemned XCI packs to an empty thumbnail.
   if (!g.tid && !g.name) return '';
-  // le jeton `v` change des que le cache serveur bouge : sans lui le
-  // navigateur garderait ses anciennes images pendant des heures.
+  // the `v` token changes as soon as the server cache moves: without it the
+  // browser would keep its old images for hours.
   const v = (DATA && DATA.covers_v) || 0;
   return '<img class="' + (cls || '') + '" src="/cover/' + (g.tid || '') + '?v=' + v +
     '&name=' + encodeURIComponent(g.name || '') + '" loading="lazy" ' +
@@ -1146,14 +1147,14 @@ function coverImg(g, cls, attrs) {
     (attrs ? ' ' + attrs : '') + '>';
 }
 
-/* ---------------------------------------------------------------- couleurs
-   La couleur dominante d'une pochette sert deux fois : elle remplit
-   l'emplacement AVANT que l'image n'arrive (la grille ne clignote plus au
-   defilement), et elle teinte l'en-tete de la fiche du jeu.
+/* ------------------------------------------------------------------ colours
+   A cover's dominant colour serves twice: it fills the slot BEFORE the image
+   arrives (the grid no longer flickers while scrolling), and it tints the
+   header of the game's detail view.
 
-   Elle est calculee une seule fois par jeu, dans le navigateur, puis rangee
-   localement : la recalculer a chaque affichage ferait travailler le
-   processeur pour un resultat toujours identique. */
+   It is computed once per game, in the browser, then stored locally:
+   recomputing it on every render would make the processor work for an
+   always-identical result. */
 const COULEURS = (() => {
   try { return JSON.parse(localStorage.getItem('couleurs') || '{}') || {}; }
   catch (e) { return {}; }
@@ -1166,15 +1167,15 @@ function cleCouleur(g) {
 
 function rangerCouleurs() {
   clearTimeout(COULEURS_A_ECRIRE);
-  // Une ecriture par salve : 48 jaquettes qui arrivent ensemble
-  // declencheraient 48 serialisations du meme objet.
+  // One write per burst: 48 covers arriving together would trigger 48
+  // serialisations of the same object.
   COULEURS_A_ECRIRE = setTimeout(() => {
     try { localStorage.setItem('couleurs', JSON.stringify(COULEURS)); }
-    catch (e) { /* quota plein : la couleur se recalculera, sans dommage */ }
+    catch (e) { /* quota full: the colour will be recomputed, no harm done */ }
   }, 800);
 }
 
-const ECH = 18;            // la pochette est reduite a 18x18 avant analyse
+const ECH = 18;            // the cover is scaled to 18x18 before analysis
 
 function couleurDominante(img) {
   let d;
@@ -1185,7 +1186,7 @@ function couleurDominante(img) {
     ctx.drawImage(img, 0, 0, ECH, ECH);
     d = ctx.getImageData(0, 0, ECH, ECH).data;
   } catch (e) {
-    return '';               // canvas indisponible : on s'en passe
+    return '';               // no canvas available: we do without
   }
   const seaux = new Map();
   for (let i = 0; i < d.length; i += 4) {
@@ -1193,13 +1194,13 @@ function couleurDominante(img) {
     if (d[i + 3] < 200) continue;
     const haut = Math.max(r, v, b), bas = Math.min(r, v, b);
     const clarte = (haut + bas) / 2;
-    // Le presque-noir et le presque-blanc sont des bords et des aplats de
-    // fond : ils dominent en surface sans jamais caracteriser une pochette.
+    // Near-black and near-white are edges and flat backgrounds: they dominate
+    // by area without ever characterising a cover.
     if (clarte < 34 || clarte > 226) continue;
     const cle = (r >> 4) + ',' + (v >> 4) + ',' + (b >> 4);
     const s = seaux.get(cle) || {n: 0, r: 0, v: 0, b: 0, poids: 0};
     s.n++; s.r += r; s.v += v; s.b += b;
-    s.poids += 1 + (haut - bas) / 64;      // une couleur franche pese plus
+    s.poids += 1 + (haut - bas) / 64;      // a vivid colour weighs more
     seaux.set(cle, s);
   }
   let chef = null;
@@ -1210,10 +1211,9 @@ function couleurDominante(img) {
                   Math.round(chef.b / chef.n) + ')';
 }
 
-// Attributs a poser sur une carte ou une fiche : de quoi retrouver la couleur
-// apres coup, et la couleur elle-meme si elle est deja connue — c'est ce qui
-// evite le clignotement, puisqu'elle s'applique AVANT le chargement de
-// l'image.
+// Attributes to set on a card or a detail view: enough to find the colour again
+// afterwards, and the colour itself when it is already known — that is what
+// avoids the flicker, since it applies BEFORE the image loads.
 function attrsTeinte(g) {
   const cle = cleCouleur(g);
   const c = COULEURS[cle];
@@ -1228,8 +1228,9 @@ function render() {
   GAMES = groupGames();
   inventaireChange();
   renderLib();
-  // Ce qui manque officiellement (patches, DLC) n'est plus une liste a part :
-  // l'information vit sur la carte du jeu concerne, la ou elle est utile.
+  // What is officially missing (patches, DLC) is no longer a separate list:
+  // the information lives on the card of the game concerned, where it is
+  // useful.
   renderImport(DATA.pending || []);
   renderTree();
   $('organizewrap').style.display = DATA.device === 'device' ? '' : 'none';
@@ -1239,11 +1240,11 @@ function render() {
 // ------------------------------------------------- systemes (autres consoles)
 function renderSysSelect() {
   const el = $('sysel');
-  // On compte des JEUX, pas des fichiers : pour la Switch, le total incluait
-  // les mises a jour et les DLC, ce qui gonflait le chiffre sans rien dire
-  // d'utile (148 fichiers pour 22 jeux).
-  // Le compte local seul mentait : la plupart des plateformes n'existent que sur
-  // la console. On retient donc le plus grand des deux (local, console detectee).
+  // We count GAMES, not files: for the Switch the total included updates and
+  // DLC, which inflated the figure while saying nothing useful (148 files for
+  // 22 games).
+  // The local count alone lied: most platforms only exist on the console. So we
+  // keep the larger of the two (local, detected console).
   const compte = s => {
     if (s.count === null) return GAMES.length;          // Switch : jeux regroupes
     const d = PLATEFORMES.find(x => x.key === s.key);
@@ -1263,44 +1264,44 @@ function renderSysSelect() {
 }
 function isSwitch() { return SYS === 'switch'; }
 function vueTotale() { return SYS === 'all'; }
-// Libelle court d'une plateforme : « GBA », pas « Game Boy Advance ».
+// A platform's short label: "GBA", not "Game Boy Advance".
 function libelleSysteme(key) {
   const s = SYSTEMS.find(x => x.key === key);
   return (s && s.folder) || key;
 }
 
 
-// Une frappe ne doit pas redessiner la grille a chaque touche.
+// Typing must not redraw the grid on every keystroke.
 //
-// `renderLib()` etait appele directement par l'evenement `input` : taper huit
-// caracteres declenchait huit rendus complets, dont sept jetes aussitot. On
-// regroupe sur l'image suivante — c'est le rythme de l'ecran, et c'est le seul
-// moment ou un rendu peut se voir.
+// `renderLib()` was called directly by the `input` event: typing eight
+// characters triggered eight full renders, seven of them thrown away at once.
+// We coalesce onto the next frame — that is the screen's rhythm, and the only
+// moment a render can be seen.
 let RENDU_PREVU = 0;
-let VUES = [];                  // vues enregistrees, servies par le serveur
-// Qui regarde, et avec quel role. Sans authentification, tout le monde est
-// administrateur — c'est le mode le plus courant de Romule.
+let VUES = [];                  // saved views, served by the server
+// Who is looking, and with what role. Without authentication everybody is an
+// administrator — Romule's most common mode.
 let ROLE = {authentification: false, connecte: false, admin: true, nom: ''};
 
-// L'interface ne montre pas ce qu'on ne peut pas faire.
+// The interface does not show what you cannot do.
 //
-// Ce n'est PAS une securite : c'est `RESERVE_ADMIN`, cote serveur, qui refuse,
-// et un test le verifie sur les 27 routes. Masquer est une politesse — sans
-// elle, un non-administrateur ouvre les Reglages, clique, et recolte des 403
-// sans comprendre ce qui lui arrive.
+// This is NOT a security measure: `RESERVE_ADMIN`, server-side, is what
+// refuses, and a test checks it across all the reserved routes. Hiding is a
+// courtesy — without it, a non-administrator opens Settings, clicks, and
+// collects 403s without understanding what is happening.
 function appliquerRole() {
   const onglet = document.querySelector('#tabs [data-tab="settings"]');
   if (onglet) onglet.hidden = !ROLE.admin;
   document.body.classList.toggle('sansadmin', !ROLE.admin);
-  // Deja sur les reglages au moment ou le role arrive : on revient aux jeux
-  // plutot que de laisser un ecran qu'on n'a pas le droit d'utiliser.
+  // Already on the settings when the role arrives: we go back to the games
+  // rather than leaving a screen nobody is allowed to use.
   if (!ROLE.admin && document.querySelector('#panel-settings.active'))
     app.tab('jeux');
 }
 
-// Ce qui DEFINIT le sous-ensemble affiche. Ni le tri, ni la taille des
-// vignettes, ni la page : ce sont des preferences d'affichage, elles valent
-// pour tout ce qu'on regarde.
+// What DEFINES the displayed subset. Not the sort order, not the tile size,
+// not the page: those are display preferences, they apply to everything you
+// look at.
 function filtresCourants() {
   return {systeme: SYS,
           recherche: (($('filter') || {}).value || '').trim(),
@@ -1349,8 +1350,8 @@ function majBarreFiltres() {
 
 // ------------------------------------------------------------ mise a jour
 //
-// Une invitation, pas une alerte : la pastille n'apparait que s'il y a
-// vraiment une version plus recente, et rien n'est bloque tant qu'on l'ignore.
+// An invitation, not an alarm: the pill only appears when there really is a
+// newer version, and nothing is blocked while you ignore it.
 let MAJ = null;
 
 async function chargerMaj() {
@@ -1361,10 +1362,9 @@ async function chargerMaj() {
   if (b) b.hidden = !r.disponible;
 }
 
-// Les notes viennent de GitHub : c'est du texte ECRIT PAR QUELQU'UN D'AUTRE.
-// Il n'entre donc jamais dans du HTML — `dialogue()` pose son `detail` par
-// `textContent`. On se contente d'alleger la syntaxe Markdown la plus
-// bruyante, sans jamais l'interpreter.
+// The notes come from GitHub: this is text WRITTEN BY SOMEONE ELSE. So it
+// never enters HTML — `dialogue()` sets its `detail` through `textContent`. We
+// merely lighten the noisiest Markdown syntax, without ever interpreting it.
 function notesLisibles(md) {
   return String(md || '')
     .replace(/\r/g, '')
@@ -1391,8 +1391,8 @@ function renderLibBientot() {
 function renderLib() {
   renderSysSelect();
   majBarreFiltres();
-  // Les filtres d'etat propres a la Switch (MAJ, DLC, conversion) n'ont pas de
-  // sens ailleurs : on les masque, le reste de la vue est commun.
+  // The Switch-specific status filters (updates, DLC, conversion) make no
+  // sense elsewhere: we hide them, the rest of the view is shared.
   const suisse = isSwitch();
   ['activer', 'convert', 'probleme', 'importer'].forEach(k => {
     const chip = document.querySelector('#filters [data-f="' + k + '"]');
@@ -1401,12 +1401,12 @@ function renderLib() {
   $('bulkconv').style.display = suisse ? '' : 'none';
 
   const tous = jeuxUnifies();
-  // Les gabarits de resume se reperent en comparant les jeux entre eux : la
-  // liste complete doit donc etre connue avant de dessiner la moindre carte.
+  // Boilerplate summaries are spotted by comparing games with one another: the
+  // full list must therefore be known before drawing a single card.
   majModelesResume(tous);
   renderToolbar(tous);
 
-  // compteurs : un filtre qui ne peut rien dire est masque, pas affiche a zero
+  // counters: a filter with nothing to say is hidden, not shown as zero
   const n = {all: tous.length, envoyer: 0, activer: 0, importer: 0, convert: 0, probleme: 0};
   tous.forEach(({e}) => { if (n[e.etat] !== undefined) n[e.etat]++; });
   Object.keys(n).forEach(k => {
@@ -1423,9 +1423,9 @@ function renderLib() {
   else bulk.style.display = 'none';
 
   const q = ($('filter').value || '').toLowerCase();
-  // Le regroupement vient APRES le filtrage : un groupe ne doit compter que
-  // les versions effectivement visibles, sinon il annoncerait « 5 versions »
-  // dans une liste qui n'en montre qu'une.
+  // Grouping comes AFTER filtering: a group must only count the versions
+  // actually visible, otherwise it would announce "5 versions" in a list that
+  // shows one.
   const list = regrouper(jeuxFiltres(tous));
 
   const lib = $('lib');
@@ -1444,8 +1444,8 @@ function renderLib() {
     $('pager').innerHTML = ''; renderActionBar(); return;
   }
 
-  // pagination : la taille de page suit la taille des cartes
-  const parPage = PARPAGE || Math.max(1, list.length);   // 0 = tout sur une page
+  // pagination: the page size follows the card size
+  const parPage = PARPAGE || Math.max(1, list.length);   // 0 = everything on one page
   const pages = Math.ceil(list.length / parPage);
   if (PAGE >= pages) PAGE = 0;
   const vus = list.slice(PAGE * parPage, (PAGE + 1) * parPage);
@@ -1453,9 +1453,9 @@ function renderLib() {
   lib.style.setProperty('--carte', TAILLES[TAILLE][1] + 'px');
   VUS_PAGE = vus.map(({g}) => g.key);
 
-  // La grille est reconciliee, plus reecrite : une carte inchangee n'est pas
-  // touchee, donc son animation ne rejoue pas et sa coche n'a pas besoin d'etre
-  // resynchronisee a la main. C'est ce que reactive.js apporte.
+  // The grid is reconciled, no longer rewritten: an unchanged card is left
+  // alone, so its animation does not replay and its checkbox needs no manual
+  // resynchronisation. That is what reactive.js brings.
   let grille = lib.firstElementChild;
   if (!grille || !grille.classList.contains('games')) {
     lib.innerHTML = '';
@@ -1465,9 +1465,9 @@ function renderLib() {
   grille.className = 'games taille-' + TAILLE  // i18n:ok - classe CSS;
 
   R.liste(grille, vus, {
-    // L'etat deplie fait partie de l'identite de la carte : sans lui, la
-    // reconciliation reutiliserait la meme vignette et le chevron resterait
-    // tourne dans le mauvais sens.
+    // The expanded state is part of the card's identity: without it,
+    // reconciliation would reuse the same tile and the chevron would stay
+    // pointing the wrong way.
     cle: ({g}) => g.key,
     creer: (x) => R.depuisHtml(carteHtml(x)),
     majEl: (el, x) => majCarte(el, x),
@@ -1478,27 +1478,27 @@ function renderLib() {
   renderActionBar();
 }
 
-// ------------------------------------------------------- index alphabetique
-// Une lettre par groupe existant, comme dans une mediatheque. Il n'a de sens
-// que si la liste EST triee par nom : sur un tri par taille, sauter a « M »
-// ne voudrait rien dire, donc l'index disparait.
+// -------------------------------------------------------- alphabetical index
+// One letter per existing group, as in a library. It only makes sense when the
+// list IS sorted by name: with a sort by size, jumping to "M" would mean
+// nothing, so the index disappears.
 function lettreDe(g) {
   const t = (nomJeu(g) || '').trim();
-  // On deplie les accents : « Ecran » et « Écran » se rangent au meme endroit.
+  // Accents are unfolded: "Ecran" and "Écran" file in the same place.
   const c = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '')[0] || '';
   if (/[0-9]/.test(c)) return '#';
   return /[a-z]/i.test(c) ? c.toUpperCase() : '#';
 }
 
-let ALPHA_POS = new Map();      // lettre -> rang dans la liste filtree
-// Lettre demandee par un clic. Dans une grille, la carte visee tombe souvent au
-// milieu d'une ligne : aucun calcul de position ne peut alors deviner « la »
-// lettre courante. Apres un clic, c'est l'intention de l'utilisateur qui fait
-// foi ; le premier defilement rend la main au calcul.
+let ALPHA_POS = new Map();      // letter -> rank in the filtered list
+// The letter asked for by a click. In a grid, the target card often falls in
+// the middle of a row: no position calculation can then guess "the" current
+// letter. After a click the user's intent is authoritative; the first scroll
+// hands control back to the calculation.
 let ALPHA_VISEE = '';
-// Instant du dernier saut. Le defilement fluide emet une dizaine d'evenements :
-// un drapeau a usage unique n'en absorbait qu'un, et l'index reprenait la main
-// avant meme d'etre arrive.
+// When the last jump happened. Smooth scrolling emits a dozen events: a
+// single-use flag absorbed only one, and the index took control back before
+// even arriving.
 let ALPHA_JUSQUA = 0;
 
 function renderAlphabet(list) {
@@ -1527,17 +1527,16 @@ function renderAlphabet(list) {
   majAlphabet();
 }
 
-// La lettre qu'on est en train de lire est mise en avant : sans cela l'index
-// dit ou l'on PEUT aller, jamais ou l'on EST.
+// The letter you are currently reading is highlighted: without that the index
+// says where you CAN go, never where you ARE.
 function majAlphabet() {
   const nav = $('alphabet');
   if (!nav || nav.hidden) return;
   const cartes = [...document.querySelectorAll('#lib .gcard')];
   let courante = '';
-  // La lettre courante est celle de la PREMIERE carte encore visible, pas de la
-  // derniere passee : dans une grille, plusieurs cartes partagent une ligne, et
-  // prendre la derniere designait la lettre suivante des qu'un groupe tenait
-  // sur une seule ligne.
+  // The current letter is that of the FIRST card still visible, not the last
+  // one passed: in a grid several cards share a row, and taking the last one
+  // pointed at the next letter as soon as a group fitted on one line.
   const tete = document.querySelector('header');
   const seuil = (tete ? tete.getBoundingClientRect().bottom : 60) + 24;
   for (const c of cartes) {
@@ -1558,22 +1557,22 @@ function majAlphabet() {
   });
 }
 
-// UNE ligne sous le titre, et la plus utile des six possibles. Empiler taille,
-// contenu, note EmuReady et remarque donnait quatre lignes concurrentes dont
-// aucune ne ressortait ; la taille et le contenu vivent desormais sur la
-// jaquette, ou ils se lisent sans lire.
-// La carte parle du JEU, pas de l'outil : elle porte le resume, rien d'autre.
-// L'etat (« MAJ à activer », « Problème ») est deja dit par l'etiquette de la
-// jaquette ; le detail — quelle mise a jour, pourquoi un fichier est incomplet —
-// appartient a la fiche, ou il y a la place de l'expliquer.
+// ONE line under the title, and the most useful of the six possible ones.
+// Stacking size, contents, EmuReady rating and remark gave four competing lines
+// none of which stood out; size and contents now live on the cover, where they
+// are read without reading.
+// The card talks about the GAME, not about the tool: it carries the summary and
+// nothing else. The status ("Update to activate", "Problem") is already said by
+// the cover's badge; the detail — which update, why a file is incomplete —
+// belongs to the detail view, where there is room to explain it.
 function carteLigne(x) {
   const resume = resumeUtile(x.g);
   return resume ? ['resume', extrait(resume, 96)] : ['', ''];
 }
 
-// Mots trop courants pour peser dans la comparaison : les garder ferait passer
-// n'importe quelle phrase pour « proche du titre ».
-const VIDES = new Set(('le la les un une des du de d l a au aux et ou en dans sur '  // i18n:ok - mots vides, pas de l'interface
+// Words too common to weigh in the comparison: keeping them would make any
+// sentence pass for "close to the title".
+const VIDES = new Set(('le la les un une des du de d l a au aux et ou en dans sur '  // i18n:ok - stop words, not interface text
   + 'pour par avec sans version edition the a an of and or in on for with your '
   + 'this that new').split(' '));
 
@@ -1583,23 +1582,23 @@ function motsUtiles(t) {
     .match(/[a-z0-9]{2,}/g) || []).filter(m => !VIDES.has(m));
 }
 
-// Un resume qui ne fait que repeter le titre occupe trois lignes pour ne rien
-// dire : « Revivez l'aventure Pokémon Blattgrüne Edition ! » sur la carte de
-// Pokémon Blattgrüne Edition. On l'ecarte quand l'essentiel de ses mots vient
-// deja du titre — mais seulement s'il est court : une vraie description qui
-// commence par le nom du jeu doit rester.
-const RESUME_COURT = 9;          // mots utiles au-dela desquels on ne juge plus
-const RESUME_REDONDANT = 0.5;    // part des mots deja presents dans le titre
+// A summary that merely repeats the title takes three lines to say nothing:
+// "Relive the Pokémon Blattgrüne Edition adventure!" on the card for Pokémon
+// Blattgrüne Edition. We drop it when most of its words already come from the
+// title — but only when it is short: a real description starting with the
+// game's name must stay.
+const RESUME_COURT = 9;          // useful words past which we stop judging
+const RESUME_REDONDANT = 0.5;    // share of words already present in the title
 
-// Deuxieme filet, celui-la fonde sur la ludotheque elle-meme. La comparaison
-// au titre ne rattrape pas « Revivez l'aventure Pokémon Edición Rojo Fuego ! »
-// sur une carte intitulee « Pokémon FireRed Version » : aucun mot commun, et
-// pourtant la phrase ne dit rien. En revanche elle commence comme sept autres
-// de la bibliotheque — c'est un GABARIT, et c'est mesurable sans connaitre la
-// langue ni la source.
-const MODELE_MOTS = 3;           // longueur du debut compare
-const MODELE_MINI = 3;           // nombre de jeux au-dela duquel c'est un gabarit
-const MODELE_LONG = 12;          // une vraie description echappe a la regle
+// A second net, this one based on the library itself. Comparing against the
+// title does not catch "Relive the Pokémon Edición Rojo Fuego adventure!" on a
+// card titled "Pokémon FireRed Version": not one word in common, and yet the
+// sentence says nothing. It does, however, start like seven others in the
+// library — that is BOILERPLATE, and it is measurable without knowing the
+// language or the source.
+const MODELE_MOTS = 3;           // length of the compared opening
+const MODELE_MINI = 3;           // number of games past which it is boilerplate
+const MODELE_LONG = 12;          // a real description escapes the rule
 let RESUMES_MODELES = new Set();
 
 function majModelesResume(tous) {
@@ -1627,17 +1626,17 @@ function resumeUtile(g) {
   return repris / mots.length >= RESUME_REDONDANT ? '' : brut;
 }
 
-// Etiquette du bas : a gauche OU est le jeu, a droite ce qu'il reste a faire.
-// Deux temoins allumes/eteints se lisent plus vite qu'une phrase, et gardent
-// le vocabulaire de l'appareil plutot que celui du formulaire.
-// Version courte de l'etat, pour le bandeau d'une carte. « Pas sur la
-// console » ne tenait pas a cote des mots MAC et CONSOLE : le bandeau se
-// terminait par « PAS SUR LA … » sur chaque jaquette, donc ne disait rien.
-// Le texte entier reste accessible en infobulle et dans la fiche.
-// « Prêt » et « À envoyer » decrivaient l'etat du FICHIER ; ce que
-// l'utilisateur veut savoir, c'est s'il peut jouer, et sinon ce qu'il reste a
-// faire. Chaque mot est donc soit « jouable », soit un verbe d'action — et la
-// pastille console, juste au-dessus, dit deja ou se trouve le jeu.
+// The bottom badge: on the left WHERE the game is, on the right what is left to
+// do. Two lit/unlit indicators read faster than a sentence, and keep the
+// vocabulary of the device rather than that of a form.
+// A short version of the status, for a card's strip. "Not on the console" did
+// not fit beside the words MAC and CONSOLE: the strip ended with "NOT ON THE …"
+// on every cover, and therefore said nothing. The full text stays available as
+// a tooltip and in the detail view.
+// "Ready" and "To send" described the FILE's state; what the user wants to know
+// is whether they can play, and if not what is left to do. So every word is
+// either "playable" or an action verb — and the console pill, just above,
+// already says where the game is.
 const ETAT_COURT = {
   probleme: 'Problème', importer: 'À rapatrier', envoyer: 'À transférer',
   activer: 'À activer', convert: 'À convertir', pret: 'Jouable',
@@ -1648,18 +1647,18 @@ function carteEtiquette({e}) {
   const p = e.presence || {mac: true, console: 'inconnu'};
   const tMac = p.mac ? 'Présent sur le serveur' : 'Absent du serveur';
   const tCons = t(TITRE_PRESENCE[p.console] || '');
-  // Pastilles muettes : la couleur porte l'information, l'infobulle la nomme.
-  // Les mots « MAC » et « CONSOLE » mangeaient les deux tiers de la largeur
-  // pour repeter un ordre qui ne change jamais (le serveur d'abord).
-  // La console a quitte ce bandeau pour la pastille du haut, ou elle se lit
-  // d'un coup d'oeil sur toute la grille. La repeter ici dirait deux fois la
-  // meme chose a 200 px d'ecart.
+  // Wordless pills: the colour carries the information, the tooltip names it.
+  // The words "MAC" and "CONSOLE" ate two thirds of the width to repeat an
+  // order that never changes (the server first).
+  // The console left this strip for the pill at the top, where it reads at a
+  // glance across the whole grid. Repeating it here would say the same thing
+  // twice, 200 px apart.
   return '<span class="temoins">' +
       '<i class="tem ' + (p.mac ? 'p-oui' : 'p-non') + '" title="' + esc(tMac) +
         '" aria-label="' + esc(tMac) + '"></i>' +
     '</span>' +
-    // `e.txt` est un libelle d'etat pris dans `ETATS` : il doit passer par le
-    // catalogue comme le texte visible juste a cote.
+    // `e.txt` is a status label taken from `ETATS`: it must go through the
+    // catalogue like the visible text right beside it.
     '<span class="etatmot ' + ETATS[e.etat][0] + '" title="' + esc(t(e.txt)) + '">' +
       esc(ETAT_COURT[e.etat] || e.txt) + '</span>';
 }
@@ -1668,19 +1667,18 @@ const TITRE_PRESENCE = {
   non: 'Absent de la console', inconnu: 'Console non consultée',
 };
 
-// Pastilles posees sur la jaquette : ce qui se chiffre (taille, MAJ, DLC).
+// Pills placed on the cover: what can be counted (size, updates, DLC).
 /* ============================================================================
    SUPPORTS PHYSIQUES
    ----------------------------------------------------------------------------
-   Vingt-trois plateformes, mais seulement six FORMES de support : une
-   cartouche de salon, une cartouche de poche, une carte, un disque, une carte
-   Switch, un circuit d'arcade. Dessiner vingt-trois silhouettes distinctes
-   serait un mensonge — a 46 px, une cartouche SNES et une cartouche Mega Drive
-   sont le meme objet.
+   Twenty-three platforms, but only six SHAPES of medium: a home cartridge, a
+   handheld cartridge, a card, a disc, a Switch card, an arcade board. Drawing
+   twenty-three distinct silhouettes would be a lie — at 46 px, a SNES cartridge
+   and a Mega Drive cartridge are the same object.
 
-   Elles servent la ou il n'y a rien a montrer : un jeu sans jaquette affichait
-   une grosse lettre dans un rectangle gris. Elles disent aussi, dans la fiche,
-   sur quoi le jeu tournait vraiment.
+   They serve where there is nothing to show: a game without a cover used to
+   display a big letter in a grey rectangle. They also say, in the detail view,
+   what the game really ran on.
    ========================================================================== */
 const MEDIA_PLATEFORME = {
   switch: 'switch',
@@ -1694,23 +1692,23 @@ const MEDIA_PLATEFORME = {
   arcade: 'borne',
 };
 
-// Dessins en `currentColor`, sur une grille de 48 : ils heritent donc de la
-// couleur du texte partout ou on les pose, sans variante a maintenir.
+// Drawings in `currentColor`, on a 48-unit grid: they inherit the text colour
+// wherever they are placed, with no variant to maintain.
 const SILHOUETTES = {
-  // Toutes suivent la meme regle : UN chemin plein, et les details sont des
-  // TROUS (`fill-rule="evenodd"`). Poser un detail par-dessus le corps en
-  // baissant son opacite ne l'eclaircit pas — il se peint dans la meme
-  // couleur, donc il disparait. C'est la decoupe qui le fait exister.
+  // They all follow the same rule: ONE filled path, and the details are HOLES
+  // (`fill-rule="evenodd"`). Laying a detail over the body at reduced opacity
+  // does not lighten it — it paints in the same colour, so it vanishes. It is
+  // the cut-out that makes it exist.
 
   // Carte Switch : coin biseaute et ergot de detrompage.
   switch:
     '<path fill-rule="evenodd" d="M15 5h13l5 5v29a4 4 0 0 1-4 4H15' +
       'a4 4 0 0 1-4-4V9a4 4 0 0 1 4-4zm3 30h8v4h-8z"/>',
-  // Cartouche de poche : haute, coin inferieur biseaute, fenetre d'etiquette.
+  // Handheld cartridge: tall, bevelled bottom corner, label window.
   poche:
     '<path fill-rule="evenodd" d="M12 4h24v32l-7 7H12V4zm4 5h16v14H16V9z' +
       'm1 21h10v3H17v-3z"/>',
-  // Cartouche de salon : large, etiquette et peigne du connecteur.
+  // Home cartridge: wide, label and connector comb.
   cartouche:
     '<path fill-rule="evenodd" d="M12 4h24a2 2 0 0 1 2 2v38H10V6a2 2 0 0 1 2-2z' +
       'm3 5h18v13H15V9zm-1 27h20v3H14v-3z"/>',
@@ -1718,14 +1716,14 @@ const SILHOUETTES = {
   carte:
     '<path fill-rule="evenodd" d="M11 11h19l6 6v20a3 3 0 0 1-3 3H11' +
       'a3 3 0 0 1-3-3V14a3 3 0 0 1 3-3zm2 20h10v3H13v-3z"/>',
-  // Disque optique : le trou est decoupe, pas peint.
+  // Optical disc: the hole is cut out, not painted.
   disque:
     '<path fill-rule="evenodd" d="M24 6a18 18 0 1 0 .01 0zm0 12.5' +
       'a5.5 5.5 0 1 0 .01 0z"/>' +
     '<path d="M24 10.5a13.5 13.5 0 0 1 11.7 6.8" fill="none"' +
       ' stroke="currentColor" stroke-width="2" stroke-linecap="round"' +
       ' opacity=".45"/>',
-  // Borne d'arcade : ecran et panneau de commande decoupes dans le meuble.
+  // Arcade cabinet: screen and control panel cut out of the cabinet.
   borne:
     '<path fill-rule="evenodd" d="M13 4h22a3 3 0 0 1 3 3v34a3 3 0 0 1-3 3H13' +
       'a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3zm2 5h18v13H15V9zm0 18h18v5H15v-5z"/>',
@@ -1766,19 +1764,19 @@ const GLYPHE_CONSOLE =
 
 function carteOverlay({g, e}) {
   const bouts = [];
-  // « Est-il sur la console ? » est LA question qu'on se pose en parcourant la
-  // grille. Elle vit donc sur la jaquette, pas dans le bandeau du bas ou elle
-  // se noyait entre deux autres informations. Trois etats seulement, et rien
-  // du tout tant que la console n'a pas repondu : afficher un temoin eteint
-  // pour « je ne sais pas » serait un mensonge.
+  // "Is it on the console?" is THE question you ask while scanning the grid.
+  // So it lives on the cover, not in the bottom strip where it drowned between
+  // two other pieces of information. Three states only, and nothing at all
+  // while the console has not answered: showing an unlit indicator for "I do
+  // not know" would be a lie.
   const p = (e && e.presence) || {};
   if (p.console && p.console !== 'inconnu') {
     bouts.push('<span class="ov ovconsole p-' + p.console + '" title="' +
       esc(t(TITRE_PRESENCE[p.console] || '')) + '" aria-label="' +
       esc(t(TITRE_PRESENCE[p.console] || '')) + '">' + GLYPHE_CONSOLE + '</span>');
   }
-  // Le nom de la plateforme, indispensable des que plusieurs se melangent, et
-  // utile ailleurs pour lever toute ambiguite sur ce qu'on regarde.
+  // The platform's name, essential as soon as several are mixed, and useful
+  // elsewhere to remove any doubt about what you are looking at.
   if (g.sysNom) bouts.push('<span class="ov ovsys">' + esc(g.sysNom) + '</span>');
   // La langue vaut pour TOUS les jeux, pas seulement les versions groupees :
   // savoir qu'une cartouche est en japonais avant de la lancer evite un
