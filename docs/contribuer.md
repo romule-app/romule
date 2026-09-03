@@ -53,8 +53,13 @@ labels unverified profiles, and that label is the honest default.
 
 ## House style
 
-Comments and docstrings are **in French**; everything user-facing is in
-English. A comment says *why*, never *what*: if it restates the line below it,
-delete it. The ones worth writing explain a constraint invisible in the code —
-a rule fighting another rule, a measured value, a bug a naive rewrite would
-bring back.
+Comments and docstrings are **in English**, like everything else the repository
+shows. `outils/verifier-anglais.py` refuses French prose there and CI runs it; a
+line that deliberately quotes French carries `anglais:ok` with its reason. The
+interface strings themselves stay French — they are the i18n catalogue's keys,
+which is a mechanism, not a style.
+
+A comment says *why*, never *what*: if it restates the line below it, delete it.
+The ones worth writing explain a constraint invisible in the code — a rule
+fighting another rule, a measured value, a bug a naive rewrite would bring
+back.
