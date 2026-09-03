@@ -1,13 +1,13 @@
-"""Tolerance d'horloge du second facteur, verifiee sans reseau ni horloge reelle.
+"""The second factor's clock tolerance, checked without network or real clock.
 
-Ces assertions vivaient dans le parcours HTTP, ou elles etaient condamnees a
-etre instables : le test y demandait « le code d'il y a 30 secondes » sans
-pouvoir savoir si cette fenetre-la avait deja servi. Quand une frontiere de
-fenetre tombait entre la connexion et le controle — une fois sur cinq environ —
-le code designait une fenetre consommee, le serveur le refusait comme un rejeu,
-et l'echec ressemblait a un bug de tolerance.
+These assertions used to live in the HTTP journey, where they were doomed to be
+flaky: the test asked there for "the code from 30 seconds ago" without being able
+to know whether that window had already been used. When a window boundary fell
+between the login and the check — roughly one time in five — the code named a
+consumed window, the server refused it as a replay, and the failure looked like a
+tolerance bug.
 
-Ici `moment` est fourni, donc rien ne bouge sous les pieds du test.
+Here `moment` is supplied, so nothing moves under the test's feet.
 """
 import sys
 from pathlib import Path
@@ -28,8 +28,8 @@ def _run():
     global ok, fail
     ok = fail = 0
     secret = totp.secret_neuf()
-    # Un instant fixe, aligne sur une fenetre : aucune frontiere ne peut etre
-    # franchie pendant le test.
+    # A fixed instant, aligned on a window: no boundary can be crossed during
+    # the test.
     T = 1_700_000_000 - (1_700_000_000 % totp.PAS)
 
     t("le code de l'instant est accepte", totp.verifier(secret, totp.code(secret, T), T)[0])

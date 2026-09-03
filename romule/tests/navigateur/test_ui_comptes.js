@@ -1,7 +1,7 @@
-/* Rend app.js dans un DOM minimal et verifie que la section « comptes »
-   se dessine et repond, sans navigateur. */
+/* Renders app.js in a minimal DOM and checks the "accounts" section draws and
+   answers, without a browser. */
 const fs = require('fs'), vm = require('vm'), path = require('path');
-// Les chemins des fichiers statiques sont relatifs a la racine du projet.
+// The static files' paths are relative to the project's root.
 process.chdir(path.resolve(__dirname, '..', '..', '..'));
 
 const html = fs.readFileSync('romule/static/index.html', 'utf8');
@@ -39,7 +39,7 @@ function faux(tag) {
   });
   return el;
 }
-// analyse tres sommaire : recupere classes et data-* des balises du gabarit
+// a very rough parse: collects the classes and data-* of the template's tags
 function analyser(h) {
   const out = [];
   for (const m of h.matchAll(/<(\w+)([^>]*)>/g)) {
@@ -57,10 +57,10 @@ for (const [k, el] of ids) el.dataset.id = k;
 const appels = [];
 const ctx = {
   console,
-  // La traduction observe les ajouts au DOM : sans cette classe, app.js ne
-  // se charge pas du tout dans le faux DOM.
-  // app.js ecoute `resize`/`scroll` au niveau global : sans ces fonctions le
-  // module ne se charge pas du tout dans le faux DOM.
+  // The translation observes DOM additions: without this class, app.js does not
+  // load at all in the fake DOM.
+  // app.js listens for `resize`/`scroll` at the global level: without these
+  // functions the module does not load at all in the fake DOM.
   addEventListener: () => {},
   removeEventListener: () => {},
   ResizeObserver: function () { this.observe = () => {}; this.disconnect = () => {}; },
@@ -70,10 +70,9 @@ const ctx = {
     this.takeRecords = () => [];
   },
   NodeFilter: {SHOW_TEXT: 4},
-  // Un vrai navigateur expose `matchMedia` en global, pas seulement sur
-  // `window` : le theme automatique l'interroge pour savoir si le systeme
-  // est en clair. Sans lui, le test exercerait le repli au lieu du vrai
-  // chemin.
+  // A real browser exposes `matchMedia` globally, not only on `window`: the
+  // automatic theme queries it to know whether the system is in light mode.
+  // Without it, the test would exercise the fallback instead of the real path.
   matchMedia: () => ({matches: false, addEventListener() {}, addListener() {}}),
   document: {
     getElementById: id => ids.get(id) || null,
@@ -108,7 +107,7 @@ ctx.window.R = null; ctx.globalThis = ctx; ctx.self = ctx;
 vm.createContext(ctx);
 vm.runInContext(fs.readFileSync('romule/static/reactive.js', 'utf8'), ctx);
 ctx.R = ctx.window.R;
-// `const app = ...` reste dans la portee du script : on l'expose pour le test.
+// `const app = ...` stays within the script's scope: we expose it for the test.
 const SUFFIXE = "\n;globalThis.__t = {app, majBlocAuth, config: c => { DATA.config = c; }};";
 vm.runInContext(fs.readFileSync('romule/static/app.js', 'utf8') + SUFFIXE, ctx);
 
@@ -136,7 +135,7 @@ const t = (n, c, d) => c ? (ok++, console.log('      OK   ' + n))
   const boite = ids.get('listecomptes');
   t('2 personnes listees', boite.children.length === 2, boite.children.length);
 
-  // bascule du selecteur de mode
+  // switching the mode selector
   const sel = ids.get('s-authmode');
   sel.value = 'interne';
   ctx.__t.config({auth_mode: 'interne'});

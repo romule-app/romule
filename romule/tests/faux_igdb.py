@@ -1,4 +1,4 @@
-"""Faux IGDB + faux Twitch, pour valider la plomberie sans identifiants reels."""
+"""A fake IGDB + a fake Twitch, to validate the plumbing without real credentials."""
 import json, sys, urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -32,22 +32,22 @@ class H(BaseHTTPRequestHandler):
             DEMANDES["requetes"].append(corps)
             if "introuvable" in corps.lower():
                 return self._j([])
-            # On renvoie un jeu qui PORTE le nom cherche : depuis que le client
-            # ecarte les resultats sans rapport (hacks de ROM au titre voisin),
-            # une reponse fixe serait rejetee — a juste titre.
+            # We return a game that CARRIES the name searched for: since the
+            # client sets aside unrelated results (ROM hacks with a neighbouring
+            # title), a fixed answer would be rejected — rightly so.
             import re as _re
             m = _re.search(r'search "([^"]*)"', corps)
             cherche = (m.group(1) if m else "Chrono Trigger").strip()
             bas = cherche.lower()
             if "voisin" in bas:
-                # Le piege que le vrai SteamGridDB a tendu sur « Crazy
-                # Construction » : un jeu SANS RAPPORT, mais bien classe, et
-                # pourvu d'une jaquette. Le client doit le refuser.
+                # The trap the real SteamGridDB set on "Crazy Construction": an
+                # UNRELATED game, but well ranked, and equipped with a cover. The
+                # client must refuse it.
                 return self._j([{"name": "Autre Chose Entierement",
                                  "cover": {"image_id": "co-piege"}}])
             if "sans image" in bas:
-                # Jeu connu, mais sans jaquette : ce n'est pas un echec de
-                # recherche, et cela ne doit pas le rayer pour les resumes.
+                # A known game, but with no cover: that is not a search
+                # failure, and it must not strike it off for the summaries.
                 return self._j([{"name": cherche, "category": 0,
                                  "summary": "Un jeu sans jaquette."}])
             return self._j([{

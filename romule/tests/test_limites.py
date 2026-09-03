@@ -1,14 +1,14 @@
-"""Bornes : ce qui vient de la configuration ou du reseau reste a sa place.
+"""Bounds: what comes from the configuration or the network stays in its place.
 
-Trois familles de defauts sont verrouillees ici.
+Three families of defect are locked down here.
 
-  * Des noms venus de la CONFIGURATION finissaient en chemins de fichiers et en
-    commandes distantes sans etre verifies : un dossier « ../.. » deplacait des
-    ROMs hors de la ludotheque, une extension avec une apostrophe cassait la
-    mise entre guillemets d'un `find` sur la console.
-  * Le mode jeton n'avait aucun test, alors que c'est le mode recommande pour
-    un service expose en permanence.
-  * Les depots de fichiers n'avaient aucun plafond.
+  * Names coming from the CONFIGURATION ended up as file paths and remote
+    commands without being checked: a "../.." folder moved ROMs outside the
+    library, an extension with an apostrophe broke the quoting of a `find` on the
+    console.
+  * The token mode had no test at all, although it is the recommended mode for a
+    permanently exposed service.
+  * File uploads had no ceiling.
 """
 import os, secrets, socket, subprocess, sys, tempfile, time
 import urllib.error, urllib.request
@@ -73,7 +73,7 @@ def appel(chemin, entetes=None, op=None, donnees=None):
         return x.code, x.headers
 
 
-# Le mode jeton refuse meme en local : on attend donc un 403, pas une panne.
+# The token mode refuses even locally: so a 403 is expected, not a fault.
 for _ in range(60):
     try:
         appel("/api/job"); break
@@ -81,8 +81,8 @@ for _ in range(60):
         time.sleep(0.5)
 
 try:
-    # Depuis la machine, `_local()` accorde l'acces avant meme le jeton : on
-    # se fait donc passer pour un appel distant, ce qui est le cas reel.
+    # From the machine, `_local()` grants access before the token even comes
+    # up: so we pass ourselves off as a remote call, which is the real case.
     distant = {"X-Forwarded-For": "203.0.113.4"}
     c, _ = appel("/api/job", distant)
     t("sans jeton, un appel distant est refuse", c == 403, c)
