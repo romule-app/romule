@@ -1,9 +1,9 @@
-"""Notifications sortantes : la forme attendue par chaque service, et le silence.
+"""Outgoing notifications: the shape each service expects, and the silence.
 
-Deux exigences egales. Ce qui part doit avoir la forme que le destinataire
-comprend — un JSON generique envoye a ntfy ne produit rien de lisible. Et rien
-ne doit partir quand rien n'est configure : un service auto-heberge qui appelle
-l'exterieur sans qu'on le lui demande est un probleme, pas une fonctionnalite.
+Two equal requirements. What leaves must have the shape the recipient
+understands — a generic JSON sent to ntfy produces nothing readable. And nothing
+must leave when nothing is configured: a self-hosted service that calls out
+without being asked is a problem, not a feature.
 """
 import json
 import os
@@ -20,12 +20,12 @@ os.environ.setdefault("ROMULE_ROOT", tempfile.mkdtemp())
 sys.path.insert(0, str(ICI.parent.parent))
 
 def _port_libre(variable):
-    """Un port qu'on demande au systeme, plutot qu'un numero fige.
+    """A port asked of the system, rather than a frozen number.
 
-    Un port fixe finit par rencontrer un serveur laisse par une execution
-    precedente, ou n'importe quoi d'autre sur la machine : le test s'adresse
-    alors a CE service-la, et rend un resultat qui ne parle pas du code qu'on
-    vient d'ecrire. La variable reste acceptee pour qui veut fixer.
+    A fixed port eventually meets a server left by an earlier run, or anything
+    else on the machine: the test then talks to THAT service, and returns a
+    result that says nothing about the code just written. The variable is still
+    accepted for whoever wants to pin it.
     """
     fixe = os.environ.get(variable)
     if fixe:
@@ -69,7 +69,7 @@ def main():
     try:
         from romule import notifs
 
-        # --- la deduction du service depuis l'adresse -----------------------
+        # --- guessing the service from the address --------------------------
         for url, attendu in (
                 ("https://discord.com/api/webhooks/1/x", "discord"),
                 ("https://discordapp.com/api/webhooks/1/x", "discord"),
@@ -100,21 +100,21 @@ def main():
             t("%s : la forme est celle du service" % service,
               bool(r) and correcte(r[0]), r[0]["corps"][:90] if r else "")
 
-        # ntfy est a part : le titre voyage en EN-TETE, pas dans le corps.
+        # ntfy is different: the title travels in a HEADER, not in the body.
         vider()
         cfg = cfg_avec({"id": "1", "url": BASE + "/sujet", "service": "ntfy",
                         "evenements": ["tache_ok"]})
         notifs.envoyer("tache_ok", "Pokémon terminé", "Corps", "error", cfg, attendre=True)
         r = recu()
         t("ntfy : le titre est un en-tete", bool(r) and r[0]["titre"], r)
-        # Un en-tete HTTP ne porte pas d'accent : `Title: Pokémon` casserait
-        # l'envoi entier, et c'est un nom de jeu parfaitement ordinaire.
+        # An HTTP header carries no accents: `Title: Pokémon` would break the
+        # whole send, and that is a perfectly ordinary game name.
         t("ntfy : le titre est reduit a l'ASCII",
           bool(r) and all(ord(c) < 128 for c in r[0]["titre"]), r[0]["titre"] if r else "")
         t("ntfy : la gravite devient une priorite",
           bool(r) and r[0]["priorite"] == "high", r)
 
-        # --- le silence, qui compte autant ----------------------------------
+        # --- the silence, which matters as much -----------------------------
         vider()
         t("rien de configure, rien n'est envoye",
           notifs.envoyer("tache_ok", "T", "", "ok", {}, attendre=True) == 0
@@ -131,13 +131,13 @@ def main():
         t("une destination desactivee n'envoie rien",
           notifs.envoyer("tache_ok", "T", "", "ok", cfg, attendre=True) == 0)
 
-        # Une liste vide veut dire TOUS les evenements : c'est ce qu'attend
-        # quelqu'un qui colle une adresse sans rien cocher.
+        # An empty list means EVERY event: that is what someone who pastes an
+        # address without ticking anything expects.
         cfg = cfg_avec({"id": "1", "url": BASE + "/x", "evenements": []})
         t("aucun evenement coche = tous",
           notifs.envoyer("tache_echec", "T", "", "error", cfg, attendre=True) == 1)
 
-        # --- les pannes ne remontent pas ------------------------------------
+        # --- failures do not propagate --------------------------------------
         reussi, raison = notifs.tester(BASE + "/refuse")
         t("un 500 est rapporte comme un echec", reussi is False, raison)
         reussi, raison = notifs.tester("http://127.0.0.1:1/rien")

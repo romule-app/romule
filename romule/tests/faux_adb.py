@@ -1,22 +1,21 @@
 #!/usr/bin/env python3
-"""Un faux `adb`, pour que la suite de tests cesse de dependre du materiel.
+"""A fake `adb`, so the test suite stops depending on hardware.
 
-Les tests donnaient trois resultats differents selon qu'une console etait
-branchee, absente, ou branchee mais hors ligne — et personne ne choisissait
-lequel. C'est ce qui a laisse cinq chaines francaises sur l'ecran d'accueil
-pendant des semaines : la branche « aucune console » ne s'affichait jamais sur
-la machine qui faisait tourner les tests.
+The tests gave three different results depending on whether a console was
+plugged in, absent, or plugged in but offline — and nobody chose which. That is
+what left five French strings on the home screen for weeks: the "no console"
+branch never displayed on the machine that ran the tests.
 
-Ce script se substitue au binaire par `ROMULE_ADB`. L'etat rejoue vient de
-`ROMULE_FAUX_ADB` :
+This script stands in for the binary through `ROMULE_ADB`. The state replayed
+comes from `ROMULE_FAUX_ADB`:
 
-    pret        une console repond, tout va bien (defaut)
-    hors-ligne  une console est vue, mais elle refuse de parler
-    aucune      rien n'est branche
+    pret        a console answers, all is well (default)
+    hors-ligne  a console is seen, but refuses to talk
+    aucune      nothing is plugged in
 
-Il ne cherche pas a imiter adb : il rend ce que le code lit reellement. Toute
-commande inconnue rend 0 et une sortie vide, ce que `_shell` interprete deja
-comme « rien trouve ».
+It does not try to imitate adb: it returns what the code really reads. Any
+unknown command returns 0 and an empty output, which `_shell` already reads as
+"nothing found".
 """
 import os
 import sys
@@ -38,7 +37,7 @@ def sortir(texte="", code=0):
 
 
 def main(argv):
-    # `_run` insere « -s <serie> » : on l'ecarte avant de lire la commande.
+    # `_run` inserts "-s <serial>": we set it aside before reading the command.
     if len(argv) >= 2 and argv[0] == "-s":
         argv = argv[2:]
     if not argv:
@@ -53,7 +52,7 @@ def main(argv):
         sortir("%s\n%s\t%s product:test model:Console_De_Test device:test"
                % (entete, SERIE, etat))
 
-    # Tout ce qui suit suppose une console qui repond.
+    # Everything below assumes a console that answers.
     if ETAT != "pret":
         sortir("error: device offline", 1)
 
@@ -63,8 +62,8 @@ def main(argv):
         ligne = " ".join(reste)
         if ligne.startswith("getprop "):
             sortir(PROPS.get(ligne.split(None, 1)[1].strip(), ""))
-        # Le reste — df, dumpsys, find, ls — rend vide : le code sait deja
-        # traiter « rien trouve », et une console de test n'a pas de jeux.
+        # The rest — df, dumpsys, find, ls — returns empty: the code already
+        # knows how to handle "nothing found", and a test console has no games.
         sortir("")
     if cmd in ("connect", "disconnect"):
         sortir("connected to %s" % SERIE)
