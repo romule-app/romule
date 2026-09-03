@@ -1,7 +1,7 @@
-"""Execution d'une tache de fond unique, avec journal et progression.
+"""Running a single background task, with a log and progress.
 
-Une seule tache a la fois (conversion, import, transfert). L'UI interroge
-`snapshot()` en boucle pour afficher le journal et la barre de progression.
+One task at a time (conversion, import, transfer). The interface polls
+`snapshot()` in a loop to show the log and the progress bar.
 """
 
 import os
@@ -12,9 +12,9 @@ from datetime import datetime
 
 from . import console
 
-# Journal : on ecrit a chaque evenement (un message perdu lors d'un plantage
-# ne sert a rien), et on fait tourner le fichier par taille — pratique
-# standard, preferable a une sauvegarde periodique.
+# Log: we write on every event (a message lost in a crash is worth nothing),
+# and rotate the file by size — standard practice, better than a periodic
+# flush.
 MAX_OCTETS = 2 * 1024 * 1024
 GARDER = 3
 NIVEAUX = ("debug", "info", "ok", "warn", "error")
@@ -37,7 +37,7 @@ def _rotate(chemin):
 
 
 def _devine_niveau(texte):
-    """Deduit la gravite d'un message qui n'en precise pas."""
+    """Infer the severity of a message that does not state one."""
     t = texte.lower()
     if any(m in t for m in ("erreur", "echec", "impossible", "invalide", "corrompu",
                             "introuvable", "[erreur]")):
@@ -76,16 +76,16 @@ class JobRunner:
         self.log_lines = []
         self.done = 0
         self.total = 0
-        self.detail = ""       # debit / ETA / info libre affichee dans le dock
+        self.detail = ""       # rate / ETA / free-form info shown in the dock
         self.logfile = logfile
         self.notify_end = True
-        # Nom affiche en `ROMULE_LOG=debug` a cote de chaque ligne. Il suit la
-        # tache en cours : « quel module a ecrit ceci » est la premiere
-        # question qu'on se pose devant un journal bavard.
+        # Name shown in `ROMULE_LOG=debug` beside every line. It follows the
+        # running task: "which module wrote this" is the first question you ask
+        # in front of a chatty log.
         self.module = "job"
 
     def log(self, line, niveau=None):
-        """Journalise un evenement. Le niveau est deduit s'il n'est pas donne."""
+        """Log an event. The level is inferred when not given."""
         niveau = niveau if niveau in NIVEAUX else _devine_niveau(str(line))
         entree = {"t": datetime.now().strftime("%H:%M:%S"),
                   "date": datetime.now().strftime("%F"),
@@ -93,10 +93,10 @@ class JobRunner:
         with self._lock:
             self.log_lines.append(entree)
             del self.log_lines[:-800]
-        # Le TERMINAL, en plus du fichier et du tampon memoire. Sans cela
-        # `docker logs romule` ne montrait que le bandeau de demarrage : tout
-        # ce qui arrivait ensuite n'existait que pour un navigateur, c'est-a-
-        # dire pour personne sur un serveur qu'on administre en ssh.
+        # The TERMINAL, on top of the file and the in-memory buffer. Without
+        # it `docker logs romule` showed only the startup banner: everything
+        # that happened afterwards existed for a browser only — that is, for
+        # nobody on a server administered over ssh.
         console.evenement(entree["m"], niveau, self.module)
         if self.logfile:
             try:
@@ -139,10 +139,10 @@ class JobRunner:
     def cancel(self):
         with self._lock:
             self.cancelled = True
-        self._resume.set()          # debloque une tache en pause pour qu'elle sorte
+        self._resume.set()          # release a paused task so it can exit
 
     def checkpoint(self):
-        """A appeler entre deux elements : bloque si en pause, renvoie False si annule."""
+        """Call between items: blocks while paused, returns False if cancelled."""
         self._resume.wait()
         with self._lock:
             return not self.cancelled
@@ -160,7 +160,7 @@ class JobRunner:
             }
 
     def start(self, label, fn, *args):
-        """Lance fn(*args) en tache de fond. False si une tache tourne deja."""
+        """Run fn(*args) in the background. False if a task is already running."""
         with self._lock:
             if self.running:
                 return False
@@ -178,7 +178,7 @@ class JobRunner:
             err = None
             try:
                 fn(*args)
-            except Exception as exc:  # une tache qui plante ne doit pas figer l'UI
+            except Exception as exc:  # a crashing task must not freeze the interface
                 err = str(exc)
                 self.log("Erreur : %s" % exc)
             finally:
@@ -195,17 +195,17 @@ class JobRunner:
                                            "tache_ok", "ok")
                 if self.notify_end:
                     notify("%s : %s" % (label, resume))
-                # Une conversion de trente fichiers dure une demi-heure : c'est
-                # exactement le moment ou l'on n'est PAS devant l'ecran. La
-                # notification de bureau ne sert qu'a qui l'est deja.
+                # A thirty-file conversion takes half an hour: exactly the
+                # moment when you are NOT in front of the screen. The desktop
+                # notification only serves someone who already is.
                 #
-                # Importe ICI et non en tete : `notifs` importe `config`, qui
-                # lit le disque a l'import. Un cycle entre les deux modules
-                # ferait echouer le demarrage plutot qu'une notification.
+                # Imported HERE and not at the top: `notifs` imports `config`,
+                # which reads the disk at import time. A cycle between the two
+                # would fail startup rather than one notification.
                 try:
                     from . import notifs
                     notifs.envoyer(evt, "Romule — %s" % label, resume, niveau)
-                except Exception as exc:      # jamais fatal : c'est un confort
+                except Exception as exc:      # never fatal: this is a convenience
                     console.evenement("Notification impossible : %s" % exc,
                                       "warn", "notifs")
 
