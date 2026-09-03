@@ -5292,10 +5292,9 @@ const app = {
   // filters — and nothing said how many were active. You could spend ten
   // minutes wondering why the grid was empty when a filter set the day before
   // was still holding.
-  // La fenetre des notes de version. Deux boutons : lire la publication
-  // complete, ou fermer. Romule ne se met PAS a jour tout seul — il tourne
-  // dans un conteneur ou sous un gestionnaire de paquets, et decider a la
-  // place de l'operateur serait deplace.
+  // The release-notes dialog. Two buttons: read the full release, or close.
+  // Romule does NOT update itself — it runs in a container or under a package
+  // manager, and deciding in the operator's place would be out of line.
   voirMaj() {
     if (!MAJ) return;
     dialogue({
@@ -5325,8 +5324,8 @@ const app = {
     dialogue({
       titre: t('Enregistrer cette vue'),
       niveau: 'info',
-      // On MONTRE ce qui sera enregistre : personne ne doit sauvegarder a
-      // l'aveugle une combinaison qu'il ne pourra pas relire ensuite.
+      // We SHOW what will be saved: nobody should blindly store a combination
+      // they cannot read back afterwards.
       message: resumeFiltres(f),
       champs: [{id: 'nom', libelle: t('Nom de la vue'),
                 exemple: t('À convertir sur Switch')}],
@@ -5352,8 +5351,8 @@ const app = {
     (f.avances || []).forEach(k => FAV.add(k));
     localStorage.setItem('fav', JSON.stringify([...FAV]));
     PAGE = 0;
-    // La plateforme en dernier : `setSystem` redessine, et le faire avant
-    // aurait dessine la grille avec les anciens filtres.
+    // The platform last: `setSystem` redraws, and doing it earlier would have
+    // drawn the grid with the old filters.
     if (f.systeme && f.systeme !== SYS) this.setSystem(f.systeme);
     else renderLib();
   },
@@ -5364,14 +5363,14 @@ const app = {
     VUES = r.vues || [];
     dessinerVues();
   },
-  // Frappe dans la recherche : on revient a la premiere page, sinon chercher
-  // depuis la page 3 ne montre rien alors qu'il y a des resultats.
+  // A keystroke in the search: we return to the first page, otherwise
+  // searching from page 3 shows nothing although there are results.
   chercher() { PAGE = 0; renderLibBientot(); },
 
-  // Replie ou deplie les rangees de filtre et de tri, sur telephone seulement.
-  // L'attribut `aria-expanded` porte l'etat : c'est lui que lit un lecteur
-  // d'ecran, et c'est aussi lui que la CSS utilise pour teinter le bouton —
-  // une seule source, pas une classe en plus a tenir synchronisee.
+  // Folds or unfolds the filter and sort rows, on phones only.
+  // The `aria-expanded` attribute carries the state: that is what a screen
+  // reader reads, and also what the CSS uses to tint the button — one single
+  // source, not an extra class to keep in step.
   basculerFiltres() {
     const b = $('replier');
     const ouvert = document.body.classList.toggle('filtres-ouverts');
@@ -5381,25 +5380,25 @@ const app = {
     if (e) e.stopPropagation();
     $('favpop').classList.toggle('on');
   },
-  // Un seul bouton « Actualiser » : relire le serveur ET la console. Avoir cinq
-  // rafraichissements differents obligeait a deviner lequel repondait a quoi.
-  // « Actualiser » ne relisait que la bibliotheque Switch : sur une autre
-  // plateforme, ou en vue « toutes les plateformes », le bouton semblait ne
-  // rien faire. Il relit maintenant ce qui est REELLEMENT a l'ecran.
+  // A single "Refresh" button: read the server AND the console again. Having
+  // five different refreshes forced you to guess which one answered what.
+  // "Refresh" used to read only the Switch library: on another platform, or in
+  // the "all platforms" view, the button looked like it did nothing. It now
+  // re-reads what is REALLY on screen.
   async actualiser() {
-    oublierCacheSysteme();                        // c'est le geste qui dit « relis »
-    await this.scan();                            // fichiers du serveur
+    oublierCacheSysteme();                        // this is the gesture that says "read again"
+    await this.scan();                            // the server's files
     if (CONN.kind) {
-      await this.explore();                       // ce qui est deja sur la console
-      await this.loadNand();                      // ce qui est actif dans Eden
+      await this.explore();                       // what is already on the console
+      await this.loadNand();                      // what is active in Eden
     }
-    await this.setSystem(SYS);                    // la liste affichee, quelle qu'elle soit
+    await this.setSystem(SYS);                    // the displayed list, whichever it is
     renderLib();
     toast('À jour.', 'ok');
   },
 
-  // Rafraichir les FICHES : titres, resumes, jaquettes. C'est une operation
-  // reseau, distincte de la relecture des fichiers.
+  // Refresh the ENTRIES: titles, summaries, covers. This is a network
+  // operation, distinct from re-reading the files.
   async actualiserFiches(force) {
     if (force) {
       const r = await api('/api/meta-oublier', {}, true);
@@ -5412,8 +5411,8 @@ const app = {
     this.basculerTaches(true);
     this.poll();
   },
-  // Une seule action principale, quel que soit le sens du transfert : l'outil
-  // deduit de la selection ce qu'il faut faire, et le montre avant de lancer.
+  // One main action, whichever way the transfer goes: the tool deduces from
+  // the selection what needs doing, and shows it before starting.
   async appliquer() { return isSwitch() ? this.deploy() : this.sendSystem(); },
 
   async deploy() {
@@ -5421,7 +5420,7 @@ const app = {
     if (!CONN.kind) return toast('Connecte d\'abord la console.', 'warn');
     const {envoyer, activer, importer} = deployCibles();
 
-    // configurations recommandees disponibles pour les jeux selectionnes
+    // recommended configurations available for the selected games
     const configs = [];
     if (ER.actif) {
       GAMES.forEach(g => {
@@ -5437,7 +5436,7 @@ const app = {
     if (!envoyer.length && !activer.length && !configs.length && !importer.length)
       return toast('Ces jeux sont déjà complets sur la console.', 'warn');
 
-    // Une seule fenetre : tout ce qui va se passer, modifiable avant de lancer.
+    // One dialog: everything about to happen, editable before starting.
     const options = [];
     if (importer.length) options.push({id: 'importer', coche: true,
       libelle: 'Copier vers le serveur les jeux qui n\'y sont pas',
@@ -5484,8 +5483,8 @@ const app = {
 
   clearManifest() { const m = $('manifest'); if (m) m.innerHTML = ''; },
 
-  // ---- reglages
-  // Enregistre un seul reglage : impossible d'effacer les autres par erreur.
+  // ---- settings
+  // Saves a single setting: impossible to wipe the others by mistake.
   async saveField(cle, valeur) {
     const avant = (DATA.config || {})[cle];
     const r = await api('/api/config', {[cle]: valeur});
@@ -5502,9 +5501,9 @@ const app = {
     if (cle === 'emuready') { ER.actif = !!valeur; this.erLoad(); this.erDevices(); }
     this.flashSaved();
   },
-  // La confirmation vit dans le sommaire, qui est colle : au bas d'une page de
-  // 5 000 px, personne ne la voyait. Au repos elle n'affiche rien — le chapeau
-  // dit deja que tout s'enregistre au fur et a mesure.
+  // The confirmation lives in the table of contents, which is sticky: at the
+  // bottom of a 5 000 px page, nobody saw it. At rest it shows nothing — the
+  // intro already says everything saves as you go.
   flashSaved() {
     const h = $('savehint');
     if (!h) return;
@@ -5519,9 +5518,9 @@ const app = {
 
   async saveSettings(silent) {
     const c = DATA.config || {};
-    // device_dir n'est volontairement PAS dans ce corps : il se choisit par le
-    // navigateur de la console (useDir). L'inclure ici a deja permis de l'effacer
-    // avec une valeur vide au chargement, avant que la config ne soit lue.
+    // device_dir is deliberately NOT in this body: it is chosen through the
+    // console browser (useDir). Including it here once made it possible to wipe
+    // it with an empty value on load, before the config had been read.
     const body = {
       jobs: Math.max(1, parseInt($('s-jobs').value, 10) || 3),
       push_layout: $('s-layout').value || 'type',
@@ -5558,17 +5557,17 @@ const app = {
     const r = await api('/api/reorganize-local', {});
     r.error || (toast('Réorganisation en cours…', 'ok'), this.poll());
   },
-  // Les fiches manquantes se telechargent a la demande : l'affichage ne doit
-  // jamais attendre le reseau, et changer de langue en redemande de nouvelles.
-  // Plug & play : une seule lecture de la console dit ce qu'elle heberge.
-  // L'utilisateur n'a plus a connaitre les noms de dossiers attendus.
-  // depuis les Reglages, aller voir les jeux d'une plateforme
-  // Le clic sur une plateforme la DETAILLE ; c'est un bouton dedie qui emmene
-  // vers la bibliotheque. Rediriger d'office privait l'utilisateur des reglages
-  // propres a cette plateforme.
-  // Une plateforme detectee amene a SES reglages, plus haut dans la page.
-  // Auparavant elle ouvrait un second editeur de dossier : le meme reglage a
-  // deux endroits, donc deux valeurs pouvant differer a l'ecran.
+  // Missing entries are downloaded on demand: the display must never wait on
+  // the network, and changing language asks for new ones.
+  // Plug & play: one read of the console says what it hosts. The user no longer
+  // has to know the expected folder names.
+  // from the Settings, go and see a platform's games
+  // Clicking a platform DETAILS it; a dedicated button is what takes you to the
+  // library. Redirecting by default deprived the user of that platform's own
+  // settings.
+  // A detected platform leads to ITS settings, further up the page. It used to
+  // open a second folder editor: the same setting in two places, so two values
+  // that could differ on screen.
   ouvrirPlateforme(key) {
     if (!key) return;
     PF_OUVERTE = key;
@@ -5581,7 +5580,7 @@ const app = {
     const cible = $('groupe-console');
     if (cible) cible.scrollIntoView({behavior: 'smooth', block: 'start'});
   },
-  // Revenir au dossier deduit de la racine des ROMs.
+  // Go back to the folder deduced from the ROM root.
   async oublierDossier(key) {
     const dirs = Object.assign({}, (DATA.config || {}).system_dirs || {});
     delete dirs[key];
@@ -5594,8 +5593,8 @@ const app = {
     $('sysel').value = key;
     this.setSystem(key);
   },
-  // Analyse complete : elle passe par le systeme de taches, donc barre de
-  // progression et journal detaille — on voit CE QUI a ete cherche, et ou.
+  // A full analysis: it goes through the task system, so a progress bar and a
+  // detailed log — you see WHAT was searched for, and where.
   async analyseGlobale() {
     const r = await api('/api/console-analyse', {});
     if (r.error) return;
@@ -5604,7 +5603,7 @@ const app = {
     this.detecterPlateformes(true);
   },
 
-  // Declarer une plateforme absente de la table livree.
+  // Declare a platform missing from the shipped table.
   ajouterPlateforme() {
     dialogue({
       titre: 'Ajouter une plateforme',
@@ -5641,15 +5640,15 @@ const app = {
     const r = await api('/api/systems-detect', {});
     if (r.error) return;
     renderPlateformes(r);
-    renderSysSelect();                 // les compteurs en dependent
+    renderSysSelect();                 // the counters depend on it
     if (silencieux) return;
     if (r.plateformes && r.plateformes.length)
       annonce(phrase('%s {plateforme|plateformes} {trouvée|trouvées}.', r.plateformes.length), 'ok');
     else annonce('Aucune plateforme trouvée sous ce dossier.', 'warn');
     this.loadSystems();
   },
-  // L'audit dit ce qui protege l'installation ET ce qui ne la protege pas :
-  // les deux comptent, donc on affiche aussi les controles reussis.
+  // The audit says what protects the installation AND what does not: both
+  // matter, so the successful checks are shown too.
   async auditer(horsLigne) {
     const boite = $('auditres');
     R.texte(boite, 'Audit en cours...');
@@ -5671,10 +5670,10 @@ const app = {
           n ? 'warn' : 'ok');
   },
 
-  // Gestion des comptes internes : les fonctions vivent plus haut, avec le
-  // reste de la logique d'authentification.
-  // IGDB : on verifie AVANT de lancer une recuperation de fiches, sinon
-  // l'echec n'apparait qu'au milieu d'une tache longue.
+  // Internal account management: the functions live further up, with the rest
+  // of the authentication logic.
+  // IGDB: we check BEFORE starting an entry fetch, otherwise the failure only
+  // shows up in the middle of a long task.
   async testerIgdb() {
     const b = $('igdbtest');
     R.texte(b, 'Vérification…');
@@ -5689,8 +5688,8 @@ const app = {
                       r.infos.exemple));
   },
 
-  // Entretien : chaque volet repond a UNE question, et n'agit jamais tout
-  // seul. Voir n'est pas decider.
+  // Maintenance: each panel answers ONE question, and never acts on its own.
+  // Seeing is not deciding.
   async voirEntretien(quoi) {
     const b = $('entretien');
     document.querySelectorAll('.entretien button').forEach(x =>
@@ -5746,9 +5745,9 @@ const app = {
     this.voirEntretien('transfert');
   },
 
-  // Certaines extensions ne designent pas une plateforme (.iso : PS2, Wii,
-  // Xbox…). Plutot que de laisser ces fichiers dormir dans le depot, on demande
-  // — une seule fois, pour tous les fichiers concernes.
+  // Some extensions do not name a platform (.iso: PS2, Wii, Xbox…). Rather
+  // than let those files sleep in the drop folder, we ask — once, for every
+  // file concerned.
   async classerImports(silencieux) {
     const r = await api('/api/import-suggestions', {}, true);
     const items = (r && r.items) || [];
@@ -5759,8 +5758,8 @@ const app = {
     ouvrirChoixPlateforme(items);
   },
 
-  // Choisir dans le Finder : le glisser-deposer ne convient pas a tout le
-  // monde, et sur telephone il n'existe pas.
+  // Pick in the file chooser: drag and drop does not suit everyone, and on a
+  // phone it does not exist.
   choisirFichiers() {
     const f = document.createElement('input');
     f.type = 'file';
@@ -5776,7 +5775,7 @@ const app = {
     if (JSUIVI) { const el = $('log'); el.scrollTop = el.scrollHeight; }
   },
 
-  // Tout reprendre est destructif pour le cache : on le dit avant.
+  // Starting over is destructive for the cache: we say so first.
   forcerFiches() {
     dialogue({
       titre: 'Tout retélécharger ?',
@@ -5790,9 +5789,9 @@ const app = {
     });
   },
 
-  // Aller a une lettre : la pagination complique les choses, car la lettre
-  // visee n'est pas forcement sur la page courante. On change donc de page
-  // AVANT de faire defiler, sinon le clic ne menait nulle part.
+  // Jump to a letter: pagination complicates things, because the letter aimed
+  // at is not necessarily on the current page. So we change page BEFORE
+  // scrolling, otherwise the click led nowhere.
   allerLettre(lettre) {
     const rang = ALPHA_POS.get(lettre);
     if (rang == null) return;
@@ -5804,25 +5803,25 @@ const app = {
       const cible = cartes[dansLaPage];
       if (!cible) return;
       cible.scrollIntoView({behavior: 'smooth', block: 'start'});
-      // Un repere visuel bref : sans lui, on ne sait pas laquelle des dix
-      // cartes visibles est celle qu'on visait.
+      // A brief visual marker: without it, you cannot tell which of the ten
+      // visible cards is the one you aimed at.
       R.classe(cible, 'visee', true);
       setTimeout(() => R.classe(cible, 'visee', false), 1400);
       setTimeout(majAlphabet, 420);
     };
-    // La lettre cliquee accuse le coup : sans ce retour, un clic sur une
-    // lettre deja courante ne produit aucun signe visible et passe pour un
-    // bouton mort.
+    // The clicked letter acknowledges the hit: without that feedback, a click
+    // on an already current letter produces no visible sign and reads as a dead
+    // button.
     const bouton = [...document.querySelectorAll('#alphabet .alpha')]
       .find(b => b.textContent === lettre);
     if (bouton) {
       bouton.classList.remove('atteinte');
-      void bouton.offsetWidth;          // force le redemarrage de l'animation
+      void bouton.offsetWidth;          // forces the animation to restart
       bouton.classList.add('atteinte');
       setTimeout(() => bouton.classList.remove('atteinte'), 600);
     }
     ALPHA_VISEE = lettre;
-    ALPHA_JUSQUA = Date.now() + 1400;   // le temps que le defilement se pose
+    ALPHA_JUSQUA = Date.now() + 1400;   // long enough for the scroll to settle
     majAlphabet();
     if (page !== PAGE) { PAGE = page; renderLib(); requestAnimationFrame(bouger); }
     else bouger();
@@ -5833,19 +5832,19 @@ const app = {
   ajouterNotif, supprimerNotif, testerNotif, testerNotifSaisie,
   chargerComptes,
 
-  // Choix de la plateforme dont on regle les options.
+  // Picking the platform whose options are being set.
   choisirPlateformeReglages(key) {
     PF_REGLAGES = key;
     localStorage.setItem('pf-reglages', key);
-    // Le selecteur doit toujours montrer la plateforme affichee : appele
-    // depuis ailleurs (une carte de plateforme), il restait sur l'ancienne.
+    // The selector must always show the displayed platform: called from
+    // elsewhere (a platform card), it stayed on the old one.
     const sel = $('s-plateforme');
     if (sel && sel.value !== key) sel.value = key;
     majReglagesPlateforme();
   },
 
-  // Verifie que le fournisseur repond AVANT d'activer le SSO : se verrouiller
-  // dehors avec une adresse mal saisie serait le pire scenario.
+  // Checks the provider answers BEFORE enabling SSO: locking yourself out with
+  // a mistyped address would be the worst outcome.
   async testerAuth() {
     const el = $('authtest');
     el.innerHTML = '<p class="erdit">Interrogation du fournisseur…</p>';
@@ -5881,14 +5880,14 @@ const app = {
   },
   async clearCovers() { const r = await api('/api/covers-clear', {}); toast(r.message, 'ok'); render(); },
 
-  // ---- corbeille + journal
-  // La corbeille se lit d'abord en une phrase. Le detail, souvent long
-  // (40 lots ici), reste replie tant qu'on ne le demande pas.
+  // ---- trash + log
+  // The trash reads first as one sentence. The detail, often long (40 batches
+  // here), stays folded until asked for.
   async loadTrash() {
-    // `rep` et non `t` : `t()` est la fonction de traduction, et la masquer ici
-    // faisait lever « t is not a function » des que la corbeille contenait un
-    // lot — le resume ne s'affichait alors jamais. Invisible tant que la
-    // corbeille reste vide, ce qui est le cas de toute ludotheque de test.
+    // `rep` and not `t`: `t()` is the translation function, and shadowing it
+    // here raised "t is not a function" as soon as the trash held a batch — the
+    // summary then never showed. Invisible as long as the trash stays empty,
+    // which is the case in any test library.
     const rep = await api('/api/trash-list');
     const r = rep.resume || {lots: 0, fichiers: 0, octets: 0, plus_vieux: 0};
     const s = $('trashsum');
@@ -5946,12 +5945,12 @@ const app = {
     if (ouvert) R.classe($('dropwrap'), 'on', false);
     R.classe(w, 'on', ouvert);
     R.classe($('fab'), 'on', ouvert);
-    if (ouvert) this.poll();                     // rafraichir tout de suite
+    if (ouvert) this.poll();                     // refresh straight away
   },
 
-  // Le bouton « + » a deux roles selon l'etat : quand quelque chose tourne, il
-  // ouvre le detail de ce qui tourne ; sinon il sert a ajouter des jeux. C'est
-  // la que l'utilisateur regarde deja, puisque l'anneau y tourne.
+  // The "+" button has two roles depending on the state: when something is
+  // running, it opens the detail of what is running; otherwise it adds games.
+  // That is where the user is already looking, since the ring spins there.
   actionFab() {
     if (activite()) this.basculerTaches();
     else this.toggleDrop();
@@ -5978,8 +5977,8 @@ const app = {
       .catch(() => toast('Copie impossible.', 'warn'));
   },
   renderJournal() { renderJournal(); },
-  // Le journal s'ouvre en tiroir sur la droite : il ne recouvre plus le bouton
-  // d'ajout ni la barre d'actions, et se referme d'un clic sur le voile.
+  // The log opens as a drawer on the right: it no longer covers the add button
+  // or the action bar, and closes with a click on the backdrop.
   toggleJournal() {
     const ouvert = $('jdrawer').classList.toggle('open');
     $('jvoile').classList.toggle('on', ouvert);
@@ -5998,8 +5997,8 @@ const app = {
     renderTache(j);
     if (j.running) setTimeout(() => this.poll(), 900);
     else {
-      // Une tache qui se termine a presque toujours deplace, converti ou
-      // supprime des fichiers : ce qu'on garde en cache ne vaut plus rien.
+      // A task that finishes has almost always moved, converted or deleted
+      // files: what we hold in cache is worth nothing any more.
       oublierCacheSysteme();
       const soucis = (j.log || []).filter(e => e.n === 'error');
       const alertes = (j.log || []).filter(e => e.n === 'warn');
@@ -6050,24 +6049,23 @@ function renderManifest(r) {
     '</span></div>' + body + '</div>';
 }
 
-// ------------------------------------------------- parcours de premier lancement
-// Chaque etape est verifiee cote serveur (/api/health) : on ne raconte pas a
-// l'utilisateur qu'il lui manque quelque chose qu'il a deja fait.
+// ------------------------------------------------------------ first-run journey
+// Every step is checked server-side (/api/health): we do not tell the user they
+// are missing something they have already done.
 let HEALTH = null;
 
 /* ============================================================================
    PREMIER DEMARRAGE
    ----------------------------------------------------------------------------
-   Un parcours, pas une liste de controles. La version precedente affichait sept
-   diagnostics d'un bloc : l'utilisateur les lisait tous, n'en comprenait aucun,
-   et n'avait rien a faire dessus.
+   A journey, not a checklist. The previous version showed seven diagnostics in
+   one block: the user read them all, understood none, and had nothing to do
+   about them.
 
-   Ici, une etape a la fois, chacune avec une action reelle et un statut :
-   OBLIGATOIRE ou FACULTATIF. Ce qui est propre a une console — emulateur,
-   cles de dechiffrement, dossiers distants — n'y figure pas : cela se regle
-   plus tard, quand on sait de quoi il s'agit. Ce qui compte au premier
-   lancement, c'est ou sont les jeux, qui a le droit d'entrer, et de quoi
-   remplir les jaquettes.
+   Here, one step at a time, each with a real action and a status: REQUIRED or
+   OPTIONAL. Anything specific to a console — emulator, decryption keys, remote
+   folders — is absent: that gets set later, once you know what it is about.
+   What matters on the first run is where the games are, who is allowed in, and
+   what will fill the covers.
    ========================================================================== */
 let ONB = {i: 0, sens: 1, occupe: false, resultatScan: null,
            consoleScan: null, testJaquettes: ''};
@@ -6097,9 +6095,9 @@ function onbEtapes(h) {
       sous: 'Le dossier qui contient tous tes jeux, toutes plateformes confondues.',
       corps: () => {
         const r = ONB.resultatScan;
-        // Choisir le dossier depuis ici, plutot que de renvoyer vers une
-        // variable d'environnement : sur un NAS, cela voulait dire ouvrir un
-        // terminal et redemarrer un conteneur au beau milieu de l'assistant.
+        // Choosing the folder from here, rather than pointing at an
+        // environment variable: on a NAS, that meant opening a terminal and
+        // restarting a container in the middle of the wizard.
         if (LUDO.cible === 'onb') return renduLudoOnboard();
         return '<p class="onbp">Romule analyse ce dossier :</p>' +
           '<div class="onbchemin">' + esc(h.ludotheque || h.root || '') + '</div>' +
@@ -6248,9 +6246,9 @@ function renderOnboard() {
     '<div class="onbtete">' +
       '<span class="onbrang">' + t('Étape %d sur %d')
         .replace('%d', ONB.i + 1).replace('%d', etapes.length) + '</span>' +
-      // `null` : une etape qui n'attend aucune action ne peut etre ni
-      // obligatoire ni facultative — la dire « facultative » suggere a tort
-      // qu'il y aurait quelque chose a y faire.
+      // `null`: a step that expects no action can be neither required nor
+      // optional — calling it "optional" wrongly suggests there would be
+      // something to do there.
       '<span class="onbbadge ' +
         (e.requis === null ? 'nul' : e.requis ? 'req' : 'opt') + '">' +
         (e.requis === null ? 'Pour info' : e.requis ? 'Obligatoire' : 'Facultatif') +
@@ -6279,9 +6277,9 @@ function renderOnboard() {
   el.classList.add('open');
 }
 
-// ------------------------------------------- proposition d'installation (a2hs)
-// Detecte automatiquement le contexte : on ne propose l'installation QUE si la
-// page est ouverte a distance (console, telephone) et pas deja installee.
+// ------------------------------------------------- install prompt (a2hs)
+// Detects the context automatically: installation is offered ONLY if the page
+// is open remotely (console, phone) and not already installed.
 let INSTALL_EVT = null;
 
 function installContext() {
@@ -6297,8 +6295,8 @@ function installContext() {
   };
 }
 
-// Quand on pilote depuis la console ou le telephone, on rappelle que la
-// bibliotheque et les actions vivent sur le serveur, pas sur l'appareil.
+// When driving from the console or the phone, we remind that the library and
+// the actions live on the server, not on the device.
 function renderHost() {
   const c = installContext();
   const el = $('hostchip');
@@ -6328,7 +6326,7 @@ function renderA2HS() {
     action + '<button class="ghost" data-act="dismissA2HS">Plus tard</button>';
 }
 
-// Chrome propose parfois une vraie installation : on l'utilise si elle arrive.
+// Chrome sometimes offers a real installation: we use it if it turns up.
 window.addEventListener('beforeinstallprompt', e => {
   e.preventDefault(); INSTALL_EVT = e; renderA2HS();
 });
@@ -6337,20 +6335,20 @@ window.addEventListener('appinstalled', () => {
   toast('Application installée. Retrouve-la sur ton écran d\'accueil.', 'ok');
 });
 
-// ---------------------------------------------------------------- glisser-deposer
-// La liste vient du serveur : elle depend des plateformes connues ET de celles
-// que l'utilisateur a ajoutees a la main, avec leurs propres extensions. La
-// figer ici aurait refuse une ROM que l'outil sait pourtant ranger.
+// ------------------------------------------------------------- drag and drop
+// The list comes from the server: it depends on the known platforms AND on
+// those the user added by hand, with their own extensions. Freezing it here
+// would have refused a ROM the tool does know how to file.
 let EXTS_ACCEPTEES = ['.nsz', '.xcz', '.nsp', '.xci', '.zip', '.7z', '.rar'];
 
-// Le voile de depot et le champ « Ajouter des jeux » annoncent la MEME liste
-// que celle reellement acceptee : une liste figee dans le HTML mentait des que
-// l'utilisateur ajoutait une plateforme.
+// The drop overlay and the "Add games" field announce the SAME list as the one
+// actually accepted: a list frozen in the HTML lied as soon as the user added a
+// platform.
 function majZoneDepot() {
   const t = $('dropexts');
   if (!t) return;
-  // Une liste alphabetique (« .3ds .bin .cci… ») n'apprend rien. Ce que
-  // l'utilisateur veut savoir, c'est QUELLES CONSOLES sont reconnues.
+  // An alphabetical list (".3ds .bin .cci…") teaches nothing. What the user
+  // wants to know is WHICH CONSOLES are recognised.
   const noms = (SYSTEMS || []).map(x => x.name).filter(Boolean);
   const apercu = noms.slice(0, 4).join(', ');
   const n = EXTS_ACCEPTEES.length;
@@ -6363,11 +6361,11 @@ function extensionAcceptee(nom) {
   return !!m && EXTS_ACCEPTEES.includes(m[0].toLowerCase());
 }
 
-// L'avancement est calcule sur le VOLUME total, pas sur le nombre de fichiers :
-// deposer un jeu de 12 Go et un patch de 30 Mo ne fait pas « 50 % » a mi-chemin.
+// Progress is computed on the total VOLUME, not the file count: dropping a
+// 12 GB game and a 30 MB patch does not make "50 %" halfway through.
 function uploadFiles(files) {
-  // Le depot ajoute des fichiers a la ludotheque : le cache est perime avant
-  // meme que le transfert ne se termine.
+  // The drop adds files to the library: the cache is stale before the transfer
+  // has even finished.
   oublierCacheSysteme();
   let list = [...files].filter(f => extensionAcceptee(f.name));
   const rejetes = [...files].length - list.length;
@@ -6378,10 +6376,10 @@ function uploadFiles(files) {
   }
   if (rejetes) journal(phrase('%d {fichier|fichiers} {ignoré|ignorés} : type non géré.', rejetes), 'warn');
 
-  // Le plafond est verifie ICI, avant d'ouvrir la moindre connexion. Le
-  // serveur le fait aussi — c'est lui qui fait autorite — mais il ne peut
-  // repondre qu'apres coup : il coupe alors la connexion en pleine reception,
-  // et le navigateur n'affiche qu'une « erreur reseau » qui n'explique rien.
+  // The ceiling is checked HERE, before opening a single connection. The
+  // server does it too — it is the authority — but it can only answer after the
+  // fact: it then cuts the connection mid-reception, and the browser shows only
+  // a "network error" that explains nothing.
   const plafond = TELEVERSEMENT_MAX;
   if (plafond) {
     const trop = list.filter(f => f.size > plafond);
@@ -6403,16 +6401,16 @@ function uploadFiles(files) {
     const fait = envoyes + enCours;
     const pct = octets ? Math.round(100 * fait / octets) : null;
     const ecoule = (Date.now() - debut) / 1000;
-    // Pas d'estimation avant d'avoir observe un vrai debit : une ETA fondee sur
-    // les premieres millisecondes annonce n'importe quoi.
+    // No estimate before a real throughput has been observed: an ETA based on
+    // the first few milliseconds announces anything at all.
     const secs = (ecoule > 2 && fait > 0)
       ? Math.round((octets - fait) / (fait / ecoule)) : null;
     const reste = texteReste(secs);
     ACT_ENVOI = {
       titre: 'Envoi' + (list.length > 1 ? ' ' + (i) + '/' + list.length : ''),
       pct: pct,
-      // Le bouton affiche le temps restant EN CHIFFRES : il lui faut la
-      // valeur, pas la phrase deja mise en forme pour le panneau.
+      // The button shows the time left AS A NUMBER: it needs the value, not
+      // the sentence already formatted for the panel.
       secs: secs,
       reste: [nom ? extrait(nom, 22) : '', reste].filter(Boolean).join(' · '),
     };
@@ -6426,12 +6424,12 @@ function uploadFiles(files) {
       majFab();
       $('bar').style.width = '0';
       toast(phrase('%d {fichier|fichiers} {déposé|déposés}.', list.length), 'ok');
-      // Le depot etant desormais possible n'importe ou, l'utilisateur n'a pas
-      // forcement le panneau sous les yeux : on l'ouvre sur la liste fraiche,
-      // pour que l'etape suivante soit la ou il regarde.
+      // Since dropping is now possible anywhere, the user does not necessarily
+      // have the panel in sight: we open it on the fresh list, so the next step
+      // is where they are looking.
       app.toggleDrop(true);
       app.reloadImport();
-      app.classerImports(true);        // s'il reste des extensions ambigues
+      app.classerImports(true);        // if ambiguous extensions remain
       return;
     }
     const file = list[i++];
@@ -6458,8 +6456,8 @@ function uploadFiles(files) {
 $('tabs').addEventListener('click', e => { if (e.target.dataset.tab) app.tab(e.target.dataset.tab); });
 $('filters').addEventListener('click', e => { const b = e.target.closest('.chip'); if (b) app.setFilter(b.dataset.f); });
 $('jfilters').addEventListener('click', e => { const b = e.target.closest('.chip'); if (b) app.setJFilter(b.dataset.jl); });
-// Un reglage modifie = on envoie CE reglage uniquement. Envoyer tout le
-// formulaire exposait a ecraser la configuration avec des champs vides.
+// One setting changed = we send THAT setting only. Sending the whole form
+// risked overwriting the configuration with empty fields.
 const SET_FIELDS = {
   's-romsroot': ['roms_root', 'text'],
   's-savesdir': ['saves_dir', 'text'], 's-sgkey': ['steamgriddb_key', 'text'],
@@ -6498,9 +6496,9 @@ $('s-erdevice').addEventListener('change', e => app.erPickDevice(e.target.value)
 $('s-uilang').addEventListener('change', e => app.setLang(e.target.value));
 $('s-plateforme').addEventListener('change', e => app.choisirPlateformeReglages(e.target.value));
 
-// Hauteur reelle de l'en-tete et du sommaire : elles changent avec la largeur
-// (les onglets passent a la ligne) et avec le mode paysage, ou l'en-tete n'est
-// plus colle. Les figer dans le CSS decalerait les ancres d'une barre.
+// The real height of the header and of the table of contents: they change with
+// the width (the tabs wrap) and in landscape, where the header is no longer
+// sticky. Freezing them in the CSS would offset the anchors by one bar.
 function mesurerBarres() {
   const tete = document.querySelector('header');
   const nav = $('setnav');
