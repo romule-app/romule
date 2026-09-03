@@ -1,8 +1,8 @@
 """Couche adb : detection de la console, exploration, import (pull) et push.
 
-Cible : handheld Android sous Eden, branche en USB avec le debogage active.
-Les fonctions `parse_*` et `reconcile` sont pures (testables sans appareil) ;
-tout ce qui parle a adb passe par `_run` / `_shell`.
+Target: an Android handheld running Eden, plugged in over USB with debugging
+enabled. The `parse_*` functions and `reconcile` are pure (testable with no
+device); everything that talks to adb goes through `_run` / `_shell`.
 """
 
 import hashlib
@@ -23,18 +23,17 @@ _GAME_FIND = (r"\( -iname '*.nsp' -o -iname '*.xci' "
 # ------------------------------------------------------------- appels adb bruts
 
 def _binaire_adb():
-    """Chemin du binaire adb a lancer, ou None s'il n'y en a pas.
+    """Path of the adb binary to run, or None when there is none.
 
-    `ROMULE_ADB` passe avant tout. C'est ce qui permet a la suite de tests de
-    designer un faux adb, donc de FIXER l'etat de la console au lieu de le
-    subir : sans elle, les tests donnaient trois resultats differents selon
-    qu'un appareil etait branche, absent, ou branche mais hors ligne. C'est
-    exactement ce qui a laisse cinq chaines francaises sur l'ecran d'accueil
-    pendant des semaines — la branche « aucune console » ne s'affichait jamais
-    sur la machine qui faisait tourner les tests.
+    `ROMULE_ADB` comes first. It is what lets the test suite point at a fake
+    adb, and therefore FIX the console's state instead of suffering it: without
+    it, the tests gave three different results depending on whether a device
+    was plugged in, absent, or plugged in but offline. That is exactly what
+    left five French strings on the home screen for weeks — the "no console"
+    branch never rendered on the machine running the tests.
 
-    Un chemin qui ne designe rien vaut « pas d'adb » : c'est la facon la plus
-    simple de rejouer une machine sans adb du tout.
+    A path that points at nothing means "no adb": the simplest way to replay a
+    machine with no adb at all.
     """
     impose = config.env("ADB").strip()
     if impose:
@@ -46,8 +45,8 @@ def adb_available():
     return _binaire_adb() is not None
 
 
-# Serie de l'appareil vise. Utile quand l'USB et le wifi sont connectes en
-# meme temps : sans cela adb refuse d'agir ("more than one device").
+# Serial of the targeted device. Useful when USB and Wi-Fi are connected at the
+# same time: without it adb refuses to act ("more than one device").
 _SERIAL = None
 
 
@@ -57,17 +56,17 @@ def set_target(serial):
 
 
 def _run(args, timeout=60, targeted=True):
-    """Renvoie (returncode, stdout, stderr). `targeted` vise l'appareil choisi."""
+    """Return (returncode, stdout, stderr). `targeted` aims at the chosen device."""
     binaire = _binaire_adb()
     if not binaire:
         return 1, "", "adb introuvable"
     cmd = [binaire]
     if targeted:
-        # Choisir la cible AU BESOIN. Sans cela, la premiere commande d'un
-        # processus partait sans `-s` : avec deux transports attaches (une
-        # console reliee en Wi-Fi en expose souvent deux, IP et mDNS), adb
-        # repondait « more than one device » et _shell renvoyait une chaine
-        # vide — un echec qui passait pour un dossier vide.
+        # Pick the target ON DEMAND. Without this, a process's first command
+        # went out without `-s`: with two transports attached (a console linked
+        # over Wi-Fi often exposes two, IP and mDNS), adb answered "more than
+        # one device" and _shell returned an empty string — a failure that
+        # passed for an empty folder.
         if not _SERIAL:
             d = _pick(devices())
             if d:
@@ -82,34 +81,34 @@ def _run(args, timeout=60, targeted=True):
 
 
 def _shell(cmd, timeout=30):
-    """Execute une commande dans le shell de l'appareil, renvoie stdout."""
+    """Run a command in the device's shell, return stdout."""
     rc, out, _ = _run(["shell", cmd], timeout=timeout)
     return out if rc == 0 else ""
 
 
 def _q(path):
-    """Quote un chemin pour le shell distant."""
+    """Quote a path for the remote shell."""
     return "'" + str(path).replace("'", "'\\''") + "'"
 
 
 # ------------------------------------------------------------- detection
 
 def is_wireless(serial):
-    """Le lien passe-t-il par le reseau ?
+    """Does the link go over the network?
 
-    Deux formes existent : « 192.168.1.42:5555 » pour un `adb connect` classique,
-    et « adb-XXXX-YYYY._adb-tls-connect._tcp » pour une connexion adb-TLS
-    annoncee en mDNS. La seconde ne contient PAS de deux-points : ne tester que
-    ce caractere la faisait passer pour de l'USB, et l'outil annoncait un cable
-    branche alors que tout transitait par le wifi.
+    Two forms exist: "192.168.1.42:5555" for a classic `adb connect`, and
+    "adb-XXXX-YYYY._adb-tls-connect._tcp" for an adb-TLS connection announced
+    over mDNS. The second contains NO colon: testing only that character made
+    it pass for USB, and the tool announced a cable was plugged in while
+    everything went over Wi-Fi.
     """
     s = str(serial or "")
     return ":" in s or "_adb-tls-" in s or s.endswith("._tcp")
 
 
 def _pick(devs, prefer=None):
-    """Choisit l'appareil a piloter : celui demande, sinon l'USB (2 a 5 fois plus
-    rapide et plus stable que le wifi), sinon le wifi."""
+    """Pick the device to drive: the requested one, else USB (2 to 5 times
+    faster and steadier than Wi-Fi), else Wi-Fi."""
     ready = [d for d in devs if d.get("state") == "device"]
     if not ready:
         return None
@@ -137,7 +136,7 @@ def state(prefer=None):
 
 
 def connection():
-    """Comment la console est reliee : {'kind': 'wifi'|'usb'|None, 'serial', 'name'}."""
+    """How the console is linked: {'kind': 'wifi'|'usb'|None, 'serial', 'name'}."""
     devs = devices()
     d = _pick(devs, _SERIAL)
     if not d:
@@ -149,10 +148,10 @@ def connection():
             "depuis": _depuis(d["serial"])}
 
 
-# Depuis quand ce lien tient. Mesure a partir de la premiere fois qu'on voit ce
-# serial : l'information n'existe pas dans adb, et elle dit bien plus que
-# « connectee » — une connexion sans fil qui vient de repartir n'a pas la meme
-# fiabilite qu'une autre etablie depuis deux heures.
+# How long this link has held. Measured from the first time we see this serial:
+# adb does not provide the information, and it says far more than "connected" —
+# a wireless link that just came back is not as trustworthy as one established
+# two hours ago.
 _VUS = {}
 
 
@@ -160,7 +159,7 @@ def _depuis(serial):
     import time as _t
     if serial not in _VUS:
         _VUS[serial] = _t.time()
-    # on oublie les liens disparus, sinon la duree serait fausse au retour
+    # forget vanished links, otherwise the duration would be wrong on return
     vivants = {d["serial"] for d in devices()}
     for s in list(_VUS):
         if s not in vivants:
@@ -189,10 +188,10 @@ def devices():
     return parse_devices(out)
 
 
-# ------------------------------------------------------------- sans fil (wifi)
+# ---------------------------------------------------------------- wireless
 
 def device_ip():
-    """Adresse IP wifi de la console (vue depuis elle-meme)."""
+    """The console's Wi-Fi IP address (as it sees itself)."""
     out = _shell("ip -f inet addr show wlan0 2>/dev/null")
     m = re.search(r"inet (\d+\.\d+\.\d+\.\d+)", out)
     if m:
@@ -203,7 +202,7 @@ def device_ip():
 
 
 def discover():
-    """Adresses de connexion annoncees par les consoles en debogage sans fil."""
+    """Connection addresses announced by consoles in wireless debugging."""
     rc, out, _ = _run(["mdns", "services"], timeout=15, targeted=False)
     found = []
     for line in out.splitlines():
@@ -217,7 +216,7 @@ def discover():
 
 
 def connect(addr, timeout=20):
-    """Se connecte a une console par le reseau. Renvoie (ok, message)."""
+    """Connect to a console over the network. Returns (ok, message)."""
     if not addr:
         return (False, "adresse manquante")
     rc, out, err = _run(["connect", addr], timeout=timeout, targeted=False)
@@ -235,12 +234,12 @@ def disconnect(addr=None):
 
 
 def pair(addr, code):
-    """Appairage sans fil (Android 11+). Renvoie (ok, message)."""
+    """Wireless pairing (Android 11+). Returns (ok, message)."""
     if not addr or not code:
         return (False, "adresse ou code manquant")
-    # Cette fonction contournait `_run` : elle lancait « adb » en dur, sans le
-    # garde d'existence. Elle etait donc le seul appel que `ROMULE_ADB` aurait
-    # rate, et le seul a lever une exception quand adb manque.
+    # This function bypassed `_run`: it ran a hard-coded "adb", with no
+    # existence guard. It was therefore the one call `ROMULE_ADB` would have
+    # missed, and the one to raise when adb is absent.
     binaire = _binaire_adb()
     if not binaire:
         return (False, "adb introuvable")
@@ -255,7 +254,7 @@ def pair(addr, code):
 
 
 def switch_to_wifi(port=5555):
-    """Bascule une console branchee en USB vers le wifi. Renvoie (ok, addr, msg)."""
+    """Move a USB-connected console over to Wi-Fi. Returns (ok, addr, msg)."""
     devs = devices()
     usb = next((d for d in devs if d.get("state") == "device" and not is_wireless(d["serial"])), None)
     if not usb:
@@ -267,14 +266,14 @@ def switch_to_wifi(port=5555):
     rc, out, err = _run(["tcpip", str(port)], timeout=30)
     if rc != 0:
         return (False, None, ((err or out).strip().splitlines() or ["echec"])[-1])
-    time.sleep(1.5)                     # l'appareil redemarre son service adb
+    time.sleep(1.5)                     # the device restarts its adb service
     addr = "%s:%d" % (ip, port)
     ok, msg = connect(addr)
     return (ok, addr if ok else None, msg)
 
 
 def open_url(url):
-    """Ouvre une adresse dans le navigateur de la console. Renvoie (ok, message)."""
+    """Open an address in the console's browser. Returns (ok, message)."""
     rc, out, err = _run(["shell", "am", "start", "-a", "android.intent.action.VIEW",
                          "-d", url], timeout=30)
     txt = (out + err).strip()
@@ -284,7 +283,7 @@ def open_url(url):
 
 
 def info():
-    """Carte d'identite de la console connectee."""
+    """Identity card of the connected console."""
     st = state()
     if st != "device":
         return {"connected": False, "state": st}
@@ -310,7 +309,7 @@ def info():
 # ------------------------------------------------------------- volumes / SD
 
 def parse_df(out):
-    """(total_octets, libre_octets) depuis une sortie `df -k`, sinon (None, None)."""
+    """(total_bytes, free_bytes) from a `df -k` output, otherwise (None, None)."""
     lines = [l for l in out.splitlines() if l.strip()]
     if len(lines) < 2:
         return (None, None)
@@ -325,8 +324,8 @@ def _df(path):
 
 
 def volume_root(path):
-    """Racine de volume d'un chemin (pour mesurer l'espace, meme si le dossier
-    cible n'existe pas encore)."""
+    """A path's volume root (to measure space, even when the target folder does
+    not exist yet)."""
     parts = [p for p in path.split("/") if p]
     if len(parts) >= 2 and parts[0] == "storage":
         if parts[1] == "emulated":
@@ -336,12 +335,12 @@ def volume_root(path):
 
 
 def free_of(path):
-    """Octets libres sur le volume qui contient path, ou None."""
+    """Free bytes on the volume holding `path`, or None."""
     return _df(volume_root(path))[1]
 
 
 def volumes():
-    """Volumes de stockage : interne + carte(s) SD, avec espace libre."""
+    """Storage volumes: internal plus SD card(s), with free space."""
     if state() != "device":
         return []
     vols = []
@@ -360,7 +359,7 @@ def volumes():
 # ------------------------------------------------------------- exploration
 
 def list_dir(remote):
-    """Contenu d'un dossier de l'appareil (dossiers d'abord)."""
+    """Contents of a folder on the device (folders first)."""
     out = _shell("ls -1 -p %s 2>/dev/null" % _q(remote))
     items = []
     for l in out.splitlines():
@@ -395,11 +394,11 @@ def parse_find(out):
 
 
 def find_games(root, exts=None):
-    """Fichiers de jeu sous un dossier de l'appareil.
+    """Game files under a folder on the device.
 
-    `exts` permet d'interroger un autre systeme que la Switch (.iso, .chd…) :
-    sans lui, les autres consoles n'avaient aucun moyen de savoir ce qui etait
-    deja en place, et heritaient d'une vue sans etat.
+    `exts` allows querying a system other than the Switch (.iso, .chd…):
+    without it, the other consoles had no way of knowing what was already in
+    place, and inherited a stateless view.
     """
     if exts:
         motifs = " -o ".join("-iname '*%s'" % e for e in sorted(exts))
@@ -412,16 +411,16 @@ def find_games(root, exts=None):
 
 
 def detect_games_dir():
-    """Devine le dossier racine des jeux : le plus long ancetre commun a tous
-    les fichiers Switch trouves sur l'appareil (gere aussi bien un dossier a plat
-    que des arborescences par jeu ou par type)."""
+    """Guess the games root: the longest common ancestor of every Switch file
+    found on the device (handles a flat folder as well as per-game or per-type
+    trees)."""
     if state() != "device":
         return None
 
     def ancetre(dirs):
         common = []
-        # `strict=False` explicite : s'arreter au chemin le plus court est
-        # exactement ce qu'on veut d'un ancetre commun.
+        # `strict=False` spelled out: stopping at the shortest path is exactly
+        # what a common ancestor should do.
         for parts in zip(*[d.split("/") for d in dirs], strict=False):
             if len(set(parts)) == 1:
                 common.append(parts[0])
@@ -429,10 +428,10 @@ def detect_games_dir():
                 break
         return "/".join(common) or dirs[0]
 
-    # Un ancetre commun calcule sur TOUS les volumes a la fois donne « /storage »
-    # des que des jeux existent a la fois sur la carte SD et en interne — un
-    # chemin qui ne designe rien. On raisonne donc volume par volume, et on
-    # retient celui qui porte le plus de jeux.
+    # A common ancestor computed across ALL volumes at once yields "/storage"
+    # as soon as games exist both on the SD card and internally — a path that
+    # points at nothing. So we reason volume by volume, and keep the one
+    # carrying the most games.
     best, best_n = None, 0
     for v in volumes():
         cmd = ("find %s -maxdepth 7 -type f %s 2>/dev/null"
@@ -442,7 +441,7 @@ def detect_games_dir():
         if not dirs or len(dirs) <= best_n:
             continue
         racine = ancetre(dirs)
-        # jamais plus haut que le volume lui-meme
+        # never higher than the volume itself
         if not racine.startswith(v["path"].rstrip("/")):
             racine = v["path"].rstrip("/")
         best, best_n = racine, len(dirs)
@@ -454,14 +453,13 @@ def _tree_folders():
 
 
 def real_folders(device_dir):
-    """Nom reel de chaque dossier de type sur la console : {"GAMES": "Games", ...}.
+    """Each type folder's real name on the console: {"GAMES": "Games", ...}.
 
-    La carte SD est insensible a la casse : un dossier cree jadis sous le nom
-    « Games » repond aussi bien a « GAMES ». Les commandes shell s'en accommodent,
-    mais nos comparaisons de chemins en Python, elles, ne matchent plus rien —
-    une verification peut alors passer a vide et paraitre bonne. Pire, la
-    protection « ne supprime pas les dossiers de type » ne les reconnait plus.
-    On lit donc les noms tels qu'ils existent reellement.
+    The SD card is case-insensitive: a folder created long ago as "Games"
+    answers to "GAMES" just as well. Shell commands cope, but our path
+    comparisons in Python match nothing any more — a check can then run on
+    emptiness and look fine. Worse, the "do not delete the type folders" guard
+    stops recognising them. So we read the names as they really are.
     """
     canon = _tree_folders()
     out = {c: c for c in canon}
@@ -480,7 +478,7 @@ def real_folders(device_dir):
 
 
 def tree_status(device_dir):
-    """Presence des sous-dossiers d'organisation (GAMES/UPDATE/DLC) sur la console."""
+    """Whether the layout subfolders (GAMES/UPDATE/DLC) exist on the console."""
     base = device_dir.rstrip("/")
     if state() != "device" or not base:
         return {}
@@ -492,7 +490,7 @@ def tree_status(device_dir):
 
 
 def make_tree(device_dir):
-    """Cree les sous-dossiers d'organisation manquants. Renvoie le nouvel etat."""
+    """Create the missing layout subfolders. Returns the new state."""
     base = device_dir.rstrip("/")
     if state() == "device" and base:
         for name in _tree_folders():
@@ -502,8 +500,8 @@ def make_tree(device_dir):
 
 
 def organize(device_dir, job, types=None):
-    """Range la console : chaque fichier va dans GAMES/UPDATE/DLC selon son type
-    (meme s'il etait dans un dossier de jeu), puis on supprime les dossiers vides."""
+    """Tidy the console: every file goes to GAMES/UPDATE/DLC by type (even if
+    it sat in a per-game folder), then empty folders are removed."""
     if state() != "device":
         job.log("Console non prete.")
         return
@@ -514,15 +512,16 @@ def organize(device_dir, job, types=None):
     job.set_total(len(games))
     moved = 0
     for g in games:
-        # Le type connu de la ludotheque prime : il vient du contenu du fichier,
-        # alors qu'ici on ne dispose que du nom — et un nom ment parfois (title ID
-        # tronque, absent, ou annoncant une base alors que c'est une mise a jour).
+        # The library's known type wins: it comes from the file's contents,
+        # whereas here we only have the name — and a name sometimes lies
+        # (truncated title ID, missing one, or announcing a base when it is an
+        # update).
         typ = (types or {}).get(g["name"])
         if typ not in config.LAYOUT_FOLDER:
             typ = titleid.tid_type(g["tid"]) if g["tid"] else "INCONNU"
         folder = reels[config.LAYOUT_FOLDER[typ]]
         dst = "%s/%s/%s" % (base, folder, g["name"])
-        # deja au bon endroit (directement sous le bon dossier de type) ?
+        # already in the right place (directly under the right type folder)?
         if g["path"] == dst:
             job.tick()
             continue
@@ -530,7 +529,7 @@ def organize(device_dir, job, types=None):
         job.log("Range : %s -> %s/" % (g["name"], folder))
         moved += 1
         job.tick()
-    # supprime les dossiers de jeux devenus vides (hors GAMES/UPDATE/DLC)
+    # remove per-game folders that became empty (except GAMES/UPDATE/DLC)
     keep = " ".join("-not -name %s" % _q(tf) for tf in sorted(set(reels.values())))
     _shell("find %s -mindepth 1 -type d -empty %s -delete 2>/dev/null" % (_q(base), keep))
     _shell("find %s -mindepth 1 -type d -empty %s -delete 2>/dev/null" % (_q(base), keep))
@@ -540,7 +539,7 @@ def organize(device_dir, job, types=None):
     _invalider_cache()
 
 def analyze(games):
-    """Marque les jeux de la console : orphelins et versions perimees (dflags)."""
+    """Flag the console's games: orphans and stale versions (dflags)."""
     bases = {g["tid"] for g in games if g["type"] == "BASE" and g["tid"]}
     owned = {}
     for g in games:
@@ -559,10 +558,10 @@ def analyze(games):
 
 
 def _invalider_cache():
-    """Toute ecriture sur la console perime la vue en cache de son arborescence.
+    """Any write to the console expires the cached view of its tree.
 
-    Sans cela, un fichier qu'on vient d'envoyer resterait invisible jusqu'a
-    l'expiration du cache — et l'utilisateur croirait le transfert rate.
+    Without this, a file you just pushed would stay invisible until the cache
+    expired — and the user would think the transfer had failed.
     """
     try:
         from . import systems
@@ -572,7 +571,7 @@ def _invalider_cache():
 
 
 def remove(paths, job):
-    """Supprime des fichiers sur la console (confirmation cote client)."""
+    """Delete files on the console (confirmation happens client-side)."""
     job.set_total(len(paths))
     n = 0
     for p in paths:
@@ -589,7 +588,7 @@ def remove(paths, job):
     _invalider_cache()
 
 def reconcile(device_games, lib_files):
-    """Marque chaque jeu de l'appareil : deja present en biblio ou non."""
+    """Flag each of the device's games: already in the library or not."""
     def key(f):
         if f.get("tid"):
             return (f["tid"], f.get("version"))
@@ -613,8 +612,8 @@ def remote_rm(remote):
 
 
 def _send_one(local, remote_dir, remote, size, verify_mode, job, attempts=2):
-    """Envoie un fichier avec verification, nettoyage du reste tronque et
-    nouvelle tentative. Renvoie 'ok' | 'fail' | 'gone' (console disparue)."""
+    """Send one file with verification, cleanup of the truncated remains and a
+    retry. Returns 'ok' | 'fail' | 'gone' (console vanished)."""
     for attempt in range(1, attempts + 1):
         rc, out, err = _run(["push", str(local), remote_dir + "/"], timeout=7200)
         msg = ((err or out) or "").strip().splitlines()
@@ -637,7 +636,7 @@ def _send_one(local, remote_dir, remote, size, verify_mode, job, attempts=2):
         if good:
             return "ok"
 
-        # echec : on retire le fichier partiel pour ne pas laisser un jeu tronque
+        # failure: remove the partial file so no truncated game is left behind
         remote_rm(remote)
         if attempt < attempts:
             job.log("  echec (%s) — nouvelle tentative…" % (msg or "inconnu"))
@@ -653,9 +652,9 @@ def remote_sha1(remote):
 
 
 def local_sha1(path):
-    # Empreinte de CORRUPTION : elle repond a « la copie est-elle arrivee
-    # entiere ? », pas a « quelqu'un a-t-il substitue le fichier ? ». Aucune
-    # propriete cryptographique n'est attendue ici.
+    # A CORRUPTION digest: it answers "did the copy arrive whole?", not "did
+    # someone substitute the file?". No cryptographic property is expected
+    # here.
     h = hashlib.sha1(usedforsecurity=False)
     with open(path, "rb") as f:
         for chunk in iter(lambda: f.read(1 << 20), b""):
@@ -674,7 +673,7 @@ def _human(b):
 
 
 def pull(remote_paths, job):
-    """Recupere des fichiers de l'appareil vers _import. Renvoie les chemins locaux."""
+    """Fetch files from the device into _import. Returns the local paths."""
     config.IMPORT.mkdir(exist_ok=True)
     job.set_total(len(remote_paths))
     got = []
@@ -697,7 +696,7 @@ def pull(remote_paths, job):
 
 
 def push_generic(paths, target_dir, job, verify=True, incremental=True):
-    """Envoie des ROMs (systemes non-Switch) dans un dossier unique de la console."""
+    """Send ROMs (non-Switch systems) into a single folder on the console."""
     st = state()
     if st != "device":
         job.log("Aucun appareil adb pret (etat : %s)." % (st or "non connecte"))
@@ -708,7 +707,7 @@ def push_generic(paths, target_dir, job, verify=True, incremental=True):
         return
     _shell("mkdir -p %s" % _q(base))
 
-    # index des tailles deja presentes (pour l'incrementiel)
+    # index of the sizes already present (for the incremental mode)
     present = {}
     if incremental:
         out = _shell("find %s -maxdepth 2 -type f -exec stat -c '%%s|%%n' {} \\; 2>/dev/null"
@@ -753,24 +752,24 @@ def push_generic(paths, target_dir, job, verify=True, incremental=True):
     _invalider_cache()
 
 def _target_folder(path, layout, type_connu=None):
-    """Sous-dossier cible d'un fichier selon le layout choisi.
+    """A file's target subfolder for the chosen layout.
 
-    `type_connu` vient de la bibliotheque, qui a lu le conteneur : il prime
-    toujours sur le nom du fichier, souvent incomplet ou trompeur.
+    `type_connu` comes from the library, which read the container: it always
+    wins over the file name, often incomplete or misleading.
     """
     if layout == "flat":
         return ""
-    if layout == "game":  # miroir : le dossier de jeu source (parent)
+    if layout == "game":  # mirror: the source per-game folder (parent)
         return str(path.parent.relative_to(config.LUDO))
     if type_connu in config.LAYOUT_FOLDER:
         return config.LAYOUT_FOLDER[type_connu]
-    tid = titleid.from_name(path.name)  # dernier recours : le nom
+    tid = titleid.from_name(path.name)  # last resort: the name
     return config.LAYOUT_FOLDER[titleid.tid_type(tid) if tid else "INCONNU"]
 
 
 def _console_index(device_dir):
-    """Empreintes des jeux deja sur la console (title ID+version et nom de
-    fichier), pour reperer un jeu present quel que soit son rangement."""
+    """Fingerprints of the games already on the console (title ID+version and
+    file name), to spot a game present whatever folder it is filed in."""
     keys = set()
     for g in find_games(device_dir):
         if g["tid"]:
@@ -780,20 +779,20 @@ def _console_index(device_dir):
 
 
 def ouvrir_droits(*chemins):
-    """Rend accessibles a Eden les fichiers qu'adb vient d'ecrire chez lui.
+    """Make the files adb just wrote reachable by Eden.
 
-    Un fichier pousse par adb appartient a l'utilisateur `shell`, en mode 644.
-    Eden, qui tourne sous un autre UID, n'est donc qu'« autre » : il peut lire
-    mais pas ecrire. Or il ouvre ses configs et ses contenus NAND en
-    lecture-ecriture, et un refus le fait renoncer en silence, sans erreur
-    visible. On elargit donc les droits apres chaque ecriture.
+    A file pushed by adb belongs to the `shell` user, mode 644. Eden, running
+    under another UID, is therefore merely "other": it can read but not write.
+    Yet it opens its configs and its NAND contents read-write, and a refusal
+    makes it give up silently, with no visible error. So we widen the
+    permissions after every write.
     """
     for chemin in chemins:
         if not chemin:
             continue
         q = _q(chemin)
-        # Un dossier garde son bit d'execution, sans quoi on ne peut plus le
-        # traverser : 777 pour les dossiers, 666 pour les fichiers.
+        # A folder keeps its execute bit, without which it can no longer be
+        # traversed: 777 for folders, 666 for files.
         _shell("if [ -d %s ]; then "
                "find %s -type f -exec chmod 666 {} + 2>/dev/null; "
                "find %s -type d -exec chmod 777 {} + 2>/dev/null; "
@@ -802,8 +801,8 @@ def ouvrir_droits(*chemins):
 
     _invalider_cache()
 
-# Codes Android de `dumpsys battery`. Les nombres bruts ne disent rien a
-# l'ecran : on les traduit ici, une fois, plutot qu'a chaque affichage.
+# Android codes from `dumpsys battery`. The raw numbers say nothing on screen:
+# we translate them here, once, rather than on every render.
 _ETAT_BATTERIE = {1: "inconnu", 2: "charge", 3: "decharge",
                   4: "pause", 5: "pleine"}
 _SANTE_BATTERIE = {1: "inconnue", 2: "bonne", 3: "surchauffe", 4: "hors service",
@@ -811,10 +810,10 @@ _SANTE_BATTERIE = {1: "inconnue", 2: "bonne", 3: "surchauffe", 4: "hors service"
 
 
 def batterie():
-    """Etat de la batterie de la console, ou None si elle ne repond pas.
+    """The console's battery state, or None when it does not answer.
 
-    Une console qui tombe en panne au milieu d'un transfert de 12 Go, c'est un
-    fichier a renvoyer : autant voir son niveau avant de lancer.
+    A console that dies in the middle of a 12 GB transfer means a file to send
+    again: better to see its level before starting.
     """
     sortie = _shell("dumpsys battery")
     if not sortie:
@@ -837,8 +836,8 @@ def batterie():
         return None
     pourcent = max(0, min(100, round(100 * niveau / echelle)))
     etat = _ETAT_BATTERIE.get(entier("status") or 1, "inconnu")
-    # `status` vaut « decharge » meme branche sur certains appareils : la
-    # presence d'une alimentation est plus fiable pour dire « en charge ».
+    # `status` reads "discharging" even when plugged in on some devices: the
+    # presence of a power source is a more reliable way to say "charging".
     branchee = any(champs.get(c, "").lower() == "true"
                    for c in ("ac powered", "usb powered", "wireless powered"))
     if branchee and etat == "decharge":
@@ -849,18 +848,18 @@ def batterie():
         "etat": etat,
         "branchee": branchee,
         "sante": _SANTE_BATTERIE.get(entier("health") or 1, "inconnue"),
-        # `temperature` est en dixiemes de degre
+        # `temperature` is in tenths of a degree
         "temperature": round(temp / 10.0, 1) if temp is not None else None,
         "volts": round((entier("voltage") or 0) / 1000.0, 2) or None,
     }
 
 
 def integrity(path):
-    """Motif de refus si le .nsp est tronque, sinon None.
+    """A reason to refuse when the .nsp is truncated, otherwise None.
 
-    Un telechargement interrompu produit une archive qui annonce plus de
-    contenu qu'elle n'en porte. Envoyee telle quelle, elle apparait dans Eden
-    comme un jeu qui ne demarre jamais — mieux vaut la bloquer ici.
+    An interrupted download produces an archive announcing more content than it
+    carries. Sent as-is, it shows up in Eden as a game that never starts —
+    better to stop it here.
     """
     if Path(path).suffix.lower() != ".nsp":
         return None
@@ -870,15 +869,15 @@ def integrity(path):
     except nand.Incomplet as exc:
         return str(exc)
     except Exception:
-        return None  # format inattendu : on ne bloque pas sur un simple doute
+        return None  # unexpected format: we do not block on a mere doubt
     return None
 
 
 def plan(paths, device_dir, layout="type", incremental=False, types=None):
-    """Construit le plan de transfert (quoi -> ou) a partir d'une liste de
-    fichiers. Si incremental et l'appareil est branche, marque `skip` les jeux
-    deja presents sur la console (par title ID/version ou nom, peu importe leur
-    dossier)."""
+    """Build the transfer plan (what -> where) from a list of files. When
+    incremental and the device is connected, marks `skip` for games already on
+    the console (by title ID/version or by name, whatever folder they are
+    in)."""
     base = device_dir.rstrip("/")
     check = incremental and state() == "device"
     index = _console_index(device_dir) if check else set()
@@ -890,7 +889,7 @@ def plan(paths, device_dir, layout="type", incremental=False, types=None):
             continue
         connu = (types or {}).get(str(f))
         folder = _target_folder(f, layout, connu)
-        folder = reels.get(folder, folder)  # respecte la casse deja en place
+        folder = reels.get(folder, folder)  # honour the casing already in place
         remote_dir = base + ("/" + folder if folder else "")
         remote = remote_dir + "/" + f.name
         size = f.stat().st_size
@@ -899,7 +898,7 @@ def plan(paths, device_dir, layout="type", incremental=False, types=None):
         skip = bool(check and (key in index or remote_size(remote) == size))
         items.append({
             "local": str(f), "name": f.name,
-            # le type connu de la bibliotheque prime : le nom ment parfois
+            # the library's known type wins: the name sometimes lies
             "type": connu or (titleid.tid_type(tid) if tid else "INCONNU"),
             "size": size, "folder": folder or "/",
             "remote_dir": remote_dir, "remote": remote, "skip": skip,
@@ -909,8 +908,8 @@ def plan(paths, device_dir, layout="type", incremental=False, types=None):
 
 
 def push(paths, device_dir, job, verify_mode="size", layout="type", incremental=True, types=None):
-    """Envoie les .nsp/.xci, ranges selon le layout, avec debit/ETA et
-    verification (none | size | hash). En incremental, saute l'existant identique."""
+    """Send the .nsp/.xci files, filed by layout, with rate/ETA and
+    verification (none | size | hash). Incremental skips identical files."""
     st = state()
     if st != "device":
         job.log("Aucun appareil adb pret (etat : %s)." % (st or "non connecte"))
@@ -938,8 +937,8 @@ def push(paths, device_dir, job, verify_mode="size", layout="type", incremental=
     start = time.time()
     okc, made = 0, set()
 
-    # On note ce qu'il reste a faire : si le transfert s'arrete, l'utilisateur
-    # n'a pas a retrouver la meme selection pour reprendre.
+    # We record what is left to do: if the transfer stops, the user does not
+    # have to rebuild the same selection to resume.
     from . import transferts
     transferts.demarrer([it["local"] for it in todo], device_dir, "switch")
 
@@ -977,5 +976,5 @@ def push(paths, device_dir, job, verify_mode="size", layout="type", incremental=
     job.set_detail("")
     job.log("Transfert termine (%d/%d) vers %s." % (okc, len(todo), device_dir))
     if okc == len(todo):
-        transferts.terminer()          # rien a reprendre
+        transferts.terminer()          # nothing to resume
     _invalider_cache()
