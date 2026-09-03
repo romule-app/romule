@@ -1,27 +1,26 @@
-"""L'API publique, version 1 — celle qu'on promet de ne pas casser.
+"""The public API, version 1 — the one we promise not to break.
 
-Romule sert 97 routes `/api/...`. Elles sont taillees pour son propre
-navigateur : elles renvoient ce dont un ecran a besoin, changent quand l'ecran
-change, et c'est tres bien ainsi. Les geler reviendrait a s'interdire de faire
-evoluer l'interface.
+Romule serves 97 `/api/...` routes. They are cut for its own browser: they
+return what a screen needs, change when that screen changes, and that is fine.
+Freezing them would mean forbidding ourselves from evolving the interface.
 
-`/api/v1` est autre chose : une surface petite, choisie pour ce qu'un tableau de
-bord ou un script veut reellement savoir, et STABLE. Ce que Sonarr et Radarr
-publient n'est pas leur surface interne non plus, et c'est la meme raison.
+`/api/v1` is something else: a small surface, chosen for what a dashboard or a
+script really wants to know, and STABLE. What Sonarr and Radarr publish is not
+their internal surface either, and for the same reason.
 
 La promesse, precisement
-------------------------
-Dans une meme version majeure, aucune route ne disparait, aucun champ existant
-ne change de nom ni de type. Des champs peuvent APPARAITRE — un client doit donc
-ignorer ceux qu'il ne connait pas. C'est tout ; le reste de l'API n'est pas
-couvert par cette promesse et le dit.
+------------
+Within a major version no route disappears, and no existing field changes name
+or type. Fields may APPEAR — so a client must ignore the ones it does not know.
+That is all; the rest of the API is not covered by this promise, and says so.
 
 La portee
----------
-`dans_la_portee()` decide seule ce qu'une cle d'API peut atteindre, et elle
-compare le chemin DEJA NORMALISE par le serveur. Une cle donnee a un tableau de
-bord ne doit pas pouvoir supprimer un compte : c'est le point entier de
-l'exercice, et c'est ce que verifie `test_apikeys.py`.
+-----
+`dans_la_portee()` -- anglais:ok, quoting a function name -- decides on its own
+what an API key may reach, and it compares
+the path ALREADY NORMALISED by the server. A key handed to a dashboard must not
+be able to delete an account: that is the entire point of the exercise, and it
+is what `test_apikeys.py` checks.
 """
 
 import json
@@ -32,22 +31,21 @@ from . import __version__
 
 PREFIXE = "/api/v1/"
 
-# Bornes de pagination. 200 n'est pas un chiffre rond au hasard : une
-# bibliotheque de 5 000 titres tient en 25 pages, et une page de 200 fiches
-# pese quelques centaines de kilo-octets — compressee par le serveur depuis
-# la version 0.2.0.
+# Pagination bounds. 200 is not a round number picked at random: a library of
+# 5 000 titles fits in 25 pages, and a page of 200 entries weighs a few hundred
+# kilobytes — compressed by the server since version 0.2.0.
 LIMITE_DEFAUT = 50
 LIMITE_MAX = 200
 
 
 def dans_la_portee(chemin):
-    """Vrai si une cle d'API a le droit d'atteindre ce chemin.
+    """True if an API key is allowed to reach this path.
 
-    La comparaison est stricte et litterale. `/api/v1` seul ne suffit pas :
-    sans la barre finale, `/api/v1x/...` passerait aussi. Le serveur normalise
-    deja le chemin avant d'arriver ici — les `..` et les doubles barres sont
-    donc resolus — mais on ne s'en remet pas a cela : un chemin qui contient
-    encore l'un ou l'autre est refuse.
+    The comparison is strict and literal. `/api/v1` alone is not enough:
+    without the trailing slash, `/api/v1x/...` would pass too. The server
+    already normalises the path before we get here — so `..` and double slashes
+    are resolved — but we do not rely on that: a path still containing either
+    is refused.
     """
     if not isinstance(chemin, str) or not chemin.startswith(PREFIXE):
         return False
@@ -59,14 +57,14 @@ def dans_la_portee(chemin):
 # --------------------------------------------------------------- helpers
 
 def _entier(valeurs, cle, defaut, mini, maxi):
-    """Deux comportements distincts, et c'est voulu.
+    """Two distinct behaviours, and that is deliberate.
 
-    Une valeur ILLISIBLE (`page=zero`) retombe sur le defaut : le client s'est
-    trompe de type, on ne peut rien en tirer. Une valeur HORS BORNES
-    (`limit=100000`, `limit=-4`) est ramenee dans les bornes : l'intention est
-    lisible, et la refuser obligerait chaque client a connaitre le plafond
-    avant de demander. C'est la convention des API paginees, et elle est
-    ecrite dans la specification.
+    An UNREADABLE value (`page=zero`) falls back to the default: the client got
+    the type wrong, nothing can be made of it. An OUT-OF-RANGE value
+    (`limit=100000`, `limit=-4`) is clamped: the intent is legible, and
+    refusing it would force every client to know the ceiling before asking.
+    That is the convention for paginated APIs, and it is written in the
+    specification.
     """
     try:
         n = int((valeurs.get(cle) or [str(defaut)])[0])
@@ -76,12 +74,12 @@ def _entier(valeurs, cle, defaut, mini, maxi):
 
 
 def _fiche(f):
-    """Ce qu'on publie d'un fichier de la bibliotheque.
+    """What we publish about a library file.
 
-    Le chemin ABSOLU n'en fait pas partie. Il n'apprend rien a un client, et il
-    revele l'arborescence du serveur — y compris, souvent, le nom de compte de
-    la personne. Le chemin relatif suffit a designer un jeu et c'est deja la
-    cle utilisee partout ailleurs.
+    The ABSOLUTE path is not part of it. It teaches a client nothing, and it
+    reveals the server's directory tree — often including the person's account
+    name. The relative path is enough to designate a game, and it is already
+    the key used everywhere else.
     """
     return {
         "key": f.get("rel"),
@@ -115,10 +113,11 @@ def _page(items, params):
 # ------------------------------------------------------------------ routage
 
 def router(chemin, params, methode, ctx):
-    """Rend (code, objet) ou None si la route est inconnue.
+    """Return (code, object), or None when the route is unknown.
 
-    `ctx` porte ce que le serveur sait faire, injecte plutot qu'importe : ce
-    module ne doit pas dependre de `server`, qui depend deja de tout le reste.
+    `ctx` carries what the server knows how to do, injected rather than
+    imported: this module must not depend on `server`, which already depends on
+    everything else.
     """
     nom = chemin[len(PREFIXE):]
 
@@ -150,11 +149,11 @@ def router(chemin, params, methode, ctx):
             fiches.sort(key=lambda f: (f["name"] or "").lower())
             return 200, _page(fiches, params)
         if nom.startswith("library/"):
-            # La cle d'un jeu EST son chemin relatif : elle contient des
-            # espaces, des crochets, parfois une apostrophe. Elle arrive donc
-            # percent-encodee, et la comparer telle quelle ne trouve jamais
-            # rien. Seule la cle est decodee, pas le chemin entier : decoder
-            # avant le routage laisserait un `%2F` fabriquer un segment.
+            # A game's key IS its relative path: it contains spaces, square
+            # brackets, sometimes an apostrophe. So it arrives percent-encoded,
+            # and comparing it as-is never finds anything. Only the key is
+            # decoded, not the whole path: decoding before routing would let a
+            # `%2F` forge a segment.
             cle = urllib.parse.unquote(nom[len("library/"):])
             lib = ctx["inventaire"]()
             for f in lib["files"]:
@@ -187,8 +186,8 @@ def router(chemin, params, methode, ctx):
             lance, motif = ctx["lancer"](taches[nom])
             if lance:
                 return 202, {"started": True, "task": nom}
-            # 409 et pas 400 : la demande est valide, c'est l'ETAT du serveur
-            # qui l'empeche. Un client qui reessaie plus tard a raison.
+            # 409 and not 400: the request is valid, it is the server's STATE
+            # that prevents it. A client retrying later is right to.
             return 409, {"error": "busy", "message": motif}
 
     return None
@@ -248,9 +247,9 @@ SPEC = {
             "summary": "Version, licence, source, uptime.",
             "responses": {"200": _reponse(
                 "Service identity.",
-                # `__version__` plutot qu'un litteral : un exemple de
-                # specification qui annonce une version d'il y a deux
-                # publications se lit comme une specification perimee.
+                # `__version__` rather than a literal: a specification example
+                # announcing a version from two releases ago reads as a stale
+                # specification.
                 {"version": __version__, "api": "v1", "uptime_s": 8412,
                  "licence": "AGPL-3.0-or-later", "library_ready": True})}}},
         "/api/v1/stats": {"get": {
@@ -319,7 +318,7 @@ SPEC = {
 
 
 def routes_decrites():
-    """Les couples (methode, chemin) que la specification annonce."""
+    """The (method, path) pairs the specification announces."""
     out = set()
     for chemin, ops in SPEC["paths"].items():
         for methode in ops:
