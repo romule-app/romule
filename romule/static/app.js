@@ -1,41 +1,40 @@
 "use strict";
-// Interface de la ludotheque Switch. Tout l'etat metier vient du serveur ;
-// ce fichier l'affiche, gere les onglets, les animations et relaie les actions.
+// The game library's interface. All business state comes from the server;
+// this file renders it, handles the tabs, the animations, and relays actions.
 
 let DATA = {files: [], stats: {}, config: {}};
 let GAMES = [];                 // jeux regroupes (vue bibliotheque)
-let DGAMES = [];                // fichiers listes sur la console
-let CONSET = new Set();          // empreintes (tid|version) des jeux sur la console
-let BROWSE_PATH = "";            // dossier courant du navigateur de la console
-let CIBLE_PARCOURS = 'roms';     // ce que le navigateur enregistrera : 'roms', 'switch' ou une plateforme
-let TREE = {};                   // etat des dossiers GAMES/UPDATE/DLC sur la console
+let DGAMES = [];                // files listed on the console
+let CONSET = new Set();          // fingerprints (tid|version) of the games on the console
+let BROWSE_PATH = "";            // current folder of the console browser
+let CIBLE_PARCOURS = 'roms';     // what the browser will save: 'roms', 'switch' or a platform
+let TREE = {};                   // state of the GAMES/UPDATE/DLC folders on the console
 let FILTER = "all";             // all | update | convert | clean
-let CONN = {};                  // lien vers la console : {kind: 'usb'|'wifi'|null}
-let CONN_INFO = null;           // identite de la console reliee (nom, serie)
-let META = {};                  // {tid: {nom, resume}} — fiches officielles en cache
-let NANDST = [];                // MAJ/DLC et leur etat vis-a-vis d'Eden
-let NANDCONN = false;           // la console repond-elle ?
-let SYSTEMS = [];               // consoles/systemes disponibles
-// La bibliotheque s'ouvre sur TOUTES les plateformes : c'est ce qu'on possede,
-// et non l'une de ses parties. Le choix precedent de l'utilisateur prime — il
-// etait ECRIT dans le stockage local a chaque changement, mais n'etait jamais
-// relu, donc perdu a chaque ouverture.
+let CONN = {};                  // link to the console: {kind: 'usb'|'wifi'|null}
+let CONN_INFO = null;           // identity of the linked console (name, serial)
+let META = {};                  // {tid: {nom, resume}} — official details, cached
+let NANDST = [];                // updates/DLC and their state as far as Eden goes
+let NANDCONN = false;           // is the console answering?
+let SYSTEMS = [];               // available consoles/systems
+// The library opens on ALL platforms: that is what you own, not one slice of
+// it. The user's previous choice wins — it was WRITTEN to local storage on
+// every change, but never read back, so lost on every visit.
 let SYS = (() => {
   try { return localStorage.getItem('systeme') || 'all'; } catch (e) { return 'all'; }
 })();
-let SGAMES = [];                // jeux du systeme generique courant
-let SCONSOLE = [];              // noms de fichiers de ce systeme sur la console
-let SCONSOLE_PATHS = [];        // leurs chemins complets, pour pouvoir les retirer
-let SCONSOLE_TAILLES = {};      // taille par chemin : la fiche affichait 0 octet
-let SCONSOLE_TITRES = {};       // titre officiel par chemin, quand il est connu
-let SALL = [];                  // toutes les plateformes, pour la vue d'ensemble
-// Ce qu'on a deja recu, par plateforme. Un cache de SESSION : il ne survit pas
-// au rechargement de la page, et il est vide des que l'inventaire bouge —
-// fin de tache, « Actualiser », depot de fichiers. Un cache qu'on ne sait pas
-// invalider est un bug d'affichage a retardement.
+let SGAMES = [];                // games of the current generic system
+let SCONSOLE = [];              // that system's file names on the console
+let SCONSOLE_PATHS = [];        // their full paths, so they can be removed
+let SCONSOLE_TAILLES = {};      // size per path: the card used to show 0 bytes
+let SCONSOLE_TITRES = {};       // official title per path, when it is known
+let SALL = [];                  // every platform, for the overview
+// What we have already received, per platform. A SESSION cache: it does not
+// survive a page reload, and it is emptied as soon as the inventory moves —
+// task end, "Refresh", file drop. A cache you cannot invalidate is a display
+// bug on a timer.
 const CACHE_SYS = {};
-// Numero de la demande en cours : une reponse plus lente qu'un second clic ne
-// doit pas ecraser l'inventaire de la plateforme finalement choisie.
+// Number of the request in flight: an answer slower than a second click must
+// not overwrite the inventory of the platform finally chosen.
 let CHARGE_SYS = 0;
 
 function oublierCacheSysteme() {
@@ -58,9 +57,9 @@ function appliquerSysteme(d) {
 }
 
 const $ = id => document.getElementById(id);
-// Les unites binaires ne s'ecrivent pas pareil partout : « Gio » en francais,
-// « GiB » en anglais. Elles apparaissent sur CHAQUE jaquette — c'etait le
-// francais le plus visible de toute l'interface anglaise.
+// Binary units are not written the same everywhere: "Gio" in French, "GiB" in
+// English. They appear on EVERY cover — it was the most visible French in the
+// whole English interface.
 const UNITES = {
   fr: ['o', 'Kio', 'Mio', 'Gio', 'Tio'],
   en: ['B', 'KiB', 'MiB', 'GiB', 'TiB'],
@@ -75,61 +74,60 @@ const fmt = b => {
 const esc = s => String(s).replace(/[&<>"']/g,
   c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
 
-// Une valeur qui entre dans une CHAINE JavaScript a l'interieur d'un attribut
-// de gestionnaire — `onclick="app.faire('ICI')"` — traverse DEUX analyseurs :
-// l'analyseur HTML decode d'abord les entites, puis le moteur JavaScript
-// compile ce qu'il en reste.
+// A value entering a JavaScript STRING inside a handler attribute —
+// `onclick="app.faire('HERE')"` — crosses TWO parsers: the HTML parser decodes
+// the entities first, then the JavaScript engine compiles whatever is left.
 //
-// `esc()` ne repond qu'au premier, et c'est ce qui rendait le trou invisible :
-// il transforme bien l'apostrophe en `&#39;`, mais l'analyseur HTML la rend
-// AVANT que le JavaScript ne soit lu. La chaine se referme, et la suite de la
-// valeur devient du code.
+// `esc()` only answers the first, and that is what made the hole invisible: it
+// does turn the apostrophe into `&#39;`, but the HTML parser gives it back
+// BEFORE the JavaScript is read. The string closes, and the rest of the value
+// becomes code.
 //
-// Il n'y a rien d'exotique a fabriquer une telle valeur : la cle d'une carte
-// EST le chemin du fichier, et rien n'interdit l'apostrophe dans un nom de
-// fichier. `x',alert(1),'.gba` suffit.
+// There is nothing exotic about producing such a value: a card's key IS the
+// file path, and nothing forbids an apostrophe in a file name.
+// `x',alert(1),'.gba` is enough.
 //
-// On echappe donc pour le contexte JavaScript D'ABORD, pour le contexte HTML
-// ensuite. L'ordre compte : l'inverse laisserait `esc` reintroduire des
-// entites que le moteur JavaScript ne sait pas relire.
+// So we escape for the JavaScript context FIRST, for the HTML context second.
+// The order matters: the reverse would let `esc` reintroduce entities the
+// JavaScript engine cannot read back.
 //
-// Le vrai remede reste de sortir ces valeurs des attributs — `data-grp` le
-// fait deja pour la cle de groupe. Tant que les gestionnaires en ligne sont
-// la, c'est cet encodage qui tient.
-// Alias de `t()`, pour les rares fonctions dont un parametre s'appelle deja
-// `t` — un title ID, un element. Renommer le parametre serait plus propre ;
-// l'alias evite de toucher a des signatures utilisees partout, et le garde-fou
-// de test_ui_injection.js continue d'interdire les autres masquages.
+// The real remedy is still to get these values out of attributes — `data-grp`
+// already does so for the group key. While inline handlers are around, this
+// encoding is what holds.
+// An alias for `t()`, for the few functions whose parameter is already called
+// `t` — a title ID, an element. Renaming the parameter would be cleaner; the
+// alias avoids touching signatures used everywhere, and the guard in
+// test_ui_injection.js still forbids the other shadowings.
 const t18n = (texte, defaut) => t(texte, defaut);
 
 const jsq = v => esc(JSON.stringify(String(v == null ? '' : v))
-  .slice(1, -1)                    // JSON rend une chaine entre guillemets
-  .replace(/'/g, "\\'")            // que JSON, lui, n'echappe pas
-  // JSON laisse passer U+2028/2029 bruts ; le moteur JavaScript les a longtemps
-  // lus comme des fins de ligne, donc comme une chaine non terminee.
+  .slice(1, -1)                    // JSON returns a quoted string
+  .replace(/'/g, "\\'")            // which JSON itself does not escape
+  // JSON lets raw U+2028/2029 through; the JavaScript engine long read them as
+  // line terminators, hence as an unterminated string.
   .replace(/\u2028/g, '\\u2028')
   .replace(/\u2029/g, '\\u2029'));
-// Titre officiel dans la langue choisie, quand la fiche est en cache ; sinon le
-// nom du fichier. Un nom de fichier dit « [Game] Pokemon Sword [0100ABF...] » la
-// ou l'editeur dit « Pokémon Épée ».
-// Quand aucune fiche n'existe — un pack .xci ne porte aucun title ID et `nsz`
-// echoue a le lire — on rend le nom de fichier presentable plutot que d'afficher
-// « Mario.Kart.8.Deluxe.(v3.0.3 & DLC).SuperXCI -MBC ».
+// The official title in the chosen language, when the entry is cached;
+// otherwise the file name. A file name says "[Game] Pokemon Sword
+// [0100ABF...]" where the publisher says "Pokémon Sword".
+// When no entry exists — an .xci pack carries no title ID and `nsz` fails to
+// read it — we make the file name presentable rather than showing
+// "Mario.Kart.8.Deluxe.(v3.0.3 & DLC).SuperXCI -MBC".
 const GROUPES_SCENE = /\b(superxci|xci|nsp|nsz|xcz|mbc|upd|repack|nsw|switch|multi\d*|fr|eu|us|jp|eur|usa|jpn)\b/gi;
 
 function nomLisible(fichier) {
-  // toute extension de ROM, pas seulement celles de la Switch : « .gba »,
-  // « .iso », « .chd »… La borne 2-4 caracteres evite de tronquer un titre.
+  // any ROM extension, not only the Switch ones: ".gba", ".iso", ".chd"… The
+  // 2-4 character bound avoids truncating a title.
   let s = String(fichier || '').replace(/\.[a-z0-9]{2,4}$/i, '');
   s = s.replace(/[\[\(][^\])]*[\])]/g, ' ');       // [tid], (EU), (v3.0.3 & DLC)
   s = s.replace(/\bv\d+(\.\d+)*\b/gi, ' ');        // v1.0.1, v262144
-  // les noms « scene » separent par des points : on ne remplace que si le nom
-  // en compte plus que de vrais espaces, pour ne pas casser « Super Smash Bros. »
+  // "scene" names separate with dots: we only replace when the name has more
+  // of them than real spaces, so as not to break "Super Smash Bros."
   const pts = (s.match(/\./g) || []).length, esp = (s.match(/ /g) || []).length;
   if (pts > esp) s = s.replace(/\./g, ' ');
   s = s.replace(/[-_]+/g, ' ').replace(GROUPES_SCENE, ' ');
-  // crochets et parentheses orphelins : certains noms sont mal formes, comme
-  // « … [0100ABF008968000][v0][US]) », et laissent une parenthese seule
+  // orphan brackets and parentheses: some names are malformed, like
+  // "… [0100ABF008968000][v0][US])", and leave a lone parenthesis
   s = s.replace(/[\[\]{}()]/g, ' ');
   s = s.replace(/\s{2,}/g, ' ').replace(/^[\s.\-–]+|[\s.\-–]+$/g, '');
   return s || pretty(fichier);
@@ -138,13 +136,13 @@ function nomLisible(fichier) {
 function nomJeu(g) {
   const m = g && g.tid && META[String(g.tid).toLowerCase()];
   if (m && m.nom) return m.nom.replace(/^\(([^)]{2,14})\)\s*/, '').trim();
-  // hors Switch : titre officiel resolu par SteamGridDB, s'il a ete recupere
+  // off-Switch: official title resolved by SteamGridDB, when it was fetched
   const t = g && (g.titre || (g.files && g.files[0] && g.files[0].titre));
   if (t) return t;
   return nomLisible(pretty((g && g.name) || ''));
 }
-// Provenance du resume affiche. Aujourd'hui une seule source demande d'etre
-// citee — Wikipedia, sous CC BY-SA — mais la forme se prete a d'autres.
+// Where the shown summary came from. Today only one source requires citing —
+// Wikipedia, under CC BY-SA — but the shape allows for others.
 function creditResume(g) {
   const f = (g && (g.files && g.files[0])) || g || {};
   const src = String(f.source_resume || g.source_resume || '');
@@ -161,20 +159,20 @@ function creditResume(g) {
 function resumeJeu(g) {
   const m = g && g.tid && META[String(g.tid).toLowerCase()];
   if (m && m.resume) return m.resume;
-  // Hors Switch, le resume vient d'IGDB et voyage avec le jeu : sans ce repli,
-  // aucune description ne s'affichait jamais pour ces plateformes.
+  // Off-Switch the summary comes from IGDB and travels with the game: without
+  // this fallback, no description ever showed for those platforms.
   const f = g && (g.resume || (g.files && g.files[0] && g.files[0].resume));
   return f || '';
 }
 
-// Annee et editeur, quand la source les fournit (IGDB pour les non-Switch).
+// Year and publisher, when the source supplies them (IGDB for non-Switch).
 function contexteJeu(g) {
   const f = g && (g.files && g.files[0]) || g || {};
   return [f.annee || g.annee, f.editeur || g.editeur].filter(Boolean).join('  ·  ');
 }
-// Un compteur qui passe de 34 a 10 d'un seul coup ne se remarque pas : on ne
-// sait pas s'il a change ni dans quel sens. En le faisant defiler, le
-// mouvement dit « ca vient de bouger, et ca descend ».
+// A counter jumping from 34 to 10 in one go goes unnoticed: you cannot tell
+// whether it changed, nor in which direction. Rolling it makes the movement
+// say "that just moved, and it is going down".
 const CHIFFRE_MS = 340;
 const CHIFFRE_EN_COURS = new WeakMap();
 
@@ -183,8 +181,8 @@ function chiffreAnime(el, cible) {
   const depart = Number(el.textContent.replace(/\D/g, ''));
   const enCours = CHIFFRE_EN_COURS.get(el);
   if (enCours) cancelAnimationFrame(enCours);
-  // Rien a raconter : premier affichage, valeur inchangee, mouvement coupe —
-  // ou DOM simplifie des tests, qui n'a pas d'horloge d'animation.
+  // Nothing to tell: first render, unchanged value, motion switched off — or
+  // the tests' simplified DOM, which has no animation clock.
   if (!Number.isFinite(depart) || depart === cible ||
       typeof requestAnimationFrame !== 'function' ||
       document.documentElement.dataset.mvt === 'aucun') {
@@ -194,7 +192,7 @@ function chiffreAnime(el, cible) {
   const t0 = performance.now();
   const pas = (maintenant) => {
     const p = Math.min(1, (maintenant - t0) / CHIFFRE_MS);
-    // depart lent puis arret net : le chiffre « se pose » sur sa valeur
+    // slow start then a sharp stop: the number "lands" on its value
     const doux = 1 - Math.pow(1 - p, 3);
     el.textContent = String(Math.round(depart + (cible - depart) * doux));
     if (p < 1) CHIFFRE_EN_COURS.set(el, requestAnimationFrame(pas));
@@ -203,7 +201,7 @@ function chiffreAnime(el, cible) {
   CHIFFRE_EN_COURS.set(el, requestAnimationFrame(pas));
 }
 
-// Coupe proprement sur un mot, jamais au milieu.
+// Cut cleanly on a word, never in the middle of one.
 function extrait(t, n) {
   t = String(t || '').trim();
   if (t.length <= n) return t;
@@ -211,25 +209,24 @@ function extrait(t, n) {
   return c.slice(0, Math.max(c.lastIndexOf(' '), n - 20)).replace(/[\s,;:.]+$/, '') + '…';
 }
 
-// remplace les colons modificateurs des noms de fichiers Switch par ':'
+// replace the modifier colons of Switch file names with ':'
 const pretty = s => String(s).replace(/[꞉∶：]/g, ':');
 const tidBase = tid => {
   let n = parseInt(tid[12], 16); if (n % 2) n--;
   return tid.slice(0, 12) + n.toString(16) + '000';
 };
-function tidHtml(t) {   // title ID decoupe (detail uniquement)
-  // La classe `tid` est dans CLASSES_DONNEES : elle porte un identifiant, qui
-  // ne se traduit pas. Mais quand il n'y en a pas, elle portait un LIBELLE, qui
-  // lui doit se traduire — et restait donc en francais. Meme defaut que `cnom`,
-  // pour la quatrieme fois : une classe ne peut pas etre a la fois un style et
-  // un marqueur. Le libelle prend sa propre classe.
+function tidHtml(t) {   // the title ID, split up (detail view only)
+  // The `tid` class is in CLASSES_DONNEES: it carries an identifier, which is
+  // not translated. But when there is none, it carried a LABEL, which must be
+  // — and so stayed French. The same defect as `cnom`, for the fourth time: a
+  // class cannot be both a style and a marker. The label gets its own class.
   if (!t) return '<span class="tid-vide">' + esc(t18n('pas de title ID')) + '</span>';
   return '<span class="tid">' + t.slice(0, 12) + '<b>' + t[12] + '</b>' +
     t.slice(13) + '</span>';
 }
-// `discret` : l'appelant affiche lui-meme le refus. Un mot de passe trop
-// court est une correction a faire, pas une panne : la fenetre « Une action
-// n'a pas abouti » serait hors sujet.
+// `discret`: the caller shows the refusal itself. A password that is too short
+// is a correction to make, not a fault: the "An action did not complete"
+// dialog would be beside the point.
 async function api(path, body, discret) {
   let j;
   try {
@@ -240,9 +237,9 @@ async function api(path, body, discret) {
       : {});
     j = await r.json();
   } catch (e) {
-    // Une reponse HTML au lieu de JSON, c'est la page de connexion : la session
-    // a expire, ou l'authentification vient d'etre activee ailleurs. Le message
-    // brut (« Unexpected token '<' ») ne disait rien a personne.
+    // An HTML response instead of JSON is the login page: the session expired,
+    // or authentication was just switched on elsewhere. The raw message
+    // ("Unexpected token '<'") told nobody anything.
     j = /Unexpected token '<'|not valid JSON/.test(e.message || '')
       ? {error: 'Session expirée : reconnecte-toi.', _session: true}
       : {error: phrase('réseau : %s', e.message)};
@@ -276,48 +273,46 @@ async function api(path, body, discret) {
   }
   return j;
 }
-// ------------------------------------------------------------ traductions
-// Les libelles vivent dans romule/locales/<code>.json, jamais dans le code.
-// Le texte FRANCAIS est la cle de traduction (principe gettext). Deux raisons :
-// on n'invente pas 570 identifiants, et une traduction manquante retombe sur
-// une phrase lisible plutot que sur « lib.filter.all ».
+// ----------------------------------------------------------- translations
+// The labels live in romule/locales/<code>.json, never in the code. The FRENCH
+// text is the translation key (the gettext principle). Two reasons: we do not
+// invent 570 identifiers, and a missing translation falls back to a readable
+// sentence rather than to "lib.filter.all".
 //
-// La traduction s'applique au DOM une fois celui-ci construit, pas a chaque
-// endroit du code qui fabrique du texte. Un observateur suffit donc a couvrir
-// l'interface entiere, y compris ce qui est genere en JavaScript, sans qu'on
-// ait a modifier 400 appels — et sans qu'un oubli soit possible.
+// Translation is applied to the DOM once it is built, not at every place in the
+// code that produces text. One observer therefore covers the whole interface,
+// including what JavaScript generates, without touching 400 call sites — and
+// without any possibility of forgetting one.
 let I18N = {};
-// Langue d'affichage. La CLE de traduction reste la phrase francaise — c'est
-// le principe gettext retenu par le projet — mais la langue par defaut est
-// l'anglais : `en.json` traduit ces cles au chargement.
+// Display language. The translation KEY stays the French sentence — the
+// gettext principle this project adopted — but the default language is
+// English: `en.json` translates those keys on load.
 let LANGUE = 'en';
 
-// Ce qu'on ne traduit JAMAIS : du code, des chemins, et surtout les donnees de
-// l'utilisateur (noms de jeux, adresses email, chemins de fichiers).
+// What we NEVER translate: code, paths, and above all the user's data (game
+// names, email addresses, file paths).
 const NON_TRADUIT = new Set(['CODE', 'PRE', 'SCRIPT', 'STYLE', 'TEXTAREA']);
-// Ces classes marquent des noeuds dont TOUT le contenu est une donnee : un
-// titre de jeu, une adresse, un chemin. Elles ne doivent jamais servir aussi de
-// selecteur de style pour du texte d'interface — c'est le defaut qui a fige
-// `tid`, puis `cnom`, puis le journal entier.
+// These classes mark nodes whose ENTIRE content is data: a game title, an
+// address, a path. They must never double as a style selector for interface
+// text — that is the defect that froze `tid`, then `cnom`, then the whole log.
 //
-// `jline`, `brow` et `crumb` en sont sorties : elles enveloppent un MELANGE.
-// Une ligne de journal contient l'horodatage, le niveau et le message ; seul
-// le message est une donnee. Les envelopper entierement gelait « Dossier
-// vide. », « .. (dossier parent) » et tout le journal, qui restait donc en
-// francais dans une interface anglaise.
+// `jline`, `brow` and `crumb` were taken out: they wrap a MIXTURE. A log line
+// holds the timestamp, the level and the message; only the message is data.
+// Wrapping them whole froze "Dossier vide.", ".. (dossier parent)" and the
+// entire log, which therefore stayed French in an English interface.
 //
-// La donnee porte desormais `data-i18n-skip`, l'attribut que `traduisible()`
-// lit deja : il marque le noeud exact, pas son voisinage.
+// The data now carries `data-i18n-skip`, the attribute `traduisible()` already
+// reads: it marks the exact node, not its neighbourhood.
 const CLASSES_DONNEES = ['gname', 'compte-mail', 'pfchemin', 'tid',
                          'hostchip', 'cnom'];
 
-// Les phrases du HTML sont reparties sur plusieurs lignes : le noeud de texte
-// contient des retours a la ligne et des indentations que la cle n'a pas. On
-// compare donc sur une forme a espaces normalises.
+// The HTML's sentences are spread over several lines: the text node holds
+// newlines and indentation the key does not have. So we compare on a
+// whitespace-normalised form.
 let I18N_PLAT = {};
-// Les phrases construites a l'execution (« 12 plateforme(s) sous … ») ne
-// peuvent pas correspondre exactement. Une entree contenant %s devient un
-// gabarit : on retrouve la phrase et on replace les parties variables.
+// Sentences built at run time ("12 platforms under …") cannot match exactly.
+// An entry containing %s becomes a template: we find the sentence again and put
+// the variable parts back.
 let I18N_GABARITS = [];
 
 function _plat(s) {
@@ -353,18 +348,17 @@ function traduit(texte) {
   return null;
 }
 
-// Un nombre suivi de son unite : « 15 jeu(x) ». Ecrit `n + ' jeu(x)'`, cela
-// formait une chaine dont le NOMBRE fait partie — donc introuvable dans un
-// catalogue, donc jamais traduite. Le nombre reste dehors, l'unite seule est
-// une cle.
-// « fichier(s) » n'est pas un pluriel, c'est un aveu. Et le remplacer par une
-// regle unique serait remplacer une faute par une autre : les langues ne
-// s'accordent pas de la meme facon. En francais, 0 et 1 sont au SINGULIER —
-// « 0 fichier », « 1 fichier ». En anglais, seul 1 l'est — « 0 files ».
+// A number followed by its unit: "15 games". Written `n + ' game(s)'`, that
+// formed a string the NUMBER was part of — hence unfindable in a catalogue,
+// hence never translated. The number stays outside; the unit alone is a key.
+// "file(s)" is not a plural, it is an admission. And replacing it with a single
+// rule would swap one mistake for another: languages do not agree the same way.
+// In French, 0 and 1 are SINGULAR — "0 fichier", "1 fichier". In English, only
+// 1 is — "0 files".
 //
-// Le modele porte donc les deux formes, `{singulier|pluriel}`, et la langue
-// choisit. Une seule cle de catalogue par phrase, et le traducteur ecrit les
-// deux formes de SA langue sans avoir a connaitre celles du francais.
+// So the template carries both forms, `{singular|plural}`, and the language
+// picks. One catalogue key per sentence, and the translator writes the two
+// forms of THEIR language without needing to know the French ones.
 const PLURIEL = {
   fr: n => (Math.abs(n) < 2 ? 0 : 1),
   en: n => (Math.abs(n) === 1 ? 0 : 1),
@@ -377,23 +371,22 @@ function accorder(texte, n) {
                                (_, sing, plur) => (i ? plur : sing));
 }
 
-// `nb(3, '{fichier|fichiers}')` -> « 3 fichiers ». Meme notation que dans les
-// phrases : une seule convention a retenir, et une seule a traduire.
+// `nb(3, '{fichier|fichiers}')` -> "3 fichiers". The same notation as in
+// sentences: one convention to remember, and one to translate.
 function nb(n, unite) {
   return n + ' ' + accorder(t(unite), n);
 }
 
-// Une phrase entiere ou le nombre est au milieu. `%d` est remplace dans
-// l'ordre par chaque valeur donnee.
+// A whole sentence with the number in the middle. `%d` is replaced, in order,
+// by each value given.
 function phrase(modele, ...valeurs) {
-  // Les deux marqueurs sont remplaces DANS L'ORDRE, et non par type : une
-  // traduction peut les inverser, mais elle garde leur nombre. Ne connaitre
-  // que %d laissait un « %s » brut a l'ecran des qu'un chemin ou un nom
-  // entrait dans une phrase.
+  // Both markers are replaced IN ORDER, not by type: a translation may swap
+  // them round, but it keeps their count. Knowing only %d left a raw "%s" on
+  // screen as soon as a path or a name entered a sentence.
   let sortie = t(modele);
   valeurs.forEach(v => { sortie = sortie.replace(/%[sd]/, v); });
-  // Le nombre qui commande l'accord est le PREMIER argument numerique : dans
-  // « %d fichier(s) sur %d », c'est le premier qui dit combien de fichiers.
+  // The number driving agreement is the FIRST numeric argument: in "%d files
+  // out of %d", it is the first that says how many files.
   const compte = valeurs.find(v => typeof v === 'number'
                                    || (typeof v === 'string' && /^\d+$/.test(v)));
   return accorder(sortie, compte === undefined ? undefined : Number(compte));
@@ -403,17 +396,17 @@ function t(texte, defaut) {
   return traduit(texte) || defaut || texte;
 }
 
-// Un attribut pose AVANT que le catalogue ne soit lu reste dans la langue du
-// premier passage : l'observateur n'ecoute que `childList`, et sa valeur —
-// souvent assemblee — n'est la cle de rien. On garde donc la ou les cles SUR
-// l'element, et on recalcule les attributs a chaque changement de langue.
+// An attribute set BEFORE the catalogue is read stays in the language of the
+// first pass: the observer only listens to `childList`, and its value — often
+// assembled — is the key to nothing. So we keep the key or keys ON the element,
+// and recompute the attributes on every language change.
 //
 //   poserAttr(el, 'title', 'Une phrase.')
 //   poserAttr(el, 'aria-label', '%s — %s', nom, aide)
 //
-// Les valeurs interpolees repassent elles aussi par `t()` au recalcul : ce
-// sont des libelles ici, et `t()` rend son entree telle quelle quand aucune
-// cle ne correspond, donc un chemin ou un nom de fichier n'y risque rien.
+// The interpolated values go through `t()` again on recompute: they are labels
+// here, and `t()` returns its input unchanged when no key matches, so a path or
+// a file name risks nothing.
 function poserAttr(el, attribut, cle, ...valeurs) {
   if (!el) return;
   const table = JSON.parse(el.dataset.i18nAttrs || '{}');
@@ -460,7 +453,7 @@ function traduireDOM(racine) {
       if (!net || !traduisible(n)) continue;
       const en = traduit(net);
       if (!en) continue;
-      // on conserve les espaces autour : ils portent la mise en page
+      // keep the surrounding whitespace: it carries the layout
       aChanger.push([n, brut.replace(net, en)]);
     }
     aChanger.forEach(([n, v]) => { n.nodeValue = v; });
@@ -479,8 +472,8 @@ function traduireDOM(racine) {
   }
 }
 
-// Tout ce qui est ajoute plus tard (cartes, fiches, dialogues) passe aussi par
-// la traduction : sans cela, seule la page initiale serait traduite.
+// Everything added later (cards, detail views, dialogs) goes through the
+// translation too: without that, only the initial page would be translated.
 const OBSERVATEUR = new MutationObserver(mutations => {
   if (EN_TRADUCTION || LANGUE === 'fr') return;
   for (const m of mutations) {
@@ -501,13 +494,12 @@ const OBSERVATEUR = new MutationObserver(mutations => {
 
 async function chargerLangue(code) {
   LANGUE = code || 'en';
-  // L'attribut `lang` de la page etait fige a « fr », quelle que soit la langue
-  // choisie : les lecteurs d'ecran prononcaient l'anglais avec une phonetique
-  // francaise, et la correction orthographique des champs de saisie se
-  // trompait de dictionnaire.
+  // The page's `lang` attribute was pinned to "fr" whatever the chosen
+  // language: screen readers pronounced English with French phonetics, and the
+  // spell-checking of input fields used the wrong dictionary.
   document.documentElement.setAttribute('lang', LANGUE);
-  // Le francais est la langue SOURCE : ses cles sont deja les phrases
-  // affichees, il n'y a rien a traduire.
+  // French is the SOURCE language: its keys are already the displayed
+  // sentences, there is nothing to translate.
   if (LANGUE === 'fr') { I18N = {}; return; }
   try {
     const r = await fetch('/locales/' + LANGUE + '.json');
@@ -519,33 +511,33 @@ async function chargerLangue(code) {
     traduireDOM(document.body);
     retraduireAttributs();
     OBSERVATEUR.observe(document.body, {childList: true, subtree: true});
-  } catch (e) { /* on garde les libelles francais */ }
+  } catch (e) { /* keep the French labels */ }
 }
 
-// Position de lecture de chaque onglet, pour y revenir tel qu'on l'a laisse.
+// Each tab's reading position, so it comes back as it was left.
 const DEFILEMENT = {};
 
-// Plafond d'un fichier depose, annonce par /api/health. 0 = pas encore connu.
+// Ceiling on an uploaded file, announced by /api/health. 0 = not known yet.
 let TELEVERSEMENT_MAX = 0;
 
-let JLOG = [];              // evenements recus du serveur
+let JLOG = [];              // events received from the server
 let JFILTRE = 'all';        // all | error | warn | info
-// Ce qui etait affiche au rendu precedent, pour n'animer que les lignes
-// reellement nouvelles. `sig` retient le filtre et la recherche : changer de
-// filtre reconstruit la liste sans qu'aucune ligne ne soit « arrivee ».
+// What was shown on the previous render, so only genuinely new lines are
+// animated. `sig` records the filter and the search: changing filter rebuilds
+// the list without any line having "arrived".
 let JVUES = {sig: '', n: 0};
 
 function messageLisible(chemin, err) {
   const e = String(err).toLowerCase();
-  // Ce n'est pas du texte affiche : c'est le message BRUT du serveur, qu'on
-  // reconnait pour le remplacer par la phrase lisible juste en dessous. Le
-  // traduire ferait echouer la reconnaissance.
+  // This is not displayed text: it is the server's RAW message, which we
+  // recognise in order to replace it with the readable sentence just below.
+  // Translating it would make the recognition fail.
   if (e.includes('route inconnue'))   // i18n:ok
     return "Cette fonction n'existe pas sur le serveur. Il tourne probablement " +
            "sur une version plus ancienne : arrête-le et relance python3 -m romule.";
   if (e.includes('reseau') || e.includes('failed to fetch'))
     return 'Le serveur ne répond plus. Vérifie qu\'il tourne toujours.';
-  if (e.includes('tache est deja en cours'))  // i18n:ok - message compare, pas affiche
+  if (e.includes('tache est deja en cours'))  // i18n:ok - message compared, not shown
     return 'Une autre opération est en cours. Attends qu\'elle se termine.';
   if (chemin.includes('/api/eden') || chemin.includes('/api/nand'))
     return 'Action sur la console impossible. Vérifie qu\'elle est bien connectée.';
@@ -554,9 +546,9 @@ function messageLisible(chemin, err) {
   return 'Le serveur a refusé cette action.';
 }
 
-// Une modale qui disparait d'un coup se lit comme un bug plutot que comme une
-// fermeture. On la laisse donc s'effacer, puis on vide son contenu — jamais
-// avant, sinon la fenetre se vide sous les yeux pendant qu'elle recule.
+// A modal that vanishes at once reads as a bug rather than as a closing. So we
+// let it fade, then empty its content — never before, or the dialog empties
+// itself before your eyes while it is still receding.
 const FERMETURE_MS = 160;
 
 function fermerVoile(el) {
@@ -568,23 +560,23 @@ function fermerVoile(el) {
   }
   el.classList.add('ferme');
   setTimeout(() => {
-    // Une fenetre a pu etre rouverte entre-temps — un bouton de dialogue qui
-    // ferme puis pose la question suivante, par exemple. L'ouverture retire
-    // `ferme` ; sans ce controle, on viderait la nouvelle fenetre.
+    // A dialog may have been reopened meanwhile — a dialog button that closes
+    // then asks the next question, for instance. Opening removes `ferme`;
+    // without this check we would empty the new dialog.
     if (!el.classList.contains('ferme')) return;
     el.classList.remove('open', 'ferme', 'sansentree');
     el.innerHTML = '';
   }, FERMETURE_MS);
 }
 
-/* La jaquette cliquee GRANDIT jusqu'a devenir celle de la fiche, au lieu que
-   la fenetre apparaisse d'un coup sans lien visible avec la carte. C'est le
-   navigateur qui interpole : on se contente de donner le MEME nom de
-   transition aux deux images, et de muter le DOM dans le rappel.
+/* The clicked cover GROWS into the one on the detail view, instead of the
+   dialog appearing at once with no visible link to the card. The browser does
+   the interpolation: we merely give the SAME transition name to both images,
+   and mutate the DOM inside the callback.
 
-   Le nom doit etre unique dans la page pendant la transition — deux elements
-   qui le portent en meme temps annulent l'effet — d'ou le nettoyage a la fin,
-   y compris si la transition est interrompue. */
+   The name must be unique in the page during the transition — two elements
+   carrying it at once cancel the effect — hence the cleanup at the end,
+   including when the transition is interrupted. */
 const NOM_TRANSITION = 'jaquette';
 
 function ouvrirDepuisJaquette(cle, muter) {
@@ -602,17 +594,17 @@ function ouvrirDepuisJaquette(cle, muter) {
   };
   source.style.viewTransitionName = NOM_TRANSITION;
   document.documentElement.classList.add('vt-fiche');
-  // La fenetre est deja entree : c'est la jaquette qui l'a amenee. Sans cette
-  // marque, retirer `vt-fiche` a la fin de la transition rendait son animation
-  // d'entree — qui se declenchait alors, une fois le mouvement termine, en
-  // faisant sauter la fiche de 28 px vers le bas avant de la faire remonter.
+  // The dialog has already entered: the cover brought it. Without this mark,
+  // removing `vt-fiche` at the end of the transition gave it back its entry
+  // animation — which then fired, once the movement was over, jumping the card
+  // 28 px down before pulling it back up.
   $('modal').classList.add('sansentree');
   try {
     const t = document.startViewTransition(() => {
-      // La carte CEDE le nom avant que la fiche ne le prenne. Deux elements
-      // qui le portent en meme temps dans l'etat d'arrivee font echouer la
-      // transition entiere (« aborted because of invalid state ») : la carte
-      // reste dans la page derriere la fenetre, elle ne disparait pas.
+      // The card GIVES UP the name before the detail view takes it. Two
+      // elements carrying it at once in the end state make the whole
+      // transition fail ("aborted because of invalid state"): the card stays
+      // in the page behind the dialog, it does not disappear.
       source.style.viewTransitionName = '';
       muter();
       const c = cible();
@@ -625,16 +617,15 @@ function ouvrirDepuisJaquette(cle, muter) {
   }
 }
 
-/* Le serveur ne connait que la tache EN COURS : son journal repart de zero a
-   chaque nouvelle tache. Le recopier tel quel — `JLOG = j.log` — effacait donc
-   tout ce qui precedait : les evenements du navigateur, et l'historique des
-   taches precedentes. Supprimer un jeu sur la console suffisait a vider le
-   journal, puisque la suppression ouvre une tache dont le journal est presque
-   vide.
+/* The server only knows the CURRENT task: its log restarts from zero with each
+   new one. Copying it wholesale — `JLOG = j.log` — therefore erased everything
+   before it: the browser's own events, and the history of previous tasks.
+   Deleting one game on the console was enough to empty the log, since the
+   deletion opens a task whose log is almost empty.
 
-   On n'ajoute donc que ce qui est apparu depuis le dernier sondage. Une liste
-   plus COURTE qu'au tour precedent signale une tache neuve : le serveur a
-   remis son compteur a zero, on remet le notre. */
+   So we only append what has appeared since the last poll. A list SHORTER than
+   the previous round signals a new task: the server reset its counter, we reset
+   ours. */
 let JLOG_SERVEUR = 0;
 
 function fusionnerJournal(recu) {
@@ -645,7 +636,7 @@ function fusionnerJournal(recu) {
 }
 
 function journal(line, niveau) {
-  // evenement cote navigateur : meme presentation que ceux du serveur
+  // a browser-side event: presented exactly like the server ones
   const d = new Date();
   JLOG.push({t: d.toTimeString().slice(0, 8), n: niveau || 'error', m: String(line)});
   JLOG = JLOG.slice(-800);
@@ -669,22 +660,21 @@ function renderJournal() {
   el.innerHTML = vues.length
     ? vues.map(e => '<div class="jline j-' + e.n + '">' +
         '<span class="jt" data-i18n-skip>' + e.t + '</span>' +
-        // Niveau machine (error, warn, info, ok) et message tel que le serveur
-        // l'a ecrit : deux donnees, pas des libelles.
+        // Machine level (error, warn, info, ok) and the message as the server
+        // wrote it: two pieces of data, not labels.
         '<span class="jn" data-i18n-skip>' + e.n + '</span>' +
         '<span class="jm" data-i18n-skip>' + esc(e.m) + '</span></div>').join('')
     : '<div class="jempty">' + (q
         ? phrase('Aucun événement pour « %s ».', esc(q))
         : t('Aucun événement.')) + '</div>';
 
-  // Comme un terminal : seules les lignes qui viennent d'arriver s'animent.
-  // Tout le bloc est reconstruit a chaque rendu, donc sans ce reperage c'est
-  // le journal ENTIER qui rejouerait son entree a chaque evenement — un
-  // clignotement permanent des que quelque chose tourne.
-  // Separateur impossible dans un nom de filtre. Ecrit en SEQUENCE
-  // d'echappement : un octet nul brut dans le fichier le fait passer pour
-  // binaire aux yeux de git et de grep, qui cessent alors d'en montrer le
-  // contenu.
+  // Like a terminal: only the lines that just arrived animate. The whole block
+  // is rebuilt on every render, so without this bookkeeping it is the ENTIRE
+  // log that would replay its entrance on every event — a permanent flicker
+  // whenever anything runs.
+  // A separator impossible in a filter name. Written as an ESCAPE SEQUENCE: a
+  // raw null byte in the file makes it look binary to git and grep, which then
+  // stop showing its contents.
   const signature = JFILTRE + '\u0000' + q;
   const neuves = signature === JVUES.sig ? vues.length - JVUES.n : 0;
   if (neuves > 0 && neuves <= 40) {
@@ -693,14 +683,14 @@ function renderJournal() {
       lignes[i].classList.add('neuve');
   }
   JVUES = {sig: signature, n: vues.length};
-  // Comme un terminal : on suit le flux tant qu'on est en bas, et on cesse de
-  // sauter des qu'on remonte pour lire. Forcer le defilement rendait le journal
-  // illisible pendant une tache.
+  // Like a terminal: we follow the stream while at the bottom, and stop
+  // jumping as soon as you scroll up to read. Forcing the scroll made the log
+  // unreadable during a task.
   if (JSUIVI) el.scrollTop = el.scrollHeight;
   majBoutonSuivi();
 }
 
-// Vrai tant que l'utilisateur n'a pas remonte le journal.
+// True while the user has not scrolled the log up.
 let JSUIVI = true;
 
 function majBoutonSuivi() {
@@ -712,9 +702,9 @@ function majBoutonSuivi() {
                                : 'Le journal reste où tu l\'as laissé.');
 }
 
-// ------------------------------------------------------------ dialogue
-// Une erreur ne doit pas se contenter d'un message fugace : on explique ce
-// qui a echoue, ce que ca implique, et on donne le detail technique a copier.
+// ------------------------------------------------------------- dialog
+// An error must not settle for a fleeting message: we explain what failed, what
+// it implies, and we give the technical detail to copy.
 const D_ICONE = {error: '⚠️', warn: '⚠️', ok: '✅', info: 'ℹ️'};
 
 function dialogue({titre, niveau = 'info', message = '', detail = '', options = [],
@@ -723,7 +713,7 @@ function dialogue({titre, niveau = 'info', message = '', detail = '', options = 
   const boutons = actions.map((a, i) =>
     '<button class="' + (a.principal ? 'go' : 'ghost') + '" data-di="' + i + '">' +
     esc(a.libelle) + '</button>').join('');
-  // Options a cocher : un seul point de decision plutot qu'une suite de fenetres.
+  // Checkable options: one decision point rather than a run of dialogs.
   const opts = options.length ? '<div class="dopts">' + options.map(o =>
     '<label class="dopt' + (o.desactive ? ' off' : '') + '">' +
     '<input type="checkbox" data-opt="' + o.id + '"' +
@@ -731,12 +721,12 @@ function dialogue({titre, niveau = 'info', message = '', detail = '', options = 
     '<span><b>' + esc(o.libelle) + '</b>' +
     (o.detail ? '<span class="dsub">' + esc(o.detail) + '</span>' : '') +
     '</span></label>').join('') + '</div>' : '';
-  // Champs de saisie : meme fenetre, meme validation, plutot qu'une succession
-  // de prompt() sans contexte.
+  // Input fields: the same dialog, the same validation, rather than a
+  // succession of context-free prompt() calls.
   const saisies = champs.length ? '<div class="dchamps">' + champs.map(c =>
     '<label class="dchamp"><span>' + esc(c.libelle) + '</span>' +
-    // `type` permet un champ mot de passe : le saisir en clair a l'ecran
-    // n'est pas acceptable.
+    // `type` allows a password field: typing one in the clear on screen is
+    // not acceptable.
     '<input type="' + esc(c.type || 'text') + '" data-champ="' + esc(c.id) + '" ' +
     'autocomplete="' + esc(c.auto || 'off') + '" ' +
     'value="' + esc(c.valeur || '') + '" ' +
@@ -749,8 +739,8 @@ function dialogue({titre, niveau = 'info', message = '', detail = '', options = 
       '<pre>' + esc(detail) + '</pre></details>' : '') +
     '<div class="acts">' + boutons +
     '<button class="ghost" data-di="close">' + esc(fermer) + '</button></div></div>';
-  // Rouvrir annule une fermeture en cours : sans cela, le nettoyage
-  // differe de `fermerVoile` viderait la fenetre qu'on vient d'ouvrir.
+  // Reopening cancels a closing in progress: without this, `fermerVoile`'s
+  // deferred cleanup would empty the dialog we just opened.
   el.classList.remove('ferme');
   el.classList.add('open');
   const premier = el.querySelector('[data-champ]');
@@ -768,14 +758,14 @@ function dialogue({titre, niveau = 'info', message = '', detail = '', options = 
   }));
 }
 
-// Trois notifications au maximum, et jamais deux fois le meme texte : une pile
-// qui s'allonge recouvre l'interface au lieu de l'expliquer.
+// Three notifications at most, and never the same text twice: a stack that
+// grows covers the interface instead of explaining it.
 const TOAST_MAX = 3;
 
 function toast(msg, kind) {
   const pile = $('toasts');
   const jumeau = [...pile.children].find(t => t.dataset.msg === msg);
-  if (jumeau) {                             // deja affiche : on le compte
+  if (jumeau) {                             // already shown: we count it
     const n = (+jumeau.dataset.n || 1) + 1;
     jumeau.dataset.n = n;
     jumeau.textContent = msg + '  ×' + n;
@@ -790,16 +780,15 @@ function toast(msg, kind) {
   setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 300); }, 3600);
 }
 
-// Un toast qui porte une ACTION, et qui vit plus longtemps.
+// A toast carrying an ACTION, which lives longer.
 //
-// La corbeille EST l'annulation : demander « êtes-vous sûr ? » avant d'y
-// mettre un fichier fait payer a chaque fois le prix d'une erreur qui ne
-// coute rien. On agit, et on propose de revenir en arriere — huit secondes,
-// le temps de s'apercevoir qu'on s'est trompe.
+// The trash IS the undo: asking "are you sure?" before putting a file in it
+// charges, every time, the price of a mistake that costs nothing. We act, and
+// we offer to go back — eight seconds, long enough to notice the mistake.
 //
-// Les actions VRAIMENT irreversibles — vider la corbeille, effacer le
-// journal, revoquer une cle — gardent leur confirmation. La regle : on
-// confirme ce qu'on ne peut pas defaire, on propose d'annuler le reste.
+// The TRULY irreversible actions — emptying the trash, clearing the log,
+// revoking a key — keep their confirmation. The rule: confirm what cannot be
+// undone, offer to undo the rest.
 function toastAction(msg, libelle, faire, kind) {
   const pile = $('toasts');
   while (pile.children.length >= TOAST_MAX) pile.firstChild.remove();
@@ -824,25 +813,25 @@ function toastAction(msg, libelle, faire, kind) {
   return fermer;
 }
 
-// Au demarrage, l'etat est deja lisible dans l'en-tete et dans les compteurs :
-// empiler des notifications par-dessus n'apprend rien et masque l'interface.
-// Elles vont donc au journal seul, qui est fait pour ca.
+// At startup the state is already legible in the header and in the counters:
+// piling notifications on top teaches nothing and hides the interface. So they
+// go to the log alone, which is made for it.
 let DEMARRAGE = true;
 
 function annonce(msg, kind) {
   journal(msg, kind === 'warn' ? 'warn' : 'ok');
   if (!DEMARRAGE) toast(msg, kind);
 }
-// `say` decrit ce qui se passe A L'INSTANT (« Envoi de X… »). Le NOM de la
-// tache, lui, vient du travail en cours : les melanger laissait un vieux
-// libelle en titre longtemps apres.
+// `say` describes what is happening RIGHT NOW ("Sending X…"). The task's NAME,
+// on the other hand, comes from the running job: mixing them left a stale label
+// as the title long afterwards.
 function say(t) { R.texte($('tachedetail'), t || ''); }
 
-// --------------------------------------------------------------- tache en cours
-// Le temps restant est estime ICI, a partir de l'avancement observe : le serveur
-// ne le calcule que pour les transferts, alors qu'une conversion ou une lecture
-// de conteneurs en a tout autant besoin. On lisse sur une fenetre glissante pour
-// qu'un a-coup ne fasse pas bondir l'estimation.
+// ----------------------------------------------------------- running task
+// The time remaining is estimated HERE, from observed progress: the server only
+// computes it for transfers, while a conversion or a container read needs it
+// just as much. We smooth over a sliding window so that a hiccup does not make
+// the estimate jump.
 let TACHE = {debut: 0, points: []};
 
 function estimeReste(done, total) {
@@ -867,25 +856,24 @@ function texteReste(s) {
   return '~' + h + ' h' + (m % 60 ? String(m % 60).padStart(2, '0') : '');
 }
 
-// --------------------------------------------------- temoin d'activite (bouton +)
-// Deux choses peuvent tourner : une tache du serveur, ou un envoi de fichiers
-// depuis ce navigateur. Le bouton n'en montre qu'une a la fois, avec une regle
-// simple : l'envoi passe devant, parce que c'est l'utilisateur qui vient de le
-// declencher et qu'il attend un retour immediat.
+// ------------------------------------------------ activity indicator (+ button)
+// Two things can be running: a server task, or a file upload from this browser.
+// The button shows one at a time, with a simple rule: the upload comes first,
+// because the user just triggered it and is waiting for an immediate answer.
 let ACT_SERVEUR = null;      // {titre, pct, reste, detail}
 let ACT_ENVOI = null;
 
 function activite() { return ACT_ENVOI || ACT_SERVEUR; }
 
-// L'anneau suit le contour du bouton, qui change de taille selon ce qu'il
-// affiche. `pathLength=100` normalise le perimetre : la jauge se pilote en
-// pourcentage sans jamais recalculer une circonference.
+// The ring follows the button's outline, which changes size with what it
+// shows. `pathLength=100` normalises the perimeter: the gauge is driven as a
+// percentage without ever recomputing a circumference.
 function majAnneau() {
   const btn = $('fab'), svg = $('fabring');
   if (!btn || !svg) return;
   const l = btn.offsetWidth, h = btn.offsetHeight;
   if (!l || !h) return;
-  const e = 3;                                   // epaisseur du trait
+  const e = 3;                                   // stroke thickness
   svg.setAttribute('viewBox', '0 0 ' + l + ' ' + h);
   [$('fabpiste'), $('fabjauge')].forEach(r => {
     if (!r) return;
@@ -896,9 +884,9 @@ function majAnneau() {
   });
 }
 
-// Temps restant en trois caracteres ou presque : le bouton fait 54 px, il n'y
-// a pas la place pour « moins d'une minute ». La phrase complete reste dans le
-// panneau et dans l'infobulle.
+// Time remaining in three characters or so: the button is 54 px, there is no
+// room for "less than a minute". The full sentence stays in the panel and in
+// the tooltip.
 function resteCourt(s) {
   if (s == null) return '';
   if (s < 60) return Math.max(1, Math.round(s)) + ' s';
@@ -908,13 +896,13 @@ function resteCourt(s) {
   return h + ' h' + String(m % 60).padStart(2, '0');
 }
 
-// Ce que le bouton affiche en son centre, par ordre de precision : le temps
-// restant s'il est estimable, sinon l'avancement, sinon rien — l'anneau qui
-// tourne dit deja « ca travaille ».
-// Marqueur : trois points qui s'allument tour a tour. Afficher « 0 % » serait
-// plus simple, mais ce serait faux — au demarrage d'un import la console n'a
-// pas encore dit combien de fichiers elle attend, donc il n'y a pas de
-// pourcentage a montrer. Les points disent la seule chose vraie : ca commence.
+// What the button shows at its centre, in order of precision: the time
+// remaining when it can be estimated, else the progress, else nothing — the
+// spinning ring already says "it is working".
+// A marker: three dots lighting in turn. Showing "0 %" would be simpler, but it
+// would be false — at the start of an import the console has not yet said how
+// many files it expects, so there is no percentage to show. The dots say the
+// only true thing: it is starting.
 const FAB_ATTENTE = '…';
 const FAB_POINTS =
   '<i class="fabpoints"><span></span><span></span><span></span></i>';
@@ -939,7 +927,7 @@ function majFab() {
   R.texte($('fabtitre'), a ? a.titre : '');
   R.texte($('fabreste'), a ? (a.reste || '') : '');
 
-  // Sans total connu, la jauge tourne au lieu de mentir sur l'avancement.
+  // With no known total, the gauge spins instead of lying about progress.
   const indetermine = !a || a.pct == null;
   R.classe(btn, 'cherche', !!a && indetermine);
   const jauge = $('fabjauge');
@@ -949,9 +937,9 @@ function majFab() {
       : Math.max(0, Math.min(100, a.pct)) + ' 100';
   }
 
-  // Le chiffre du centre. On ne le reecrit que s'il a change : sinon
-  // l'animation de bascule rejouerait a chaque sondage du serveur, deux fois
-  // par seconde, et le bouton clignoterait sans arret.
+  // The centre figure. We only rewrite it when it has changed: otherwise the
+  // flip animation would replay on every server poll, twice a second, and the
+  // button would flicker without stopping.
   const coeur = coeurFab(a);
   const eta = $('fabeta');
   if (eta && coeur !== FAB_COEUR) {
@@ -959,16 +947,16 @@ function majFab() {
     else eta.textContent = coeur;
     if (coeur) {
       eta.classList.remove('change');
-      void eta.offsetWidth;                     // redemarre l'animation
+      void eta.offsetWidth;                     // restart the animation
       eta.classList.add('change');
     }
     FAB_COEUR = coeur;
   }
   R.classe(btn, 'pause', !!(a && a.pause));
 
-  // Fin de tache : l'anneau se remplit et s'eteint en vert. Sans ce signal,
-  // le bouton redevient simplement un « + » et rien ne dit que ce qu'on
-  // attendait est termine.
+  // Task end: the ring fills and fades out in green. Without that signal, the
+  // button simply becomes a "+" again and nothing says that what you were
+  // waiting for has finished.
   if (FAB_TRAVAILLAIT && !a) {
     btn.classList.remove('fini');
     void btn.offsetWidth;
@@ -984,23 +972,21 @@ function majFab() {
 
 window.addEventListener('resize', majAnneau);
 
-// Vrai tant qu'une recherche de fiches tourne REELLEMENT.
+// True while a details lookup is REALLY running.
 //
-// Le bandeau « Recherche des infos… » s'affichait sur toute carte sans fiche,
-// qu'une recherche soit en cours ou non. Pour un jeu qu'aucune base ne connait
-// — un titre trop recent, un homebrew, un nom de fichier trop abime — il ne
-// disparaissait donc JAMAIS : la carte annoncait un travail en cours qui
-// n'aurait jamais lieu. C'est un mensonge de l'interface, pas un detail
-// d'affichage, et il etait sous les yeux de tout le monde sur la capture du
-// README.
+// The "Fetching details…" banner showed on any card without details, whether a
+// lookup was running or not. For a game no database knows — too recent a title,
+// a homebrew, a file name too mangled — it therefore NEVER went away: the card
+// announced work in progress that would never happen. That is the interface
+// lying, not a display detail, and it was in front of everyone on the README
+// screenshot.
 //
-// Une carte sans fiche ne dit maintenant plus rien : son absence de resume se
-// voit deja, et « Fiches manquantes » est la pour aller les chercher.
+// A card without details now says nothing: its missing summary is visible
+// enough, and "Missing details" is there to go and fetch them.
 let RECHERCHE_FICHES = false;
 
-// Les libelles que le serveur donne aux taches qui remplissent les fiches.
-// Ce sont des noms de FONCTION Python, pas du texte affiche : ils ne se
-// traduisent pas.
+// The labels the server gives to the tasks that fill in the details. These are
+// Python FUNCTION names, not displayed text: they are not translated.
 const TACHES_FICHES = ['sync_meta', 'meta_sync'];   // i18n:ok
 
 function renderTache(j) {
@@ -1008,8 +994,8 @@ function renderTache(j) {
   const cherche = !!j.running && TACHES_FICHES.includes(j.label);
   if (cherche !== RECHERCHE_FICHES) {
     RECHERCHE_FICHES = cherche;
-    // La fin de la recherche doit effacer les bandeaux restants : sans ce
-    // rendu, ils tiendraient jusqu'au prochain passage sur la grille.
+    // The end of the lookup must clear the remaining banners: without this
+    // render they would hold until the next pass over the grid.
     if (typeof renderLib === 'function') renderLib();
   }
   R.classe(el, 'on', !!j.running);
