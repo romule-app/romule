@@ -7242,8 +7242,8 @@ function commandesDisponibles() {
     ['Rétablir les animations', 'mouvement complet', () => app.setMouvement('complet')],  // i18n:ok - 2e champ : mot-cle de recherche
     ['Voir l\'état de l\'installation', 'diagnostic sante', () => app.showOnboard()],  // i18n:ok - 2e champ : mot-cle de recherche
   ];
-  // Chaque plateforme devient une destination : c'est le menu qu'on ouvre le
-  // plus souvent, et il est en haut de page, loin des mains.
+  // Every platform becomes a destination: it is the menu opened most often,
+  // and it sits at the top of the page, far from the hands.
   for (const s of (SYSTEMS || [])) {
     c.push(['Plateforme : ' + s.name, 'console systeme ' + (s.folder || ''),
             () => app.setSystem(s.key)]);
@@ -7251,9 +7251,9 @@ function commandesDisponibles() {
   return c.map(([titre, mots, faire]) => ({titre, mots, faire, type: 'action'}));
 }
 
-// Score d'une sous-suite. Plus les lettres trouvees sont contigues et plus
-// elles tombent en debut de mot, meilleur est le score — sans quoi « mario »
-// remonterait n'importe quel titre contenant ces cinq lettres eparpillees.
+// A subsequence's score. The more contiguous the letters found, and the closer
+// they fall to the start of a word, the better the score — without which
+// "mario" would surface any title holding those five letters scattered about.
 function scoreFlou(texte, cherche) {
   const t = texte.toLowerCase(), q = cherche;
   let i = 0, score = 0, suite = 0;
@@ -7264,8 +7264,8 @@ function scoreFlou(texte, cherche) {
     if (j === 0 || /[\s:,\-–—(\[]/.test(t[j - 1])) score += 6;   // debut de mot
     i++;
   }
-  if (i < q.length) return -1;                    // toutes les lettres ? sinon rien
-  return score - t.length * 0.02;                 // a egalite, le titre le plus court
+  if (i < q.length) return -1;                    // every letter? otherwise nothing
+  return score - t.length * 0.02;                 // on a tie, the shortest title
 }
 
 const PALETTE_MAX = 9;
@@ -7302,7 +7302,7 @@ function remplirPalette(q) {
     const s = cherche
       ? Math.max(scoreFlou(cmd.titre, cherche), scoreFlou(cmd.mots, cherche) - 4)
       : 0;
-    if (s >= 0) candidats.push({...cmd, score: s + 2});   // les actions passent devant a egalite
+    if (s >= 0) candidats.push({...cmd, score: s + 2});   // on a tie, actions come first
   }
   let jeux = [];
   try { jeux = jeuxUnifies(); } catch (e) { jeux = []; }
@@ -7354,8 +7354,8 @@ function bougerPalette(pas) {
 function lancerPalette(i) {
   const c = PALETTE_CHOIX[i == null ? PALETTE_INDEX : i];
   if (!c) return;
-  // On ferme AVANT d'agir : plusieurs actions ouvrent une fenetre, et la
-  // palette resterait posee par-dessus.
+  // We close BEFORE acting: several actions open a dialog, and the palette
+  // would stay sitting on top of it.
   fermerPalette();
   try { c.faire(); } catch (e) { toast('Action impossible.', 'warn'); }
 }
@@ -7381,17 +7381,17 @@ function paletteOuverte() {
 /* ============================================================================
    CLAVIER
    ----------------------------------------------------------------------------
-   L'outil se pilote depuis un ordinateur, et tout y passait par la souris : viser une
-   jaquette de 158 px pour lire son etat, revenir a la recherche, recommencer.
-   Les raccourcis retenus sont ceux que l'on trouve dans un gestionnaire de
-   fichiers ou une mediatheque — rien a apprendre.
+   The tool is driven from a computer, and everything there went through the
+   mouse: aiming at a 158 px cover to read its state, back to the search, start
+   again. The shortcuts chosen are the ones found in a file manager or a media
+   library — nothing to learn.
 
-     /            aller a la recherche          Fleches  se deplacer dans la grille
-     Entree       ouvrir la fiche               Espace   cocher / decocher
-     Debut / Fin  premiere / derniere carte     Echap    fermer, ou vider la recherche
+     /            go to the search              Arrows  move around the grid
+     Enter        open the detail view          Space   tick / untick
+     Home / End   first / last card             Esc     close, or clear the search
    ========================================================================== */
 
-// Un champ de saisie garde ses touches : y taper « / » doit ecrire « / ».
+// An input field keeps its keys: typing "/" in one must write "/".
 function dansUneSaisie(el) {
   if (!el) return false;
   const t = (el.tagName || '').toUpperCase();
@@ -7402,9 +7402,9 @@ function cartesVisibles() {
   return [...document.querySelectorAll('#lib .gcard')];
 }
 
-// Nombre de cartes par rangee, mesure plutot que calcule : la grille est en
-// `auto-fill`, donc le compte depend de la largeur reelle et de la taille
-// choisie. Toutes les cartes d'une rangee partagent leur bord superieur.
+// The number of cards per row, measured rather than computed: the grid is an
+// `auto-fill`, so the count depends on the real width and on the chosen size.
+// Every card in a row shares its top edge.
 function cartesParRangee(cartes) {
   if (cartes.length < 2) return 1;
   const haut = cartes[0].getBoundingClientRect().top;
@@ -7422,7 +7422,7 @@ function bougerDansGrille(pas) {
   const ici = cartes.indexOf(document.activeElement.closest
     ? document.activeElement.closest('.gcard') : null);
   let cible;
-  if (ici < 0) cible = 0;                      // rien de vise : on entre par la premiere
+  if (ici < 0) cible = 0;                      // nothing aimed at: we enter by the first
   else cible = Math.min(cartes.length - 1, Math.max(0, ici + pas));
   cartes[cible].focus({preventScroll: true});
   cartes[cible].scrollIntoView({block: 'nearest', behavior: 'smooth'});
@@ -7430,16 +7430,16 @@ function bougerDansGrille(pas) {
 }
 
 addEventListener('keydown', ev => {
-  // ⌘K sur Mac, Ctrl+K ailleurs : la combinaison est celle qu'attendent tous
-  // ceux qui ont deja vu une palette. Elle passe AVANT le filtre des
-  // modificateurs, et meme depuis un champ de saisie.
+  // ⌘K on a Mac, Ctrl+K elsewhere: the combination is the one everyone who has
+  // seen a palette expects. It comes BEFORE the modifier filter, and works even
+  // from an input field.
   if ((ev.metaKey || ev.ctrlKey) && (ev.key === 'k' || ev.key === 'K')) {
     ev.preventDefault();
     paletteOuverte() ? fermerPalette() : ouvrirPalette();
     return;
   }
-  // Tant que la palette est ouverte, elle capte le clavier : les fleches y
-  // parcourent la liste, elles ne doivent pas bouger la grille derriere.
+  // While the palette is open, it takes the keyboard: the arrows walk its list,
+  // they must not move the grid behind it.
   if (paletteOuverte()) {
     if (ev.key === 'Escape') { ev.preventDefault(); fermerPalette(); }
     else if (ev.key === 'ArrowDown') { ev.preventDefault(); bougerPalette(1); }
@@ -7451,12 +7451,12 @@ addEventListener('keydown', ev => {
   const saisie = dansUneSaisie(ev.target);
 
   if (ev.key === 'Escape') {
-    // La loupe est posee par-dessus la fiche : elle se ferme la premiere.
+    // The magnifier sits on top of the detail view: it closes first.
     if (loupeOuverte()) return fermerLoupe();
     if ($('modal').classList.contains('open')) return app.closeGame();
     if ($('dialog').classList.contains('open')) return app.closeDialog();
     cacherApercu();
-    // Dans la recherche, Echap efface d'abord, puis rend la main.
+    // In the search, Esc clears first, then hands control back.
     if (ev.target === $('filter')) {
       if ($('filter').value) { $('filter').value = ''; app.renderLib(); }
       else $('filter').blur();
@@ -7502,8 +7502,8 @@ addEventListener('keydown', ev => {
     case ' ':
       if (!carte) return;
       ev.preventDefault();
-      // La grille est redessinee : le focus DOM est perdu avec l'ancien
-      // noeud, on le repose sur la carte qui a pris sa place.
+      // The grid is redrawn: the DOM focus is lost with the old node, so we
+      // put it back on the card that took its place.
       app.cardClick({shiftKey: ev.shiftKey}, carte.dataset.key);
       redonnerFocus(carte.dataset.key);
       return;
@@ -7522,13 +7522,13 @@ function redonnerFocus(cle) {
 /* ============================================================================
    APERCU AU SURVOL PROLONGE
    ----------------------------------------------------------------------------
-   Ouvrir la fiche pour savoir si un jeu tient sur la console, puis la fermer,
-   puis recommencer sur le suivant : c'est le geste qu'on repete le plus. Un
-   survol appuye repond a la question sans quitter la grille.
+   Opening the detail view to know whether a game fits on the console, then
+   closing it, then starting again on the next one: that is the most repeated
+   gesture. A held hover answers the question without leaving the grid.
 
-   Le delai compte autant que le contenu : trop court, l'apercu clignote des
-   qu'on traverse la grille ; trop long, on l'a deja abandonne. 600 ms
-   correspond a « je me suis arrete sur celui-la ».
+   The delay matters as much as the content: too short and the preview flickers
+   as soon as you cross the grid; too long and you have already given up. 600 ms
+   corresponds to "I have stopped on this one".
    ========================================================================== */
 const APERCU_MS = 600;
 let APERCU_MINUTEUR = 0;
@@ -7581,8 +7581,8 @@ function poserApercu(carte) {
   traduireDOM(el);
   el.classList.add('on');
 
-  // Place l'apercu du cote ou il tient. Le mesurer APRES l'avoir rendu
-  // visible : un element cache n'a pas de dimensions.
+  // Places the preview on whichever side it fits. Measured AFTER being made
+  // visible: a hidden element has no dimensions.
   const r = carte.getBoundingClientRect();
   const b = el.getBoundingClientRect();
   const marge = 12;
@@ -7595,12 +7595,12 @@ function poserApercu(carte) {
   el.style.top = Math.round(Math.max(8, y)) + 'px';
 }
 
-// Un seul ecouteur pour toute la grille : poser un `mouseenter` sur chaque
-// carte obligerait a le refaire a chaque rendu.
-// `mousemove` plutot que `mouseover` : ce dernier ne se declenche qu'au
-// franchissement d'une frontiere, donc jamais quand la grille se redessine
-// sous un curseur immobile — ni sous un navigateur pilote. Le cout est nul,
-// la premiere ligne du gestionnaire ecarte tout ce qui ne change rien.
+// A single listener for the whole grid: putting a `mouseenter` on every card
+// would mean redoing it on every render.
+// `mousemove` rather than `mouseover`: the latter only fires when a boundary is
+// crossed, so never when the grid redraws under a motionless cursor — nor under
+// a driven browser. The cost is nil: the handler's first line discards
+// everything that changes nothing.
 document.addEventListener('mousemove', ev => {
   if (!matchMedia('(hover: hover)').matches) return;
   if (document.documentElement.dataset.mvt === 'aucun') return;
@@ -7608,7 +7608,7 @@ document.addEventListener('mousemove', ev => {
   if (carte === APERCU_CARTE) return;
   cacherApercu();
   if (!carte) return;
-  // Pas d'apercu par-dessus une fenetre ouverte : il la recouvrirait.
+  // No preview on top of an open dialog: it would cover it.
   if ($('modal').classList.contains('open')) return;
   APERCU_CARTE = carte;
   APERCU_MINUTEUR = setTimeout(() => poserApercu(carte), APERCU_MS);
@@ -7616,8 +7616,8 @@ document.addEventListener('mousemove', ev => {
 addEventListener('scroll', cacherApercu, {passive: true});
 document.addEventListener('click', cacherApercu);
 
-// Douze silhouettes : de quoi remplir la premiere hauteur d'ecran sans
-// pretendre annoncer le nombre reel de jeux, qu'on ne connait pas encore.
+// Twelve silhouettes: enough to fill the first screen height without claiming
+// to announce the real number of games, which we do not know yet.
 function poserSquelettes(combien) {
   const hote = $('libsquelette');
   if (!hote || hote.childElementCount) return;
@@ -7634,77 +7634,77 @@ poserSquelettes(12);
 construireChoixCartes();
 majApparence();
 
-// etat de chargement plutot que des compteurs a zero et une console « absente » :
-// afficher une information fausse, meme une seconde, est pire que ne rien dire.
+// A loading state rather than zeroed counters and an "absent" console:
+// displaying wrong information, even for a second, is worse than saying
+// nothing.
 (async () => {
   document.body.classList.add('chargement');
   renderHost();
   renderA2HS();
   app.langLoad();
   try {
-    await app.scan();              // fichiers du serveur : la base de tout
-    // La bibliotheque s'affiche des que le serveur a repondu. Attendre en plus la
-    // console retardait tout l'ecran de deux secondes et demie pour une
-    // information qui n'occupe que trois puces de filtre — et `renderLib`
-    // sait deja se passer d'elle.
-    // Les lancer EN PARALLELE a ete essaye : le premier affichage y gagnait
-    // 0,7 s, mais les deux lectures se disputaient le disque et l'adb, et
-    // l'etat de la console mettait 10 s au lieu de 2,5 s a arriver. Mauvais
-    // echange.
+    await app.scan();              // the server's files: the basis of everything
+    // The library shows as soon as the server has answered. Also waiting for
+    // the console delayed the whole screen by two and a half seconds for
+    // information that occupies three filter pills — and `renderLib` already
+    // knows how to do without it.
+    // Running them IN PARALLEL was tried: the first paint gained 0.7 s, but the
+    // two reads fought over the disk and adb, and the console's state took 10 s
+    // instead of 2.5 s to arrive. A bad trade.
     document.body.classList.remove('chargement');
     document.body.classList.add('pret');
-    // La vue « toutes les plateformes » montre DEJA les jeux Switch a cet
-    // instant : `jeuxTous()` part de `GAMES`, que `scan()` vient de remplir.
-    // Les autres plateformes s'ajoutent ensuite, sans que rien ne disparaisse
-    // entre-temps. On ne l'attend donc pas avant d'afficher : mesure a 21 ms a
-    // froid, mais une ludotheque avec quinze plateformes n'a aucune raison de
-    // retarder le premier ecran.
+    // The "all platforms" view ALREADY shows the Switch games at this point:
+    // `jeuxTous()` starts from `GAMES`, which `scan()` has just filled. The
+    // other platforms are added afterwards, without anything disappearing in
+    // between. So we do not wait for it before displaying: measured at 21 ms
+    // cold, but a library with fifteen platforms has no reason to delay the
+    // first screen.
     app.setSystem(SYS);
-    // `DEMARRAGE` reste vrai : il ne dit pas « la page est visible » mais
-    // « l'utilisateur n'a encore rien demande ». Le passer a faux ici ferait
-    // remonter en notifications les messages de la console — « Console
-    // détectée », « 152 fichiers sur la console » — que personne n'a
-    // sollicites et qui sont deja au journal.
-    await app.reveilConsole();     // etat de la console, puis ses fichiers
-    // La console est maintenant connue : `systems.tout()` peut lire son arbre,
-    // ce qu'il n'avait pas pu faire au premier appel. On refait donc UNE fois
-    // la vue d'ensemble, sinon les fichiers presents uniquement sur la console
-    // n'y apparaitraient jamais.
+    // `DEMARRAGE` stays true: it does not say "the page is visible" but "the
+    // user has not asked for anything yet". Setting it false here would raise
+    // the console's messages as notifications — "Console détectée", "152
+    // fichiers sur la console" — which nobody asked for and which are already
+    // in the log.
+    await app.reveilConsole();     // the console's state, then its files
+    // The console is now known: `systems.tout()` can read its tree, which it
+    // could not do on the first call. So we redo the overview ONCE, otherwise
+    // the files present only on the console would never appear there.
     if (vueTotale() && CONN.kind) { oublierCacheSysteme(); app.setSystem('all'); }
   } finally {
     document.body.classList.remove('chargement');
     document.body.classList.add('pret');
-    DEMARRAGE = false;               // a partir d'ici, l'utilisateur agit
+    DEMARRAGE = false;               // from here on, the user is acting
   }
-  // le reste peut arriver apres : rien n'en depend pour un premier affichage
+  // the rest can come later: nothing depends on it for a first paint
   app.checkHealth();
-  chargerVues();                   // les vues enregistrees, servies par le serveur
-  chargerMaj();                    // y a-t-il une version plus recente ?
+  chargerVues();                   // the saved views, served by the server
+  chargerMaj();                    // is there a newer version?
   app.erLoad();
   app.erDevices();
-  // `scan()` a deja lu la liste des plateformes et l'attend : la redemander
-  // ici la lisait deux fois a chaque lancement.
-  // Les compteurs du selecteur dependent de ce que porte la console : on la lit
-  // une fois, en arriere-plan, plutot que d'afficher des zeros trompeurs.
+  // `scan()` has already read the platform list and awaits it: asking again
+  // here read it twice on every launch.
+  // The selector's counters depend on what the console carries: we read it
+  // once, in the background, rather than show misleading zeros.
   if (CONN.kind) app.detecterPlateformes(true);
 })();
 
-/* ------------------------------------------------- bouton du journal mobile
-   Le bouton pend au milieu du bord droit. Selon la page et la taille de
-   l'ecran, il tombe pile sur ce qu'on veut lire — et il n'y avait aucun moyen
-   de le pousser. On le rend glissable de haut en bas, et sa position tient
-   d'une session a l'autre.
+/* ---------------------------------------------------- mobile log button
+   The button hangs in the middle of the right edge. Depending on the page and
+   the screen size, it lands exactly on what you want to read — and there was no
+   way to push it. We make it draggable up and down, and its position holds from
+   one session to the next.
 
-   Trois details qui font la difference entre « glissable » et « utilisable » :
+   Three details that separate "draggable" from "usable":
 
-   * un glissement ne doit pas ouvrir le journal. On distingue le clic du
-     glissement par un seuil de quelques pixels, et on annule le clic qui suit
-     un vrai deplacement — en phase de CAPTURE, pour passer avant le
-     gestionnaire en ligne du bouton ;
-   * la position est bornee a l'ecran et re-bornee au redimensionnement, sinon
-     un bouton range en bas d'un grand ecran devient injoignable sur un petit ;
-   * le clavier fait la meme chose. Une poignee qui n'obeit qu'a la souris
-     n'existe pas pour qui n'en utilise pas. */
+   * a drag must not open the log. The click is told from the drag by a
+     threshold of a few pixels, and the click that follows a real move is
+     cancelled — in the CAPTURE phase, so as to come before the button's own
+     handler;
+   * the position is clamped to the screen and re-clamped on resize, otherwise a
+     button parked at the bottom of a large screen becomes unreachable on a
+     small one;
+   * the keyboard does the same thing. A handle that obeys only the mouse does
+     not exist for whoever does not use one. */
 (function boutonJournalDeplacable() {
   const btn = $('journalbtn');
   if (!btn) return;
@@ -7744,18 +7744,18 @@ majApparence();
     if (!actif) return;
     actif = false;
     btn.classList.remove('glisse');
-    try { btn.releasePointerCapture(e.pointerId); } catch (_) { /* deja relache */ }
+    try { btn.releasePointerCapture(e.pointerId); } catch (_) { /* already released */ }
     if (bouge) { poser(btn.getBoundingClientRect().top, true); finGlisse = performance.now(); }
   });
   btn.addEventListener('pointercancel', () => {
     actif = false; bouge = false; btn.classList.remove('glisse');
   });
-  // Capture : le gestionnaire en ligne du bouton est en phase de bulle, donc
-  // il passe apres celui-ci. C'est ce qui permet d'annuler le clic.
+  // Capture: the button's own handler is in the bubbling phase, so it comes
+  // after this one. That is what makes cancelling the click possible.
   btn.addEventListener('click', e => {
-    // Fenetre courte plutot que drapeau persistant : un glissement qui ne
-    // produit aucun clic — pointeur relache ailleurs, geste tactile annule —
-    // laissait le drapeau leve, et c'est le clic suivant qui etait mange.
+    // A short window rather than a persistent flag: a drag that produces no
+    // click — pointer released elsewhere, touch gesture cancelled — left the
+    // flag raised, and it was the next click that got eaten.
     if (performance.now() - finGlisse > 300) return;
     e.stopPropagation();
     e.preventDefault();
