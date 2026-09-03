@@ -25,6 +25,11 @@ signaler des lignes parfaitement justes :
 Une ligne peut porter `anglais:ok` quand elle CITE du francais a dessein — par
 exemple pour expliquer une cle de catalogue. La marque demande une raison a
 cote, comme `i18n:ok` et `fuite:ok` ailleurs dans le projet.
+
+Elle couvre le BLOC entier, pas la ligne seule. Une citation deborde souvent
+sur deux lignes — « Kirby et le Labyrinthe des Miroirs » ne tient pas sur
+celle qui porterait la marque — et exiger une marque par ligne pousserait a
+tordre la phrase pour plaire a l'outil, ce qui est le contraire du but.
 """
 import re
 import sys
@@ -63,13 +68,33 @@ MUETTES = {".git", "node_modules", "__pycache__", "site", "locales"}
 
 def francais(texte):
     """Les marqueurs francais trouves dans ce texte, ou un ensemble vide."""
-    if "anglais:ok" in texte:
-        return set()
     mots = {m.lower() for m in MOT.findall(texte)}
     trouves = mots & MARQUEURS
     if ELISION.search(texte):
         trouves.add("elision")
     return trouves
+
+
+def blocs(lignes):
+    """Regroupe des (numero, texte) voisins, et ecarte ceux qui sont marques.
+
+    La marque `anglais:ok` couvre le bloc entier : une citation francaise dans
+    de la prose anglaise s'etale sur plusieurs lignes, et la marque ne tient
+    que sur l'une d'elles.
+    """
+    groupes, courant = [], []
+    for num, texte in lignes:
+        if courant and num - courant[-1][0] > 1:
+            groupes.append(courant); courant = []
+        courant.append((num, texte))
+    if courant:
+        groupes.append(courant)
+    gardes = []
+    for g in groupes:
+        if any("anglais:ok" in t for _, t in g):
+            continue
+        gardes.extend(g)
+    return gardes
 
 
 def prose_python(source):
@@ -138,6 +163,14 @@ NAME = "x"
 '''
 
 
+# La meme citation, etalee sur deux lignes : la marque est sur la premiere et
+# doit couvrir la seconde.
+CITATION_LONGUE_PY = '''# The English title is the pivot -- anglais:ok, quoting a
+# French title: "Kirby et le Labyrinthe des Miroirs".
+NAME = "x"
+'''
+
+
 def epreuve():
     """Le detecteur voit-il le francais, et se tait-il sur l'anglais ?
 
@@ -150,8 +183,16 @@ def epreuve():
     if not any(francais(t) for _, t in prose_python(MAUVAIS_PY)):
         print("   EPREUVE ECHOUEE : du francais evident passe")
         return False
-    if any(francais(t) for _, t in prose_python(CITATION_PY)):
+    if any(francais(t) for _, t in blocs(prose_python(CITATION_PY))):
         print("   EPREUVE ECHOUEE : la marque `anglais:ok` ne protege pas")
+        return False
+    # La marque doit couvrir le bloc, pas seulement sa propre ligne : une
+    # citation francaise deborde presque toujours sur la ligne suivante.
+    if any(francais(t) for _, t in blocs(prose_python(CITATION_LONGUE_PY))):
+        print("   EPREUVE ECHOUEE : la marque ne couvre pas le bloc entier")
+        return False
+    if not any(francais(t) for _, t in blocs(prose_python(MAUVAIS_PY))):
+        print("   EPREUVE ECHOUEE : le regroupement en blocs laisse passer")
         return False
     return True
 
@@ -177,7 +218,7 @@ def main(argv):
             src = p.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
             continue
-        for num, texte in extracteur(src):
+        for num, texte in blocs(extracteur(src)):
             mots = francais(texte)
             if not mots:
                 continue
