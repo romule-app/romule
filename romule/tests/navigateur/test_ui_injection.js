@@ -1,19 +1,19 @@
-/* Une valeur qui entre dans une chaine JavaScript a l'interieur d'un attribut
-   de gestionnaire traverse deux analyseurs. `esc()` n'en couvre qu'un.
+/* A value that enters a JavaScript string inside a handler attribute goes
+   through two parsers. `esc()` covers only one of them.
 
-   Le trou : `esc()` transforme l'apostrophe en `&#39;`, mais l'analyseur HTML
-   la restitue AVANT que le moteur JavaScript ne compile le gestionnaire. La
-   chaine se referme, et la suite de la valeur devient du code. La cle d'une
-   carte etant le CHEMIN du fichier, un nom comme `x',alert(1),'.gba` suffisait
-   — et il s'obtient par un simple depot de fichier.
+   The hole: `esc()` turns the apostrophe into `&#39;`, but the HTML parser
+   restores it BEFORE the JavaScript engine compiles the handler. The string
+   closes, and the rest of the value becomes code. Since a card's key is the
+   file's PATH, a name like `x',alert(1),'.gba` was enough — and it is obtained
+   by simply dropping a file.
 
-   Trois choses sont verifiees ici :
-     1. `jsq()` rend la valeur telle quelle, sans jamais executer l'injection ;
-     2. `esc()` seul, lui, l'executait — la faille etait reelle, pas theorique ;
-     3. AUCUN gestionnaire en ligne du fichier n'interpole plus sans `jsq()`.
+   Three things are checked here:
+     1. `jsq()` renders the value as it stands, never executing the injection;
+     2. `esc()` alone did execute it — the hole was real, not theoretical;
+     3. NO inline handler in the file interpolates without `jsq()` any more.
 
-   Le point 3 est le plus utile : il vaut pour les sites d'aujourd'hui comme
-   pour celui que quelqu'un ajoutera demain. */
+   Point 3 is the most useful: it holds for today's call sites as much as for the
+   one someone adds tomorrow. */
 const fs = require('fs'), path = require('path');
 const RACINE = path.resolve(__dirname, '..', '..', '..');
 const CHEMIN = path.join(RACINE, 'romule', 'static', 'app.js');
@@ -22,27 +22,27 @@ const src = fs.readFileSync(CHEMIN, 'utf8');
 let ok = 0, ko = 0;
 function t(nom, cond, detail) {
   if (cond) { ok++; console.log('      OK   ' + nom); }
-  else { ko++; console.log('      ECHEC ' + nom + '   ' + (detail || '')); }
+  else { ko++; console.log('      FAIL  ' + nom + '   ' + (detail || '')); }
 }
 
-// ---- on evalue les definitions REELLES du fichier livre
+// ---- we evaluate the REAL definitions from the shipped file
 const lignes = src.split('\n');
 const debut = lignes.findIndex(l => l.startsWith('const esc = s =>'));
 const fin = lignes.findIndex((l, i) => i > debut && l.includes('u2029/g'));
 if (debut < 0 || fin < 0) {
-  console.log('      ECHEC definitions de esc/jsq introuvables dans app.js');
+  console.log('      FAIL  esc/jsq definitions not found in app.js');
   process.exit(1);
 }
 const [esc, jsq] = new Function(
   lignes.slice(debut, fin + 1).join('\n') + '\nreturn [esc, jsq];')();
 
-// L'analyseur HTML decode les entites d'une valeur d'attribut avant que le
-// moteur JavaScript ne lise le gestionnaire. On refait ce decodage.
+// The HTML parser decodes an attribute value's entities before the JavaScript
+// engine reads the handler. We redo that decoding.
 const decodeHTML = s => s
   .replace(/&#39;/g, "'").replace(/&quot;/g, '"')
   .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
 
-console.log('   -- 1. la valeur ressort intacte, et rien ne s\'execute --');
+console.log('   -- 1. the value comes back intact, and nothing runs --');
 const cas = [
   "x',alert(1),'.gba",
   "');alerte();//",
@@ -67,34 +67,34 @@ for (const v of cas) {
     'recu ' + JSON.stringify(recu) + (injecte ? ' ET code injecte execute' : ''));
 }
 
-console.log('   -- 2. l\'ancien encodage etait bien perce --');
+console.log('   -- 2. the old encoding really was pierced --');
 let execute = false;
 try {
   new Function('app', 'event', 'alerte',
     decodeHTML("app.cardClick(event,'" + esc("x',alerte(),'.gba") + "')"))(
     {cardClick: () => {}}, {}, () => { execute = true; });
-} catch (e) { /* une erreur de syntaxe prouverait deja la sortie de la chaine */ }
-t('esc() seul executait le code injecte', execute,
+} catch (e) { /* a syntax error would already prove the string was escaped */ }
+t('esc() alone ran the injected code', execute,
   'si ce controle echoue, le scenario a change et la regle est a revoir');
 
-console.log('   -- 3. le detecteur voit-il ce qu\'il pretend voir ? --');
-// Une regle qui annonce un invariant sans qu'on ait verifie qu'elle DETECTE
-// quelque chose ne vaut rien. La premiere version de ce test exigeait une
-// espace avant le `+` : elle a laissse passer un site ou la ligne etait coupee
-// juste apres le litteral, et le `+` ouvrait la ligne suivante. Le detecteur
-// est donc mis a l'epreuve avant d'etre applique.
+console.log('   -- 3. does the detector see what it claims to see? --');
+// A rule that announces an invariant without anyone having checked that it
+// DETECTS something is worth nothing. This test's first version required a space
+// before the `+`: it let through a call site where the line was broken right
+// after the literal, with the `+` opening the next one. So the detector is put
+// to the test before being applied.
 function fautifs(texte) {
   const out = [];
   let m;
-  // Une valeur entrant dans une chaine JavaScript d'attribut est precedee du
-  // delimiteur `\''` puis d'une concatenation. N'importe quelle blancheur peut
-  // entourer le `+`, saut de ligne compris.
+  // A value entering an attribute's JavaScript string is preceded by the `\''`
+  // delimiter then by a concatenation. Any whitespace can surround the `+`, a
+  // line break included.
   const appel = /\\''\s*\+\s*([A-Za-z_$][\w$]*)\s*\(/g;
   while ((m = appel.exec(texte)) !== null) {
     if (m[1] === 'jsq') continue;
     out.push(texte.slice(0, m.index).split('\n').length + ' : ' + m[1] + '(');
   }
-  // Et la forme sans le moindre encodage : `\'' + variable +`
+  // And the form with no encoding at all: `\'' + variable +`
   const nu = /\\''\s*\+\s*([A-Za-z_$][\w$.]*)\s*\+/g;
   while ((m = nu.exec(texte)) !== null) {
     out.push(texte.slice(0, m.index).split('\n').length + ' : ' + m[1] +
@@ -123,34 +123,34 @@ const epreuves = [
 ];
 for (const [nom, extrait, attendu] of epreuves) {
   const vu = fautifs(extrait).length > 0;
-  t(nom + (attendu ? ' -> detecte' : ' -> ignore'), vu === attendu,
+  t(nom + (attendu ? ' -> detected' : ' -> ignored'), vu === attendu,
     'detecte=' + vu);
 }
 
-console.log('   -- 4. et le fichier livre le respecte --');
+console.log('   -- 4. and the shipped file honours it --');
 const restants = fautifs(src);
-t('tous les sites passent par jsq()', restants.length === 0, restants.join(' | '));
+t('every call site goes through jsq()', restants.length === 0, restants.join(' | '));
 const total = /\\''\s*\+\s*jsq\(/g;
 const compte = (src.match(total) || []).length;
-console.log('      (' + compte + ' site(s) — 0 est le resultat attendu depuis la'
+console.log('      (' + compte + ' call site(s) — 0 is the expected result since'
             + ' phase 4 ; jsq() reste defini comme garde-fou)');
 
-console.log('   -- 4bis. plus aucun gestionnaire en ligne --');
-// La phase 4 a supprime les 153 attributs `on*=`. Le detecteur ci-dessus est
-// donc devenu vide de sens : il cherche une forme qui n'existe plus. On le
-// garde — il redeviendra utile le jour ou quelqu'un reintroduira un
-// gestionnaire — mais l'invariant qui protege VRAIMENT le fichier est
-// maintenant plus fort : il n'y a pas d'attribut de gestionnaire du tout.
+console.log('   -- 4bis. no inline handler left --');
+// Phase 4 removed the 153 `on*=` attributes. So the detector above has become
+// meaningless: it looks for a shape that no longer exists. We keep it — it will
+// become useful again the day someone reintroduces a handler — but the invariant
+// that REALLY protects the file is now stronger: there is no handler attribute
+// at all.
 //
-// C'est cet invariant qui permet a la politique de securite de refuser
-// `'unsafe-inline'`. Le premier `onclick` reintroduit rendrait tous les
-// boutons de l'interface inertes, en silence.
+// That invariant is what lets the security policy refuse `'unsafe-inline'`. The
+// first `onclick` reintroduced would make every button in the interface inert,
+// in silence.
 function enLigne(texte) {
   const out = [];
   texte.split('\n').forEach((l, i) => {
-    // Les lignes de commentaire en citent en exemple : ce sont des mots, pas
-    // du code. Le decoupage est grossier a dessein — un commentaire mal
-    // detecte ferait un faux positif bruyant, jamais un trou silencieux.
+    // Comment lines quote some as examples: those are words, not code. The
+    // splitting is deliberately crude — a badly detected comment makes a noisy
+    // false positive, never a silent hole.
     const nu = l.trim();
     if (nu.startsWith('//') || nu.startsWith('*') || nu.startsWith('/*')) return;
     const m = nu.match(/\son[a-z]+\s*=\s*["']/);
@@ -159,26 +159,26 @@ function enLigne(texte) {
   return out;
 }
 const epreuvesEnLigne = [
-  ['un onclick genere -> detecte', "  x = '<b onclick=\"f()\">';", true],
-  ['un onchange genere -> detecte', "  x = '<i onchange=\"g()\">';", true],
-  ['le meme en commentaire -> ignore', "  // exemple : onclick=\"f()\"", false],
-  ['un data-act -> ignore', "  x = '<b data-act=\"f\">';", false],
+  ['a generated onclick -> detected', "  x = '<b onclick=\"f()\">';", true],
+  ['a generated onchange -> detected', "  x = '<i onchange=\"g()\">';", true],
+  ['the same in a comment -> ignored', "  // example: onclick=\"f()\"", false],
+  ['a data-act -> ignored', "  x = '<b data-act=\"f\">';", false],
 ];
 for (const [nom, extrait, attendu] of epreuvesEnLigne)
   t(nom, (enLigne(extrait).length > 0) === attendu);
 
 const html = fs.readFileSync(
   path.join(RACINE, 'romule', 'static', 'index.html'), 'utf8');
-t('app.js ne genere aucun gestionnaire en ligne',
+t('app.js generates no inline handler',
   enLigne(src).length === 0, enLigne(src).join(' | '));
-t('index.html n\'en porte aucun',
+t('index.html carries none either',
   enLigne(html).length === 0, enLigne(html).join(' | '));
 
-console.log('   -- 4ter. les valeurs entrant dans un data-* sont echappees --');
-// La valeur a quitte la chaine JavaScript pour une valeur d'attribut : un
-// SEUL analyseur la lit desormais, et `esc()` suffit — a condition qu'il soit
-// la. Sans lui, un nom de fichier contenant un guillemet double sortirait de
-// l'attribut et pourrait en ouvrir un autre.
+console.log('   -- 4ter. the values entering a data-* are escaped --');
+// The value has left the JavaScript string for an attribute value: ONE parser
+// now reads it, and `esc()` is enough — provided it is there. Without it, a file
+// name holding a double quote would escape the attribute and could open
+// another.
 function sansEsc(texte) {
   const out = [];
   let m;
@@ -193,34 +193,34 @@ function sansEsc(texte) {
   return out;
 }
 const epreuvesEsc = [
-  ['un data-arg non echappe -> detecte',
+  ['an unescaped data-arg -> detected',
    "x = '<b data-arg=\"' + jsq(v) + '\">';", true],
-  ['un data-arg nu -> detecte', "x = '<b data-arg=\"' + v + '\">';", true],
-  ['un data-arg echappe -> ignore', "x = '<b data-arg=\"' + esc(v) + '\">';", false],
-  ['un data-arg2 echappe -> ignore', "x = '<b data-arg2=\"' + esc(v) + '\">';", false],
+  ['a bare data-arg -> detected', "x = '<b data-arg=\"' + v + '\">';", true],
+  ['an escaped data-arg -> ignored', "x = '<b data-arg=\"' + esc(v) + '\">';", false],
+  ['an escaped data-arg2 -> ignored', "x = '<b data-arg2=\"' + esc(v) + '\">';", false],
 ];
 for (const [nom, extrait, attendu] of epreuvesEsc)
   t(nom, (sansEsc(extrait).length > 0) === attendu);
 const nonEch = sansEsc(src);
-t('toutes les valeurs interpolees passent par esc()',
+t('every interpolated value goes through esc()',
   nonEch.length === 0, nonEch.join(' | '));
 console.log('      (' + (src.match(/data-(?:act|arg\d?)="'\s*\+\s*esc\(/g) || []).length
             + ' valeurs echappees)');
 
-console.log('   -- 5. rien ne masque la fonction de traduction --');
-// `t()` traduit. Une variable locale nommee `t` la masque dans toute la
-// portee, et l'appel devient « t is not a function » — au premier rendu
-// seulement, donc un demarrage casse et rien du tout ensuite. C'est arrive :
-// `const t = $('tri')` dans `renderToolbar`, et l'ecran restait vide.
+console.log('   -- 5. nothing shadows the translation function --');
+// `t()` translates. A local variable named `t` shadows it throughout the scope,
+// and the call becomes "t is not a function" — on the first render only, so a
+// broken startup and nothing at all afterwards. It happened: `const t = $('tri')`
+// in `renderToolbar`, and the screen stayed empty.
 //
-// Douze fonctions declarent un `t` local. Aucune ne doit appeler `t(`.
+// Twelve functions declare a local `t`. None of them may call `t(`.
 function masquages(texte) {
   const out = [];
   const decl = /\b(?:const|let|var)\s+t\s*=/g;
   let m;
   while ((m = decl.exec(texte)) !== null) {
-    // On suit les accolades depuis la declaration : quand la profondeur passe
-    // sous zero, on a quitte le bloc ou le masquage s'applique.
+    // We follow the braces from the declaration: when the depth goes below
+    // zero, we have left the block where the shadowing applies.
     let prof = 0;
     for (let i = m.index; i < texte.length; i++) {
       const c = texte[i];
@@ -236,31 +236,32 @@ function masquages(texte) {
   return out;
 }
 
-// Le detecteur est mis a l'epreuve avant d'etre applique, comme le bloc 3.
-t('il voit un t() dans une portee ou t est masque',
+// The detector is put to the test before being applied, as in block 3.
+t('it sees a t() in a scope where t is shadowed',
   masquages("function f(){ const t = x; return t('a'); }").length === 1);
-t("il ignore un t() hors de la portee",
+t("it ignores a t() outside the scope",
   masquages("function f(){ const t = x; }\nfunction g(){ return t('a'); }").length === 0);
-t('il ignore une portee sans appel',
+t('it ignores a scope with no call',
   masquages("function f(){ const t = x; return t.value; }").length === 0);
 
 const masques = masquages(src);
-t('aucune fonction ne masque t() puis l\'appelle', masques.length === 0,
-  'lignes : ' + masques.join(', '));
+t('no function shadows t() then calls it', masques.length === 0,
+  'lines: ' + masques.join(', '));
 
-console.log('   -- 6. les libelles de tache cotes client et serveur concordent --');
-// Ce fichier s'appelle « injection » et il est devenu le gardien des
-// INVARIANTS DE SOURCE d'app.js : plus de gestionnaire en ligne, `esc()` sur
-// les valeurs interpolees, aucun masquage de `t()`. En voici un de plus.
+console.log('   -- 6. the task labels match on the client and the server --');
+// This file is called "injection" and it has become the guardian of app.js's
+// SOURCE INVARIANTS: no inline handler, `esc()` on interpolated values, no
+// shadowing of `t()`. Here is one more.
 //
-// `TACHES_FICHES` contient des noms de FONCTION Python : `JobRunner.start()`
-// pose `fn.__name__` comme libelle, et le client compare cette chaine pour
-// savoir si une recherche de fiches tourne. Rien ne relie les deux fichiers.
-// Renommer `actions.sync_meta` casserait le bandeau « Recherche des infos… »
-// en silence, et dans les DEUX sens : soit il ne s'afficherait plus jamais,
-// soit il ne s'effacerait plus.
+// `TACHES_FICHES` holds Python FUNCTION names: `JobRunner.start()` sets
+// `fn.__name__` as the label, and the client compares that string to know
+// whether an entry search is running. Nothing links the two files. Renaming
+// `actions.sync_meta` would break the "Recherche des infos…" banner -- anglais:ok,
+// a quoted interface string -- in silence,
+// and in BOTH directions: either it would never show again, or it would never
+// clear.
 const blocTaches = (src.match(/const TACHES_FICHES = \[([^\]]*)\]/) || [])[1];
-t('app.js declare TACHES_FICHES', !!blocTaches, 'introuvable');
+t('app.js declares TACHES_FICHES', !!blocTaches, 'not found');
 const attendus = blocTaches
   ? [...blocTaches.matchAll(/'([^']+)'/g)].map(m => m[1]) : [];
 
@@ -268,33 +269,32 @@ const serveur = fs.readFileSync(path.join(RACINE, 'romule', 'server.py'), 'utf8'
 const route = serveur.match(
   /"\/api\/meta-sync":\s*\n\s*self\._job\(actions\.(\w+)/);
 const appele = route ? route[1] : null;
-t('la route /api/meta-sync lance bien une tache', !!appele,
-  'motif introuvable dans server.py');
-t('le libelle du serveur figure dans la liste du client',
+t('the /api/meta-sync route does start a task', !!appele,
+  'pattern not found in server.py');
+t("the server's label appears in the client's list",
   !!appele && attendus.includes(appele),
   'serveur=' + appele + '  client=' + JSON.stringify(attendus));
 
-// Et la fonction doit exister, sans quoi la concordance ne prouve rien.
+// And the function must exist, otherwise the match proves nothing.
 const actions = fs.readFileSync(path.join(RACINE, 'romule', 'actions.py'), 'utf8');
-t('la fonction existe dans actions.py',
+t('the function exists in actions.py',
   !!appele && new RegExp('^def ' + appele + '\\(', 'm').test(actions), appele);
 
-console.log('   -- 7. setSystem ne vide pas avant d\'avoir de quoi remplir --');
-// Le « saut » au changement de plateforme venait de la : l'ancienne version
-// vidait `SGAMES`, `SCONSOLE` et `SALL` PUIS attendait le reseau. Entre les
-// deux, la grille etait vide, la page remontait, puis tout revenait.
+console.log('   -- 7. setSystem does not empty before it can refill --');
+// The "jump" when switching platform came from there: the old version emptied
+// `SGAMES`, `SCONSOLE` and `SALL` THEN waited for the network. In between, the
+// grid was empty, the page scrolled up, then everything came back.
 //
-// Ce controle est ICI, sur le source, et non dans un test navigateur — trois
-// versions de la mesure a l'execution (hauteur par image, nombre de cartes,
-// avec latence emulee puis retard force) sont restees VERTES sur le code
-// casse. Un controle qu'on n'a jamais vu echouer ne prouve rien. La regle,
-// elle, est nette et se lit : aucune affectation d'une liste vide avant le
-// premier `await`.
+// This check lives HERE, on the source, and not in a browser test — three
+// versions of the runtime measurement (height per frame, number of cards, with
+// emulated latency then a forced delay) stayed GREEN on the broken code. A check
+// nobody has ever seen fail proves nothing. The rule, on the other hand, is
+// clear and readable: no assignment of an empty list before the first `await`.
 function videAvantAttente(texte) {
   const d = texte.indexOf('async setSystem(key)');
   if (d < 0) return ['setSystem introuvable'];
   const attente = texte.indexOf('await', d);
-  if (attente < 0) return ['aucun await dans setSystem'];
+  if (attente < 0) return ['no await in setSystem'];
   const tete = texte.slice(d, attente);
   const out = [];
   for (const nom of ['SGAMES', 'SCONSOLE', 'SCONSOLE_PATHS', 'SALL']) {
@@ -304,31 +304,31 @@ function videAvantAttente(texte) {
   return out;
 }
 const epreuvesVide = [
-  ['une liste videe avant l\'await -> detecte',
+  ['a list emptied before the await -> detected',
    "async setSystem(key){ SGAMES = []; const r = await api(); }", true],
-  ['videe APRES l\'await -> ignore',
+  ['emptied AFTER the await -> ignored',
    "async setSystem(key){ const r = await api(); SGAMES = []; }", false],
-  ['aucune affectation -> ignore',
+  ['no assignment -> ignored',
    "async setSystem(key){ const r = await api(); appliquer(r); }", false],
 ];
 for (const [nom, extrait, attendu] of epreuvesVide)
   t(nom, (videAvantAttente(extrait).length > 0) === attendu);
 const vides = videAvantAttente(src);
-t('setSystem ne vide aucune liste avant son premier await',
+t('setSystem empties no list before its first await',
   vides.length === 0, vides.join(', '));
 
-console.log('   -- 8. les boutons de fenetre portent le bon rappel --');
-// `dialogue()` appelle `actions[i].faire(champs)`. Ecrire `action:` au lieu de
-// `faire:` produit un bouton qui s'affiche, se clique, et NE FAIT RIEN — sans
-// erreur, sans trace. Trois appels etaient dans ce cas, dont le « Copier »
-// d'une cle d'API, qu'on ne peut plus reafficher ensuite.
+console.log('   -- 8. the dialog buttons carry the right callback --');
+// `dialogue()` calls `actions[i].faire(champs)`. Writing `action:` instead of
+// `faire:` produces a button that shows, is clicked, and DOES NOTHING — with no
+// error, no trace. Three call sites were in that state, among them the "Copier"
+// of an API key, which cannot be shown again afterwards.
 //
-// `test_gestes.py` ne pouvait pas le voir : le bouton EST atteignable, il a
-// bien un gestionnaire. C'est ce que le gestionnaire appelle qui n'existe pas.
+// `test_gestes.py` could not see it: the button IS reachable, it does have a
+// handler. It is what the handler calls that does not exist.
 function rappelsFautifs(texte) {
   const out = [];
-  // Un objet d'action se reconnait a `libelle:` ; on regarde ce qui le suit
-  // jusqu'a la fin de l'objet.
+  // An action object is recognised by `libelle:`; we look at what follows it
+  // until the end of the object.
   const re = /libelle:\s*[^,]+,([^}]*)\}/g;
   let m;
   while ((m = re.exec(texte)) !== null)
@@ -337,18 +337,18 @@ function rappelsFautifs(texte) {
   return out;
 }
 const epreuvesRappel = [
-  ['action: au lieu de faire: -> detecte',
+  ['action: instead of faire: -> detected',
    "actions: [{libelle: 'X', principal: true, action: () => f()}]", true],
-  ['faire: -> ignore',
+  ['faire: -> ignored',
    "actions: [{libelle: 'X', principal: true, faire: () => f()}]", false],
-  ['un libelle sans rappel -> ignore', "actions: [{libelle: 'X'}]", false],
+  ['a label with no callback -> ignored', "actions: [{libelle: 'X'}]", false],
 ];
 for (const [nom, extrait, attendu] of epreuvesRappel)
   t(nom, (rappelsFautifs(extrait).length > 0) === attendu);
 const fautifsRappel = rappelsFautifs(src);
-t('aucun bouton de fenetre n\'utilise `action:`',
+t('no dialog button uses `action:`',
   fautifsRappel.length === 0, 'lignes : ' + fautifsRappel.join(', '));
 
 console.log('      ------------------------------------------------');
-console.log('      ' + ok + ' controles OK, ' + ko + ' echec(s)');
+console.log('      ' + ok + ' checks OK, ' + ko + ' failure(s)');
 process.exit(ko ? 1 : 0);
