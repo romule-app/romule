@@ -28,6 +28,8 @@ import json
 import time
 import urllib.parse
 
+from . import __version__
+
 PREFIXE = "/api/v1/"
 
 # Bornes de pagination. 200 n'est pas un chiffre rond au hasard : une
@@ -246,7 +248,10 @@ SPEC = {
             "summary": "Version, licence, source, uptime.",
             "responses": {"200": _reponse(
                 "Service identity.",
-                {"version": "0.2.0", "api": "v1", "uptime_s": 8412,
+                # `__version__` plutot qu'un litteral : un exemple de
+                # specification qui annonce une version d'il y a deux
+                # publications se lit comme une specification perimee.
+                {"version": __version__, "api": "v1", "uptime_s": 8412,
                  "licence": "AGPL-3.0-or-later", "library_ready": True})}}},
         "/api/v1/stats": {"get": {
             "summary": "Counts and total size for the whole library.",
