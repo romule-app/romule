@@ -21,7 +21,8 @@ Romule ignore donc `X-Forwarded-For` et `X-Real-IP` **tant que tu ne nommes pas
 le proxy toi-même** :
 
 ```sh
-ROMULE_TRUSTED_PROXIES=127.0.0.1,::1
+ROMULE_TRUSTED_PROXIES=127.0.0.1,::1        # proxy sur l'hôte
+ROMULE_TRUSTED_PROXIES=172.16.0.0/12        # proxy en conteneur
 ```
 
 Sans cela, un en-tête transmis n'accorde rien — et une requête qui en porte un

@@ -28,7 +28,7 @@ seul dossier continue donc de fonctionner exactement comme avant.
 | `ROMULE_TOKEN` | — | Jeton d'accès ; remplace celui qui est engendré |
 | `ROMULE_LAN` | — | `1` ouvre l'accès réseau **sans mot de passe** |
 | `ROMULE_KEYS` | `~/.romule/prod.keys` | Chemin du fichier de clés de déchiffrement |
-| `ROMULE_TRUSTED_PROXIES` | — | Adresses, séparées par des virgules, dont les en-têtes transmis sont honorés |
+| `ROMULE_TRUSTED_PROXIES` | — | Adresses, séparées par des virgules, dont les en-têtes transmis sont honorés. **La notation CIDR est acceptée** (`172.16.0.0/12`), et c'est ce qu'il faut sous Docker, où l'adresse du proxy est attribuée dynamiquement. |
 | `ROMULE_UPLOAD_MAX` | 64 Gio | Plus grand envoi accepté, en octets |
 | `ROMULE_DISK_MARGIN` | 2 Gio | Espace libre gardé en réserve, en octets |
 | `ROMULE_NO_BROWSER` | — | `1` empêche Romule d'ouvrir un navigateur au démarrage |

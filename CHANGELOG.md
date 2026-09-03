@@ -10,7 +10,39 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ## [Unreleased]
 
+### Added
+
+- **`exemples/caddy/` — a complete reverse-proxy stack**, with Romule *not*
+  published on the host: it is reachable only through Caddy. CI stands the
+  stack up on every change and replays the matrix that matters:
+
+  | | with `ROMULE_TRUSTED_PROXIES` | without |
+  |---|---|---|
+  | a genuinely local client, through the proxy | **200** | 403 |
+  | an outside client forging `X-Forwarded-For: 127.0.0.1` | **403** | 403 |
+
+  The two rows differ by one header and give opposite results. This cannot be
+  proven with a double: what is being checked is what a *real* Caddy writes
+  into the chain, and a double would only prove what it wrote itself.
+- **`ROMULE_TRUSTED_PROXIES` accepts CIDR** — `172.16.0.0/12` beside
+  `127.0.0.1`. Exact-string matching was fine while you wrote `127.0.0.1`; it
+  stopped being fine the moment there was a container, because Docker assigns
+  the proxy's address dynamically. The setting the documentation recommends was
+  impractical in the deployment it recommends: you had to read an address after
+  every `docker compose up` and fix it when it changed.
+
 ### Fixed
+
+- **A network notation was compared as an address.** With
+  `ROMULE_TRUSTED_PROXIES=10.0.0.0/8`, the literal string `10.0.0.0/8` was in
+  the exact-match set, so a chain link equal to it counted as a declared relay.
+  No exploitation is claimed — behind a real proxy the attacker's address is
+  appended on the right and the walk stops there — but a notation is not an
+  address, and it is fixed as the comparison bug it is.
+- **The startup banner said "Network: disabled" right above the address to
+  connect to.** The line followed the `lan_access` setting; in a container
+  Romule listens on `0.0.0.0` and protects itself with a token, so the two
+  disagreed in the most common case. It follows the socket now.
 
 - **The update notice no longer reads "Version v0.3.0 available".** GitHub
   names its tags `v0.3.0` and the interface already writes the word *Version*

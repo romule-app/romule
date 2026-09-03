@@ -1,0 +1,65 @@
+# Romule derriere Caddy, en une commande.
+#
+#     docker compose up -d
+#     docker compose logs romule     # l'adresse avec ton jeton d'acces
+#
+# Puis http://localhost/ — Caddy ecoute sur le port 80, Romule n'est PAS
+# publie : il n'est joignable que par le proxy. C'est le point de cet exemple.
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: romule-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-donnees:/data
+      - caddy-config:/config
+    depends_on:
+      - romule
+
+  romule:
+    image: ghcr.io/romule-app/romule:latest
+    container_name: romule
+    restart: unless-stopped
+    # AUCUN `ports:`. Romule n'est joignable que depuis le reseau du compose,
+    # donc uniquement par Caddy. Publier son port en plus reviendrait a laisser
+    # une porte ouverte a cote de celle qu'on vient de proteger.
+    environment:
+      ROMULE_ROOT: /data
+      ROMULE_BASES: /library
+
+      # LE REGLAGE QUI COMPTE.
+      #
+      # Un proxy fait paraitre TOUTES les requetes comme venant de lui. Romule
+      # accorde tous les droits aux requetes locales : sans cette declaration,
+      # il ignore `X-Forwarded-For` — et une requete qui en porte un n'est pas
+      # non plus traitee comme locale. C'est volontaire : le defaut refuse.
+      #
+      # La notation CIDR est acceptee, et c'est ce qu'il faut ici : Docker
+      # attribue l'adresse de Caddy dynamiquement, et une adresse fixe serait
+      # fausse au premier `docker compose down`.
+      ROMULE_TRUSTED_PROXIES: 172.16.0.0/12
+
+      # Le service est desormais joignable par le reseau, a travers le proxy.
+      # Choisis TON mode d'acces :
+      #   - laisse ces deux lignes commentees et cree un compte dans
+      #     l'assistant : c'est le plus sur ;
+      #   - ROMULE_LAN=1 ouvre sans mot de passe. A ne faire que si Caddy
+      #     porte lui-meme une authentification devant.
+      # ROMULE_LAN: "1"
+      # ROMULE_TOKEN: ""
+
+      TZ: Europe/Paris
+
+    volumes:
+      - romule-donnees:/data
+      - ./library:/library      # ← tes jeux
+
+volumes:
+  caddy-donnees:
+  caddy-config:
+  romule-donnees:

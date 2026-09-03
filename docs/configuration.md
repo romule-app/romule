@@ -27,7 +27,7 @@ working exactly as before.
 | `ROMULE_TOKEN` | — | Access token; overrides the generated one |
 | `ROMULE_LAN` | — | `1` opens network access **without a password** |
 | `ROMULE_KEYS` | `~/.romule/prod.keys` | Path to the decryption keys |
-| `ROMULE_TRUSTED_PROXIES` | — | Comma-separated IPs whose forwarded headers are honoured |
+| `ROMULE_TRUSTED_PROXIES` | — | Addresses whose forwarded headers are honoured, comma-separated. **CIDR is accepted** (`172.16.0.0/12`), which is what you want under Docker where the proxy's address is assigned dynamically. |
 | `ROMULE_UPLOAD_MAX` | 64 GiB | Largest accepted upload, bytes |
 | `ROMULE_DISK_MARGIN` | 2 GiB | Free space kept in reserve, bytes |
 | `ROMULE_NO_BROWSER` | — | `1` stops Romule opening a browser at startup |

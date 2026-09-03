@@ -1,0 +1,36 @@
+# Romule derriere Caddy.
+#
+# Caddy termine le TLS et parle a Romule en HTTP clair sur le reseau interne :
+# Romule n'a pas de TLS, c'est une limite assumee plutot qu'une pile ecrite a
+# la main. Voir docs/securite.md.
+#
+# Remplace `:80` par ton nom de domaine et Caddy obtiendra un certificat
+# Let's Encrypt tout seul :
+#
+#     romule.exemple.fr {
+#         reverse_proxy romule:8787
+#     }
+
+:80 {
+	# `reverse_proxy` pose lui-meme X-Forwarded-For, X-Forwarded-Proto et
+	# X-Forwarded-Host. Il AJOUTE l'adresse du pair a droite de la chaine
+	# existante plutot que de la remplacer — c'est ce qui permet a Romule de
+	# remonter la chaine par la droite et d'ignorer ce qu'un client a pu y
+	# ecrire lui-meme.
+	reverse_proxy romule:8787 {
+		# Un envoi de jeu pese plusieurs gigaoctets et dure des minutes.
+		# Sans ces deux reglages, Caddy coupe au milieu.
+		flush_interval -1
+		transport http {
+			read_timeout 3600s
+			write_timeout 3600s
+		}
+	}
+
+	# Pas de limite de taille de corps : ce sont des jeux entiers qui passent.
+	request_body {
+		max_size 0
+	}
+
+	encode gzip
+}
