@@ -1,29 +1,27 @@
-"""Ce que Romule ecrit dans le TERMINAL, et rien d'autre.
+"""What Romule writes to the TERMINAL, and nothing else.
 
-Le journal du navigateur et celui du terminal repondent a deux questions
-differentes. Le premier dit a un utilisateur ce que sa ludotheque est en train
-de faire ; le second sert a comprendre pourquoi un service ne demarre pas, sur
-une machine ou personne ne peut ouvrir de navigateur — un conteneur, un NAS,
-une session ssh. Jusqu'ici, seul le premier existait : `JobRunner.log()`
-ecrivait dans un fichier et dans un tampon memoire, jamais sur la sortie
-standard. `docker logs romule` ne montrait donc presque rien.
+The browser log and the terminal log answer two different questions. The first
+tells a user what their library is doing right now; the second is how you work
+out why a service will not start, on a machine where nobody can open a browser
+— a container, a NAS, an ssh session. Until now only the first existed:
+`JobRunner.log()` wrote to a file and to an in-memory buffer, never to standard
+output. `docker logs romule` therefore showed almost nothing.
 
-Le style se choisit par `ROMULE_LOG`, et le defaut ne change rien a ce qui
-existait :
+The style is chosen with `ROMULE_LOG`, and the default changes nothing about
+what existed before:
 
-    quiet     les erreurs seules
-    normal    le bandeau, les faits de demarrage, avertissements et erreurs
-    verbose   + chaque evenement de tache, horodate et etiquete
-    debug     + le module, le fil d'execution, et la duree depuis le demarrage
-    json      une ligne JSON par evenement, pour un collecteur
+    quiet     errors only
+    normal    the banner, the startup facts, warnings and errors
+    verbose   + every task event, timestamped and tagged
+    debug     + the module, the thread, and seconds since startup
+    json      one JSON line per event, for a log collector
 
-`json` n'est pas un caprice : `docker logs | jq` est la facon dont on lit un
-service qu'on n'administre pas a la main, et une ligne coloree y devient une
-suite d'echappements ANSI.
+`json` is not a whim: `docker logs | jq` is how you read a service you do not
+administer by hand, and a coloured line there becomes a string of ANSI escapes.
 
-La couleur suit `NO_COLOR` (la convention, https://no-color.org) et s'eteint
-d'elle-meme hors d'un terminal : une redirection vers un fichier ne doit pas
-le remplir de sequences d'echappement.
+Colour follows `NO_COLOR` (the convention, https://no-color.org) and switches
+itself off outside a terminal: redirecting to a file must not fill it with
+escape sequences.
 """
 
 import json as _json
@@ -32,20 +30,20 @@ import sys
 import threading
 import time
 
-# Ordre de gravite croissante. `debug` est le plus bas : il n'apparait qu'aux
-# styles qui le demandent.
+# Increasing order of severity. `debug` is the lowest: it only shows for the
+# styles that ask for it.
 NIVEAUX = ("debug", "info", "ok", "warn", "error")
 _RANG = {n: i for i, n in enumerate(NIVEAUX)}
 
 STYLES = ("quiet", "normal", "verbose", "debug", "json")
 
-# Seuil de gravite affiche, par style.
+# Severity threshold shown, per style.
 #
-# `verbose` s'arrete a `info` et NON a `debug`, ce qui n'est pas un detail :
-# l'interface interroge `/api/job` en boucle tant qu'une tache tourne, et les
-# requetes sont journalisees en `debug`. Un `verbose` qui les montrerait noierait
-# les evenements de tache sous des dizaines de lignes par seconde — c'est-a-dire
-# rendrait illisible exactement ce qu'on est venu lire.
+# `verbose` stops at `info` and NOT at `debug`, which is not a detail: the
+# interface polls `/api/job` in a loop while a task runs, and requests are
+# logged at `debug`. A `verbose` that showed them would bury the task events
+# under dozens of lines a second — that is, make unreadable exactly what you
+# opened it to read.
 _SEUIL = {"quiet": _RANG["error"], "normal": _RANG["warn"],
           "verbose": _RANG["info"], "debug": _RANG["debug"],
           "json": _RANG["debug"]}
@@ -63,8 +61,8 @@ def _style_demande():
     v = (os.environ.get("ROMULE_LOG") or os.environ.get("SWITCH_LOG") or "").strip().lower()
     if v in STYLES:
         return v
-    # Un alias evident vaut mieux qu'un refus : « ROMULE_LOG=trace » veut
-    # visiblement dire « le plus bavard possible ».
+    # An obvious alias beats a refusal: `ROMULE_LOG=trace` clearly means
+    # "as loud as you can".
     return {"trace": "debug", "silencieux": "quiet", "bavard": "verbose",
             "": "normal"}.get(v, "normal")
 
@@ -87,7 +85,7 @@ COULEUR = _couleur_possible()
 
 
 def relire():
-    """Relit l'environnement. Sert aux tests, qui posent la variable apres coup."""
+    """Re-read the environment. For tests, which set the variable afterwards."""
     global STYLE, COULEUR
     STYLE = _style_demande()
     COULEUR = _couleur_possible()
@@ -99,13 +97,13 @@ def _c(texte, quoi):
 
 
 def montre(niveau):
-    """Ce niveau doit-il apparaitre au style courant ?"""
+    """Should this level show at the current style?"""
     return _RANG.get(niveau, _RANG["info"]) >= _SEUIL.get(STYLE, _SEUIL["normal"])
 
 
-# `ROMULE` en lettres formees de blocs. Un service qui demarre doit se nommer :
-# dans un journal ou dix conteneurs ecrivent, c'est le seul repere qui separe
-# deux demarrages.
+# `ROMULE` in block letters. A service starting up should name itself: in a
+# log where ten containers write, this is the only marker that separates one
+# startup from the next.
 _BANNIERE = r"""
   ██████   ██████  ███    ███ ██    ██ ██      ███████
   ██   ██ ██    ██ ████  ████ ██    ██ ██      ██
@@ -116,11 +114,10 @@ _BANNIERE = r"""
 
 
 def banniere(faits):
-    """Le bandeau de demarrage : le nom, puis les faits, alignes.
+    """The startup banner: the name, then the facts, aligned.
 
-    `faits` est une liste de couples (libelle, valeur). Une valeur vide n'est
-    pas affichee : une ligne « Console : » suivie de rien apprend moins que son
-    absence.
+    `faits` is a list of (label, value) pairs. An empty value is not shown: a
+    line reading "Console:" followed by nothing teaches less than its absence.
     """
     if STYLE == "json":
         evenement("demarrage", **{k.lower().replace(" ", "_"): v
@@ -140,11 +137,11 @@ def banniere(faits):
 
 
 def evenement(message, niveau="info", module="", **champs):
-    """Une ligne de journal sur la sortie standard.
+    """One log line on standard output.
 
-    Ne leve jamais : un service ne doit pas mourir parce qu'il n'a pas pu se
-    plaindre. Une sortie fermee — un `docker logs` interrompu, un tube casse —
-    est le cas normal, pas une panne.
+    Never raises: a service must not die because it could not complain. A
+    closed output — an interrupted `docker logs`, a broken pipe — is the normal
+    case, not a fault.
     """
     if not montre(niveau):
         return
@@ -172,9 +169,9 @@ def _ligne(message, niveau, module, champs):
     bouts = [_c(time.strftime("%H:%M:%S"), "gris"),
              _c(_ETIQUETTE.get(niveau, "INFO "), niveau)]
     if STYLE == "debug":
-        # Qui a parle, depuis quel fil, et a quelle seconde de vie du service.
-        # Les trois repondent a des questions differentes : « quel module »,
-        # « quelle tache concurrente », « avant ou apres le scan ».
+        # Who spoke, from which thread, and at what second of the service's
+        # life. The three answer different questions: "which module", "which
+        # concurrent task", "before or after the scan".
         bouts.append(_c("%7.2fs" % (time.monotonic() - DEBUT), "gris"))
         bouts.append(_c("%-14s" % (module or "-")[:14], "gris"))
         bouts.append(_c("%-12s" % threading.current_thread().name[:12], "gris"))
@@ -186,12 +183,12 @@ def _ligne(message, niveau, module, champs):
 
 
 def dit(message, niveau="info", module=""):
-    """Un fait de DEMARRAGE : montre quel que soit le style, sauf en `quiet`.
+    """A STARTUP fact: shown whatever the style, except in `quiet`.
 
-    Distinct d'`evenement()`, qui obeit au seuil de gravite. « Ludotheque :
-    /library » n'est ni un avertissement ni une erreur, et doit pourtant
-    apparaitre en `normal` — c'est meme la premiere chose qu'on lit quand on
-    cherche pourquoi le service ne trouve pas les jeux.
+    Distinct from `evenement()`, which obeys the severity threshold. "Library:
+    /library" is neither a warning nor an error, yet it must appear in
+    `normal` — it is in fact the first thing you read when working out why the
+    service cannot find your games.
     """
     if STYLE == "quiet" and niveau != "error":
         return

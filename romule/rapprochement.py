@@ -1,28 +1,26 @@
-"""Ce candidat correspond-il vraiment a ce qu'on cherchait ?
+"""Does this candidate really match what we were looking for?
 
-Deux sources donnent un titre officiel a partir d'un nom de fichier :
-SteamGridDB pour les jeux sans identifiant, IGDB pour les resumes. Toutes deux
-rendent une LISTE de candidats classes par leur propre pertinence, qui n'est
-pas la notre : elles cherchent a repondre quelque chose, nous cherchons a
-repondre juste.
+Two sources turn a file name into an official title: SteamGridDB for games
+without an identifier, IGDB for summaries. Both return a LIST of candidates
+ranked by their own idea of relevance, which is not ours: they try to answer
+something, we try to answer correctly.
 
-`covers.sgdb_infos()` prenait le premier resultat, sans rien verifier. Sur
-« Crazy Construction », SteamGridDB rendait un jeu nomme « Crazy » — et comme
-ce titre sert ensuite de pivot pour interroger IGDB, la carte affichait le nom
-ET le resume d'un autre jeu. Un seul `[0]` non verifie produisait les deux
-defauts, et le resultat etait pire qu'une fiche absente : une fiche absente se
-voit, une fiche fausse se croit.
+`covers.sgdb_infos()` took the first result, unchecked. On "Crazy
+Construction", SteamGridDB returns a game called "Crazy" — and since that title
+is then the pivot for the IGDB lookup, the card showed the name AND the summary
+of a different game. One unchecked `[0]` produced both defects, and the result
+was worse than a missing entry: a missing entry is visible, a wrong one is
+believed.
 
-La regle
+The rule
 --------
-Un candidat doit couvrir la MAJORITE des mots cherches. « Crazy » couvre un mot
-sur deux : ce n'est pas assez. « Batman: Arkham Asylum » couvre les trois mots
-de « Batman Arkham Asylum » : c'est le bon.
+A candidate must cover the MAJORITY of the words being searched for. "Crazy"
+covers one word out of two: not enough. "Batman: Arkham Asylum" covers all
+three words of "Batman Arkham Asylum": that is the one.
 
-Le seuil est aux deux tiers, arrondi au superieur — donc deux mots sur deux,
-deux sur trois, trois sur quatre. Il est volontairement severe : ne rien
-afficher coute une ligne vide, afficher le mauvais jeu coute la confiance dans
-tout le reste de la grille.
+The threshold is two thirds, rounded up — so two words out of two, two out of
+three, three out of four. It is deliberately strict: showing nothing costs an
+empty line, showing the wrong game costs the trust placed in the whole grid.
 """
 
 import math
@@ -31,20 +29,20 @@ import unicodedata
 
 _MOTS = re.compile(r"[a-z0-9]+")
 
-# Des mots qui n'aident pas a distinguer deux jeux : ils sont ignores dans le
-# COMPTE, mais pas retires du candidat — « The Last of Us » ne doit pas devenir
-# « Last Us » pour autant.
+# Words that do not help tell two games apart: they are ignored in the COUNT,
+# but not stripped from the candidate — "The Last of Us" must not become
+# "Last Us" along the way.
 _VIDES = {"the", "a", "an", "of", "and", "le", "la", "les", "de", "des", "du",
           "et", "version", "edition", "deluxe", "hd", "remastered"}
 
 
 def mots(texte):
-    """Les mots d'un titre, accents retires.
+    """The words of a title, with accents removed.
 
-    Sans cette normalisation, « Pokémon » se coupait en « pok » et « mon » — le
-    motif ne connait que l'ASCII — et ne pouvait donc jamais correspondre a
-    « Pokemon » ecrit dans un nom de fichier. C'est exactement le genre de
-    detail qui aurait fait rejeter des fiches parfaitement bonnes.
+    Without this normalisation, "Pokémon" was split into "pok" and "mon" — the
+    pattern only knows ASCII — and could therefore never match "Pokemon" as
+    written in a file name. Exactly the kind of detail that would have rejected
+    perfectly good entries.
     """
     plat = unicodedata.normalize("NFKD", texte or "")
     plat = "".join(c for c in plat if not unicodedata.combining(c))
@@ -52,14 +50,14 @@ def mots(texte):
 
 
 def distinctifs(vise):
-    """Les mots qui portent l'identite. Si on n'en garde aucun, on garde tout :
-    un titre entierement fait de mots courants existe (« The Witness »)."""
+    """The words that carry identity. If none survive, keep them all: a title
+    made entirely of common words exists ("The Witness")."""
     utiles = vise - _VIDES
     return utiles or vise
 
 
 def couverture(candidat, cherche):
-    """Part des mots distinctifs de `cherche` que `candidat` reprend, de 0 a 1."""
+    """Share of the distinctive words of `cherche` that `candidat` repeats, 0 to 1."""
     vise = distinctifs(mots(cherche))
     if not vise:
         return 0.0
@@ -67,7 +65,7 @@ def couverture(candidat, cherche):
 
 
 def assez_proche(candidat, cherche, seuil=2 / 3):
-    """Le candidat couvre-t-il assez de ce qu'on cherchait ?"""
+    """Does the candidate cover enough of what was being searched for?"""
     vise = distinctifs(mots(cherche))
     if not vise:
         return False
@@ -76,11 +74,11 @@ def assez_proche(candidat, cherche, seuil=2 / 3):
 
 
 def meilleur(candidats, cherche, nom=lambda x: x):
-    """Le candidat le plus proche, ou None si aucun n'est assez proche.
+    """The closest candidate, or None if none is close enough.
 
-    A couverture egale, le titre le plus COURT gagne : il ajoute moins de mots
-    qu'on n'a pas demandes, donc il s'ecarte moins — c'est ce qui separe
-    « Mario Kart 8 » de « Mario Kart 8 Deluxe Booster Course Pass ».
+    At equal coverage the SHORTEST title wins: it adds fewer words nobody asked
+    for, so it strays less — which is what separates "Mario Kart 8" from
+    "Mario Kart 8 Deluxe Booster Course Pass".
     """
     retenus = [c for c in (candidats or []) if assez_proche(nom(c), cherche)]
     if not retenus:
