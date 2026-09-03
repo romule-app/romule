@@ -307,6 +307,11 @@ terminating HTTPS in front of it.
     }
     ```
 
+    A complete stack — Caddy in front, Romule not published on the host — is in
+    [`exemples/caddy/`](https://github.com/romule-app/romule/tree/main/exemples/caddy).
+    CI stands it up on every change and checks that a forged
+    `X-Forwarded-For` still gets you nowhere.
+
 === "nginx"
 
     ```nginx

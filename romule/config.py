@@ -1,5 +1,6 @@
 """Chemins, constantes et configuration persistante."""
 
+import ipaddress
 import json
 import os
 from pathlib import Path
@@ -276,8 +277,63 @@ CLES = Path(env("KEYS") or _cles_par_defaut()).expanduser()
 JETONS_INTERDITS = {"change-moi", "changeme", "change-me", "secret", "token",
                     "colle-le-ici", "a-changer", "tondejeton"}
 
-PROXYS_CONFIANCE = {a.strip() for a in env("TRUSTED_PROXIES").split(",")
-                    if a.strip()}
+_DECLARES = {a.strip() for a in env("TRUSTED_PROXIES").split(",") if a.strip()}
+
+
+def _reseaux_de_confiance(entrees):
+    """Les entrees notees en CIDR, converties une fois pour toutes.
+
+    Une comparaison de chaines exactes suffisait tant qu'on ecrivait
+    `127.0.0.1`. Elle ne suffit plus des qu'il y a un conteneur : Docker
+    attribue l'adresse du proxy dynamiquement, et le reglage que la
+    documentation recommande devenait donc impraticable dans le deploiement
+    qu'elle recommande — il fallait relever une adresse apres chaque
+    `docker compose up`, et la corriger quand elle changeait.
+
+    On accepte donc `172.16.0.0/12` a cote de `127.0.0.1`. Les deux formes
+    coexistent : une installation existante n'a rien a changer.
+    """
+    reseaux = []
+    for entree in entrees:
+        if "/" not in entree:
+            continue
+        try:
+            reseaux.append(ipaddress.ip_network(entree, strict=False))
+        except ValueError:
+            # Une entree illisible ne doit surtout pas devenir permissive.
+            # On la signale au demarrage et on l'ignore.
+            PROBLEMES.append("ROMULE_TRUSTED_PROXIES : %r n'est pas un reseau "
+                             "valide, entree ignoree" % entree)
+    return reseaux
+
+
+RESEAUX_CONFIANCE = _reseaux_de_confiance(_DECLARES)
+# Les entrees CIDR sont RETIREES de l'ensemble des adresses exactes. Sans cela,
+# la chaine « 172.16.0.0/12 » y figurerait telle quelle — et `_client_reel()`
+# compare les maillons de `X-Forwarded-For`, qui viennent du client. Ecrire
+# cette chaine dans l'en-tete aurait suffi a se faire passer pour un relais
+# declare, donc a choisir quel maillon Romule retient.
+PROXYS_CONFIANCE = {a for a in _DECLARES if "/" not in a}
+
+
+def proxy_de_confiance(adresse):
+    """Cette adresse est-elle celle d'un relais declare ?
+
+    Le defaut est TOUJOURS le refus : sans declaration, aucun en-tete transmis
+    ne vaut quoi que ce soit. C'est la seule reponse sure, parce qu'un
+    `X-Forwarded-For` s'ecrit a la main par n'importe qui.
+    """
+    if not adresse:
+        return False
+    if adresse in PROXYS_CONFIANCE:
+        return True
+    if not RESEAUX_CONFIANCE:
+        return False
+    try:
+        ip = ipaddress.ip_address(adresse)
+    except ValueError:
+        return False
+    return any(ip in reseau for reseau in RESEAUX_CONFIANCE)
 
 # titledb : liste ordonnee, on essaie chaque miroir jusqu'au premier qui repond.
 VERSIONS_URLS = [
