@@ -1,22 +1,22 @@
-"""Les noms ecrits sur le disque ne se renomment pas.
+"""The names written on disk are not renamed.
 
-Ce test existe pour la traduction du code en anglais, et il y survivra.
+This test exists for the translation of the code into English, and it will
+outlive it.
 
-Un identifiant qu'on renomme est sans consequence : le programme est recompile
-d'un bloc, et la suite de tests dit tout de suite si quelque chose manque. Une
-CLE ECRITE SUR DISQUE, elle, ne se renomme pas — elle est deja dans le fichier
-de configuration de chaque installation. La renommer ne casse rien ici : ca
-casse chez les autres, au premier redemarrage, en silence. Le service repart
-sur ses valeurs par defaut et l'utilisateur decouvre que sa console n'est plus
-appairee, que son emulateur est revenu a Eden, et que ses cles d'API ne sont
-plus reconnues.
+Renaming an identifier has no consequence: the program is recompiled in one
+piece, and the test suite says straight away if something is missing. A KEY
+WRITTEN ON DISK, on the other hand, is not renamed — it is already in every
+installation's configuration file. Renaming it breaks nothing here: it breaks at
+other people's, on the first restart, in silence. The service starts again on its
+default values and the user discovers their console is no longer paired, their
+emulator is back to Eden, and their API keys are no longer recognised.
 
-D'ou cette liste, figee a la main. Elle n'est pas engendree depuis le code :
-une liste engendree suivrait le renommage et ne prouverait rien. Elle dit ce
-qui est sur le disque des gens, et le test echoue quand le code s'en ecarte.
+Hence this list, frozen by hand. It is not generated from the code: a generated
+list would follow the rename and would prove nothing. It states what is on
+people's disks, and the test fails when the code departs from it.
 
-Ajouter une cle est normal et demande de l'ajouter ici — c'est le seul cout,
-et il rappelle au passage qu'une cle nouvelle est un engagement.
+Adding a key is normal and requires adding it here — that is the only cost, and
+it is a reminder along the way that a new key is a commitment.
 """
 import json
 import os
@@ -45,7 +45,7 @@ def t(nom, cond, detail=""):
 
 # --- `_romule-config.json` -------------------------------------------------
 #
-# Les 41 reglages, tels qu'ils sont ecrits aujourd'hui chez tout le monde.
+# The 41 settings, as they are written today at everyone's.
 CONFIG = {
     "auth_mode", "auth_secret", "auto_nand", "cover_provider", "cover_url",
     "device_dir", "emulateur", "emulateur_paquet", "emuready",
@@ -59,15 +59,15 @@ CONFIG = {
     "versions_urls", "wifi_addr",
 }
 
-# Ecrite par le serveur, pas declaree dans DEFAULTS : le jeton engendre au
-# premier demarrage. La perdre, c'est enfermer dehors une instance exposee.
+# Written by the server, not declared in DEFAULTS: the token generated on the
+# first start. Losing it means locking an exposed instance out.
 HORS_DEFAUTS = {"jeton_auto"}
 
-# --- Les autres fichiers d'etat --------------------------------------------
-# `version` figure dans les trois fichiers : c'est le numero de format, celui
-# qui permettra un jour de lire un ancien fichier sans se tromper. Il manquait
-# a ma premiere liste, et le test l'a trouve des son premier passage — ce qui
-# est precisement ce qu'on lui demande.
+# --- The other state files -------------------------------------------------
+# `version` appears in all three files: it is the format number, the one that
+# will one day make it possible to read an old file without getting it wrong. It
+# was missing from my first list, and the test found it on its very first run —
+# which is precisely what it is asked to do.
 COMPTES = {"version", "comptes", "id", "email", "nom", "hash", "cree",
            "maj_mdp", "echecs", "bloque", "photo", "derniere", "admin", "totp"}
 CLES_API = {"version", "cles", "id", "nom", "prefixe", "empreinte", "cree",
@@ -75,14 +75,14 @@ CLES_API = {"version", "cles", "id", "nom", "prefixe", "empreinte", "cree",
 VUES = {"version", "vues", "id", "nom", "filtres", "cree",
         "systeme", "recherche", "etat", "avances"}
 
-# --- Ce qui porte un nom sur le systeme de fichiers -------------------------
+# --- What carries a name on the file system --------------------------------
 FICHIERS = {"_romule-config.json", "_romule-comptes.json", "_romule-cles.json",
             "_romule-vues.json", "_romule-lib.log", "_romule-acces.log",
             "_romule-maj.json", "_covers", "_corbeille", "_import"}
 
 
 def _cles_du_disque(chemin):
-    """Toutes les cles d'un JSON, a tous les niveaux."""
+    """Every key of a JSON document, at every level."""
     def descendre(x):
         if isinstance(x, dict):
             for k, v in x.items():
@@ -100,8 +100,8 @@ def test_les_reglages():
     t("aucun reglage n'a disparu ni change de nom", not partis,
       "ces cles sont sur le disque de chaque installation : %s" % partis)
     neufs = sorted(reels - CONFIG)
-    # Un reglage ajoute est normal ; il faut juste le declarer ici, et ce
-    # rappel est le seul cout du filet.
+    # An added setting is normal; it just has to be declared here, and that
+    # reminder is the net's only cost.
     t("tout reglage nouveau est declare dans ce test", not neufs,
       "ajoute(s) au code mais pas a la liste figee : %s" % neufs)
 
@@ -133,9 +133,9 @@ def test_les_cles_api():
     manquantes = sorted(ecrites - CLES_API)
     t("aucun champ de cle d'API inconnu n'est ecrit", not manquantes,
       "champs ecrits mais non declares : %s" % manquantes)
-    # L'empreinte est ce qui rend une fuite du fichier inoffensive : si ce
-    # champ disparaissait au profit d'un autre nom, la cle ne serait plus
-    # reconnue et personne ne saurait pourquoi.
+    # The fingerprint is what makes a leak of the file harmless: if this field
+    # disappeared in favour of another name, the key would no longer be
+    # recognised and nobody would know why.
     t("l'empreinte porte toujours ce nom", "empreinte" in ecrites, sorted(ecrites))
 
 
@@ -157,12 +157,11 @@ def test_les_noms_de_fichiers():
 
 
 def epreuve():
-    """Le filet attrape-t-il un renommage ?
+    """Does the net catch a rename?
 
-    On simule ce qu'on cherche a empecher — une cle qui disparait de
-    `DEFAULTS` — et on verifie que la comparaison le voit. Sans cette
-    epreuve, une liste figee qui aurait derive avec le code passerait pour
-    une protection.
+    We simulate what we are trying to prevent — a key disappearing from
+    `DEFAULTS` — and check the comparison sees it. Without this trial, a frozen
+    list that had drifted along with the code would pass for a protection.
     """
     faux = set(CONFIG) - {"emulateur"}
     if not (CONFIG - faux):
