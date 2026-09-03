@@ -1,17 +1,16 @@
-"""Un en-tete de proxy ne doit jamais suffire a se faire passer pour local.
+"""A proxy header must never be enough to pass for local.
 
-L'acces sans authentification repose sur `_local()` : « la requete vient de
-cette machine, donc elle vient de son proprietaire ». Derriere un reverse
-proxy installe sur le meme hote — nginx, Caddy, Traefik, ce que recommande
-tout guide d'auto-hebergement — TOUTES les requetes arrivent de 127.0.0.1.
-La supposition s'effondre, et le jeton comme le reglage « acces reseau »
-deviennent decoratifs.
+Access without authentication rests on `_local()`: "the request comes from this
+machine, so it comes from its owner". Behind a reverse proxy installed on the
+same host — nginx, Caddy, Traefik, what every self-hosting guide recommends —
+ALL requests arrive from 127.0.0.1. The assumption collapses, and both the token
+and the "network access" setting become decorative.
 
-On distingue donc deux situations :
+So two situations are told apart:
 
-  * personne ne relaie  -> une requete de 127.0.0.1 est bien locale ;
-  * quelqu'un relaie    -> l'adresse du pair ne dit plus rien, sauf si
-                           l'operateur a DECLARE son proxy.
+  * nobody relays    -> a request from 127.0.0.1 really is local;
+  * somebody relays  -> the peer's address says nothing any more, unless the
+                        operator has DECLARED their proxy.
 """
 import http.cookiejar, json, os, socket, subprocess, sys, tempfile, time
 import urllib.error, urllib.request
@@ -100,10 +99,10 @@ try:
     autre.terminate(); autre = None
 
     print("   -- proxy declare en CIDR --")
-    # Sous Docker, l'adresse du proxy est attribuee dynamiquement : une adresse
-    # exacte serait fausse au premier `docker compose down`. Le reglage que la
-    # documentation recommande etait donc impraticable dans le deploiement
-    # qu'elle recommande.
+    # Under Docker, the proxy's address is assigned dynamically: an exact
+    # address would be wrong at the first `docker compose down`. The setting the
+    # documentation recommends was therefore unusable in the deployment it
+    # recommends.
     autre, base3 = demarrer(ROMULE_TRUSTED_PROXIES="127.0.0.0/8")
     t("un pair dans le reseau declare est cru",
       appel(base3, "/api/job", {"X-Forwarded-For": "127.0.0.1"}) == 200)
@@ -112,16 +111,14 @@ try:
     autre.terminate(); autre = None
 
     print("   -- la notation CIDR n'est pas une adresse --")
-    # Une notation de reseau n'est pas une adresse, et ne doit jamais etre
-    # comparee comme telle. Si « 10.0.0.0/8 » restait dans l'ensemble des
-    # adresses EXACTES, ecrire cette chaine dans X-Forwarded-For suffirait a
-    # y passer pour un relais declare — donc a choisir quel maillon Romule
-    # retient en remontant la chaine.
+    # A network notation is not an address, and must never be compared as one.
+    # If "10.0.0.0/8" stayed in the set of EXACT addresses, writing that string
+    # into X-Forwarded-For would be enough to pass there for a declared relay —
+    # and so to choose which link Romule keeps while walking the chain.
     #
-    # Je n'ai pas montre d'exploitation reelle : derriere un vrai proxy,
-    # l'adresse de l'attaquant est ajoutee A DROITE et la remontee s'y arrete.
-    # C'est un defaut de comparaison, corrige comme tel — pas une faille dont
-    # je pretendrais avoir la preuve.
+    # No real exploitation was demonstrated: behind a real proxy, the attacker's
+    # address is appended ON THE RIGHT and the walk stops there. This is a
+    # comparison defect, fixed as such — not a hole anyone claims to have proved.
     autre, base4 = demarrer(ROMULE_TRUSTED_PROXIES="127.0.0.1,10.0.0.0/8")
     t("un maillon egal a la notation CIDR n'est pas un relais de confiance",
       appel(base4, "/api/job",
