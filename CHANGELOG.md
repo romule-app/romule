@@ -8,7 +8,10 @@ and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 Romule is at `0.x`: the HTTP API is **not** stable yet, and a minor release may
 change it. Breaking changes are always listed under **Changed** with the reason.
 
-## [Unreleased]
+## [0.3.1] — 2026-09-03
+
+A follow-up to 0.3.0: the reverse-proxy example the documentation kept
+promising, and the four defects that writing it uncovered.
 
 ### Added
 
