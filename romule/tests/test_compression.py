@@ -1,24 +1,23 @@
-"""Le serveur ne compressait rien.
+"""The server compressed nothing.
 
-Mesure a l'origine de ce travail, sur une ludotheque de 2 000 titres :
-`/api/scan` pesait 2,04 Mio et repartait en entier a chaque affichage, et les
-trois fichiers statiques 507 Kio — `_static` posant `Cache-Control: no-store`,
-ils repartent a CHAQUE chargement de page. Pour un outil auto-heberge qu'on
-atteint souvent depuis l'exterieur, c'est le poste le plus lourd.
+The measurement behind this work, on a 2 000-title library: `/api/scan` weighed
+2.04 MiB and went out in full on every display, and the three static files
+507 KiB — since `_static` sets `Cache-Control: no-store`, they go out on EVERY
+page load. For a self-hosted tool often reached from outside, that is the
+heaviest item.
 
-Ce qui est verifie ici n'est pas « ca compresse » mais les quatre proprietes
-qui font qu'une compression est correcte :
+What is checked here is not "it compresses" but the four properties that make a
+compression correct:
 
-  * le corps decompresse est IDENTIQUE a l'original ;
-  * `Content-Length` annonce la taille reellement envoyee ;
-  * `Vary: Accept-Encoding` accompagne la reponse, sinon un cache
-    intermediaire sert la variante compressee a qui ne sait pas la lire ;
-  * un client qui refuse le gzip recoit du clair.
+  * the decompressed body is IDENTICAL to the original;
+  * `Content-Length` announces the size actually sent;
+  * `Vary: Accept-Encoding` accompanies the response, otherwise an intermediate
+    cache serves the compressed variant to whoever cannot read it;
+  * a client that refuses gzip receives the clear form.
 
-Plus deux pieges specifiques a ce serveur : les images ne doivent pas etre
-recompressees, et l'ETag doit distinguer les deux representations — sans quoi
-un client qui cesse d'accepter le gzip recevrait un 304 pour un corps qu'il n'a
-jamais eu sous cette forme.
+Plus two traps specific to this server: images must not be recompressed, and the
+ETag must tell the two representations apart — without which a client that stops
+accepting gzip would receive a 304 for a body it never had in that form.
 """
 import gzip, os, socket, subprocess, sys, tempfile, time
 import urllib.error, urllib.request
@@ -35,7 +34,7 @@ def libre():
 RACINE = str(Path(tempfile.mkdtemp(prefix="ludo-gzip-")).resolve())
 jeux = Path(RACINE) / "GAMES"
 jeux.mkdir(parents=True)
-# Assez de titres pour que l'inventaire depasse largement le seuil.
+# Enough titles for the inventory to go well past the threshold.
 for i in range(400):
     (jeux / ("Titre numero %03d [0100%012x][v0].nsp" % (i, i))).write_bytes(b"\0" * 64)
 
