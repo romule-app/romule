@@ -8,32 +8,32 @@ from pathlib import Path
 PKG = Path(__file__).resolve().parent
 STATIC = PKG / "static"
 
-# ----------------------------------------------------------------- LA RACINE
-# La ludotheque — jeux, jaquettes, comptes, journaux — vit dans un dossier
-# DISTINCT du code. Elle valait auparavant `PKG.parent`, c'est-a-dire le
-# dossier qui contient le paquet : le code se retrouvait donc installe au
-# milieu des jeux, et l'application ecrivait son etat dans ses propres sources.
-# Tant que l'outil n'avait qu'un utilisateur, cela passait ; pour un depot
-# public, c'est un piege — quiconque clone le projet voit sa bibliotheque
-# apparaitre dans `git status`, et un `git add` emporte ses cles de console.
+# -------------------------------------------------------------------- ROOT
+# The library — games, cover art, accounts, logs — lives in a folder SEPARATE
+# from the code. It used to be `PKG.parent`, that is, the folder containing the
+# package: the code therefore ended up installed among the games, and the
+# application wrote its state into its own sources. While the tool had one
+# user that passed; for a public repository it is a trap — anyone cloning the
+# project sees their library turn up in `git status`, and one `git add` carries
+# off their console keys.
 #
-# Ordre retenu, du plus explicite au plus implicite :
-#   1. ROMULE_ROOT   — le nom du projet
-#   2. SWITCH_ROOT   — l'ancien nom, encore accepte
-#   3. ~/.local/share/romule (ou XDG_DATA_HOME), cree au besoin
+# Order of preference, from most explicit to most implicit:
+#   1. ROMULE_ROOT   — the project's name
+#   2. SWITCH_ROOT   — the old name, still accepted
+#   3. ~/.local/share/romule (or XDG_DATA_HOME), created if needed
 def _racine_par_defaut():
     base = os.environ.get("XDG_DATA_HOME", "").strip()
     return Path(base or (Path.home() / ".local" / "share")) / "romule"
 
 
-# Les variables du projet s'appellent ROMULE_*. Les anciennes, SWITCH_*, sont
-# encore lues : quelqu'un qui met a jour ne doit pas voir son service s'arreter
-# parce qu'un nom a change. Elles sont signalees une fois au demarrage.
+# The project's variables are named ROMULE_*. The old SWITCH_* ones are still
+# read: someone upgrading must not see their service stop because a name
+# changed. They are reported once at startup.
 ANCIENNES_UTILISEES = []
 
 
 def env(nom, defaut=""):
-    """Valeur de ROMULE_<nom>, ou de SWITCH_<nom> si elle seule est posee."""
+    """The value of ROMULE_<name>, or of SWITCH_<name> if only that one is set."""
     v = os.environ.get("ROMULE_" + nom)
     if v is not None:
         return v
@@ -52,28 +52,28 @@ ROOT = Path(env("ROOT") or _racine_par_defaut()).expanduser().resolve()
 
 
 def racine_douteuse(chemin=None):
-    """La racine designe-t-elle un endroit ou l'on ne doit rien ecrire ?
+    """Does the root point somewhere nothing should be written?
 
-    L'application deplace des fichiers et cree des dossiers. Une racine mal
-    reglee n'est pas une gene : c'est une perte de donnees. On refuse donc les
-    emplacements dont on est sur qu'ils ne sont pas une ludotheque.
+    The application moves files and creates folders. A mis-set root is not an
+    inconvenience: it is data loss. So we refuse the locations we are sure are
+    not a game library.
     """
     c = Path(chemin or ROOT).resolve()
     if c == Path(c.anchor):
         return "la racine du disque"
     if c == Path.home().resolve():
         return "le dossier personnel"
-    # `os.path.isdir` plutot que `Path.is_dir` : le premier rend False quand il
-    # ne peut pas regarder, le second leve. Or c'est une HEURISTIQUE — ne pas
-    # pouvoir lire le dossier n'en fait pas un depot de code, et une exception
-    # ici tuait le demarrage avant le controle qui, lui, sait expliquer.
+    # `os.path.isdir` rather than `Path.is_dir`: the former returns False when
+    # it cannot look, the latter raises. And this is a HEURISTIC — being unable
+    # to read the folder does not make it a code repository, and an exception
+    # here killed startup before the check that does know how to explain.
     if os.path.isdir(c / "romule") or os.path.isdir(c / ".git"):
         return "un depot de code (le code et les jeux doivent rester separes)"
     return ""
 
 
 def en_conteneur():
-    """Deploiement conteneurise ? Le remede a proposer n'est pas le meme."""
+    """Containerised deployment? The remedy to offer is not the same."""
     if os.path.exists("/.dockerenv"):
         return True
     try:
@@ -82,62 +82,61 @@ def en_conteneur():
     except OSError:
         return False
 
-# ------------------------------------------------------------- LA LUDOTHEQUE
-# `ROOT` melangeait deux choses qui n'ont pas la meme nature.
+# ----------------------------------------------------------------- LIBRARY
+# `ROOT` conflated two things of different natures.
 #
-#   * L'ESPACE DE TRAVAIL DU SERVICE — configuration, comptes, journaux,
-#     jaquettes, caches, sauvegardes. Il est fixe par le deploiement : un
-#     volume dans un conteneur, un dossier XDG en natif. Le deplacer, c'est
-#     changer d'installation.
-#   * LA LUDOTHEQUE — les jeux. C'est une donnee d'utilisateur. Elle vit
-#     souvent sur un autre disque, et c'est elle qu'on veut pouvoir designer
-#     depuis l'interface sans editer un fichier compose.
+#   * THE SERVICE'S WORKSPACE — configuration, accounts, logs, cover art,
+#     caches, backups. It is fixed by the deployment: a volume in a container,
+#     an XDG folder natively. Moving it means changing installation.
+#   * THE LIBRARY — the games. That is user data. It often lives on another
+#     disk, and it is the one you want to be able to point at from the
+#     interface without editing a compose file.
 #
-# Les melanger obligeait a choisir son dossier de jeux par variable
-# d'environnement, et changer d'avis faisait perdre ses comptes au passage.
-# Les outils auto-heberges separent tous les deux : le dossier de donnees vient
-# du deploiement, les bibliotheques s'ajoutent depuis l'ecran de reglages.
+# Conflating them forced you to choose your games folder through an environment
+# variable, and changing your mind lost your accounts along the way. Every
+# self-hosted tool separates the two: the data folder comes from the
+# deployment, libraries are added from the settings screen.
 #
-# Par defaut la ludotheque EST la racine : une installation existante ne voit
-# aucune difference, et rien ne se deplace tout seul.
+# By default the library IS the root: an existing installation sees no
+# difference, and nothing moves on its own.
 LUDO_IMPOSEE = bool(env("LIBRARY").strip())
 LUDO = Path(env("LIBRARY").strip() or ROOT).expanduser().resolve()
 
-# Dossiers ou l'interface a le droit d'aller, separes comme un PATH.
-# Vide — le defaut — signifie « tout ce que le processus voit », ce qui est le
-# comportement des outils auto-heberges : en conteneur, la frontiere est le
-# `volumes:` applique par le noyau ; en natif, c'est le compte Unix du service.
-# La declaration reste utile a qui installe en natif sous un compte large.
+# Folders the interface may enter, separated like a PATH.
+# Empty — the default — means "everything the process can see", which is how
+# self-hosted tools behave: in a container the boundary is the kernel-enforced
+# `volumes:`; natively it is the service's Unix account. Declaring it stays
+# useful to anyone installing natively under a broad account.
 #
-# Ce controle vit ICI, et pas dans le module de navigation, parce qu'il ne
-# suffit pas de brider la fenetre qui parcourt : sans lui, il restait possible
-# de SAISIR un chemin hors des bases et de s'y installer. Toutes les
-# operations sur les fichiers suivaient alors la ludotheque en dehors du
-# perimetre declare, et le confinement n'etait qu'une gene a l'affichage.
+# This check lives HERE, and not in the browsing module, because confining the
+# browsing dialog is not enough: without it, one could still TYPE a path
+# outside the bases and settle there. Every file operation then followed the
+# library outside the declared perimeter, and the confinement was no more than
+# a display inconvenience.
 BASES = [Path(b).expanduser().resolve()
          for b in env("BASES").split(os.pathsep) if b.strip()]
 
 
 def dans_les_bases(chemin):
-    """Le chemin est-il dans les bases declarees ? Vrai si aucune ne l'est."""
+    """Is the path inside the declared bases? True when none is declared."""
     if not BASES:
         return True
     c = Path(chemin).resolve()
     return any(c == b or b in c.parents for b in BASES)
 
-# Problemes rencontres en lisant la configuration, signales au demarrage.
-# Ils ne justifient pas de refuser de demarrer : un chemin devenu invalide —
-# un disque externe debranche — doit laisser le service accessible, sans quoi
-# on ne peut meme plus se connecter pour le corriger.
+# Problems met while reading the configuration, reported at startup.
+# They do not justify refusing to start: a path gone invalid — an external disk
+# unplugged — must leave the service reachable, otherwise you cannot even log
+# in to fix it.
 PROBLEMES = []
 
 
 def _chemins_ludotheque():
-    """Recalcule ce qui doit suivre les jeux plutot que l'etat du service.
+    """Recompute what must follow the games rather than the service's state.
 
-    La corbeille et le dossier d'import vivent A COTE des jeux, pas a cote de
-    la configuration. Sur un autre systeme de fichiers, `shutil.move` cesse
-    d'etre un renommage et recopie : quinze gigaoctets pour ecarter un titre.
+    The trash and the drop folder live NEXT TO the games, not next to the
+    configuration. Across filesystems, `shutil.move` stops being a rename and
+    copies instead: fifteen gigabytes to set one title aside.
     """
     global TRASH, IMPORT
     TRASH = LUDO / "_corbeille"
@@ -145,17 +144,17 @@ def _chemins_ludotheque():
 
 
 def definir_ludotheque(chemin, creer=False):
-    """Change le dossier scanne. Renvoie "" ou la raison du refus.
+    """Change the scanned folder. Returns "" or the reason for refusal.
 
-    Le refus est toujours motive : ce chemin est saisi par un humain dans une
-    fenetre de reglages, et « echec » sans raison le laisse sans recours.
+    A refusal always states why: this path is typed by a human in a settings
+    dialog, and "failed" with no reason leaves them with no recourse.
     """
     global LUDO
     if LUDO_IMPOSEE:
         return "la ludotheque est imposee par ROMULE_LIBRARY"
     brut = str(chemin or "").strip()
     if not brut:
-        # Revenir au defaut est une operation legitime, pas une erreur.
+        # Returning to the default is a legitimate operation, not an error.
         LUDO = ROOT
         _chemins_ludotheque()
         return ""
@@ -175,8 +174,8 @@ def definir_ludotheque(chemin, creer=False):
         return "emplacement refuse : %s" % douteux
     if not dans_les_bases(c):
         return "hors des dossiers autorises (ROMULE_BASES)"
-    # Romule deplace et convertit des fichiers. Accepter un dossier en lecture
-    # seule, c'est promettre un service qui echouera a la premiere action.
+    # Romule moves and converts files. Accepting a read-only folder promises a
+    # service that will fail on its first action.
     if not os.access(c, os.W_OK):
         return "dossier en lecture seule"
     LUDO = c
@@ -187,31 +186,29 @@ def definir_ludotheque(chemin, creer=False):
 TRASH = LUDO / "_corbeille"
 IMPORT = LUDO / "_import"
 VCACHE = ROOT / "_cache_versions.txt"
-# Title IDs deja lus a l'interieur des conteneurs. Chaque lecture lance `nsz`,
-# soit un quart de seconde par fichier mal nomme — et ce cout etait paye a
-# chaque affichage de la page, pour un resultat qui ne change jamais tant que
-# le fichier ne change pas.
+# Title IDs already read from inside containers. Each read runs `nsz`, about a
+# quarter of a second per badly named file — and that cost was paid on every
+# page render, for a result that never changes while the file does not.
 TIDCACHE = ROOT / "_cache_conteneurs.json"
 NAND_LIST = ROOT / "_a_installer_dans_NAND.txt"
 
 
 def fichier_etat(nom, ancien_nom):
-    """Chemin d'un fichier d'etat, en recuperant l'ancien nom s'il existe.
+    """Path of a state file, picking up the old name if it still exists.
 
-    Les fichiers d'etat portaient le nom du projet precedent. Se contenter du
-    nouveau nom, c'est faire perdre sa configuration et ses comptes a qui met a
-    jour : le service repartirait sur une installation vierge sans le dire.
-    Le renommage n'a lieu qu'une fois, et son echec n'est pas une panne — on
-    continue simplement de lire la ou les donnees sont.
+    State files used to carry the previous project's name. Settling for the new
+    name means making anyone who upgrades lose their configuration and their
+    accounts: the service would restart on a blank installation without saying
+    so. The rename happens once, and its failure is not a fault — we simply go
+    on reading where the data is.
     """
     neuf = ROOT / nom
     ancien = ROOT / ancien_nom
-    # `exists()` peut lever : un dossier auquel le processus n'a meme pas le
-    # droit d'acceder refuse le `stat`. Cette fonction s'execute a l'IMPORT du
-    # module — une exception ici tue le programme avant que quiconque ait pu
-    # expliquer quoi que ce soit, et l'utilisateur lit une trace de pile au
-    # lieu du remede. On rend le chemin neuf et on laisse le controle de
-    # demarrage faire son travail.
+    # `exists()` can raise: a folder the process may not even enter refuses
+    # the `stat`. This function runs at module IMPORT time — an exception here
+    # kills the program before anyone could explain anything, and the user
+    # reads a stack trace instead of the remedy. We return the new path and let
+    # the startup check do its job.
     try:
         if neuf.exists() or not ancien.exists():
             return neuf
@@ -231,40 +228,41 @@ EXTS = {".nsz", ".xcz", ".nsp", ".xci"}
 COMPRESSED = {".nsz", ".xcz"}
 PLAYABLE = {".nsp", ".xci"}
 
-# Dossiers a ne jamais parcourir pendant le scan de la ludotheque.
+# Folders never to walk during the library scan.
 IGNORE_DIRS = {"_corbeille", "_import", "_covers", "_saves", "romule", ".git"}
 
 PORT = int(env("WEB_PORT", "8787"))
 
-# Deploiement en service (NAS, Docker) : regles fixees par l'environnement.
-#   ROMULE_LAN=1     autorise les appareils du reseau des le demarrage
-#   ROMULE_TOKEN=... exige ce jeton pour tout acces distant (recommande 24/7)
-#   ROMULE_ROOT=...  emplacement de la ludotheque
+# Service deployment (NAS, Docker): rules set by the environment.
+#   ROMULE_LAN=1     lets devices on the network in from startup
+#   ROMULE_TOKEN=... requires this token for any remote access (recommended 24/7)
+#   ROMULE_ROOT=...  where the library lives
 ENV_LAN = env_bool("LAN")
 TOKEN = env("TOKEN").strip()
 
-# Adresses des reverse proxys autorises a parler au nom de leurs clients.
-# Sans cette declaration, un en-tete `X-Forwarded-For` ne prouve rien :
-# n'importe qui peut l'ecrire. Avec elle, et seulement depuis ces adresses,
-# l'application accepte de lire la vraie adresse du client.
+# Addresses of the reverse proxies allowed to speak for their clients.
+# Without this declaration an `X-Forwarded-For` header proves nothing: anyone
+# can write it. With it, and only from those addresses, the application agrees
+# to read the client's real address.
 #     ROMULE_TRUSTED_PROXIES=127.0.0.1,172.18.0.1
-# Plafond d'un fichier depose par le navigateur. Genereux : une image Switch
-# depasse couramment 15 Gio. Mais un plafond genereux reste un plafond — sans
-# lui, tout appareil autorise pouvait remplir le disque de l'hote.
+# Ceiling on a file dropped by the browser. Generous: a Switch image commonly
+# exceeds 15 GiB. But a generous ceiling is still a ceiling — without it, any
+# authorised device could fill the host's disk.
 TELEVERSEMENT_MAX = int(env("UPLOAD_MAX", 64 * 2 ** 30))
-# On refuse aussi d'ecrire si le disque tomberait sous ce seuil.
+# We also refuse to write if the disk would drop below this threshold.
 DISQUE_MARGE = int(env("DISK_MARGIN", 2 * 2 ** 30))
 
-# Jetons d'exemple : les laisser en place revient a n'avoir aucun jeton, et
-# c'est le defaut que prend quiconque copie le fichier compose sans le lire.
-# Emplacement de prod.keys. Il etait fige a ~/.switch/prod.keys, ce qui ne
-# survit ni a un conteneur tournant sous un autre utilisateur, ni a quelqu'un
-# qui range ses cles ailleurs.
+# Example tokens: leaving them in place amounts to having no token at all, and
+# that is the default anyone gets who copies the compose file without reading
+# it.
+# Where prod.keys lives. It used to be pinned to ~/.switch/prod.keys, which
+# survives neither a container running as another user, nor someone who keeps
+# their keys elsewhere.
 def _cles_par_defaut():
-    """~/.romule/prod.keys, ou l'ancien ~/.switch/prod.keys s'il existe encore.
+    """~/.romule/prod.keys, or the old ~/.switch/prod.keys if it still exists.
 
-    Changer un emplacement par defaut sans regarder l'ancien, c'est casser
-    l'installation de ceux qui mettent a jour.
+    Changing a default location without looking at the old one breaks the
+    installation of everyone who upgrades.
     """
     neuf = Path.home() / ".romule" / "prod.keys"
     ancien = Path.home() / ".switch" / "prod.keys"
@@ -273,7 +271,7 @@ def _cles_par_defaut():
 
 CLES = Path(env("KEYS") or _cles_par_defaut()).expanduser()
 
-# fuite:ok cette liste EST le garde-fou contre ces valeurs : elle doit les citer
+# fuite:ok this list IS the guard against these values: it has to quote them
 JETONS_INTERDITS = {"change-moi", "changeme", "change-me", "secret", "token",
                     "colle-le-ici", "a-changer", "tondejeton"}
 
@@ -281,17 +279,16 @@ _DECLARES = {a.strip() for a in env("TRUSTED_PROXIES").split(",") if a.strip()}
 
 
 def _reseaux_de_confiance(entrees):
-    """Les entrees notees en CIDR, converties une fois pour toutes.
+    """The entries written in CIDR, converted once and for all.
 
-    Une comparaison de chaines exactes suffisait tant qu'on ecrivait
-    `127.0.0.1`. Elle ne suffit plus des qu'il y a un conteneur : Docker
-    attribue l'adresse du proxy dynamiquement, et le reglage que la
-    documentation recommande devenait donc impraticable dans le deploiement
-    qu'elle recommande — il fallait relever une adresse apres chaque
-    `docker compose up`, et la corriger quand elle changeait.
+    Exact string comparison was enough while you wrote `127.0.0.1`. It stopped
+    being enough the moment a container was involved: Docker assigns the
+    proxy's address dynamically, so the setting the documentation recommends
+    became impractical in the deployment it recommends — you had to read an
+    address after every `docker compose up`, and fix it when it changed.
 
-    On accepte donc `172.16.0.0/12` a cote de `127.0.0.1`. Les deux formes
-    coexistent : une installation existante n'a rien a changer.
+    So `172.16.0.0/12` is accepted alongside `127.0.0.1`. Both forms coexist:
+    an existing installation has nothing to change.
     """
     reseaux = []
     for entree in entrees:
@@ -300,28 +297,28 @@ def _reseaux_de_confiance(entrees):
         try:
             reseaux.append(ipaddress.ip_network(entree, strict=False))
         except ValueError:
-            # Une entree illisible ne doit surtout pas devenir permissive.
-            # On la signale au demarrage et on l'ignore.
+            # An unreadable entry must above all not become permissive.
+            # We report it at startup and ignore it.
             PROBLEMES.append("ROMULE_TRUSTED_PROXIES : %r n'est pas un reseau "
                              "valide, entree ignoree" % entree)
     return reseaux
 
 
 RESEAUX_CONFIANCE = _reseaux_de_confiance(_DECLARES)
-# Les entrees CIDR sont RETIREES de l'ensemble des adresses exactes. Sans cela,
-# la chaine « 172.16.0.0/12 » y figurerait telle quelle — et `_client_reel()`
-# compare les maillons de `X-Forwarded-For`, qui viennent du client. Ecrire
-# cette chaine dans l'en-tete aurait suffi a se faire passer pour un relais
-# declare, donc a choisir quel maillon Romule retient.
+# CIDR entries are REMOVED from the set of exact addresses. Without that, the
+# string "172.16.0.0/12" would sit in it verbatim — and `_client_reel()`
+# compares the links of `X-Forwarded-For`, which come from the client. Writing
+# that string into the header would have been enough to pass for a declared
+# relay, hence to choose which link Romule keeps.
 PROXYS_CONFIANCE = {a for a in _DECLARES if "/" not in a}
 
 
 def proxy_de_confiance(adresse):
-    """Cette adresse est-elle celle d'un relais declare ?
+    """Is this the address of a declared relay?
 
-    Le defaut est TOUJOURS le refus : sans declaration, aucun en-tete transmis
-    ne vaut quoi que ce soit. C'est la seule reponse sure, parce qu'un
-    `X-Forwarded-For` s'ecrit a la main par n'importe qui.
+    The default is ALWAYS refusal: with no declaration, no forwarded header is
+    worth anything. It is the only safe answer, because an `X-Forwarded-For`
+    can be written by hand by anybody.
     """
     if not adresse:
         return False
@@ -335,49 +332,49 @@ def proxy_de_confiance(adresse):
         return False
     return any(ip in reseau for reseau in RESEAUX_CONFIANCE)
 
-# titledb : liste ordonnee, on essaie chaque miroir jusqu'au premier qui repond.
+# titledb: an ordered list; we try each mirror until one answers.
 VERSIONS_URLS = [
     "https://raw.githubusercontent.com/blawar/titledb/master/versions.txt",
 ]
 
 DEFAULTS = {
-    # Emulateur cible. Ce qui etait fige sur Eden — nom de paquet, chemins,
-    # format des reglages — vient desormais de romule/profils/*.json.
+    # Target emulator. What used to be pinned to Eden — package name, paths,
+    # settings format — now comes from romule/profils/*.json.
     "emulateur": "eden",
-    "emulateur_paquet": "",     # rempli par la detection sur la console
-    "device_dir": "/storage/emulated/0/Switch",  # ou l'emulateur lit ses jeux
-    "jobs": 3,                                    # conversions en parallele
-    "push_layout": "type",                        # type | game | flat (voir device.py)
-    "verify_mode": "size",                        # none | size | hash (apres push)
-    "incremental": True,                          # ne pousser que ce qui manque/differe
+    "emulateur_paquet": "",     # filled in by detection on the console
+    "device_dir": "/storage/emulated/0/Switch",  # where the emulator reads its games
+    "jobs": 3,                                    # parallel conversions
+    "push_layout": "type",                        # type | game | flat (see device.py)
+    "verify_mode": "size",                        # none | size | hash (after push)
+    "incremental": True,                          # only push what is missing or differs
     "cover_provider": "nlib",                     # nlib | steamgriddb | custom
     "cover_url": "https://api.nlib.cc/nx/{tid}/icon/256/256",  # provider custom
-    "steamgriddb_key": "",                        # cle API si provider steamgriddb
-    # IGDB (via Twitch) : seule source gratuite de RESUMES pour les plateformes
-    # autres que la Switch. Vide = fonctionnalite inactive, rien n'est appele.
+    "steamgriddb_key": "",                        # API key when the provider is steamgriddb
+    # IGDB (through Twitch): the only free source of SUMMARIES for platforms
+    # other than the Switch. Empty = feature inactive, nothing is called.
     "igdb_client_id": "",
     "igdb_client_secret": "",
-    # Anglais par defaut : c'est la langue d'un projet auto-heberge public.
-    # Le francais reste livre, et se choisit dans les reglages.
-    "meta_lang": "en",                            # langue des fiches de jeu (nlib)
-    "local_layout": "type",                       # rangement local : type | game
-    "versions_urls": list(VERSIONS_URLS),         # miroirs titledb, essayes dans l'ordre
-    "lan_access": False,                          # ouvrir l'interface au reseau local
-    "notify": True,                               # notification macOS en fin de tache
+    # English by default: it is the language of a public self-hosted project.
+    # French is still shipped, and is chosen in the settings.
+    "meta_lang": "en",                            # language of the game details (nlib)
+    "local_layout": "type",                       # local filing: type | game
+    "versions_urls": list(VERSIONS_URLS),         # titledb mirrors, tried in order
+    "lan_access": False,                          # open the interface to the local network
+    "notify": True,                               # macOS notification when a task ends
     "notif_destinations": [],                     # Discord, Slack, Telegram, ntfy, Gotify, webhook
-    "roms_root": "",                              # racine des ROMs sur la console (multi-systemes)
-    "saves_dir": "",                              # dossier des sauvegardes sur la console
-    "wifi_addr": "",                              # derniere adresse de la console en wifi
+    "roms_root": "",                              # ROMs root on the console (multi-system)
+    "saves_dir": "",                              # save folder on the console
+    "wifi_addr": "",                              # the console's last Wi-Fi address
     "emuready": False,                            # reglages communautaires (beta)
     "emuready_device": "",                        # identifiant de MA variante de console
-    "emuready_device_nom": "",                    # son nom lisible
-    "ui_lang": "en",                              # langue de l'interface
-    "auto_nand": False,                           # activer MAJ/DLC des qu'ils arrivent
-    "trash_days": 0,                              # purge auto de la corbeille (0 = jamais)
-    "system_dirs": {},                            # nom de dossier par plateforme, si different
-    "systemes_perso": [],                         # plateformes ajoutees a la main
-    # Dossier scanne. Vide = la racine du service, c'est-a-dire le comportement
-    # d'avant : personne ne voit son inventaire changer en mettant a jour.
+    "emuready_device_nom": "",                    # its readable name
+    "ui_lang": "en",                              # interface language
+    "auto_nand": False,                           # activate updates/DLC as soon as they arrive
+    "trash_days": 0,                              # auto-purge of the trash (0 = never)
+    "system_dirs": {},                            # folder name per platform, when different
+    "systemes_perso": [],                         # hand-added platforms
+    # The scanned folder. Empty = the service root, that is, the previous
+    # behaviour: nobody sees their inventory change on upgrading.
     "library_path": "",
     # --- authentification : "aucun" (defaut) ou "oidc" (SSO)
     "auth_mode": "aucun",
@@ -385,25 +382,25 @@ DEFAULTS = {
     "oidc_client_id": "",
     "oidc_client_secret": "",
     "oidc_scopes": "openid profile email",
-    "oidc_redirect": "",                          # adresse publique, si proxy
-    "oidc_emails": "",                            # liste blanche, separee par des virgules
-    "oidc_groupes": "",                           # ou par groupes
-    # QUI ADMINISTRE, ce qui n'est pas la meme question que QUI PEUT ENTRER.
-    # Vide = aucune session SSO n'est administratrice : le defaut refuse.
+    "oidc_redirect": "",                          # public address, when behind a proxy
+    "oidc_emails": "",                            # allow-list, comma-separated
+    "oidc_groupes": "",                           # or by group
+    # WHO ADMINISTERS, which is not the same question as WHO MAY ENTER.
+    # Empty = no SSO session is an administrator: the default refuses.
     "oidc_admin_groupes": "",
-    # Verifier une fois par jour s'il existe une version plus recente.
-    # C'est la SEULE sortie reseau que Romule fait sans qu'on la lui
-    # demande ; certains hebergent precisement pour ne parler a personne.
+    # Check once a day whether a newer version exists. This is the ONLY
+    # outbound call Romule makes unasked; some people self-host precisely so as
+    # to talk to nobody.
     "maj_check": True,
-    "auth_secret": "",                            # signature des cookies, genere seul
+    "auth_secret": "",                            # cookie signing key, generated on its own
 }
 
 SAVES = ROOT / "_saves"
 
-# Archives acceptees dans _import (decompressees automatiquement).
+# Archives accepted in _import (extracted automatically).
 ARCHIVES = {".zip", ".7z", ".rar"}
 
-# Sous-dossiers cibles quand push_layout == "type" (organisation pour Eden).
+# Target subfolders when push_layout == "type" (Eden's layout).
 LAYOUT_FOLDER = {"BASE": "GAMES", "UPDATE": "UPDATE", "DLC": "DLC", "INCONNU": "GAMES"}
 
 COVERS = ROOT / "_covers"
@@ -416,35 +413,34 @@ def load_config():
             cfg.update(json.loads(CONFIG_FILE.read_text()))
         except (ValueError, OSError):
             pass
-    # En service, l'environnement a le dernier mot sur l'ouverture reseau.
+    # As a service, the environment has the last word on network access.
     if ENV_LAN or TOKEN:
         cfg["lan_access"] = True
-    # Le dossier des jeux est relu ICI, et pas seulement au demarrage : la
-    # restauration d'une sauvegarde recharge la configuration, et la
-    # ludotheque doit suivre.
+    # The games folder is re-read HERE, and not only at startup: restoring a
+    # backup reloads the configuration, and the library must follow.
     if not LUDO_IMPOSEE:
         souci = definir_ludotheque(cfg.get("library_path", ""))
         if souci:
-            # Le repli doit etre EXPLICITE. Sans lui, un chemin refuse laisse
-            # `LUDO` sur sa valeur precedente : le service continuerait de
-            # travailler sur l'ancienne ludotheque en annoncant la nouvelle.
+            # The fallback must be EXPLICIT. Without it, a refused path leaves
+            # `LUDO` on its previous value: the service would go on working on
+            # the old library while announcing the new one.
             definir_ludotheque("")
-            # On garde la valeur en configuration : l'effacer ferait croire a
-            # l'utilisateur qu'il n'a jamais rien choisi, alors que son disque
-            # est peut-etre simplement debranche.
+            # The value stays in the configuration: erasing it would make the
+            # user think they never chose anything, when their disk may simply
+            # be unplugged.
             avis = ("Ludotheque « %s » inutilisable (%s) — les jeux sont "
                     "cherches dans %s" % (cfg.get("library_path", ""), souci, ROOT))
-            if avis not in PROBLEMES:      # `load_config` est appele plusieurs fois
+            if avis not in PROBLEMES:      # `load_config` is called several times
                 PROBLEMES.append(avis)
     return cfg
 
 
 def save_config(cfg):
-    # `auth_secret` est cree a la volee par auth.py, apres le chargement de la
-    # configuration : la copie que detient l'appelant ne le contient donc pas
-    # forcement. L'ecraser par une chaine vide changerait la cle de signature
-    # des cookies, et deconnecterait tout le monde a chaque enregistrement des
-    # reglages. On ne laisse jamais un secret vide remplacer un secret existant.
+    # `auth_secret` is created on the fly by auth.py, after the configuration
+    # has been loaded: the copy the caller holds therefore may not contain it.
+    # Overwriting it with an empty string would change the cookie signing key
+    # and log everybody out every time the settings are saved. An empty secret
+    # is never allowed to replace an existing one.
     if not cfg.get("auth_secret") and CONFIG_FILE.exists():
         try:
             ancien = json.loads(CONFIG_FILE.read_text()).get("auth_secret")
@@ -452,17 +448,17 @@ def save_config(cfg):
                 cfg = dict(cfg, auth_secret=ancien)
         except (ValueError, OSError):
             pass
-    # Ecriture atomique, et permissions posees AVANT que le fichier ne porte
-    # son nom definitif. Deux defauts que le motif precedent laissait passer :
+    # Atomic write, with permissions set BEFORE the file takes its final name.
+    # Two defects the previous pattern let through:
     #
-    #   * `write_text` cree le fichier avec l'umask courant — souvent 0644 —
-    #     et le `chmod` ne venait qu'apres. Entre les deux, la cle de signature
-    #     des sessions, les cles d'API et le jeton d'acces etaient lisibles par
-    #     tous les comptes de la machine ;
-    #   * une coupure en pleine ecriture laissait un fichier tronque. On y perd
-    #     `auth_secret` — donc toutes les sessions — et tous les reglages.
+    #   * `write_text` creates the file with the current umask — often 0644 —
+    #     and the `chmod` only came afterwards. In between, the session signing
+    #     key, the API keys and the access token were readable by every account
+    #     on the machine;
+    #   * an interruption mid-write left a truncated file. That loses
+    #     `auth_secret` — hence every session — and every setting.
     #
-    # `comptes.py` procedait deja ainsi pour les empreintes de mots de passe.
+    # `comptes.py` already did it this way for password digests.
     tmp = CONFIG_FILE.with_suffix(".tmp")
     try:
         tmp.write_text(json.dumps(cfg, indent=2, ensure_ascii=False) + "\n",
@@ -474,5 +470,5 @@ def save_config(cfg):
         try:
             tmp.unlink()
         except OSError:
-            pass          # rien a nettoyer, ou plus de droits : sans importance
+            pass          # nothing to clean, or no rights left: of no consequence
         return False
