@@ -24,7 +24,7 @@ import json
 import re
 import time
 
-from . import config, reseau
+from . import config, net
 from . import __version__
 
 # Published version: `v0.2.0` or `0.2.0`, possibly followed by a suffix.
@@ -73,10 +73,10 @@ def _ecrire_cache(d):
 
 def _demander():
     """Ask GitHub. Returns a dict, or raises."""
-    req = reseau.urllib.request.Request(
+    req = net.urllib.request.Request(
         SOURCE, headers={"Accept": "application/vnd.github+json",
                          "User-Agent": "romule"})
-    with reseau.ouvrir(req, timeout=8) as r:
+    with net.open_url(req, timeout=8) as r:
         d = json.loads(r.read().decode("utf-8"))
     # The tag's `v` is stripped: the interface already writes "Version %s
     # available", and "Version v0.3.0 available" reads twice. The comparison

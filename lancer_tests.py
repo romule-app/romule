@@ -75,7 +75,7 @@ def unitaires():
                 "romule.tests.test_import_roms",
                 "romule.tests.test_totp_unite",
                 "romule.tests.test_profils",
-                "romule.tests.test_reseau",
+                "romule.tests.test_net",
                 "romule.tests.test_apikeys",
                 "romule.tests.test_reglages",
                 "romule.tests.test_matching",

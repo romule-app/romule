@@ -15,77 +15,77 @@ import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
-from romule import reseau                                       # noqa: E402
+from romule import net                                          # noqa: E402
 
 ok = ko = 0
 
 
-def t(nom, cond, detail=""):
+def t(name, cond, detail=""):
     global ok, ko
     if cond:
         ok += 1
-        print("  ok   %s" % nom)
+        print("  ok   %s" % name)
     else:
         ko += 1
-        print("  ECHEC %s   %s" % (nom, detail))
+        print("  FAIL %s   %s" % (name, detail))
 
 
-def test_accepte_http():
+def test_accepts_http():
     for u in ("http://exemple.fr/a", "https://exemple.fr/a",
               "HTTPS://EXEMPLE.FR/A", "https://exemple.fr:8443/a?b=c"):
         try:
-            reseau.verifier(u)
-            t("accepte %s" % u, True)
-        except reseau.SchemaRefuse as exc:
-            t("accepte %s" % u, False, exc)
+            net.check(u)
+            t("accepts %s" % u, True)
+        except net.SchemeRefused as exc:
+            t("accepts %s" % u, False, exc)
 
 
-def test_refuse_le_reste():
+def test_refuses_the_rest():
     # `file:` is the case that matters: it is the one that turns the service
     # into a file reader. The others are refused by the same rule.
     for u in ("file:///etc/passwd", "FILE:///etc/passwd", "ftp://h/f",
               "gopher://h/", "data:text/plain,bonjour", "/etc/passwd",
               "etc/passwd", "", None):
         try:
-            reseau.verifier(u)
-            t("refuse %r" % u, False, "accepte a tort")
-        except reseau.SchemaRefuse:
-            t("refuse %r" % u, True)
+            net.check(u)
+            t("refuses %r" % u, False, "wrongly accepted")
+        except net.SchemeRefused:
+            t("refuses %r" % u, True)
 
 
-def test_ouvrir_verifie_aussi_les_Request():
+def test_open_url_also_checks_Request_objects():
     """The check must be on the URL the request carries, not on the object."""
     req = urllib.request.Request("file:///etc/passwd",
                                  headers={"User-Agent": "romule"})
     try:
-        reseau.ouvrir(req)
-        t("une Request en file:// est refusee", False, "ouverte a tort")
-    except reseau.SchemaRefuse:
-        t("une Request en file:// est refusee", True)
+        net.open_url(req)
+        t("a file:// Request is refused", False, "wrongly opened")
+    except net.SchemeRefused:
+        t("a file:// Request is refused", True)
     except Exception as exc:
-        t("une Request en file:// est refusee", False, "autre erreur : %r" % exc)
+        t("a file:// Request is refused", False, "another error: %r" % exc)
 
 
-def test_aucune_sortie_directe_dans_le_code_livre():
+def test_no_direct_call_in_the_shipped_code():
     """The guard is only worth something if nobody bypasses it.
 
     A centralised check goes stale as soon as a direct call reappears elsewhere.
     We verify it on the source, not on the intention.
     """
-    racine = Path(__file__).resolve().parent.parent
-    fautifs = []
-    for f in sorted(racine.glob("*.py")):
-        if f.name == "reseau.py":
+    root = Path(__file__).resolve().parent.parent
+    offenders = []
+    for f in sorted(root.glob("*.py")):
+        if f.name == "net.py":
             continue
-        for n, ligne in enumerate(f.read_text(encoding="utf-8").splitlines(), 1):
-            if "urlopen(" in ligne and not ligne.lstrip().startswith("#"):
-                fautifs.append("%s:%d" % (f.name, n))
-    t("aucun urlopen direct hors de reseau.py", not fautifs, fautifs)
+        for n, line in enumerate(f.read_text(encoding="utf-8").splitlines(), 1):
+            if "urlopen(" in line and not line.lstrip().startswith("#"):
+                offenders.append("%s:%d" % (f.name, n))
+    t("no direct urlopen outside net.py", not offenders, offenders)
 
 
-for fn in (test_accepte_http, test_refuse_le_reste,
-           test_ouvrir_verifie_aussi_les_Request,
-           test_aucune_sortie_directe_dans_le_code_livre):
+for fn in (test_accepts_http, test_refuses_the_rest,
+           test_open_url_also_checks_Request_objects,
+           test_no_direct_call_in_the_shipped_code):
     fn()
-print("  %d controles OK, %d echec(s)" % (ok, ko))
+print("  %d checks OK, %d failure(s)" % (ok, ko))
 sys.exit(1 if ko else 0)
