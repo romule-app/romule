@@ -37,7 +37,7 @@ def sortie(style, faire, no_color="1"):
         os.environ.pop("NO_COLOR", None)
     else:
         os.environ["NO_COLOR"] = no_color
-    console.relire()
+    console.reload_env()
     tampon = io.StringIO()
     try:
         with redirect_stdout(tampon):
@@ -45,14 +45,14 @@ def sortie(style, faire, no_color="1"):
     finally:
         os.environ.clear()
         os.environ.update(avant)
-        console.relire()
+        console.reload_env()
     return tampon.getvalue()
 
 
 def main():
     from romule import console
 
-    tout = lambda c: [c.evenement(n, n) for n in console.NIVEAUX]  # noqa: E731
+    tout = lambda c: [c.event(n, n) for n in console.LEVELS]  # noqa: E731
 
     # --- the thresholds, in both directions -----------------------------
     s = sortie("quiet", tout)
@@ -73,10 +73,10 @@ def main():
       "debug" not in s, repr(s))
 
     s = sortie("debug", tout)
-    t("debug montre tout", all(n in s for n in console.NIVEAUX), repr(s))
+    t("debug montre tout", all(n in s for n in console.LEVELS), repr(s))
 
     # --- the debug style carries what it takes to place a line -----------
-    s = sortie("debug", lambda c: c.evenement("essai", "info", "moncar"))
+    s = sortie("debug", lambda c: c.event("essai", "info", "moncar"))
     t("debug nomme le module", "moncar" in s, repr(s))
     import re as _re
     # "12.34s": the service's age since it started. Written as it stood, the
@@ -85,53 +85,53 @@ def main():
       bool(_re.search(r"\d+\.\d\ds", s)), repr(s))
     t("debug nomme le fil d'execution",
       "MainThread" in s, repr(s))
-    s2 = sortie("verbose", lambda c: c.evenement("essai", "info", "moncar"))
+    s2 = sortie("verbose", lambda c: c.event("essai", "info", "moncar"))
     t("verbose ne porte PAS le module", "moncar" not in s2, repr(s2))
 
     # --- json ------------------------------------------------------------
-    s = sortie("json", lambda c: c.evenement("un message", "warn", "mod", n=3))
+    s = sortie("json", lambda c: c.event("un message", "warn", "mod", n=3))
     try:
         d = json.loads(s.strip())
     except ValueError:
         d = {}
     t("json rend une ligne analysable", bool(d), repr(s))
-    t("json porte niveau, message, module et champs",
-      d.get("niveau") == "warn" and d.get("message") == "un message"
+    t("json porte level, message, module et champs",
+      d.get("level") == "warn" and d.get("message") == "un message"
       and d.get("module") == "mod" and d.get("n") == 3, d)
     t("json n'ecrit aucune couleur", "\033" not in s, repr(s))
 
     # --- the banner -------------------------------------------------------
     faits = [("Version", "0.3.0"), ("Vide", ""), ("Ludotheque", "/jeux")]
-    s = sortie("normal", lambda c: c.banniere(faits))
+    s = sortie("normal", lambda c: c.banner(faits))
     t("le bandeau nomme le service", "ROMULE" in s or "██" in s, repr(s[:80]))
     t("le bandeau montre les faits renseignes",
       "0.3.0" in s and "/jeux" in s, repr(s))
     # A "Console:" line followed by nothing teaches less than its absence.
     t("le bandeau tait les faits vides", "Vide" not in s, repr(s))
-    t("quiet n'affiche aucun bandeau", sortie("quiet", lambda c: c.banniere(faits)) == "")
-    s = sortie("json", lambda c: c.banniere(faits))
+    t("quiet n'affiche aucun bandeau", sortie("quiet", lambda c: c.banner(faits)) == "")
+    s = sortie("json", lambda c: c.banner(faits))
     t("en json le bandeau devient un evenement",
       json.loads(s.strip()).get("message") == "demarrage", repr(s))
 
     # --- la couleur --------------------------------------------------------
-    s = sortie("normal", lambda c: c.evenement("x", "error"), no_color="1")
+    s = sortie("normal", lambda c: c.event("x", "error"), no_color="1")
     t("NO_COLOR eteint la couleur", "\033" not in s, repr(s))
     # Outside a terminal, colour would fill a file with escape sequences.
     # `redirect_stdout` into a StringIO is precisely that case.
-    s = sortie("normal", lambda c: c.evenement("x", "error"), no_color=None)
+    s = sortie("normal", lambda c: c.event("x", "error"), no_color=None)
     t("hors terminal, pas de couleur non plus", "\033" not in s, repr(s))
 
     # --- never kill the service --------------------------------------------
     avant = dict(os.environ)
     os.environ["ROMULE_LOG"] = "debug"
-    console.relire()
+    console.reload_env()
     vrai = sys.stdout
     try:
         ferme = io.StringIO()
         ferme.close()
         sys.stdout = ferme
-        console.evenement("dans le vide", "error")
-        console.dit("dans le vide", "error")
+        console.event("dans le vide", "error")
+        console.say("dans le vide", "error")
         sys.stdout = vrai
         t("une sortie fermee ne tue pas le service", True)
     except Exception as exc:
@@ -141,7 +141,7 @@ def main():
         sys.stdout = vrai
         os.environ.clear()
         os.environ.update(avant)
-        console.relire()
+        console.reload_env()
 
     # --- valeur inconnue ----------------------------------------------------
     t("un style inconnu retombe sur normal",

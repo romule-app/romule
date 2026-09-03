@@ -205,10 +205,10 @@ class Handler(BaseHTTPRequestHandler):
         finally:
             # `ROMULE_LOG=debug` only: the interface polls `/api/job` in a
             # loop, and these lines would drown out everything else elsewhere.
-            if console.montre("debug") and getattr(self, "command", None):
+            if console.shows("debug") and getattr(self, "command", None):
                 ms = (time.monotonic() - debut) * 1000
                 code = self._code or 0
-                console.evenement(
+                console.event(
                     "%-4s %-3d %6.1fms %s" % (self.command, code, ms, self.path),
                     "error" if code >= 500 else "warn" if code >= 400 else "debug",
                     "http", client=self.client_address[0] if self.client_address else "?")
@@ -2091,10 +2091,10 @@ def _audit_demarrage():
             JOB.log("Securite — %s : %s" % (c["titre"], c["constat"]), "warn")
     n = r["resume"]["grave"] + r["resume"]["alerte"]
     if n:
-        console.dit("Securite : %d point(s) a regarder — `python3 -m romule.audit`"
+        console.say("Securite : %d point(s) a regarder — `python3 -m romule.audit`"
                     % n, "warn", "audit")
     else:
-        console.dit("Securite : aucun point d'attention.", "ok", "audit")
+        console.say("Securite : aucun point d'attention.", "ok", "audit")
 
 
 def _notif_public(d):
@@ -2225,7 +2225,7 @@ def serve(open_browser=True):
     jeton_auto = _jeton_de_premier_demarrage()
     url = "http://127.0.0.1:%d" % config.PORT
     ip = _lan_ip()
-    console.banniere(_faits_de_demarrage(url, ip, jeton_auto))
+    console.banner(_faits_de_demarrage(url, ip, jeton_auto))
     threading.Thread(target=_reconnect_wifi, daemon=True).start()
     LIB.scan(log=JOB.log)
     versions.load(LIB, log=JOB.log)
@@ -2235,21 +2235,21 @@ def serve(open_browser=True):
                or config.env("NO_BROWSER", "").strip() not in ("", "0"))
     _audit_demarrage()
     for souci in config.PROBLEMES:
-        console.dit(souci, "warn", "config")
+        console.say(souci, "warn", "config")
     if CFG.get("lan_access") and not config.TOKEN:
-        console.dit("Accessible SANS MOT DE PASSE par tout appareil du reseau.",
+        console.say("Accessible SANS MOT DE PASSE par tout appareil du reseau.",
                     "warn", "acces")
     if jeton_auto:
         # Without the full address, the token is a string the user has to
         # paste back by hand in the right place — that is where it fails.
-        console.dit("Ce service est joignable par le reseau et n'a pas encore "
+        console.say("Ce service est joignable par le reseau et n'a pas encore "
                     "de compte. Ouvre cette adresse, puis cree ton compte :",
                     "warn", "acces")
-        console.dit("  http://%s:%d/?token=%s"
+        console.say("  http://%s:%d/?token=%s"
                     % (ip or "<adresse-du-serveur>", config.PORT, jeton_auto),
                     "warn", "acces")
     if not adb_hint():
-        console.dit("adb absent — la console ne pourra pas etre pilotee",
+        console.say("adb absent — la console ne pourra pas etre pilotee",
                     "warn", "device")
     if open_browser and not service:
         threading.Timer(1.0, lambda: webbrowser.open(url)).start()
@@ -2258,7 +2258,7 @@ def serve(open_browser=True):
     def stop(*_):
         # `docker stop` sends SIGTERM: we warn the running task and hand back
         # cleanly rather than being killed outright.
-        console.dit("Arret demande, fermeture...", "info", "serveur")
+        console.say("Arret demande, fermeture...", "info", "serveur")
         JOB.cancel()
         threading.Thread(target=srv.shutdown, daemon=True).start()
 
