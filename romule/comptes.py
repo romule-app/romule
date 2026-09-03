@@ -1,28 +1,25 @@
-"""Comptes internes : email + mot de passe, sans aucune dependance.
+"""Internal accounts: email plus password, with no dependency at all.
 
-C'est l'alternative au SSO pour qui n'heberge pas de fournisseur OIDC. Les
-choix de securite suivent les recommandations actuelles (NIST SP 800-63B,
-OWASP ASVS v4 chapitre 2) :
+The alternative to SSO for anyone not running an OIDC provider. The security
+choices follow current guidance (NIST SP 800-63B, OWASP ASVS v4 chapter 2):
 
-  * empreintes `scrypt` — fonction a cout memoire, bien plus couteuse a
-    attaquer par GPU qu'un simple SHA ; sel aleatoire par compte, parametres
-    stockes avec l'empreinte pour pouvoir les durcir plus tard sans casser
-    les comptes existants ;
-  * comparaison a temps constant, et calcul d'une empreinte factice quand
-    l'email est inconnu : le temps de reponse ne revele pas si un compte
-    existe ;
-  * un seul message d'erreur pour « email inconnu » et « mot de passe faux » ;
-  * temporisation exponentielle apres echecs repetes, comptee a la fois par
-    compte (persistee sur disque, donc un redemarrage ne l'efface pas) et par
-    adresse IP ;
-  * regle de mot de passe fondee sur la longueur et sur le refus des mots de
-    passe courants, sans exigence de caracteres speciaux ni expiration —
-    ces deux dernieres pratiques sont aujourd'hui deconseillees ;
-  * changer son mot de passe invalide toutes les sessions ouvertes ailleurs.
+  * `scrypt` digests — a memory-hard function, far more expensive to attack
+    with a GPU than a plain SHA; a random salt per account, and the parameters
+    stored alongside the digest so they can be hardened later without breaking
+    existing accounts;
+  * constant-time comparison, and a decoy digest computed when the email is
+    unknown: the response time does not reveal whether an account exists;
+  * one single error message for "unknown email" and "wrong password";
+  * exponential backoff after repeated failures, counted both per account
+    (persisted to disk, so a restart does not clear it) and per IP address;
+  * a password rule based on length and on refusing common passwords, with no
+    special-character requirement and no expiry — both of those practices are
+    now discouraged;
+  * changing a password invalidates every session open elsewhere.
 
-Le fichier des comptes est distinct de la configuration : il ne doit jamais
-partir dans une sauvegarde de reglages ni s'afficher dans l'interface. Il est
-ecrit en 0600, et le dossier des photos en 0700.
+The accounts file is separate from the configuration: it must never travel in
+a settings backup nor be shown in the interface. It is written 0600, and the
+photo folder 0700.
 """
 
 import base64
@@ -41,28 +38,28 @@ from . import config
 FICHIER = config.fichier_etat("_romule-comptes.json", "_switch-comptes.json")
 PHOTOS = config.ROOT / "_comptes"
 
-# Parametres recommandes par l'OWASP (Password Storage Cheat Sheet) : N=2^17,
-# r=8, p=1, soit 128 Mo de memoire et ~200 ms par calcul sur un Mac recent.
-# C'est le cout memoire qui compte : il rend une attaque massive par GPU
-# beaucoup plus chere qu'un simple SHA, quel que soit le nombre d'essais.
-# Les parametres sont ecrits DANS l'empreinte : les relever plus tard
-# n'invalidera aucun compte existant.
+# Parameters recommended by OWASP (Password Storage Cheat Sheet): N=2^17,
+# r=8, p=1 — 128 MB of memory and about 200 ms per computation on a recent Mac.
+# The memory cost is what matters: it makes a mass GPU attack far more
+# expensive than a plain SHA, whatever the number of attempts. The parameters
+# are written INSIDE the digest: raising them later invalidates no existing
+# account.
 SCRYPT_N, SCRYPT_R, SCRYPT_P, SCRYPT_LEN = 2 ** 17, 8, 1, 32
 SCRYPT_MAXMEM = 192 * 1024 * 1024
 
 MDP_MIN, MDP_MAX = 12, 128
 PHOTO_MAX = 2 * 1024 * 1024
 
-# Seuil a partir duquel on temporise, et plafond de l'attente.
+# The threshold at which we start delaying, and the ceiling on that delay.
 ECHECS_AVANT_ATTENTE = 3
 ATTENTE_MAX = 15 * 60
 
 _LOCK = threading.RLock()
 _ECHECS_IP = {}                # {ip: (nombre, jusqu_a)} — memoire seule
 
-# Les mots de passe les plus repandus dans les fuites publiques. La liste est
-# volontairement courte : elle arrete les choix les plus evidents sans
-# pretendre remplacer un service comme « Have I Been Pwned ».
+# The passwords most common in public breaches. The list is deliberately
+# short: it stops the most obvious choices without pretending to replace a
+# service like "Have I Been Pwned".
 COURANTS = {
     "password", "motdepasse", "123456", "12345678", "123456789", "1234567890",
     "azertyuiop", "qwertyuiop", "azerty123", "qwerty123", "motdepasse1",
@@ -86,8 +83,8 @@ def _lire():
 
 
 def _ecrire(d):
-    """Ecriture atomique, en 0600 : les empreintes ne doivent etre lisibles
-    que par le compte systeme qui fait tourner le serveur."""
+    """Atomic write, 0600: the digests must only be readable by the system
+    account running the server."""
     FICHIER.parent.mkdir(parents=True, exist_ok=True)
     tmp = FICHIER.with_suffix(".tmp")
     tmp.write_text(json.dumps(d, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
@@ -108,7 +105,7 @@ def _public(u):
 
 
 def liste():
-    """Comptes existants, sans rien qui touche au mot de passe."""
+    """The existing accounts, with nothing password-related."""
     return [_public(u) for u in _lire()["comptes"]]
 
 
@@ -125,7 +122,7 @@ def est_admin(uid):
 
 
 def promouvoir(uid, admin=True):
-    """Donne ou retire le role d'administrateur."""
+    """Grant or withdraw the administrator role."""
     with _LOCK:
         d = _lire()
         for u in d["comptes"]:
@@ -140,11 +137,11 @@ def promouvoir(uid, admin=True):
 
 
 def reprendre_roles():
-    """Les comptes crees avant l'existence des roles n'en ont aucun.
+    """Accounts created before roles existed carry none.
 
-    Sans reprise, une installation existante se retrouverait sans le moindre
-    administrateur apres la mise a jour : plus personne ne pourrait toucher aux
-    reglages. Le plus ancien compte, celui de l'installateur, le devient.
+    Without this catch-up, an existing installation would find itself with no
+    administrator at all after the upgrade: nobody could touch the settings any
+    more. The oldest account, the installer's, becomes one.
     """
     with _LOCK:
         d = _lire()
@@ -165,16 +162,16 @@ def _index_email(d, email):
 # ------------------------------------------------------------ mots de passe
 
 def _normaliser(mdp):
-    """NFKC : « é » tape au clavier ou compose donne la meme empreinte."""
+    """NFKC: an "e-acute" typed directly or composed yields the same digest."""
     return unicodedata.normalize("NFKC", mdp or "")
 
 
-# scrypt a N=2^17 mobilise environ 128 Mio par calcul. C'est voulu : c'est ce
-# qui rend une attaque hors ligne couteuse. Mais rien ne limitait le nombre de
-# calculs SIMULTANES — quelques tentatives de connexion en parallele suffisaient
-# a epuiser la memoire du serveur, ce qui transformait une protection en levier.
-# Deux a la fois : assez pour ne pas ralentir un usage normal, assez peu pour
-# que le pire cas reste borne.
+# scrypt at N=2^17 uses about 128 MiB per computation. That is deliberate: it
+# is what makes an offline attack expensive. But nothing limited the number of
+# SIMULTANEOUS computations — a handful of parallel login attempts was enough
+# to exhaust the server's memory, turning a protection into a lever. Two at a
+# time: enough not to slow normal use, few enough that the worst case stays
+# bounded.
 _PLACES_SCRYPT = threading.BoundedSemaphore(
     int(config.env("SCRYPT_PARALLELE", "2")))
 
@@ -191,7 +188,7 @@ def hacher(mdp):
 
 
 def verifier_mdp(mdp, empreinte):
-    """Comparaison a temps constant. Faux pour toute empreinte illisible."""
+    """Constant-time comparison. False for any unreadable digest."""
     try:
         algo, n, r, p, sel, dk = str(empreinte).split("$")
         if algo != "scrypt":
@@ -207,8 +204,8 @@ def verifier_mdp(mdp, empreinte):
     return hmac.compare_digest(calcule, attendu)
 
 
-# Empreinte jetable, calculee une fois : sert a occuper le processeur aussi
-# longtemps sur un email inconnu que sur un email connu.
+# A throwaway digest, computed once: it keeps the processor busy for as long
+# on an unknown email as on a known one.
 _LEURRE = None
 
 
@@ -220,7 +217,7 @@ def _perdre_du_temps(mdp):
 
 
 def valider_mdp(mdp, email=""):
-    """Leve ValueError avec un message affichable si le mot de passe ne va pas."""
+    """Raise ValueError with a displayable message if the password will not do."""
     mdp = _normaliser(mdp)
     if len(mdp) < MDP_MIN:
         raise ValueError("Le mot de passe doit faire au moins %d caracteres."
@@ -232,8 +229,8 @@ def valider_mdp(mdp, email=""):
     if bas in COURANTS:
         raise ValueError("Ce mot de passe figure parmi les plus utilises : "
                          "choisis-en un autre.")
-    # Un mot de passe fait de la meme lettre repetee passe la regle de longueur
-    # sans rien valoir.
+    # A password made of the same letter repeated passes the length rule and
+    # is worth nothing.
     if len(set(bas)) < 5:
         raise ValueError("Ce mot de passe est trop repetitif.")
     local = (email or "").split("@")[0].lower()
@@ -255,7 +252,7 @@ def valider_email(email):
 # ------------------------------------------------------------- temporisation
 
 def _attente(echecs):
-    """1re, 2e, 3e essai : libre. Ensuite 2 s, 4 s, 8 s... plafonne."""
+    """1st, 2nd, 3rd attempt: free. Then 2 s, 4 s, 8 s... up to the ceiling."""
     if echecs < ECHECS_AVANT_ATTENTE:
         return 0
     return min(2 ** (echecs - ECHECS_AVANT_ATTENTE + 1), ATTENTE_MAX)
@@ -287,17 +284,17 @@ def _echec_ip(ip):
 # ----------------------------------------------------------------- operations
 
 def creer(email, mdp, nom="", cfg=None):
-    """Cree un compte. Leve ValueError si l'email est pris ou le mot de passe faible."""
+    """Create an account. Raises ValueError if the email is taken or the password weak."""
     email = valider_email(email)
     valider_mdp(mdp, email)
     with _LOCK:
         d = _lire()
         if _index_email(d, email) >= 0:
             raise ValueError("Un compte existe deja avec cette adresse.")
-        # Le PREMIER compte est administrateur. C'est la convention des outils
-        # auto-heberges (Jellyfin, Immich, Paperless) : celui qui installe
-        # gouverne. Sans role du tout, n'importe quel utilisateur pouvait
-        # supprimer les autres ou eteindre l'authentification.
+        # The FIRST account is the administrator. That is the convention among
+        # self-hosted tools (Jellyfin, Immich, Paperless): whoever installs it
+        # governs. With no roles at all, any user could delete the others or
+        # switch authentication off.
         premier = not d["comptes"]
         u = {"id": secrets.token_urlsafe(9), "email": email,
              "nom": (nom or "").strip()[:80] or email.split("@")[0],
@@ -310,18 +307,18 @@ def creer(email, mdp, nom="", cfg=None):
 
 
 class BesoinCode(ValueError):
-    """Mot de passe bon, mais le second facteur manque ou ne correspond pas.
+    """Password correct, but the second factor is missing or does not match.
 
-    Une exception distincte : le formulaire doit alors demander le code, sans
-    refaire saisir le mot de passe. Elle n'est levee qu'apres verification du
-    mot de passe, donc elle ne revele l'existence d'aucun compte.
+    A distinct exception: the form must then ask for the code without making
+    the user retype the password. It is only raised after the password has been
+    verified, so it reveals the existence of no account.
     """
 
 
 def totp_preparer(uid):
-    """Cree un secret, pas encore actif : il ne le devient qu'une fois un code
-    valide fourni. Sans cette etape, une application mal configuree
-    verrouillerait le compte."""
+    """Create a secret, not yet active: it only becomes so once a valid code
+    has been supplied. Without that step, a mis-configured app would lock the
+    account out."""
     from . import totp
     with _LOCK:
         d = _lire()
@@ -358,7 +355,7 @@ def totp_activer(uid, saisie):
 
 
 def totp_desactiver(uid, mdp):
-    """Exige le mot de passe : retirer un facteur est un affaiblissement."""
+    """Requires the password: removing a factor is a weakening."""
     with _LOCK:
         d = _lire()
         for i, u in enumerate(d["comptes"]):
@@ -377,7 +374,7 @@ def totp_actif(u):
 
 
 def _consommer_code(email, compteur):
-    """Memorise le compteur utilise pour interdire le rejeu du meme code."""
+    """Record the counter used, so the same code cannot be replayed."""
     with _LOCK:
         d = _lire()
         i = _index_email(d, email)
@@ -392,10 +389,10 @@ def _consommer_code(email, compteur):
 
 
 def connecter(email, mdp, ip="", code=""):
-    """Renvoie le compte si les identifiants sont bons, sinon leve ValueError.
+    """Return the account if the credentials are right, else raise ValueError.
 
-    Le message d'erreur est le meme pour un email inconnu et un mot de passe
-    faux : donner un message different revient a publier la liste des comptes.
+    The error message is the same for an unknown email and a wrong password:
+    giving a different message amounts to publishing the list of accounts.
     """
     reste = _verrou_ip(ip)
     if reste:
@@ -411,7 +408,7 @@ def connecter(email, mdp, ip="", code=""):
                 raise _refus_temporise(attente)
 
     if not u:
-        _perdre_du_temps(mdp)          # meme cout que pour un compte reel
+        _perdre_du_temps(mdp)          # same cost as for a real account
         _echec_ip(ip)
         raise ValueError("Email ou mot de passe incorrect.")
 
@@ -427,8 +424,8 @@ def connecter(email, mdp, ip="", code=""):
                 _ecrire(d)
         raise ValueError("Email ou mot de passe incorrect.")
 
-    # Mot de passe valide. S'il existe un second facteur, il reste a franchir :
-    # les compteurs d'echec ne sont donc pas encore remis a zero.
+    # Password valid. If a second factor exists, it is still to be cleared:
+    # the failure counters are therefore not reset yet.
     if totp_actif(u):
         from . import totp
         bon, compteur = totp.verifier(u["totp"]["secret"], code,
@@ -453,8 +450,8 @@ def connecter(email, mdp, ip="", code=""):
 
 
 def changer_mdp(uid, ancien, nouveau):
-    """Exige le mot de passe actuel : un cookie vole ne doit pas suffire a
-    prendre le compte definitivement."""
+    """Requires the current password: a stolen cookie must not be enough to
+    take the account for good."""
     with _LOCK:
         d = _lire()
         for i, u in enumerate(d["comptes"]):
@@ -466,8 +463,8 @@ def changer_mdp(uid, ancien, nouveau):
             if verifier_mdp(nouveau, u["hash"]):
                 raise ValueError("Le nouveau mot de passe est identique a l'ancien.")
             d["comptes"][i]["hash"] = hacher(nouveau)
-            # Change l'epoque du compte : toutes les sessions signees avant
-            # cet instant cessent d'etre valables (voir auth.session).
+            # Move the account's epoch: every session signed before this
+            # instant stops being valid (see auth.session).
             d["comptes"][i]["maj_mdp"] = int(time.time())
             _ecrire(d)
             return _public(d["comptes"][i])
@@ -475,20 +472,19 @@ def changer_mdp(uid, ancien, nouveau):
 
 
 def reinitialiser_mdp(email, nouveau):
-    """Repose le mot de passe SANS connaitre l'ancien. Depuis le terminal seul.
+    """Reset the password WITHOUT knowing the old one. From the terminal only.
 
-    C'est la porte de secours d'un administrateur enferme dehors : plus de mot
-    de passe, plus de second facteur, et personne d'autre pour promouvoir un
-    compte. La seule alternative etait d'editer `_romule-comptes.json` a la
-    main — c'est-a-dire de coller une empreinte scrypt calculee ailleurs, ce
-    que personne ne fait correctement du premier coup.
+    This is the way back in for a locked-out administrator: no password left,
+    no second factor, and nobody else to promote an account.
+    The only alternative was editing `_romule-comptes.json` by hand — that is,
+    pasting an scrypt digest computed elsewhere, which nobody gets right first
+    time.
 
-    Elle n'est atteignable QUE par la ligne de commande, jamais par une route
-    HTTP : une reinitialisation sans preuve d'identite est exactement ce qu'un
-    attaquant cherche. Qui peut lancer `romule` a deja les droits du service,
-    donc l'acces au fichier des comptes : la commande ne donne rien de plus
-    que ce que le systeme de fichiers donnait deja, elle le rend seulement
-    faisable sans se tromper.
+    It is reachable ONLY from the command line, never through an HTTP route: a
+    reset with no proof of identity is exactly what an attacker wants. Whoever
+    can run `romule` already has the service's rights, hence access to the
+    accounts file: the command grants nothing the filesystem did not already
+    grant, it merely makes it doable without mistakes.
     """
     email = valider_email(email)
     valider_mdp(nouveau, email)
@@ -498,11 +494,11 @@ def reinitialiser_mdp(email, nouveau):
         if i < 0:
             raise ValueError("Aucun compte avec cette adresse.")
         d["comptes"][i]["hash"] = hacher(nouveau)
-        # Coupe toutes les sessions en cours : si le compte a ete pris, le
-        # reprendre ne doit pas laisser l'autre connecte.
+        # Cut every open session: if the account was taken over, reclaiming it
+        # must not leave the other party logged in.
         d["comptes"][i]["maj_mdp"] = int(time.time())
-        # Un compte bloque par des echecs repetes doit repartir : sinon la
-        # reinitialisation reussit et la connexion echoue quand meme.
+        # An account locked by repeated failures must be released: otherwise
+        # the reset succeeds and the login fails anyway.
         d["comptes"][i]["echecs"] = 0
         d["comptes"][i]["bloque"] = 0
         _ecrire(d)
@@ -510,12 +506,12 @@ def reinitialiser_mdp(email, nouveau):
 
 
 def desactiver_totp(email):
-    """Retire le second facteur. Pour un telephone perdu, depuis le terminal.
+    """Remove the second factor. For a lost phone, from the terminal.
 
-    `totp_desactiver()` exige le mot de passe, ce qui est juste depuis
-    l'interface. Ici on est deja sur la machine : exiger le mot de passe
-    n'ajouterait aucune preuve, et l'exiger pour un compte dont on vient de
-    perdre le second facteur enfermerait dehors pour de bon.
+    `totp_desactiver()` requires the password, which is right from the
+    interface. Here we are already on the machine: requiring the password would
+    add no proof, and requiring it for an account whose second factor has just
+    been lost would lock the user out for good.
     """
     email = valider_email(email)
     with _LOCK:
@@ -524,16 +520,16 @@ def desactiver_totp(email):
         if i < 0:
             raise ValueError("Aucun compte avec cette adresse.")
         avait = bool((d["comptes"][i].get("totp") or {}).get("actif"))
-        # `{}` plutot qu'une cle retiree : c'est ce que fait deja
-        # `totp_desactiver`, et deux representations du meme etat finissent
-        # toujours par diverger quelque part.
+        # `{}` rather than a removed key: that is what `totp_desactiver`
+        # already does, and two representations of the same state always end up
+        # diverging somewhere.
         d["comptes"][i]["totp"] = {}
         _ecrire(d)
         return avait
 
 
 def par_email(email):
-    """Le compte portant cette adresse, ou None. Pour la ligne de commande."""
+    """The account bearing this address, or None. For the command line."""
     d = _lire()
     i = _index_email(d, valider_email(email))
     return _public(d["comptes"][i]) if i >= 0 else None
@@ -559,7 +555,7 @@ def modifier(uid, nom=None, email=None):
 
 
 def supprimer(uid):
-    """Refuse de supprimer le dernier compte : plus personne ne pourrait entrer."""
+    """Refuses to delete the last account: nobody could get in any more."""
     with _LOCK:
         d = _lire()
         if len(d["comptes"]) <= 1:
@@ -568,9 +564,9 @@ def supprimer(uid):
         reste = [u for u in d["comptes"] if u["id"] != uid]
         if len(reste) == len(d["comptes"]):
             raise ValueError("Compte introuvable.")
-        # « Il doit rester quelqu'un » ne suffit pas : il doit rester quelqu'un
-        # QUI PEUT ADMINISTRER. Sinon les reglages deviennent inaccessibles
-        # sans toucher au fichier des comptes a la main.
+        # "Someone must remain" is not enough: someone WHO CAN ADMINISTER
+        # must remain. Otherwise the settings become unreachable without
+        # editing the accounts file by hand.
         if not any(u.get("admin") for u in reste):
             raise ValueError("C'est le dernier administrateur : promeus "
                              "quelqu'un d'autre avant de le supprimer.")
@@ -588,8 +584,8 @@ def supprimer(uid):
 
 # ---------------------------------------------------------------- photo
 
-# On ne se fie pas au type annonce par le navigateur : on lit les premiers
-# octets. Un fichier renomme en .png ne passera pas.
+# We do not trust the type the browser announces: we read the first bytes. A
+# file renamed to .png will not get through.
 SIGNATURES = [
     (b"\x89PNG\r\n\x1a\n", ".png", "image/png"),
     (b"\xff\xd8\xff", ".jpg", "image/jpeg"),
@@ -640,8 +636,8 @@ def photo_lire(uid):
     if not nom:
         return None, None
     p = PHOTOS / nom
-    # Le nom vient du fichier de comptes, mais on verifie tout de meme qu'il
-    # reste dans le dossier prevu.
+    # The name comes from the accounts file, but we check all the same that it
+    # stays inside the intended folder.
     try:
         p.resolve().relative_to(PHOTOS.resolve())
     except (ValueError, OSError):

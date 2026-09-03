@@ -1,36 +1,34 @@
-"""Cles d'API — des jetons nommes, revocables un par un.
+"""API keys — named tokens, revocable one at a time.
 
-Romule avait deja `ROMULE_TOKEN` : UN secret, tous les droits, qu'on ne peut ni
-nommer ni revoquer sans le changer pour tout le monde. Il reste, parce qu'il
-resout un autre probleme — ouvrir l'interface a un navigateur sans compte.
+Romule already had `ROMULE_TOKEN`: ONE secret, every right, which cannot be
+named or revoked without changing it for everybody. It stays, because it solves
+a different problem — opening the interface to a browser with no account.
 
-Une cle d'API resout celui-ci : donner a un tableau de bord, a un script de
-sauvegarde ou a une tache planifiee un acces qu'on peut retirer a lui seul, et
-dont on voit la derniere utilisation.
+An API key solves this one: giving a dashboard, a backup script or a scheduled
+job an access that can be withdrawn on its own, and whose last use is visible.
 
-Trois choix qui ne vont pas de soi
+Three choices that are not obvious
 ----------------------------------
 
-**Le prefixe `rml_` n'est pas decoratif.** Il rend une cle reconnaissable dans
-un journal, un fichier de configuration ou un depot public. C'est ce qui permet
-a un lecteur — humain ou automate — de dire « ceci est un secret » sans
-connaitre Romule. GitHub et Stripe le font pour cette raison.
+**The `rml_` prefix is not decorative.** It makes a key recognisable in a log,
+a configuration file or a public repository. It is what lets a reader — human
+or machine — say "this is a secret" without knowing Romule. GitHub and Stripe
+do it for that reason.
 
-**SHA-256, et surtout pas `comptes.hacher()`.** Le projet hache les mots de
-passe en scrypt N=2^17, soit environ 128 Mio de memoire par calcul. C'est voulu,
-et c'est juste : un mot de passe est choisi par un humain, donc devinable, et il
-faut rendre chaque essai couteux.
+**SHA-256, and above all not `comptes.hacher()`.** The project hashes passwords
+with scrypt N=2^17, about 128 MiB of memory per computation. That is deliberate
+and correct: a password is chosen by a human, therefore guessable, and every
+attempt must be made expensive.
 
-Une cle d'API n'est pas cela. C'est un secret ALEATOIRE de 256 bits : il n'y a
-rien a deviner, et aucun cout de calcul n'ajoute de securite. En revanche une
-cle est presentee a CHAQUE requete — un tableau de bord qui sonde toutes les
-trente secondes ferait alors, a lui seul, 128 Mio d'allocation par sonde. Le
-durcissement se retournerait en moyen de mettre le serveur a genoux.
+An API key is not that. It is a RANDOM 256-bit secret: there is nothing to
+guess, and no amount of computation adds security. A key is, on the other hand,
+presented on EVERY request — a dashboard polling every thirty seconds would on
+its own allocate 128 MiB per poll. The hardening would turn into a way of
+bringing the server to its knees.
 
-**La recherche se fait par prefixe.** Comparer la cle presentee a toutes les
-empreintes enregistrees couterait un parcours complet a chaque requete. Les
-douze premiers caracteres identifient la cle ; l'empreinte, comparee en temps
-constant, decide.
+**Lookup is by prefix.** Comparing the presented key against every stored
+digest would cost a full scan on each request. The first twelve characters
+identify the key; the digest, compared in constant time, decides.
 """
 
 import hashlib
@@ -45,9 +43,9 @@ from . import config
 
 FICHIER = config.fichier_etat("_romule-cles.json", "_romule-cles.json")
 
-# `rml_` + 43 caracteres base64url (32 octets). Le prefixe affiche couvre le
-# marqueur et les huit premiers caracteres du secret : assez pour reconnaitre
-# une cle dans une liste, trop peu pour la reconstruire.
+# `rml_` + 43 base64url characters (32 bytes). The displayed prefix covers the
+# marker and the first eight characters of the secret: enough to recognise a
+# key in a list, far too little to rebuild it.
 MARQUEUR = "rml_"
 _TAILLE = 32
 _PREFIXE = 12
@@ -68,8 +66,8 @@ def _lire():
 
 
 def _ecrire(d):
-    """Ecriture atomique en 0600, comme le fichier des comptes : une empreinte
-    ne doit etre lisible que par le compte systeme qui fait tourner Romule."""
+    """Atomic write in 0600, like the accounts file: a digest must only be
+    readable by the system account running Romule."""
     FICHIER.parent.mkdir(parents=True, exist_ok=True)
     tmp = FICHIER.with_suffix(".tmp")
     tmp.write_text(json.dumps(d, indent=2, ensure_ascii=False) + "\n",
@@ -85,9 +83,9 @@ def _empreinte(cle):
 # -------------------------------------------------------------------- lecture
 
 def _public(k):
-    """Ce qu'on peut montrer. L'empreinte n'en fait pas partie : elle ne permet
-    pas de retrouver la cle, mais elle permettrait de la VERIFIER hors ligne,
-    donc de tester une liste de candidats sans passer par le serveur."""
+    """What may be shown. The digest is not part of it: it does not reveal the
+    key, but it would allow VERIFYING one offline — that is, testing a list of
+    candidates without going through the server."""
     return {"id": k["id"], "nom": k["nom"], "prefixe": k["prefixe"],
             "cree": k["cree"], "dernier_usage": k.get("dernier_usage"),
             "revoquee": bool(k.get("revoquee"))}
@@ -108,9 +106,9 @@ def nombre():
 def creer(nom):
     """Rend (fiche_publique, cle_en_clair).
 
-    La cle en clair n'est rendue QU'ICI : elle n'est stockee nulle part, et
-    l'appelant est le seul a pouvoir la montrer. C'est ce qui rend une fuite du
-    fichier d'etat inoffensive pour les cles elles-memes.
+    The plaintext key is returned HERE and nowhere else: it is stored nowhere,
+    and the caller is the only one able to show it. That is what makes a leak
+    of the state file harmless for the keys themselves.
     """
     nom = (nom or "").strip()[:60] or "sans nom"
     cle = MARQUEUR + secrets.token_urlsafe(_TAILLE)
@@ -129,9 +127,9 @@ def creer(nom):
 
 
 def revoquer(cid):
-    """Revoque au lieu de supprimer : le nom et la date de derniere utilisation
-    restent lisibles. « Cette cle a-t-elle servi apres que je l'ai retiree ? »
-    est une question qu'on se pose apres coup, pas avant."""
+    """Revoke rather than delete: the name and the last-used date stay
+    readable. "Did this key get used after I withdrew it?" is a question you
+    ask afterwards, not before."""
     with _LOCK:
         d = _lire()
         for k in d["cles"]:
@@ -160,10 +158,10 @@ def renommer(cid, nom):
 # ---------------------------------------------------------------- verification
 
 def verifier(presentee):
-    """Rend la fiche publique si la cle est valide, sinon None.
+    """Return the public record if the key is valid, otherwise None.
 
-    La date de derniere utilisation n'est ecrite qu'une fois par minute : sans
-    cela, une sonde de tableau de bord reecrirait le fichier a chaque appel.
+    The last-used date is written at most once a minute: without that, a
+    dashboard poll would rewrite the file on every call.
     """
     if not presentee or not isinstance(presentee, str):
         return None
@@ -177,9 +175,9 @@ def verifier(presentee):
         for k in d["cles"]:
             if k.get("revoquee") or k.get("prefixe") != prefixe:
                 continue
-            # Temps constant : une comparaison ordinaire s'arrete au premier
-            # caractere different, et le TEMPS de reponse dit alors combien de
-            # caracteres etaient justes.
+            # Constant time: an ordinary comparison stops at the first
+            # differing character, and the response TIME then tells how many
+            # characters were right.
             if not hmac.compare_digest(k.get("empreinte", ""), emp):
                 continue
             maintenant = int(time.time())
@@ -188,6 +186,6 @@ def verifier(presentee):
                 try:
                     _ecrire(d)
                 except OSError:
-                    pass          # un disque plein ne doit pas fermer l'API
+                    pass          # a full disk must not close the API
             return _public(k)
     return None
