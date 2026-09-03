@@ -1,8 +1,8 @@
-"""Parcours reel sur telephone : on ouvre chaque surface et on verifie
-qu'elle s'affiche, tient dans l'ecran, et repond au doigt.
+"""A real journey on a phone: we open every surface and check it displays,
+fits on the screen, and answers a finger.
 
-L'audit statique ne voit que ce qui est a l'ecran au chargement. Ici on
-deroule la page et on ouvre les panneaux, la ou l'utilisateur a bute.
+The static audit only sees what is on screen at load time. Here we scroll the
+page and open the panels, where the user got stuck.
 """
 import sys
 from pathlib import Path
@@ -14,17 +14,16 @@ from cdp import Navigateur
 from audit_responsive import SONDE
 
 import os
-# `LUDO_URL` est OBLIGATOIRE, et il n'y a volontairement pas de defaut.
+# `LUDO_URL` is REQUIRED, and there is deliberately no default.
 #
-# Il y en avait un : `http://127.0.0.1:8799/`. Or c'est un port ou tourne
-# facilement une VRAIE instance — la mienne, en l'occurrence. Lance seul, ce
-# test pilotait donc la ludotheque de quelqu'un : il rapportait « 189
-# gestionnaires en ligne » parce qu'il examinait une version d'il y a trois
-# mois, et il cliquait dans de vraies donnees.
+# There used to be one: `http://127.0.0.1:8799/`. But that is a port where a REAL
+# instance easily runs — mine, as it happens. Run on its own, this test therefore
+# drove someone's library: it reported "189 inline handlers" because it was
+# examining a three-month-old version, and it clicked inside real data.
 #
-# Un defaut qui vise un service plausible est pire qu'une erreur : il donne un
-# resultat, et ce resultat parle d'autre chose. `lancer_tests.py` pose la
-# variable ; qui veut viser un serveur de developpement la pose lui-meme.
+# A default that aims at a plausible service is worse than an error: it gives a
+# result, and that result talks about something else. `lancer_tests.py` sets the
+# variable; whoever wants to aim at a development server sets it themselves.
 URL = os.environ.get("LUDO_URL", "")
 if not URL:
     print("LUDO_URL n'est pas posee. Lance `python3 lancer_tests.py "
@@ -78,11 +77,10 @@ def main():
         t("aucune notification empilee",
           n.js("document.querySelectorAll('#toasts .toast').length") == 0,
           n.js("[...document.querySelectorAll('#toasts .toast')].map(x=>x.textContent)"))
-        # Cette assertion exigeait « Console détectée », donc une console
-        # BRANCHEE. Elle echouait des qu'il n'y en avait pas — c'est-a-dire
-        # chez tout nouvel utilisateur, et sur tout executeur d'integration
-        # continue. Ce qu'on veut verifier ici, c'est que le demarrage laisse
-        # une trace au journal, pas laquelle.
+        # This assertion required "Console détectée", so a console PLUGGED IN.
+        # It failed as soon as there was none — that is, at every new user's, and
+        # on every continuous-integration runner. What we want to check here is
+        # that the startup leaves a trace in the log, not which one.
         t("les evenements sont au journal",
           n.js("JLOG.length") >= 1, n.js("JLOG.map(l=>l.m)"))
         t("le bouton du journal signale du nouveau",
