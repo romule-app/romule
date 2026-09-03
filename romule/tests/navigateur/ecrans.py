@@ -1,19 +1,19 @@
-"""Les ecrans de l'interface, en un seul endroit.
+"""The interface's screens, in one single place.
 
-Deux tests balayent le DOM rendu — les phrases restees en francais, et les
-elements cliquables devenus inertes. Ni l'un ni l'autre ne voit ce qui n'est
-pas AFFICHE : il faut donc ouvrir les ecrans un par un.
+Two tests sweep the rendered DOM — the sentences left in French, and the
+clickable elements gone inert. Neither of them sees what is not DISPLAYED: the
+screens must therefore be opened one by one.
 
-Cette liste etait dupliquee dans le premier de ces tests. La sortir ici n'est
-pas du rangement : un ecran ajoute a l'interface doit etre ajoute a UN seul
-endroit, sinon le second test continuera silencieusement de ne pas le voir —
-ce qui est exactement le defaut que la phase 3.5 a corrige.
+This list used to be duplicated inside the first of those tests. Moving it here
+is not tidying: a screen added to the interface must be added in ONE place,
+otherwise the second test will silently go on not seeing it — which is exactly
+the defect phase 3.5 fixed.
 """
 
 import time
 
-# Chaque entree ouvre un ecran. L'ordre compte : certaines dependent de la
-# precedente (fermer la fiche avant d'ouvrir l'assistant).
+# Each entry opens a screen. The order matters: some depend on the previous one
+# (closing the detail view before opening the wizard).
 ETAPES = [
     "app.tab('jeux')",
     "app.tab('settings')",
@@ -23,15 +23,15 @@ ETAPES = [
     "app.auditer(true)",
     "app.toggleJournal()",
     "app.toggleDrop(true)",
-    # Les sections de reglages sont exclusives : chacune doit etre ouverte.
+    # The settings sections are exclusive: each must be opened.
     "document.querySelector(\"#setnav a[href='#sec-console']\").click()",
     "document.querySelector(\"#setnav a[href='#sec-biblio']\").click()",
     "document.querySelector(\"#setnav a[href='#sec-entretien']\").click()",
     "document.querySelector(\"#setnav a[href='#sec-acces']\").click()",
     "document.querySelector(\"#setnav a[href='#sec-interface']\").click()",
-    # Le navigateur de dossiers du serveur.
+    # The server's folder browser.
     "app.tab('settings'); app.ludoOuvrir()",
-    # La fiche d'un jeu : l'ecran le plus dense.
+    # A game's detail view: the densest screen.
     "app.tab('jeux'); (function(){const c=document.querySelector('#lib .gcard');"
     "if (c) app.openGame(c.dataset.key);})()",
     "app.closeGame(); app.openOnboard && app.openOnboard()",
@@ -40,11 +40,11 @@ ETAPES = [
 
 
 def parcourir(n, releve, pause=0.9):
-    """Ouvre chaque ecran et applique `releve` (une expression JS) a chacun.
+    """Opens each screen and applies `releve` (a JS expression) to each of them.
 
-    Rend la reunion de tout ce que `releve` a rapporte. Une etape qui echoue
-    est ignoree : un ecran indisponible dans l'etat courant ne doit pas faire
-    tomber le balayage des autres.
+    Returns the union of everything `releve` reported. A step that fails is
+    ignored: a screen unavailable in the current state must not bring down the
+    sweep of the others.
     """
     vu = set()
     for code in ETAPES:

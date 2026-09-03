@@ -1,9 +1,9 @@
-"""Audit responsive : ce qu'un doigt peut reellement atteindre, taille par taille.
+"""Responsive audit: what a finger can really reach, size by size.
 
-Trois defauts recherches, tous invisibles a la lecture du CSS :
-  * la page deborde horizontalement ;
-  * un controle est recouvert par autre chose et n'attrape pas l'appui ;
-  * un controle est trop petit pour un doigt (44 px est le minimum courant).
+Three defects are looked for, all invisible when reading the CSS:
+  * the page overflows horizontally;
+  * a control is covered by something else and does not catch the tap;
+  * a control is too small for a finger (44 px is the common minimum).
 """
 import sys
 from pathlib import Path
@@ -13,17 +13,16 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from cdp import Navigateur
 
 import os
-# `LUDO_URL` est OBLIGATOIRE, et il n'y a volontairement pas de defaut.
+# `LUDO_URL` is REQUIRED, and there is deliberately no default.
 #
-# Il y en avait un : `http://127.0.0.1:8799/`. Or c'est un port ou tourne
-# facilement une VRAIE instance — la mienne, en l'occurrence. Lance seul, ce
-# test pilotait donc la ludotheque de quelqu'un : il rapportait « 189
-# gestionnaires en ligne » parce qu'il examinait une version d'il y a trois
-# mois, et il cliquait dans de vraies donnees.
+# There used to be one: `http://127.0.0.1:8799/`. But that is a port where a REAL
+# instance easily runs — mine, as it happens. Run on its own, this test therefore
+# drove someone's library: it reported "189 inline handlers" because it was
+# examining a three-month-old version, and it clicked inside real data.
 #
-# Un defaut qui vise un service plausible est pire qu'une erreur : il donne un
-# resultat, et ce resultat parle d'autre chose. `lancer_tests.py` pose la
-# variable ; qui veut viser un serveur de developpement la pose lui-meme.
+# A default that aims at a plausible service is worse than an error: it gives a
+# result, and that result talks about something else. `lancer_tests.py` sets the
+# variable; whoever wants to aim at a development server sets it themselves.
 URL = os.environ.get("LUDO_URL", "")
 if not URL:
     print("LUDO_URL n'est pas posee. Lance `python3 lancer_tests.py "
@@ -31,13 +30,13 @@ if not URL:
           "    LUDO_URL=http://127.0.0.1:9871/ python3 %s"
           % __file__, file=sys.stderr)
     raise SystemExit(2)
-# Cinq telephones et tablettes, puis les consoles portables de retrogaming —
-# des appareils Android avec un navigateur, un ecran COURT, et des boutons
-# plutot qu'un doigt precis. Aucune n'etait testee.
+# Five phones and tablets, then the retro handhelds — Android devices with a
+# browser, a SHORT screen, and buttons rather than a precise finger. None of them
+# was tested.
 #
-# Les viewports sont ceux que le navigateur annonce reellement : la resolution
-# divisee par la densite. Un 1080p de 6 pouces rend environ 720 x 405 points
-# CSS, pas 1920 x 1080.
+# The viewports are the ones the browser really announces: the resolution divided
+# by the density. A 6-inch 1080p screen renders about 720 x 405 CSS points, not
+# 1920 x 1080.
 TAILLES = [
     ("iPhone SE       ", 375, 667, 2),
     ("iPhone 15 Pro   ", 393, 852, 3),
@@ -45,19 +44,19 @@ TAILLES = [
     ("paysage         ", 852, 393, 3),
     ("tablette        ", 768, 1024, 2),
 
-    # Le plus petit ecran 4:3 encore vendu. S'il tient ici, il tient partout.
+    # The smallest 4:3 screen still sold. If it holds here, it holds anywhere.
     ("Anbernic RG35XX ", 640, 480, 1),
-    # 16:9 tres court : le cas que vise `@media (max-height:460px)`.
+    # A very short 16:9: the case `@media (max-height:460px)` targets.
     ("Retroid Pocket 5", 640, 360, 3),
-    # 6 pouces 1080p en paysage — le format le plus repandu des consoles
-    # Android. L'Odin 2 et le Thor partagent ce viewport ; un seul profil suffit
-    # donc a couvrir les deux.
+    # A 6-inch 1080p in landscape — the most widespread format among Android
+    # handhelds. The Odin 2 and the Thor share this viewport; one profile
+    # therefore covers both.
     ("AYN Odin 2/Thor ", 720, 405, 2.66),
-    # Le SECOND ecran du Thor : 3,92 pouces en 1080 x 1240. C'est le seul
-    # viewport plus haut que large ET presque carre de la liste — une grille
-    # reglee pour du 16:9 y rencontre un rapport qu'elle n'a jamais vu.
+    # The Thor's SECOND screen: 3.92 inches at 1080 x 1240. It is the list's
+    # only viewport taller than it is wide AND nearly square — a grid tuned for
+    # 16:9 meets a ratio there it has never seen.
     ("AYN Thor 2e ecr.", 360, 413, 3),
-    # Large mais court, et sous Linux.
+    # Wide but short, and running Linux.
     ("Steam Deck      ", 1280, 800, 1),
 ]
 
@@ -153,11 +152,10 @@ def uniq(xs):
     return out
 
 
-# La sonde a gagne un filtre — « rogne par un conteneur defilant, donc pas
-# recouvert » — et un filtre peut aveugler autant qu'il precise. On lui montre
-# donc les DEUX cas dans une page reelle avant de lui faire confiance : un
-# bouton reellement recouvert doit etre signale, le meme sorti d'un cadre
-# defilant ne doit pas l'etre.
+# The probe gained a filter — "clipped by a scrolling container, therefore not
+# covered" — and a filter can blind as much as it sharpens. So we show it BOTH
+# cases in a real page before trusting it: a button really covered must be
+# reported, the same one taken out of a scrolling frame must not.
 EPREUVE = r"""
 (function () {
   const z = document.createElement('div');
@@ -202,9 +200,9 @@ def eprouver(n):
 
 def main():
     total_pb = 0
-    # Le port derive de l'INDEX, pas de la largeur : deux profils peuvent
-    # partager la meme largeur (640 pour le RG35XX et le Retroid Pocket 5) et
-    # se disputeraient alors le meme port.
+    # The port derives from the INDEX, not from the width: two profiles can
+    # share the same width (640 for the RG35XX and the Retroid Pocket 5) and
+    # would then fight over the same port.
     for i, (nom, l, h, dpr) in enumerate(TAILLES):
         n = Navigateur(port=9400 + i, largeur=l, hauteur=h, dpr=dpr)
         try:
@@ -214,7 +212,7 @@ def main():
                     break
                 time.sleep(1.5)
             time.sleep(1)
-            if i == 0:                       # une seule fois : la sonde est la meme
+            if i == 0:                       # once only: the probe is the same
                 couvert, rogne_ = eprouver(n)
                 print("   sonde : recouvrement reel %s | rognage ignore %s"
                       % ("vu" if couvert else "MANQUE",
