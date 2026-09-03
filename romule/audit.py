@@ -1,28 +1,27 @@
-"""Audit de securite automatique, sans dependance.
+"""Automatic security audit, with no dependency.
 
 Deux familles de controles, volontairement separees :
 
-  1. **Posture** — la facon dont CETTE installation est configuree : qui peut
-     entrer, avec quoi, et ce qui traine sur le disque. C'est la source de
-     loin la plus frequente de problemes reels sur un outil auto-heberge,
-     et c'est verifiable hors ligne, instantanement.
+  1. **Posture** — how THIS installation is configured: who can get in, with
+     what, and what is lying around on disk. By far the most common source of
+     real problems on a self-hosted tool, and checkable offline, instantly.
 
-  2. **Version de Python** — la seule « dependance » du projet. On interroge
-     endoflife.date pour savoir si la serie utilisee recoit encore des
-     correctifs de securite. Sans reseau, le controle est signale « non
-     verifie » plutot que « bon » : un audit qui ment par omission est pire
-     que pas d'audit.
+  2. **Python version** — the project's only "dependency". We ask
+     endoflife.date whether the series in use still receives security fixes.
+     With no network, the check reports "not verified" rather than "fine": an
+     audit that lies by omission is worse than no audit.
 
-Chaque controle rend un niveau : `grave`, `alerte`, `info` ou `bon`.
-`code_sortie()` renvoie 2 si un controle grave a echoue, 1 pour une alerte,
-0 sinon — de quoi bloquer un deploiement dans un pipeline.
+Each check returns a level: `grave`, `alerte`, `info` or `bon`.
+`code_sortie()` returns 2 when a severe check failed, 1 for a warning, 0
+otherwise — enough to block a deployment in a pipeline.
 
 Usage :
-    python3 -m romule.audit            # rapport lisible
-    python3 -m romule.audit --json     # pour un pipeline
+    python3 -m romule.audit            # readable report
+    python3 -m romule.audit --json     # for a pipeline
     python3 -m romule.audit --hors-ligne
 """
 
+import ast
 import json
 import os
 import re
@@ -43,7 +42,7 @@ def _c(niveau, titre, constat, remede=""):
 # ------------------------------------------------------------------ posture
 
 def _acces(cfg):
-    """Qui peut ouvrir la ludotheque, et avec quoi."""
+    """Who can open the library, and with what."""
     from . import auth, comptes
     out = []
     mode = cfg.get("auth_mode", "aucun")
@@ -105,7 +104,7 @@ def _acces(cfg):
 
 
 def _https_probable(cfg):
-    """Vrai si l'installation semble servie via un proxy HTTPS."""
+    """True when the installation appears to be served through an HTTPS proxy."""
     return (cfg.get("oidc_redirect") or "").startswith("https://")
 
 
@@ -135,7 +134,7 @@ def _secrets(cfg):
 
 
 def _permissions():
-    """Les fichiers sensibles ne doivent pas etre lisibles par tout le monde."""
+    """The sensitive files must not be readable by everybody."""
     from . import comptes
     out = []
     for chemin, exige in ((config.CONFIG_FILE, 0o077), (comptes.FICHIER, 0o077)):
@@ -155,19 +154,18 @@ def _permissions():
 
 
 def _code():
-    """Quelques motifs qu'on ne veut jamais voir reapparaitre dans le code.
+    """A few patterns we never want to see reappear in the code.
 
-    Ce n'est pas un analyseur statique : c'est un garde-fou sur les erreurs
-    precises que ce projet a deja rencontrees ou pourrait commettre.
+    This is not a static analyser: it is a guard against the specific mistakes
+    this project has already made or could make.
     """
-    # Ces chaines sont des MOTIFS DE RECHERCHE, jamais des appels : ce module
-    # n'execute rien de ce qu'il cite. Il s'exclut lui-meme du balayage plus
-    # bas, sinon il se signalerait a chaque passage.
-    # Le troisieme champ dit A QUELS FICHIERS le motif s'applique. Sans lui,
-    # `\bexec\s*\(` — ecrit pour Python — capturait `.exec(` d'une expression
-    # reguliere JavaScript (`app.js`), et l'audit restait bloque sur une alerte
-    # permanente qu'on finissait par ignorer. Un garde-fou qu'on apprend a
-    # ignorer ne garde plus rien.
+    # These strings are SEARCH PATTERNS, never calls: this module executes
+    # nothing of what it quotes. It excludes itself from the sweep below,
+    # otherwise it would flag itself on every pass.
+    # The third field says WHICH FILES the pattern applies to. Without it,
+    # `\bexec\s*\(` — written for Python — caught the `.exec(` of a JavaScript
+    # regular expression (`app.js`), and the audit sat on a permanent warning
+    # everyone learnt to ignore. A guard you learn to ignore guards nothing.
     PY_SEUL, TOUS = ".py", "*"
     interdits = [
         (r"\bshell\s*=\s*True", "subprocess avec shell=True",
@@ -185,7 +183,7 @@ def _code():
         touches = []
         for f in fichiers:
             if f.name == "audit.py":
-                continue                      # ce fichier CITE les motifs
+                continue                      # this file QUOTES the patterns
             if portee != "*" and f.suffix != portee:
                 continue
             for n, ligne in enumerate(f.read_text(encoding="utf-8",
@@ -204,16 +202,16 @@ def _code():
     return out
 
 
-# Champs qui viennent de l'utilisateur ou du reseau, et qui finissent a l'ecran.
+# Fields that come from the user or the network and end up on screen.
 _SENSIBLES = ("nom", "email", "titre", "name", "message", "error", "resume")
 
 
 def _sans_esc(expression):
-    """Identifiants sensibles concatenes SANS passer par esc().
+    """Sensitive identifiers concatenated WITHOUT going through esc().
 
-    On retire d'abord tout ce qui est deja dans un `esc(...)`, puis on cherche
-    ce qui reste : une simple recherche de motif ne distinguerait pas
-    `esc(c.nom)` — sur : de `+ c.nom +` — dangereux.
+    We first strip everything already inside an `esc(...)`, then look at what
+    is left: a plain pattern search would not tell `esc(c.nom)` — safe — from
+    `+ c.nom +` — dangerous.
     """
     reste, i = [], 0
     while i < len(expression):
@@ -233,7 +231,7 @@ def _sans_esc(expression):
 
 
 def _innerhtml():
-    """Une donnee non echappee posee en innerHTML, c'est une injection HTML."""
+    """Unescaped data assigned to innerHTML is an HTML injection."""
     touches = []
     for f in (config.PKG / "static").glob("*.js"):
         src = f.read_text(encoding="utf-8", errors="replace")
@@ -252,7 +250,7 @@ def _innerhtml():
 
 
 def _entetes():
-    """Les en-tetes de securite sont-ils toujours poses par le serveur ?"""
+    """Are the security headers still being set by the server?"""
     src = (config.PKG / "server.py").read_text(encoding="utf-8", errors="replace")
     attendus = ("Content-Security-Policy", "X-Content-Type-Options",
                 "X-Frame-Options", "Referrer-Policy")
@@ -266,13 +264,13 @@ def _entetes():
 
 
 def _csp():
-    """`script-src 'self'` sans tolerance pour l'inline, depuis la phase 4.
+    """`script-src 'self'` with no tolerance for inline, since phase 4.
 
-    Le controle lit le SOURCE de `server.py` plutot que d'interroger le
-    serveur : l'en-tete depend de la requete (HSTS n'est pose qu'en TLS), et
-    un audit lance hors ligne doit pouvoir repondre. La branche « inline
-    autorise » reste ecrite : elle se rallumerait si quelqu'un remettait la
-    tolerance, et c'est exactement ce qu'on veut voir signale."""
+    The check reads `server.py`'s SOURCE rather than querying the server: the
+    header depends on the request (HSTS is only set over TLS), and an audit run
+    offline must still answer. The "inline allowed" branch stays written: it
+    would light up again if someone restored the tolerance, which is exactly
+    what we want reported."""
     src = (config.PKG / "server.py").read_text(encoding="utf-8", errors="replace")
     if "Content-Security-Policy" not in src:
         return [_c("alerte", "Aucune politique de contenu",
@@ -339,15 +337,37 @@ def _python(hors_ligne):
 
 
 def _dependances():
-    """Le projet revendique zero dependance : on le verifie, ca ne se decrete pas."""
+    """The project claims zero dependencies: we check it, it is not decreed.
+
+    Parsed with `ast`, not with a regular expression. The regex matched any
+    line whose first word was `import` or `from` — including a wrapped comment
+    reading "the user thinks the import failed", which reported a dependency
+    named `failed`. A guard that cries wolf gets switched off, and then it
+    guards nothing.
+
+    Parsing also catches what the regex missed: `import a, b` declares two
+    modules, and `import a.b` depends on `a`.
+    """
     externes = set()
     connus = {p.stem for p in config.PKG.glob("*.py")} | {"romule"}
     for f in config.PKG.glob("*.py"):
-        for ligne in f.read_text(encoding="utf-8", errors="replace").splitlines():
-            m = re.match(r"\s*(?:from|import)\s+([a-zA-Z_][\w]*)", ligne)
-            if not m:
-                continue
-            nom = m.group(1)
+        try:
+            arbre = ast.parse(f.read_text(encoding="utf-8", errors="replace"))
+        except SyntaxError:
+            # A file that does not parse is a different problem, and the
+            # syntax suite is the one that reports it. Here we simply cannot
+            # conclude, and we say nothing rather than guess.
+            continue
+        noms = set()
+        for noeud in ast.walk(arbre):
+            if isinstance(noeud, ast.Import):
+                noms |= {a.name.split(".")[0] for a in noeud.names}
+            elif isinstance(noeud, ast.ImportFrom):
+                # `level > 0` is a relative import — `from . import x` — so by
+                # construction it is one of ours.
+                if not noeud.level and noeud.module:
+                    noms.add(noeud.module.split(".")[0])
+        for nom in noms:
             if nom in connus or nom in sys.stdlib_module_names:
                 continue
             externes.add(nom)
@@ -363,13 +383,13 @@ def _dependances():
 
 
 def _cles_api():
-    """Les cles d'API sont un acces a part entiere : elles doivent figurer dans
-    le rapport qui dit qui peut entrer.
+    """API keys are an access path in their own right: they belong in the
+    report that says who can get in.
 
-    Une cle ne se perime pas et ne se rappelle a personne. Celle qu'on a creee
-    pour essayer un tableau de bord il y a six mois ouvre toujours la porte, et
-    rien dans l'interface ne la met sous les yeux. C'est le seul moment ou on
-    la relit.
+    A key does not expire and reminds nobody of itself. The one created six
+    months ago to try out a dashboard still opens the door, and nothing in the
+    interface puts it in front of you. This is the one moment it gets read
+    again.
     """
     from . import apikeys
     try:
@@ -413,7 +433,7 @@ def lancer(cfg=None, hors_ligne=False):
 
 
 def code_sortie(rapport):
-    """2 = probleme grave, 1 = alerte, 0 = rien a signaler."""
+    """2 = severe problem, 1 = warning, 0 = nothing to report."""
     return {3: 2, 2: 1}.get(rapport["pire"], 0)
 
 
