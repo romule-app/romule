@@ -3875,8 +3875,8 @@ function changerMotDePasse() {
   });
 }
 
-// Deux etapes volontaires : on ne declare le facteur actif qu'apres avoir vu
-// un code valide. Sinon une application mal configuree verrouille le compte.
+// Two deliberate steps: the factor is only declared active after a valid code
+// has been seen. Otherwise a mis-configured app locks the account.
 async function activerDoubleFacteur() {
   const p = await api('/api/compte-totp-preparer', {}, true);
   if (!p || p.error) return toast((p && p.error) || 'Préparation impossible.', 'warn');
@@ -3907,8 +3907,8 @@ function retirerDoubleFacteur() {
   });
 }
 
-// Une seule fenetre pour TOUS les fichiers a classer : en ouvrir une par
-// fichier serait insupportable des qu'on en depose dix.
+// One dialog for ALL the files to file: opening one per file would be
+// unbearable as soon as ten are dropped.
 function ouvrirChoixPlateforme(items) {
   const el = $('dialog');
   const ligne = it => {
@@ -3936,8 +3936,8 @@ function ouvrirChoixPlateforme(items) {
     + '<div class="classer">' + items.map(ligne).join('') + '</div>'
     + '<div class="acts"><button class="go" data-di="ok">Ranger</button>'
     + '<button class="ghost" data-di="close">Plus tard</button></div></div>';
-  // Rouvrir annule une fermeture en cours : sans cela, le nettoyage
-  // differe de `fermerVoile` viderait la fenetre qu'on vient d'ouvrir.
+  // Reopening cancels a closing already under way: without this, the deferred
+  // cleanup in `fermerVoile` would empty the dialog we have just opened.
   el.classList.remove('ferme');
   el.classList.add('open');
   el.querySelectorAll('[data-di]').forEach(b => b.addEventListener('click', async () => {
@@ -3981,16 +3981,16 @@ function syncSetDesc() {
     const t = (SET_DESC[desc] || {})[$(sel).value];
     if (t) $(desc).textContent = t;
   });
-  // Les champs lies a une source restent TOUJOURS visibles : on ne cache pas
-  // un reglage que l'utilisateur pourrait chercher. On signale juste qu'il est
-  // inactif avec la source choisie.
+  // Fields tied to a source stay ALWAYS visible: we do not hide a setting the
+  // user might go looking for. We merely say it is inactive with the chosen
+  // source.
   const prov = $('s-coverprov').value;
   const marquer = (row, actif, quand) => {
     $(row).classList.toggle('inactive', !actif);
-    // Ce texte etait rendu par `content: attr(data-note)` en CSS : il n'est
-    // alors JAMAIS un noeud de texte, donc ni l'observateur ni aucun outil ne
-    // peut le voir — et il ne pouvait pas etre traduit. Il devient un vrai
-    // element, rempli par `textContent`.
+    // This text was rendered by `content: attr(data-note)` in CSS: it is then
+    // NEVER a text node, so neither the observer nor any tool can see it — and
+    // it could not be translated. It becomes a real element, filled through
+    // `textContent`.
     const cible = $(row).querySelector('.setlab span');
     let note = cible && cible.querySelector('.setnote');
     if (cible && !note) {
@@ -4000,8 +4000,8 @@ function syncSetDesc() {
     }
     if (note) {
       note.textContent = actif ? ''
-        // `quand` est lui-meme un libelle : le laisser brut affichait
-        // « — used only with “URL personnalisée” », a moitie traduit.
+        // `quand` is itself a label: leaving it raw showed "— used only with
+        // “URL personnalisée”", half translated.
         : phrase('— utilisée seulement avec « %s »', t(quand));
     }
   };
@@ -4010,7 +4010,7 @@ function syncSetDesc() {
 }
 function fillSettings() {
   const c = DATA.config || {};
-  // un champ peut avoir ete retire de la page : on ne suppose jamais sa presence
+  // a field may have been removed from the page: we never assume it is there
   const set = (id, v) => {
     const el = $(id);
     if (el && v != null && document.activeElement !== el) el.value = v;
@@ -4018,8 +4018,8 @@ function fillSettings() {
   set('s-oidcissuer', c.oidc_issuer); set('s-oidcclient', c.oidc_client_id);
   set('s-oidcsecret', c.oidc_client_secret); set('s-oidcemails', c.oidc_emails);
   set('s-oidcgroupes', c.oidc_groupes); set('s-oidcadmingroupes', c.oidc_admin_groupes); set('s-oidcredirect', c.oidc_redirect);
-  // `aucun` est la VALEUR du reglage, pas son libelle : l'option affichee
-  // vit dans index.html et passe par le catalogue.
+  // `aucun` is the setting's VALUE, not its label: the displayed option lives
+  // in index.html and goes through the catalogue.
   if ($('s-authmode')) $('s-authmode').value = c.auth_mode || 'aucun';  // i18n:ok
   majBlocAuth();
   set('s-jobs', c.jobs); set('s-cover', c.cover_url); set('s-sgkey', c.steamgriddb_key);
@@ -4040,17 +4040,17 @@ function fillSettings() {
   syncSetDesc();
 }
 
-// ---------------------------------------------------------------- app
-// Les profils viennent de /api/health : le serveur seul sait lesquels sont
-// livres, et lequel est actif.
+// ----------------------------------------------------------------- app
+// The profiles come from /api/health: the server alone knows which are shipped,
+// and which is active.
 function nomEmulateur(cle) {
   const p = ((HEALTH && HEALTH.profils) || []).find(x => x.cle === cle);
   return p ? p.nom : (cle || '');
 }
 
-// Le pied de page tient l'offre de code source exigee par l'AGPL. Les valeurs
-// viennent du serveur : une version ecrite en dur dans la page finit toujours
-// par mentir apres une mise a jour.
+// The footer carries the source offer the AGPL requires. The values come from
+// the server: a version hard-coded in the page always ends up lying after an
+// upgrade.
 function renderPied() {
   if (!HEALTH) return;
   const v = $('pied-version');
@@ -4067,10 +4067,10 @@ function renderChoixEmulateur() {
   const profils = HEALTH.profils || [];
   if (!profils.length) { el.innerHTML = ''; return; }
   const actif = (HEALTH.checks || {}).emulateur || '';
-  // Un `<option>` ne contient que du texte : on ne peut pas y isoler le nom du
-  // profil de sa mention « non verifie ». La phrase est donc assemblee DEJA
-  // traduite, sinon le parcours du DOM cherche « Eden — not verified » comme
-  // une seule cle, qu'aucun catalogue ne contiendra jamais.
+  // An `<option>` contains text and nothing else: the profile's name cannot be
+  // separated there from its "not verified" note. So the sentence is assembled
+  // ALREADY translated, otherwise the DOM walk looks for "Eden — not verified"
+  // as a single key, which no catalogue will ever hold.
   el.innerHTML = '<select id="selemulateur" data-act-change="choisirEmulateur">' +
     profils.map(x => {
       const nom = t(x.nom);
@@ -4083,68 +4083,67 @@ function renderChoixEmulateur() {
 
 const app = {
   tab(name) {
-    // Un non-administrateur n'a rien a faire dans les reglages : le serveur
-    // refuserait tout ce qu'il y ferait. On l'y laisse entrer par erreur
-    // serait le laisser buter sur des 403.
+    // A non-administrator has no business in the settings: the server would
+    // refuse everything they did there. Letting them in by mistake would mean
+    // letting them run into 403s.
     if (name === 'settings' && !ROLE.admin) return;
-    // On note ou en etait la lecture avant de changer d'onglet : revenir des
-    // reglages renvoyait jusqu'ici tout en haut de la bibliotheque, ce qui
-    // oblige a retrouver a la main la carte qu'on regardait.
+    // We note where the reading was before switching tab: coming back from the
+    // settings used to return to the very top of the library, forcing you to
+    // find by hand the card you were looking at.
     const actuel = document.querySelector('.panel.active');
     if (actuel) DEFILEMENT[actuel.id] = scrollY;
     const poser = () => {
       document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
       document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
       $('panel-' + name).classList.add('active');
-      // La jaquette d'exemple des apercus n'existe qu'une fois la ludotheque
-      // lue : au premier passage dans les reglages, elle est enfin connue.
+      // The previews' sample cover only exists once the library has been read:
+      // on the first visit to the settings, it is finally known.
       if (name === 'settings') majApercuJaquette();
-      // Restauration apres le changement de panneau : avant, la hauteur de
-      // page est encore celle de l'ancien onglet et le navigateur ecrete la
-      // position demandee.
+      // Restored after the panel change: before it, the page height is still
+      // that of the old tab and the browser clamps the requested position.
       const y = DEFILEMENT['panel-' + name];
       requestAnimationFrame(() => scrollTo({top: y || 0, behavior: 'instant'}));
     };
-    // Fondu croise natif quand le navigateur sait le faire. Sans lui, les deux
-    // panneaux s'echangent d'un coup ; avec, l'ancien s'efface pendant que le
-    // nouveau se pose. Aucune bibliotheque : c'est une API du navigateur.
-    // On l'evite si l'utilisateur a coupe le mouvement, sinon la transition
-    // continue de tourner alors qu'il a demande le contraire.
+    // A native cross-fade when the browser can do it. Without it the two
+    // panels swap at once; with it, the old one fades while the new one
+    // settles. No library: this is a browser API.
+    // We skip it when the user has turned motion off, otherwise the transition
+    // keeps running although they asked for the opposite.
     const bouge = document.documentElement.dataset.mvt !== 'aucun';
     if (bouge && document.startViewTransition) {
-      // Marque le TYPE de transition : l'ouverture d'une fiche en utilise une
-      // autre, et les deux se partagent les memes pseudo-elements.
+      // Marks the TYPE of transition: opening a detail view uses another one,
+      // and the two share the same pseudo-elements.
       document.documentElement.classList.add('vt-onglet');
       const t = document.startViewTransition(poser);
       const fini = () => document.documentElement.classList.remove('vt-onglet');
       t.finished.then(fini, fini);
     } else poser();
   },
-  // La console est interrogee une seule fois, au demarrage : la liste des jeux
-  // en depend, et elle n'est plus derriere un onglet qu'il faudrait ouvrir.
+  // The console is queried once, at startup: the game list depends on it, and
+  // it is no longer behind a tab you would have to open.
   _consoleReady: false,
   async reveilConsole() {
     if (this._consoleReady) return;
     this._consoleReady = true;
-    // `detect()` enchaine deja sur la lecture des fichiers et de la NAND :
-    // les refaire ici doublait chaque appel, et chaque notification.
+    // `detect()` already chains into reading the files and the NAND: doing it
+    // again here doubled every call, and every notification.
     await this.detect();
-    if (!CONN.kind) return;                 // rien a lire : on reste hors ligne
+    if (!CONN.kind) return;                 // nothing to read: we stay offline
     this.ecLoad();
   },
   setFilter(f) {
-    FILTER = f; PAGE = 0;   // changer de filtre ramene toujours a la premiere page
+    FILTER = f; PAGE = 0;   // changing filter always returns to the first page
     majChips();
     renderLib();
   },
 
-  // appele a chaque frappe dans la recherche : la page courante n'a plus de sens
+  // called on every keystroke in the search: the current page no longer applies
   renderLib() { PAGE = 0; renderLib(); },
 
-  // ---- bibliotheque : actions par jeu
-  // Cherche dans la liste AFFICHEE, pas seulement dans la bibliotheque Switch :
-  // les jeux des autres plateformes et ceux presents uniquement sur la console
-  // n'y figurent pas, et leur fiche restait donc vide.
+  // ---- library: per-game actions
+  // Searches the DISPLAYED list, not only the Switch library: games from other
+  // platforms and those present only on the console do not appear there, so
+  // their detail view stayed empty.
   gameByKey(k) {
     const t = jeuxUnifies().find(x => x.g.key === k);
     return t && t.g;
@@ -4153,16 +4152,16 @@ const app = {
     const g = this.gameByKey(k); if (!g) return;
     ouvrirDepuisJaquette(k, () => {
       $('modal').innerHTML = openGameHtml(g);
-      // Rouvrir annule une fermeture en cours : sans cela, le nettoyage
-      // differe de `fermerVoile` viderait la fenetre qu'on vient d'ouvrir.
+      // Reopening cancels a closing already under way: without this, the
+      // deferred cleanup in `fermerVoile` would empty the dialog we just opened.
       $('modal').classList.remove('ferme');
       $('modal').classList.add('open');
       auPremierPlan($('modal'));
     });
     const info = $('gm-info'), desc = $('gm-desc');
 
-    // Ce que l'on sait deja, tout de suite : la fiche ne doit jamais rester
-    // bloquee sur « chargement… » quand aucune fiche distante n'existe.
+    // What we already know, straight away: the detail view must never stay
+    // stuck on "loading…" when no remote entry exists.
     const resume = resumeJeu(g);
     if (desc && resume) desc.textContent = resume;
     if (!g.tid) {
@@ -4173,7 +4172,7 @@ const app = {
       if (info) info.textContent = bits.join('  ·  ');
       return;
     }
-    this.loadBackups(g.tid.toUpperCase());   // historique des configurations
+    this.loadBackups(g.tid.toUpperCase());   // the configuration history
     const r = await api('/api/game-meta', {tid: g.tid});
     const m = r.meta;
     if (!m || !info) { if (info) info.textContent = ''; return; }
@@ -4186,8 +4185,8 @@ const app = {
     if (!e || e.target === $('dialog')) fermerVoile($('dialog'));
   },
   closeGame(e) { if (!e || e.target === $('modal')) fermerVoile($('modal')); },
-  // Active dans Eden les MAJ/DLC d'UN seul jeu, depuis sa fiche. Le meme
-  // traitement en masse reste accessible par la selection.
+  // Activate ONE game's updates and DLC in Eden, from its detail view. The same
+  // treatment in bulk stays available through the selection.
   async activerJeu(k) {
     const g = this.gameByKey(k);
     if (!g) return;
@@ -4201,7 +4200,7 @@ const app = {
       this.poll();
     }
   },
-  // Rapatrie un jeu qui n'existe que sur la console, depuis sa fiche.
+  // Bring back a game that exists only on the console, from its detail view.
   async importerJeu(k) {
     const g = this.gameByKey(k);
     if (!g || !g.paths || !g.paths.length) return;
@@ -4223,11 +4222,11 @@ const app = {
     const r = await api('/api/convert', {paths});
     r.error || (toast(phrase('Conversion de %d {fichier|fichiers} lancée.', paths.length), 'ok'), this.poll());
   },
-  // L'envoi depend de la plateforme : la Switch passe par le rangement
-  // GAMES/UPDATE/DLC et n'accepte que des conteneurs decompresses ; les autres
-  // consoles recoivent leur ROM telle quelle. Sans cette distinction, un jeu
-  // 3DS ou GBA se voyait repondre « aucun fichier a envoyer » alors qu'il etait
-  // bien la — son extension n'etait simplement pas celle d'un jeu Switch.
+  // Sending depends on the platform: the Switch goes through the
+  // GAMES/UPDATE/DLC filing and only accepts decompressed containers; the other
+  // consoles receive their ROM as-is. Without that distinction, a 3DS or GBA
+  // game was told "no file to send" although it was right there — its extension
+  // simply was not a Switch game's.
   async sendGame(k) {
     const g = this.gameByKey(k); if (!g) return;
     const sys = g.systeme || (g.files && g.files[0] && g.files[0].system) || 'switch';
@@ -4265,9 +4264,9 @@ const app = {
     this.poll();
   },
   async trashFile(path) {
-    // Plus de `confirm()` : il n'etait pas traduisible — c'est le navigateur
-    // qui l'ecrit — et il faisait payer le prix d'une erreur qui n'en est pas
-    // une, puisque la corbeille se restaure.
+    // No more `confirm()`: it was not translatable — the browser writes it —
+    // and it charged the price of a mistake that is not one, since the trash
+    // can be restored.
     const r = await api('/api/trash', {paths: [path]});
     if (!r || r.error) return;
     this.closeGame();
@@ -4276,10 +4275,9 @@ const app = {
                 t('Annuler'), () => this.restore(r.lot), 'ok');
   },
 
-  // ---- systemes / autres consoles
-  // Deux appels rapproches partagent la meme promesse : la liste des
-  // plateformes etait relue deux fois au demarrage, une par la sequence de
-  // lancement et une par la detection.
+  // ---- systems / other consoles
+  // Two close calls share the same promise: the platform list was read twice at
+  // startup, once by the launch sequence and once by the detection.
   loadSystems() {
     if (this._chargeSystems) return this._chargeSystems;
     this._chargeSystems = (async () => {
@@ -4297,25 +4295,26 @@ const app = {
     })();
     return this._chargeSystems;
   },
-  // Changer de plateforme ne doit ni sauter, ni recharger ce qu'on a deja vu.
+  // Switching platform must neither jump, nor reload what has already been
+  // seen.
   //
-  // L'ancienne version vidait `SGAMES`, `SCONSOLE` et `SALL` PUIS attendait un
-  // aller-retour reseau. Entre les deux, la grille etait vide : le contenu
-  // s'effondrait, la page remontait, puis tout revenait. Et rien n'etait garde,
-  // donc revenir sur une plateforme deja vue la retelechargait.
+  // The old version emptied `SGAMES`, `SCONSOLE` and `SALL` THEN waited for a
+  // network round trip. In between, the grid was empty: the content collapsed,
+  // the page scrolled back up, then everything returned. And nothing was kept,
+  // so coming back to an already-seen platform downloaded it again.
   //
-  // Deux changements, et l'ordre compte : on garde l'affichage courant jusqu'a
-  // ce qu'on ait de quoi le remplacer, et on memorise ce qu'on a recu.
+  // Two changes, and the order matters: we keep the current display until we
+  // have something to replace it with, and we remember what we received.
   async setSystem(key) {
-    if (SYS === key && CACHE_SYS[key]) return;    // deja la, rien a faire
+    if (SYS === key && CACHE_SYS[key]) return;    // already here, nothing to do
     SYS = key; dsel2.clear(); PAGE = 0;
     localStorage.setItem('systeme', key);
 
     const garde = CACHE_SYS[key];
     if (garde) { appliquerSysteme(garde); renderLib(); return; }
 
-    // Rien en cache : on annonce le chargement SANS vider, pour que la hauteur
-    // de la grille ne bouge pas — c'est elle qui faisait sauter la page.
+    // Nothing cached: we announce the loading WITHOUT emptying, so the grid's
+    // height does not move — that is what made the page jump.
     R.classe($('lib'), 'charge', true);
     const jeton = ++CHARGE_SYS;
     try {
@@ -4323,9 +4322,9 @@ const app = {
         ? {tout: (await api('/api/library-all', {})).systemes || []}
         : isSwitch() ? {switch: true}
                      : await api('/api/system-games', {system: key});
-      // Une reponse arrivee apres qu'on a change d'avis ne doit rien ecraser :
-      // deux clics rapides produisaient sinon l'inventaire de la PREMIERE
-      // plateforme sous le nom de la seconde.
+      // An answer that lands after we changed our mind must overwrite nothing:
+      // two quick clicks otherwise produced the FIRST platform's inventory
+      // under the second one's name.
       if (jeton !== CHARGE_SYS) return;
       CACHE_SYS[key] = donnees;
       appliquerSysteme(donnees);
@@ -4334,8 +4333,8 @@ const app = {
       if (jeton === CHARGE_SYS) R.classe($('lib'), 'charge', false);
     }
   },
-  // Une seule action principale hors Switch aussi : elle envoie vers la console
-  // ce qui manque, et rapatrie ce qui n'existe que la-bas.
+  // One main action off the Switch too: it sends the console what is missing,
+  // and brings back what exists only over there.
   async sendSystem() {
     const c = deployCibles();
     if (!c.envoyer.length && !c.importer.length)
@@ -4356,10 +4355,10 @@ const app = {
     r.error || (toast('Rangement lancé.', 'ok'), this.poll());
   },
 
-  // ---- integrite / sauvegardes
-  // `budgetGo` limite le passage a une tranche : ce qui n'a jamais ete
-  // verifie d'abord, puis le plus ancien. Une verification complete de 160 Go
-  // ne se lance jamais en pratique ; par tranches, la couverture progresse.
+  // ---- integrity / backups
+  // `budgetGo` limits the pass to one slice: what has never been checked first,
+  // then the oldest. A full 160 GB verification never gets started in practice;
+  // slice by slice, the coverage grows.
   async verify(approfondie, budgetGo) {
     const deep = approfondie === undefined
       ? isSwitch() && confirm('Vérification approfondie ?\n\n'
@@ -4414,17 +4413,17 @@ const app = {
       .then(() => toast('Liste copiee.', 'ok')).catch(() => toast('Copie impossible, selectionne le texte.', 'warn'));
   },
   async nandWrite() { const r = await api('/api/nand-write', {}); toast(r.message, 'ok'); },
-  // ---- apparence : theme, animation des jaquettes, mouvement
-  // Ces trois reglages restent dans le navigateur et non dans la config du
-  // serveur : ils decrivent un ECRAN, pas une ludotheque. La meme
-  // bibliotheque se consulte en clair sur une tablette et en sombre sur la
-  // console, et une preference d'appareil n'a pas a voyager.
+  // ---- appearance: theme, cover animation, motion
+  // These three settings live in the browser and not in the server's config:
+  // they describe a SCREEN, not a library. The same library is read in light on
+  // a tablet and in dark on the console, and a device preference has no
+  // business travelling.
   setTheme(v) { poserApparence('theme', v, ['sombre', 'clair', 'auto']); },
   setCarte(v) { poserApparence('carte', v, ['aucune', '0', '1', '2', '3', '4', '5']); },
-  // Les trois valeurs autorisees du reglage, pas des libelles.
+  // The setting's three allowed values, not labels.
   setMouvement(v) { poserApparence('mvt', v, ['complet', 'reduit', 'aucun']); },  // i18n:ok
 
-  // ---- langue de l'interface
+  // ---- interface language
   async langLoad() {
     const r = await api('/api/langues');
     const sel = $('s-uilang');
@@ -4438,9 +4437,9 @@ const app = {
   async setLang(code) {
     if (code === LANGUE) return;
     await this.saveField('ui_lang', code);
-    // La traduction remplace le texte DANS le DOM : revenir en arriere
-    // demanderait de memoriser chaque original. Une relecture de la page part
-    // du bon pied, et la langue est deja enregistree cote serveur.
+    // Translation replaces the text IN the DOM: going back would require
+    // remembering every original. Reloading the page starts from the right
+    // foot, and the language is already saved server-side.
     location.reload();
   },
 
@@ -4465,7 +4464,7 @@ const app = {
     const r = await api('/api/emuready-devices', {});
     ER_DEVICES = (r.tous || []);
     const sug = r.suggestions || [];
-    // les variantes de la console detectee d'abord, puis tout le reste
+    // the detected console's variants first, then all the rest
     const liste = sug.concat(ER_DEVICES.filter(d => !sug.some(x => x.id === d.id)));
     $('erdevices').innerHTML = liste.map(d =>
       '<option value="' + esc(d.nom) + '">').join('');
@@ -4484,7 +4483,7 @@ const app = {
   },
   async erPickDevice(saisie) {
     const nom = (saisie || '').trim();
-    if (!nom) {                       // champ vide : on retire le modele
+    if (!nom) {                       // empty field: the model is removed
       await this.saveField('emuready_device', '');
       await this.saveField('emuready_device_nom', '');
       ER.appareil = ''; ER.appareil_nom = '';
@@ -4496,8 +4495,8 @@ const app = {
     await this.saveField('emuready_device_nom', d.nom);
     ER.appareil = d.id; ER.appareil_nom = d.nom;
     this.erDevices();
-    // les rapports memorises etaient tries pour l'ancien modele : on refait
-    // l'analyse tout de suite, sinon l'utilisateur voit d'autres consoles.
+    // the remembered reports were sorted for the old model: we redo the
+    // analysis at once, otherwise the user sees other consoles.
     toast('Console : ' + d.nom + '. Recalcul des notes…', 'ok');
     this.erSync(true);
   },
@@ -4506,13 +4505,13 @@ const app = {
     const r = await api('/api/emuready-sync', {force: !!force});
     r.error || (toast('Consultation d\'EmuReady…', 'ok'), this.poll());
   },
-  // Voir avant d'appliquer : on montre les reglages reels du rapport.
+  // See before applying: we show the report's actual settings.
   async erPreview(listingId, tid, appareil) {
     say('Lecture de la configuration…');
     const r = await api('/api/emuready-preview', {listing_id: listingId});
     if (r.error) return;
     const lignes = (r.contenu || '').split('\n');
-    // on met en avant les reglages reellement imposes par ce rapport
+    // we highlight the settings this report actually imposes
     const imposes = [];
     lignes.forEach((l, i) => {
       if (l.includes('\\use_global=false')) {
@@ -4536,7 +4535,7 @@ const app = {
     });
   },
 
-  // Historique : chaque écriture a laissé une sauvegarde restaurable.
+  // History: every write left a restorable backup.
   async loadBackups(tid) {
     const el = $('er-backups');
     if (!el || !tid) return;
@@ -4570,7 +4569,7 @@ const app = {
     r.error || (toast('Application en cours…', 'ok'), this.poll());
   },
 
-  // ---- configuration d'Eden
+  // ---- Eden configuration
   ecFillScope(jeux) {
     const sel = $('ec-scope');
     const avant = sel.value;
@@ -4595,7 +4594,7 @@ const app = {
     const ch = {};
     $('ec-table').querySelectorAll('input[data-cle]').forEach(i => {
       const v = i.value.trim();
-      if (!v) return;                                   // vide = ne pas toucher
+      if (!v) return;                                   // empty = leave alone
       const actuel = (ECVALS[i.dataset.sec] || {})[i.dataset.cle];
       if (String(actuel) === v) return;                 // inchange
       (ch[i.dataset.sec] = ch[i.dataset.sec] || {})[i.dataset.cle] = v;
@@ -4633,27 +4632,27 @@ const app = {
 
   async loadNand() {
     const r = await api('/api/nand-status', {});
-    // L'etat NAND entre dans `etatDuJeu()` : il fait donc partie de ce que la
-    // liste unifiee reflete.
+    // The NAND state feeds `etatDuJeu()`: it is therefore part of what the
+    // unified list reflects.
     NANDST = r.items || []; NANDCONN = !!r.connectee; inventaireChange();
-    renderLib();          // l'etat NAND nourrit la vue unifiee
+    renderLib();          // the NAND state feeds the unified view
   },
 
 
 
 
   // ---- console
-  // ---- connexion sans fil
+  // ---- wireless connection
   togglePair() {
-    // l'appairage vit dans les reglages : on y emmene l'utilisateur plutot que
-    // de lui ouvrir un bloc qu'il ne verrait pas depuis la liste des jeux
+    // pairing lives in the settings: we take the user there rather than open
+    // a block they would not see from the game list
     this.tab('settings');
     const w = $('pairwrap');
     const ouvre = w.style.display === 'none';
     w.style.display = ouvre ? '' : 'none';
     if (ouvre) { this.wizStep(1); w.scrollIntoView({block: 'center', behavior: 'smooth'}); }
   },
-  // Assistant : une seule etape visible a la fois, chacune disant OU agir.
+  // Wizard: one visible step at a time, each saying WHERE to act.
   wizStep(n) {
     for (let i = 1; i <= 3; i++) {
       const el = $('wstep' + i);
@@ -4663,11 +4662,11 @@ const app = {
     if (b) b.style.width = Math.round(n / 3 * 100) + '%';
     if (n === 3) {
       this.wizCheck();
-      this.wifiDiscover();               // pre-remplit l'adresse si elle est trouvable
+      this.wifiDiscover();               // pre-fills the address if it can be found
       const a = $('pair-addr'); if (a && !a.value) a.focus();
     }
   },
-  // Valide au fur et a mesure : l'utilisateur voit ce qui manque avant d'echouer.
+  // Validates as you go: the user sees what is missing before failing.
   wizCheck() {
     const addr = ($('pair-addr').value || '').trim();
     const code = ($('pair-code').value || '').trim();
@@ -4728,13 +4727,13 @@ const app = {
     toast(r.message, 'ok'); this.detect();
   },
 
-  // ---- ouvrir l'interface sur la console
+  // ---- open the interface on the console
   async refreshInstall() {
     const r = await api('/api/console-url', {});
     const wrap = $('installwrap');
-    // Bouton compact de l'en-tete : le libelle reste court, l'explication passe
-    // en infobulle. Desactive plutot que masque quand ce n'est pas encore pret,
-    // pour que l'utilisateur sache que la fonction existe.
+    // The header's compact button: the label stays short, the explanation
+    // moves into a tooltip. Disabled rather than hidden when it is not ready
+    // yet, so the user knows the feature exists.
     if (!r.connected) { wrap.style.display = 'none'; return; }
     wrap.style.display = '';
     R.texte($('installurl'), r.url || '');
@@ -4750,8 +4749,8 @@ const app = {
   // ---- premier lancement
   async checkHealth(force) {
     HEALTH = await api('/api/health', {});
-    // Le plafond d'envoi vient du serveur : le figer dans le navigateur
-    // signifierait mentir des que l'hebergeur le change.
+    // The upload ceiling comes from the server: freezing it in the browser
+    // would mean lying as soon as the host changes it.
     TELEVERSEMENT_MAX = ((HEALTH || {}).checks || {}).televersement_max || 0;
     const vu = localStorage.getItem('onboard-vu') === '1';
     renderChoixEmulateur();
@@ -4760,22 +4759,22 @@ const app = {
     if (force || (HEALTH.first_run && !vu)) renderOnboard();
     return HEALTH;
   },
-  // Depuis l'assistant : emmener l'utilisateur la ou se cree un compte, plutot
-  // que de lui decrire le chemin.
+  // From the wizard: take the user where an account is created, rather than
+  // describe the path to them.
   allerComptes() {
     this.closeOnboard();
     this.tab('settings');
     voirSectionReglages('sec-acces');
   },
 
-  // Le profil d'emulateur dicte tous les chemins sur la console : le changer
-  // depuis l'assistant evite d'avoir a le chercher dans les reglages avant
-  // meme d'avoir compris a quoi il sert.
+  // The emulator profile dictates every path on the console: changing it from
+  // the wizard avoids having to hunt for it in the settings before even having
+  // understood what it is for.
   async choisirEmulateur(cle) {
     await this.saveField('emulateur', cle);
-    // Le nom du paquet Android differe d'une version a l'autre : on demande a
-    // la console lequel est reellement installe, plutot que de le deviner.
-    try { await api('/api/emulateur-detecter', {}); } catch (e) { /* console absente */ }
+    // The Android package name differs between versions: we ask the console
+    // which one is actually installed, rather than guess.
+    try { await api('/api/emulateur-detecter', {}); } catch (e) { /* no console */ }
     await this.checkHealth(true);
   },
 
@@ -4784,9 +4783,9 @@ const app = {
   onbSuiv() { onbAller(ONB.i + 1); },
   onbAller(i) { onbAller(i); },
 
-  // Compter les jeux par plateforme, c'est la seule facon de savoir si le
-  // dossier indique est le bon. Un chemin accepte sans rien dedans est un
-  // chemin faux qu'on ne decouvre qu'une heure plus tard.
+  // Counting games per platform is the only way to know whether the folder
+  // given is the right one. A path accepted with nothing inside is a wrong path
+  // you only discover an hour later.
   async onbScanner() {
     ONB.occupe = true; renderOnboard();
     let lib = {}, sys = {};
@@ -4799,8 +4798,8 @@ const app = {
     const plateformes = [];
     let total = 0;
     (sys.systems || []).forEach(x => {
-      // Les jeux Switch ne sont pas comptes par `systems` : ils viennent de
-      // l'inventaire, seul a savoir distinguer un jeu de sa mise a jour.
+      // Switch games are not counted by `systems`: they come from the
+      // inventory, the only thing able to tell a game from its update.
       const n = x.engine === 'switch' ? (stats.base || 0) : (x.count || 0);
       if (n > 0) { plateformes.push({nom: x.name, n: n}); total += n; }
     });
@@ -4829,9 +4828,9 @@ const app = {
     await this.checkHealth(true);
   },
 
-  // Enregistrer sans verifier, c'est laisser l'utilisateur decouvrir dans un
-  // mois que sa cle etait mal collee. On demande donc une jaquette tout de
-  // suite, sur un jeu qu'il vient de scanner.
+  // Saving without checking means letting the user find out in a month that
+  // their key was pasted wrong. So we ask for a cover straight away, on a game
+  // they have just scanned.
   async onbTesterFiches() {
     const sgdb = ($('onb-sgdb').value || '').trim();
     const cid = ($('onb-igdb-id').value || '').trim();
@@ -4859,10 +4858,10 @@ const app = {
     renderOnboard();
   },
 
-  // La connexion sans fil a deja son assistant complet dans les reglages : le
-  // refaire ici en plus petit ne servirait qu'a en avoir deux a maintenir.
-  // « Ce que la console contient deja » est la premiere question qu'on se pose
-  // une fois branche, et la seule qui evite de reimporter ce qui y est deja.
+  // The wireless connection already has its full wizard in the settings:
+  // rebuilding it here in miniature would only mean two of them to maintain.
+  // "What the console already holds" is the first question you ask once
+  // plugged in, and the only one that avoids re-importing what is already there.
   async onbScannerConsole() {
     ONB.occupe = true; renderOnboard();
     try {
@@ -4915,13 +4914,13 @@ const app = {
     renderA2HS();
   },
 
-  // Une jaquette absente au premier essai (recherche en ligne en cours) est
-  // retentee une fois avant d'abandonner : sinon elle ne revient jamais.
+  // A cover missing on the first try (an online search is under way) is
+  // retried once before giving up: otherwise it never comes back.
   coverRate(img) {
-    // Une image cassee affiche la boite grise du navigateur avec son texte
-    // alternatif — pendant les 2,5 s du reessai, la fiche montrait donc un
-    // rectangle brise. On la cache tout de suite : le fond de `.cover` fait
-    // deja office de pochette vide, comme dans la grille.
+    // A broken image shows the browser's grey box with its alternative text —
+    // so during the 2.5 s of the retry, the card displayed a broken rectangle.
+    // We hide it at once: `.cover`'s background already acts as an empty
+    // sleeve, as it does in the grid.
     img.classList.add('vide');
     if (img.dataset.retry) { img.remove(); return; }
     img.dataset.retry = '1';
@@ -4929,12 +4928,12 @@ const app = {
     setTimeout(() => { img.src = base + '&r=1'; }, 2500);
   },
 
-  // Une jaquette vient d'arriver : on en tire sa couleur si on ne la connait
-  // pas encore, et on la pose sur la carte (ou sur la fiche). Le calcul est
-  // fait une seule fois par jeu dans la vie du navigateur.
-  // La jaquette de la fiche s'ouvre en grand. On passe par l'element plutot
-  // que par une URL en dur : c'est la MEME image, deja chargee, donc
-  // l'agrandissement est instantane.
+  // A cover has just arrived: we take its colour if we do not know it yet, and
+  // set it on the card (or on the detail view). The computation happens once
+  // per game in the browser's lifetime.
+  // The detail view's cover opens full size. We go through the element rather
+  // than a hard-coded URL: it is the SAME image, already loaded, so the
+  // enlargement is instant.
   loupeJaquette(img) {
     if (!img || !img.src) return;
     const feuille = img.closest('.sheet');
@@ -4978,21 +4977,21 @@ const app = {
       annonce(phrase('Console détectée : %s', d.info.name), 'ok');
       await this.chargerConsole();
     } else {
-      // Assemblee, la phrase n'etait traduisible par aucun catalogue.
+      // Assembled, the sentence was translatable by no catalogue.
       annonce(phrase('Aucune console prête (%s).', d.state || t('non connectée')), 'warn');
     }
   },
 
-  // Lire ce que porte la console passe TOUJOURS par ici. Deux appels qui se
-  // chevauchent partagent la meme promesse au lieu de relancer la lecture :
-  // c'est ce qui produisait « 148 fichier(s)… » trois fois de suite.
+  // Reading what the console carries ALWAYS goes through here. Two overlapping
+  // calls share the same promise instead of starting the read again: that is
+  // what produced "148 file(s)…" three times in a row.
   chargerConsole() {
     if (this._lectureConsole) return this._lectureConsole;
     this._lectureConsole = (async () => {
       try {
         if (DATA.config && DATA.config.device_dir) await this.explore();
-        else await this.detectDir();   // aucun dossier connu : on le cherche
-        await this.loadNand();         // l'etat NAND n'a de sens qu'une fois connecte
+        else await this.detectDir();   // no folder known: we look for it
+        await this.loadNand();         // the NAND state only means something once connected
       } finally {
         this._lectureConsole = null;
       }
@@ -5006,7 +5005,7 @@ const app = {
       DATA.config = r.config;
       fillSettings();
       renderLib();
-      majReglagesPlateforme();     // le dossier affiche vient de la configuration
+      majReglagesPlateforme();     // the folder shown comes from the configuration
     }
     return r.config;
   },
@@ -5015,8 +5014,8 @@ const app = {
     const r = await api('/api/device-detect-dir', {});
     if (!r.dir) return toast('Aucun dossier trouvé. Utilise « changer » pour naviguer.', 'warn');
     const actuel = (DATA.config || {}).device_dir;
-    // Ne jamais remplacer en silence un dossier deja choisi : une detection
-    // approximative a deja efface un reglage correct.
+    // Never silently replace an already chosen folder: a rough detection has
+    // wiped a correct setting before.
     if (actuel && actuel !== r.dir) {
       return dialogue({
         titre: 'Changer le dossier des jeux ?',
@@ -5035,8 +5034,8 @@ const app = {
     toast(phrase('Dossier des jeux trouvé : %s', r.dir), 'ok');
     this.explore();
   },
-  // Le meme navigateur sert a choisir la racine des ROMs, le dossier Switch ou
-  // celui de n'importe quelle plateforme : seule la CIBLE change.
+  // The same browser picks the ROM root, the Switch folder or any platform's:
+  // only the TARGET changes.
   parcourir(cible, depart) {
     CIBLE_PARCOURS = cible || 'roms';
     const w = $('browserwrap');
@@ -5069,19 +5068,19 @@ const app = {
       toast(phrase('Dossier Switch : %s', BROWSE_PATH), 'ok');
       this.explore();
     } else {
-      // chemin absolu : il prime sur le nom de sous-dossier deduit de la racine
+      // an absolute path: it wins over the sub-folder name deduced from the root
       const dirs = Object.assign({}, (DATA.config || {}).system_dirs || {});
       dirs[CIBLE_PARCOURS] = BROWSE_PATH;
       await this.saveField('system_dirs', dirs);
       toast(libelleSysteme(CIBLE_PARCOURS) + ' : ' + BROWSE_PATH, 'ok');
     }
     $('browserwrap').style.display = 'none';
-    majReglagesPlateforme();       // le chemin affiche suit immediatement
+    majReglagesPlateforme();       // the path shown follows immediately
     this.detecterPlateformes();
   },
   setDpath(p) { BROWSE_PATH = p; this.tab('settings'); $('browserwrap').style.display = ''; this.browse(p); },
 
-  // ---- ou sont les jeux, sur la machine qui heberge le service
+  // ---- where the games are, on the machine hosting the service
   ludoOuvrir(depart) {
     if (HEALTH && HEALTH.ludotheque_imposee) {
       return toast(t('Imposé par la variable ROMULE_LIBRARY.'), 'warn');
@@ -5096,9 +5095,9 @@ const app = {
   async ludoAller(chemin) {
     const r = await api('/api/parcourir', {chemin: chemin || ''}, true);
     if (r.error) {
-      // Discret volontairement : se heurter a un dossier interdit en navigant
-      // est banal, et ouvrir une fenetre d'erreur a chaque clic serait pire
-      // que le probleme.
+      // Deliberately quiet: running into a forbidden folder while browsing is
+      // ordinary, and opening an error dialog on every click would be worse
+      // than the problem.
       if (LUDO.cible === 'onb') return toast(r.error, 'warn');
       $('ludoetat').textContent = r.error;
       return;
@@ -5121,9 +5120,9 @@ const app = {
     HEALTH = await api('/api/health', {});
     majLudotheque();
     this.ludoFermer();
-    // La reponse PORTE deja l'inventaire du nouveau dossier : relancer
-    // `/api/scan` ici, c'est parcourir deux fois une arborescence qui peut
-    // faire plusieurs teraoctets.
+    // The answer already CARRIES the new folder's inventory: calling
+    // `/api/scan` here means walking twice over a tree that can be several
+    // terabytes.
     DATA = r;
     render();
     this.loadTrash();
@@ -5131,8 +5130,8 @@ const app = {
     annonce(phrase('Ludothèque : %s — %d {jeu|jeux}.', LUDO.chemin,
                    (r.files || []).length), 'ok');
     if (LUDO.cible === 'onb') {
-      // Le resultat d'analyse portait sur l'ANCIEN dossier : le garder
-      // validerait l'etape avec un chiffre qui ne correspond plus a rien.
+      // The scan result was about the OLD folder: keeping it would validate
+      // the step with a figure that no longer matches anything.
       LUDO.cible = 'set'; LUDO.etat = null; ONB.resultatScan = null;
       renderOnboard();
     }
@@ -5141,8 +5140,8 @@ const app = {
     if (!LUDO.chemin) return toast(t('Ouvre d\'abord un dossier.'), 'warn');
     const nom = prompt(t('Nom du nouveau dossier :'), 'Romule');
     if (!nom) return;
-    // Un nom, pas un chemin : la saisie ne doit pas servir a remonter
-    // l'arborescence. Le serveur refuserait, mais autant ne pas le proposer.
+    // A name, not a path: the input must not be a way to climb the tree. The
+    // server would refuse, but there is no point offering it.
     const propre = String(nom).replace(/[\\/]/g, '').trim();
     if (!propre) return;
     LUDO.chemin = LUDO.chemin.replace(/\/+$/, '') + '/' + propre;
@@ -5174,11 +5173,12 @@ const app = {
     r.error || (toast('Rangement en cours…', 'ok'), this.poll());
   },
 
-  // ---- selection et action principale
-  // Un clic sur une carte coche le jeu s'il reste quelque chose a lui faire,
-  // sinon il ouvre sa fiche : le meme geste ne fait jamais deux choses au hasard.
-  // Clic = cocher. Maj+clic = cocher toute la plage depuis le dernier clic,
-  // comme dans un explorateur de fichiers. La fiche s'ouvre par « Détails ».
+  // ---- selection and main action
+  // A click on a card ticks the game if something remains to be done to it,
+  // otherwise it opens its detail view: the same gesture never does two things
+  // at random.
+  // Click = tick. Shift+click = tick the whole range since the last click, as
+  // in a file explorer. The detail view opens through "Details".
   cardClick(ev, key) {
     if (ev && ev.shiftKey && DERNIER_CLIC) {
       const a = VUS_PAGE.indexOf(DERNIER_CLIC), b = VUS_PAGE.indexOf(key);
@@ -5194,11 +5194,11 @@ const app = {
     DERNIER_CLIC = key;
     this.deployToggle(key, !dsel2.has(key));
   },
-  // Cocher un jeu ne doit toucher QUE sa carte. Redessiner toute la liste
-  // rejouait l'animation d'entree des dizaines de vignettes : visuellement,
-  // on croyait la page rechargee a chaque clic.
-  // Plus de mise a jour manuelle du DOM : renderLib() reconcilie, donc cocher
-  // ne touche que la carte concernee, sans reconstruire ni ranimer la grille.
+  // Ticking a game must touch ONLY its card. Redrawing the whole list replayed
+  // the entry animation of dozens of thumbnails: visually, the page looked
+  // reloaded on every click.
+  // No more manual DOM updates: renderLib() reconciles, so ticking touches only
+  // the card concerned, without rebuilding or re-animating the grid.
   deployToggle(key, on) {
     on ? dsel2.add(key) : dsel2.delete(key);
     renderLib();
@@ -5212,8 +5212,8 @@ const app = {
     PAGE = 0; renderLib();
   },
 
-  // Retirer des fichiers de la console : action destructrice, donc on montre
-  // exactement ce qui part avant de demander confirmation.
+  // Removing files from the console: a destructive action, so we show exactly
+  // what is leaving before asking for confirmation.
   async supprimerConsole() {
     const {supprConsole} = deployCibles();
     if (!supprConsole.length) return toast('Rien à retirer de la console.', 'warn');
@@ -5232,12 +5232,11 @@ const app = {
       }}],
     });
   },
-  // Corbeille locale : rien n'est efface, tout reste restaurable.
+  // The local trash: nothing is erased, everything stays restorable.
   //
-  // Plus de fenetre de confirmation. La corbeille EST l'annulation : demander
-  // « êtes-vous sûr ? » avant d'y mettre un fichier fait payer a chaque fois
-  // le prix d'une erreur qui ne coute rien. On agit, et le toast propose de
-  // revenir en arriere pendant huit secondes.
+  // No more confirmation dialog. The trash IS the undo: asking "are you sure?"
+  // before putting a file in it charges every time the price of a mistake that
+  // costs nothing. We act, and the toast offers to go back for eight seconds.
   async corbeilleSelection() {
     const {local} = deployCibles();
     if (!local.length) return toast('Rien à mettre à la corbeille.', 'warn');
@@ -5248,11 +5247,11 @@ const app = {
     toastAction(phrase('%d {fichier|fichiers} à la corbeille.', r.n),
                 t('Annuler'), () => this.restore(r.lot), 'ok');
   },
-  // « Tout cocher » porte sur l'ensemble des resultats filtres, pas seulement
-  // sur la page visible : sinon le geste ment des qu'il y a une pagination.
-  // Les versions d'un jeu ont leur propre fenetre. Elle passe par `#dialog` et
-  // non par `#modal` : ouvrir la fiche d'une version depuis la liste doit
-  // pouvoir se poser PAR-DESSUS, et Echap refermer l'une puis l'autre.
+  // "Tick all" covers the whole filtered result set, not just the visible
+  // page: otherwise the gesture lies as soon as there is pagination.
+  // A game's versions get their own dialog. It goes through `#dialog` and not
+  // `#modal`: opening a version's detail view from the list must be able to
+  // sit ON TOP, and Esc must close one then the other.
   voirVersions(cle) {
     const membres = GROUPES.get(cle);
     if (!membres || !membres.length) return;
@@ -5287,12 +5286,12 @@ const app = {
   },
   clearFav() { FAV.clear(); localStorage.removeItem('fav'); PAGE = 0; renderLib(); },
 
-  // ---- filtres : les compter, les effacer, les enregistrer
+  // ---- filters: counting them, clearing them, saving them
   //
-  // Trois mecanismes cohabitent — la recherche, la pastille d'etat, les
-  // filtres avances — et rien ne disait combien etaient actifs. On pouvait
-  // chercher pendant dix minutes pourquoi la grille etait vide alors qu'un
-  // filtre pose la veille tenait toujours.
+  // Three mechanisms coexist — the search, the state pill, the advanced
+  // filters — and nothing said how many were active. You could spend ten
+  // minutes wondering why the grid was empty when a filter set the day before
+  // was still holding.
   // La fenetre des notes de version. Deux boutons : lire la publication
   // complete, ou fermer. Romule ne se met PAS a jour tout seul — il tourne
   // dans un conteneur ou sous un gestionnaire de paquets, et decider a la
