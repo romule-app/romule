@@ -1,11 +1,11 @@
-"""Verifie le mode « comptes internes » de bout en bout, sur une racine jetable."""
+"""Checks the "internal accounts" mode end to end, on a throwaway root."""
 import socket
 import atexit, json, os, subprocess, sys, tempfile, time, http.cookiejar
 import urllib.error, urllib.parse, urllib.request
 
 RACINE = tempfile.mkdtemp(prefix="ludo-test-")
-# Demande au systeme plutot qu'un numero fige : un port fixe finit par
-# rencontrer autre chose, et le test s'adresse alors a ce service-la.
+# Asked of the system rather than a frozen number: a fixed port eventually meets
+# something else, and the test then talks to that service.
 with socket.socket() as _s:
     _s.bind(("127.0.0.1", 0))
     PORT = str(_s.getsockname()[1])
@@ -117,7 +117,7 @@ biscuits_avant = [c.value for c in pot if c.name == "switch_session"][0]
 c, b, _ = appel("/api/compte-mdp", {"ancien": "grand cheval bleu 42",
                                     "nouveau": "petite lune verte 77"})
 t("mot de passe change", c == 200, js(b))
-# un autre navigateur qui detenait l'ancienne session
+# another browser that held the old session
 autre = urllib.request.build_opener()
 r = urllib.request.Request(BASE + "/api/job", headers={"Cookie": "switch_session=" + biscuits_avant})
 try:
@@ -146,12 +146,11 @@ c, b, _ = appel("/api/compte-creer", {"email": "deux@exemple.fr", "mdp": "encore
 second = js(b).get("compte", {})
 t("le premier compte est administrateur, le second non",
   not second.get("admin"), second)
-# Le compte connecte est le premier, donc l'administrateur : supprimer le
-# SECOND est permis.
+# The logged-in account is the first, so the administrator: deleting the SECOND
+# is allowed.
 c, b, _ = appel("/api/compte-supprimer", {"id": second.get("id")})
 t("un administrateur supprime un autre compte", c == 200, js(b))
-# Mais se supprimer lui-meme ne doit pas laisser la ludotheque sans personne
-# pour l'administrer.
+# But deleting itself must not leave the library with nobody to administer it.
 appel("/api/compte-creer", {"email": "trois@exemple.fr", "mdp": "un troisieme mot long"})
 c, b, _ = appel("/api/compte-supprimer", {"id": uid})
 t("le dernier administrateur n'est pas supprimable", c == 400, js(b))
@@ -159,7 +158,7 @@ t("le dernier administrateur n'est pas supprimable", c == 400, js(b))
 print("   -- 11. le fichier des comptes ne contient aucun mot de passe --")
 brut = pathlib.Path(RACINE, "_romule-comptes.json").read_text()
 t("mot de passe absent du disque", "petite lune verte" not in brut and "encore un mot long" not in brut)
-# fuite:ok ce test garantit justement qu'aucun mot de passe n'est stocke en clair
+# fuite:ok this test guarantees precisely that no password is stored in the clear
 t("empreinte scrypt", "scrypt$131072$8$1$" in brut, brut[:80])
 
 srv.terminate()
