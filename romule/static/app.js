@@ -6511,8 +6511,8 @@ function mesurerBarres() {
   }
 }
 addEventListener('resize', mesurerBarres);
-// L'index suit la lecture : on recalcule au defilement, jamais plus d'une fois
-// par image.
+// The index follows the reading: recomputed on scroll, never more than once
+// per frame.
 (function () {
   let prevu = false;
   addEventListener('scroll', () => {
@@ -6520,16 +6520,16 @@ addEventListener('resize', mesurerBarres);
     prevu = true;
     requestAnimationFrame(() => {
       prevu = false;
-      // Un defilement volontaire rend la main au calcul de position. Le saut
-      // lui-meme en declenche un : on le laisse passer.
+      // A deliberate scroll hands control back to the position computation.
+      // The jump itself triggers one: we let that one through.
       if (Date.now() > ALPHA_JUSQUA) ALPHA_VISEE = '';
       majAlphabet();
     });
   }, {passive: true});
 })();
-// Une mesure unique au chargement se trompe : l'en-tete grandit quand la
-// connexion s'affiche, et le sommaire n'existe qu'une fois l'onglet ouvert.
-// On suit donc leur taille reelle.
+// A single measurement on load gets it wrong: the header grows when the
+// connection shows, and the table of contents only exists once the tab is open.
+// So we follow their real size.
 if ('ResizeObserver' in window) {
   const suivi = new ResizeObserver(mesurerBarres);
   const tete = document.querySelector('header');
@@ -6538,14 +6538,14 @@ if ('ResizeObserver' in window) {
   if (barre) suivi.observe(barre);
 }
 
-/* Les reglages sont maintenant des ONGLETS : une seule section a l'ecran.
-   Les cinq bout a bout faisaient une page de plusieurs ecrans ou l'on
-   naviguait au defilement, et le sommaire ne servait qu'a se reperer dans ce
-   defilement. Avec des onglets, il choisit vraiment ce qu'on regarde — et la
-   page redevient courte, ce qui compte sur un handheld.
+/* The settings are now TABS: one section on screen at a time. The five of them
+   end to end made a page several screens long, navigated by scrolling, and the
+   table of contents only helped you find your place within that scroll. With
+   tabs, it really chooses what you look at — and the page becomes short again,
+   which matters on a handheld.
 
-   La section ouverte est retenue : on revient presque toujours dans celle
-   qu'on reglait. */
+   The open section is remembered: you almost always come back to the one you
+   were setting. */
 const SECTIONS_REGLAGES = [];
 let SECTION_ACTIVE = '';
 
@@ -6583,15 +6583,15 @@ function voirSectionReglages(id, memoriser) {
     sec.setAttribute('aria-labelledby', sec.id + '-onglet');
     a.id = sec.id + '-onglet';
     a.addEventListener('click', ev => {
-      // L'ancre reste dans le HTML : sans JavaScript, elle continue de mener
-      // a la section, qui est alors simplement affichee a la suite.
+      // The anchor stays in the HTML: without JavaScript it still leads to
+      // the section, which is then simply displayed one after the other.
       ev.preventDefault();
       voirSectionReglages(sec.id);
       scrollTo({top: 0, behavior: 'instant'});
     });
   }
-  // Fleches gauche/droite dans la barre d'onglets : c'est ce qu'attend
-  // n'importe quel lecteur d'ecran, et c'est plus rapide a la main.
+  // Left/right arrows in the tab bar: that is what any screen reader expects,
+  // and it is faster by hand.
   nav.addEventListener('keydown', ev => {
     const pas = ev.key === 'ArrowRight' ? 1 : ev.key === 'ArrowLeft' ? -1 : 0;
     if (!pas) return;
@@ -6610,24 +6610,24 @@ function voirSectionReglages(id, memoriser) {
 })();
 $('browser').addEventListener('click', e => { const el = e.target.closest('.brow.dir'); if (el && el.dataset.path) app.browse(el.dataset.path); });
 $('crumb').addEventListener('click', e => { const a = e.target.closest('a'); if (a && a.dataset.path) app.browse(a.dataset.path); });
-// Un seul attribut pour le navigateur du serveur — `data-lpath` — et une
-// delegation par conteneur. L'assistant est redessine en entier a chaque
-// etape : ecouter sur `#onboard` survit a ses rendus.
+// One attribute for the server browser — `data-lpath` — and one delegation per
+// container. The wizard is redrawn in full at every step: listening on
+// `#onboard` survives its renders.
 ['ludowrap', 'onboard'].forEach(id => {
   $(id).addEventListener('click', e => {
     const el = e.target.closest('[data-lpath]');
     if (el) app.ludoAller(el.dataset.lpath);
   });
 });
-// --- Depot : la fenetre entiere accepte les fichiers.
-// Le petit rectangle en pointilles restait a trouver, et n'etait visible qu'une
-// fois le panneau ouvert. Deposer n'importe ou est le geste attendu ; le
-// rectangle reste, comme repere quand le panneau est ouvert.
+// --- Dropping: the whole window accepts files.
+// The little dotted rectangle still had to be found, and was only visible once
+// the panel was open. Dropping anywhere is the expected gesture; the rectangle
+// stays, as a landmark when the panel is open.
 const drop = $('drop');
 const voile = $('dropzone');
 
-// `dragenter` et `dragleave` se declenchent AUSSI en passant d'un element a
-// l'autre : sans compteur, le voile clignoterait pendant tout le survol.
+// `dragenter` and `dragleave` also fire when moving from one element to
+// another: without a counter, the overlay would flicker throughout the hover.
 let profondeur = 0;
 
 function transporteDesFichiers(e) {
@@ -6648,7 +6648,7 @@ window.addEventListener('dragenter', e => {
 });
 window.addEventListener('dragover', e => {
   if (!transporteDesFichiers(e)) return;
-  e.preventDefault();                       // sans ca, le navigateur ouvre le fichier
+  e.preventDefault();                       // without this the browser opens the file
   e.dataTransfer.dropEffect = 'copy';
 });
 window.addEventListener('dragleave', e => {
@@ -6664,13 +6664,13 @@ window.addEventListener('drop', e => {
   drop.classList.remove('over');
   uploadFiles(e.dataTransfer.files);
 });
-// Le rectangle du panneau se met simplement en evidence au survol.
+// The panel's rectangle simply highlights on hover.
 ['dragover', 'dragenter'].forEach(ev =>
   drop.addEventListener(ev, () => drop.classList.add('over')));
 ['dragleave', 'dragend', 'drop'].forEach(ev =>
   drop.addEventListener(ev, () => drop.classList.remove('over')));
-// Remonter dans le journal coupe le suivi ; redescendre au bas le reprend.
-// C'est le comportement d'un terminal, et il n'a pas besoin d'etre explique.
+// Scrolling up in the log stops the follow; going back to the bottom resumes
+// it. This is a terminal's behaviour, and it needs no explaining.
 $('log').addEventListener('scroll', () => {
   const el = $('log');
   const enBas = el.scrollHeight - el.scrollTop - el.clientHeight < 24;
@@ -6682,21 +6682,20 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') { app.closeG
 /* ---------------------------------------------------------------------------
    LA CROIX DIRECTIONNELLE
 
-   Sur une console portable de retrogaming — Anbernic, Retroid, AYN — le pouce
-   est sur la croix, pas sur l'ecran. Ces appareils emettent des evenements
-   CLAVIER standards : il n'y a donc pas besoin de l'API Gamepad, et s'en
-   passer evite de dependre d'un materiel qu'on ne peut pas eprouver ici.
+   On a retro handheld — Anbernic, Retroid, AYN — the thumb is on the D-pad,
+   not on the screen. These devices emit standard KEYBOARD events: the Gamepad
+   API is therefore not needed, and doing without it avoids depending on
+   hardware that cannot be tried out here.
 
-   Deux tiers du chemin etaient deja faits, et il vaut la peine de le dire :
-   les cartes portent `tabindex="0"` et `role="button"`, elles repondent donc
-   deja a Entree (regle posee en phase 4), et `.gcard:focus-visible` dessine
-   deja un anneau lisible. Ce qui manquait, c'etait de passer d'une carte a
-   l'autre autrement qu'avec la tabulation.
+   Two thirds of the way was already done, and it is worth saying: the cards
+   carry `tabindex="0"` and `role="button"`, so they already answer Enter (a
+   rule set in phase 4), and `.gcard:focus-visible` already draws a readable
+   ring. What was missing was moving from one card to the next by something
+   other than the Tab key.
 
-   Le nombre de COLONNES n'est pas une constante : la grille est un
-   `auto-fill`, il depend de la largeur et de la densite choisie. On le lit
-   donc dans la geometrie — les cartes de la premiere rangee partagent leur
-   bord superieur.
+   The number of COLUMNS is not a constant: the grid is an `auto-fill`, so it
+   depends on the width and on the chosen density. We therefore read it from the
+   geometry — the cards of the first row share their top edge.
    ------------------------------------------------------------------------- */
 function cartesGrille() {
   return [...document.querySelectorAll('#lib .gcard')];
@@ -6728,19 +6727,19 @@ document.addEventListener('keydown', ev => {
   else if (ev.key === 'ArrowDown') cible = i + col;
   else if (ev.key === 'Home') cible = 0;
   else if (ev.key === 'End') cible = cartes.length - 1;
-  // Une fleche qui sort de la grille ne fait rien plutot que de rebondir :
-  // sur une console, le rebond se lit comme un bouton qui n'a pas repondu.
+  // An arrow that leaves the grid does nothing rather than wrap around: on a
+  // handheld, wrapping reads as a button that did not answer.
   if (cible < 0 || cible >= cartes.length) return;
   ev.preventDefault();
   cartes[cible].focus();
-  // `nearest` : on ne recentre pas la page quand la carte visee est deja
-  // visible, sinon chaque appui fait sauter la grille sous les yeux.
+  // `nearest`: the page is not re-centred when the target card is already
+  // visible, otherwise every press makes the grid jump before your eyes.
   cartes[cible].scrollIntoView({block: 'nearest', inline: 'nearest'});
 });
 
-// « / » saute a la recherche — le raccourci qu'attend quiconque a deja utilise
-// GitHub. Il est ignore quand on est deja en train d'ecrire quelque part,
-// sinon taper une barre oblique dans un chemin deplacerait le curseur.
+// "/" jumps to the search — the shortcut anyone who has used GitHub expects.
+// It is ignored while you are already typing somewhere, otherwise typing a
+// slash in a path would move the cursor.
 document.addEventListener('keydown', e => {
   if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return;
   const ou = document.activeElement;
@@ -6754,40 +6753,38 @@ document.addEventListener('keydown', e => {
   champ.select();
 });
 /* ---------------------------------------------------------------------------
-   DELEGATION — un seul ecouteur par geste, une liste blanche
+   DELEGATION — one listener per gesture, one allow-list
 
-   Les gestionnaires `onclick="app.faire('x')"` obligeaient la politique de
-   securite a tolerer `'unsafe-inline'`, c'est-a-dire a autoriser n'importe
-   quel script pose dans la page. C'est ce qui a rendu exploitable l'XSS
-   stockee corrigee en 0.1.0 : un nom de fichier suffisait a fermer la chaine
-   et a ecrire du code. Deplacer la valeur dans un `data-*` ne DEPLACE pas le
-   probleme, il le supprime : un attribut de donnee n'est jamais compile.
+   The `onclick="app.faire('x')"` handlers forced the security policy to
+   tolerate `'unsafe-inline'`, that is, to allow any script placed in the page.
+   That is what made the stored XSS fixed in 0.1.0 exploitable: a file name was
+   enough to close the string and write code. Moving the value into a `data-*`
+   does not MOVE the problem, it removes it: a data attribute is never compiled.
 
-   `ACTES` est une liste BLANCHE, pas un appel dynamique. `app[el.dataset.act]`
-   sans ce filtre laisserait n'importe quel attribut atteindre n'importe quelle
-   methode — y compris celles qui suppriment. Le cout est une ligne par action ;
-   le prix de l'autre solution est une faille de la meme famille que celle
-   qu'on vient de fermer.
+   `ACTES` is an ALLOW-LIST, not a dynamic call. `app[el.dataset.act]` without
+   that filter would let any attribute reach any method — including the ones
+   that delete. The cost is one line per action; the price of the alternative is
+   a hole from the same family as the one just closed.
 
-   Un attribut PAR GESTE, et non un seul pour tous : un clic sur un `<select>`
-   precede le changement de valeur, donc un attribut commun aurait declenche
-   l'action avec l'ANCIENNE valeur avant de la rejouer avec la bonne.
+   One attribute PER GESTURE, and not a single one for all: a click on a
+   `<select>` precedes the value change, so a shared attribute would have fired
+   the action with the OLD value before replaying it with the right one.
 
-     data-act        au clic
-     data-act-change au changement de valeur
-     data-act-input  a la frappe
+     data-act        on click
+     data-act-change on value change
+     data-act-input  on keystroke
 
-   L'argument, quand il y en a un :
-     data-arg="jeux"     une CHAINE, toujours, jamais reinterpretee ;
-     data-val="2"        du JSON, pour un nombre ou un booleen ;
-     (rien)              la valeur du champ, si l'element en est un.
-   Cette separation n'est pas du zele : en 4.4 les arguments deviendront des
-   chemins de fichiers, et « 2024 » est un nom de dossier parfaitement legitime
-   qu'une coercition silencieuse transformerait en nombre.
+   The argument, when there is one:
+     data-arg="jeux"     a STRING, always, never reinterpreted;
+     data-val="2"        JSON, for a number or a boolean;
+     (nothing)           the field's value, if the element is one.
+   This separation is not fussiness: in 4.4 the arguments will become file
+   paths, and "2024" is a perfectly legitimate folder name that a silent
+   coercion would turn into a number.
    ------------------------------------------------------------------------- */
 const ACTES = new Set([
-  // Les trois premiers ne figurent dans AUCUN attribut du source : ils sont
-  // poses a l'execution depuis la liste `boutons` de `renderActions`.
+  // The first three appear in NO attribute of the source: they are set at
+  // runtime from `renderActions`'s `boutons` list.
   'appliquer', 'corbeilleSelection', 'supprimerConsole',
   'actionFab', 'activerJeu', 'actualiser', 'actualiserFiches',
   'ajouterCompte', 'ajouterPlateforme', 'allerSysteme', 'analyseGlobale',
@@ -6820,26 +6817,26 @@ const ACTES = new Set([
   'wizCheck', 'wizStep',
 ]);
 
-// Les cas qui ne se ramenent pas a « une methode, un argument ». Ceux-ci ont
-// besoin de l'EVENEMENT : ce sont des fonds de fenetre, qui ne se ferment que
-// si le clic les a touches eux et non leur contenu. Un appel sans l'evenement
-// fermerait la fenetre des qu'on clique dedans.
+// The cases that do not reduce to "one method, one argument". These need the
+// EVENT: they are dialog backdrops, which close only if the click hit them and
+// not their content. A call without the event would close the dialog as soon as
+// you clicked inside it.
 const ACTES_SPECIAUX = {
   'closeDialog': (el, ev) => app.closeDialog(ev),
   'closeGame': (el, ev) => app.closeGame(ev),
   'toggleFavPop': (el, ev) => app.toggleFavPop(ev),
   'toggleTrashList': (el, ev) => app.toggleTrashList(ev),
-  // Deux arguments : `data-val` n'en porte qu'un, et lui en faire porter une
-  // liste rendrait ambigu le jour ou une action prendra un tableau.
+  // Two arguments: `data-val` carries only one, and making it carry a list
+  // would be ambiguous the day an action takes an array.
   'verify-20': () => app.verify(false, 20),
-  // La carte entiere est cliquable, et son geste depend de l'evenement
-  // (touche enfoncee, bouton du milieu). Les boutons POSES DESSUS ont leur
-  // propre `data-act` : `closest` retient le plus proche, donc le bouton
-  // l'emporte sur la carte sans qu'on ait a arreter la propagation.
+  // The whole card is clickable, and its gesture depends on the event (a
+  // modifier key held, the middle button). The buttons PLACED ON IT have their
+  // own `data-act`: `closest` keeps the nearest one, so the button wins over
+  // the card without having to stop propagation.
   'cardClick': (el, ev) => app.cardClick(ev, el.dataset.arg),
-  // Prend l'element lui-meme : c'est de son image qu'on veut l'agrandissement.
+  // Takes the element itself: it is its image we want enlarged.
   'loupeJaquette': el => app.loupeJaquette(el),
-  // Fermer le panneau des taches ET ouvrir le depot : deux appels, un geste.
+  // Close the task panel AND open the drop area: two calls, one gesture.
   'taches-vers-depot': () => { app.basculerTaches(false); app.toggleDrop(true); },
 };
 
@@ -6862,9 +6859,9 @@ function distributeur(attribut, cle) {
     const nom = el.dataset[cle];
     const special = ACTES_SPECIAUX[nom];
     if (special) { special(el, ev); return; }
-    // Silence volontaire : un nom absent de la liste blanche ne fait RIEN. Le
-    // test `test_gestes.py` verifie qu'aucun `data-act` de l'interface n'est
-    // dans ce cas — c'est la qu'une faute de frappe doit se voir, pas ici.
+    // Deliberate silence: a name absent from the allow-list does NOTHING. The
+    // `test_gestes.py` test checks that no `data-act` of the interface is in
+    // that case — that is where a typo must show, not here.
     if (!ACTES.has(nom)) return;
     const f = app[nom];
     if (typeof f === 'function') f.apply(app, argumentDe(el));
@@ -6875,10 +6872,10 @@ document.addEventListener('click', distributeur('data-act', 'act'));
 document.addEventListener('change', distributeur('data-act-change', 'actChange'));
 document.addEventListener('input', distributeur('data-act-input', 'actInput'));
 
-// Un element rendu cliquable par `role="button"` doit repondre au clavier. Un
-// vrai <button> le fait tout seul ; ici c'est une image, et c'est ce qu'un
-// `onkeydown` ecrit a la main faisait sur la jaquette. En le posant une fois
-// pour toutes, la regle vaut pour tout faux bouton present ou a venir.
+// An element made clickable by `role="button"` must answer the keyboard. A
+// real <button> does it by itself; here it is an image, and that is what a
+// hand-written `onkeydown` did on the cover. Set once and for all, the rule
+// holds for every fake button present or to come.
 document.addEventListener('keydown', ev => {
   if (ev.key !== 'Enter' && ev.key !== ' ') return;
   const el = ev.target.closest('[data-act][role=button]');
@@ -6887,10 +6884,10 @@ document.addEventListener('keydown', ev => {
   el.click();
 });
 
-// `load` et `error` d'une image ne REMONTENT pas : aucun ecouteur sur
-// `document` ne les verrait en phase de bouillonnement. Ils passent en
-// revanche par la phase de CAPTURE, qui descend depuis document — d'ou le
-// troisieme argument. C'est la seule facon de deleguer ces deux gestes.
+// An image's `load` and `error` do NOT bubble: no listener on `document` would
+// see them in the bubbling phase. They do go through the CAPTURE phase, which
+// descends from document — hence the third argument. That is the only way to
+// delegate those two events.
 for (const geste of ['load', 'error']) {
   document.addEventListener(geste, ev => {
     const img = ev.target;
@@ -6903,18 +6900,17 @@ app.ACTES = ACTES;
 app.ACTES_SPECIAUX = ACTES_SPECIAUX;
 window.app = app;
 
-// Sequence de demarrage. Tant que l'inventaire n'est pas revenu, on affiche un
+// Startup sequence. Until the inventory has come back, we show a
 /* ============================================================================
-   APPARENCE — theme, animation des jaquettes, mouvement
+   APPEARANCE — theme, cover animation, motion
    ----------------------------------------------------------------------------
-   Le choix initial est pose par le script en tete de index.html, avant le
-   premier rendu. Ce bloc-ci ne sert qu'a le CHANGER et a tenir les reglages a
-   jour ; il n'a pas a s'executer pour que la page s'affiche correctement.
+   The initial choice is set by the script at the top of index.html, before the
+   first render. This block only serves to CHANGE it and to keep the settings up
+   to date; it does not have to run for the page to display correctly.
    ========================================================================== */
 
-// Le libelle et la description de chaque variante. Le meme tableau sert a
-// construire les vignettes et a nommer le reglage : deux listes separees
-// finiraient par diverger.
+// Each variant's label and description. The same array builds the thumbnails
+// and names the setting: two separate lists would end up drifting apart.
 const ANIMATIONS = [
   ['1', 'Affiche inclinée', 'La carte s\'incline et un reflet balaie la jaquette.'],
   ['2', 'Élévation et halo', 'La carte se détache du fond, cerclée de laiton.'],
@@ -6925,13 +6921,13 @@ const ANIMATIONS = [
   ['aucune', 'Aucune', 'Le survol se contente de marquer la carte visée.'],
 ];
 
-// La couleur de la barre systeme sur mobile suit le fond de page : sans cela,
-// l'encoche reste noire au milieu d'une interface claire.
+// The system bar's colour on mobile follows the page background: without this,
+// the notch stays black in the middle of a light interface.
 const TEINTE_BARRE = {sombre: '#141216', clair: '#efeae4'};
 
-// `matchMedia` manque dans le DOM simplifie des tests Node, et un navigateur
-// tres ancien peut l'ignorer. Son absence vaut « aucune preference exprimee »,
-// ce qui ramene au theme sombre : le defaut du projet.
+// `matchMedia` is missing from the simplified DOM of the Node tests, and a very
+// old browser may not know it. Its absence means "no preference expressed",
+// which falls back to the dark theme: the project's default.
 function media(requete) {
   return typeof matchMedia === 'function' ? matchMedia(requete) : null;
 }
@@ -6949,8 +6945,8 @@ function poserApparence(cle, valeur, permis) {
   if (!permis.includes(valeur)) return;
   const d = document.documentElement;
   if (d.dataset[cle] === valeur) return;
-  // Le fondu n'est actif QUE pendant le changement : une transition
-  // permanente sur `background` rendrait poisseux chaque survol de ligne.
+  // The fade is active ONLY during the change: a permanent transition on
+  // `background` would make every row hover feel sticky.
   if (cle === 'theme') {
     d.classList.add('vire');
     setTimeout(() => d.classList.remove('vire'), 420);
@@ -6986,32 +6982,31 @@ function construireChoixCartes() {
     b.className = 'animopt';
     b.type = 'button';
     b.dataset.apercu = cle;
-    // Ces deux attributs sont poses au chargement du module, donc AVANT que
-    // le catalogue ne soit lu — et leur valeur est assemblee, donc cle de
-    // rien. Deux raisons independantes de rester en francais, qu'aucun
-    // controle sur le source ne pouvait reveler.
+    // These two attributes are set when the module loads, so BEFORE the
+    // catalogue is read — and their value is assembled, so it is a key to
+    // nothing. Two independent reasons to stay in French, which no check on
+    // the source could have revealed.
     poserAttr(b, 'title', aide);
     poserAttr(b, 'aria-label', '%s — %s', nom, aide);
-    // La vignette imite une carte de jeu — un rectangle de jaquette surmonte
-    // d'un bandeau d'etat — sans porter de vraie pochette : une image de jeu
-    // ici laisserait croire que le reglage ne concerne que ce jeu-la. Un
-    // simple numero, lui, ne montrait pas ce que l'effet fait a une carte.
+    // The thumbnail mimics a game card — a cover rectangle topped by a status
+    // strip — without carrying a real sleeve: a game image here would suggest
+    // the setting only concerns that one game. A plain number, on the other
+    // hand, did not show what the effect does to a card.
     const vue = document.createElement('span');
     vue.className = 'apercu';
     const img = document.createElement('img');
     img.className = 'apimg';
     img.alt = '';
-    // La source arrive plus tard : au moment ou ce bloc se construit, la
-    // ludotheque n'est pas encore lue. En attendant, le degrade tient lieu
-    // de jaquette.
+    // The source arrives later: when this block is built, the library has not
+    // been read yet. In the meantime, the gradient stands in for a cover.
     //
-    // Si elle echoue — et elle echoue des que le jeu choisi n'a pas encore de
-    // pochette en cache, ce qui est le cas courant d'une installation neuve —
-    // on retombe sur la pochette generique AU LIEU de retirer l'image. La
-    // retirer laissait l'apercu vide pour de bon : les trois effets a comparer
-    // n'avaient plus rien a habiller, et aucun rechargement n'y changeait rien.
+    // If it fails — and it fails as soon as the chosen game has no cached
+    // sleeve, the ordinary case on a fresh install — we fall back to the
+    // generic sleeve INSTEAD of removing the image. Removing it left the
+    // preview empty for good: the three effects to compare had nothing left to
+    // dress, and no reload changed that.
     img.onerror = function () {
-      if (this.dataset.repli) { this.remove(); return; }   // meme le repli a echoue
+      if (this.dataset.repli) { this.remove(); return; }   // even the fallback failed
       this.dataset.repli = '1';
       this.src = JAQUETTE_EXEMPLE;
     };
@@ -7022,8 +7017,8 @@ function construireChoixCartes() {
     const lab = document.createElement('span');
     lab.className = 'anom';
     lab.textContent = nom;
-    // `appendChild` plutot que `append` : c'est la seule des deux que
-    // fournit le DOM simplifie des tests, et elle suffit ici.
+    // `appendChild` rather than `append`: it is the only one of the two the
+    // tests' simplified DOM provides, and it is enough here.
     b.appendChild(vue);
     b.appendChild(lab);
     b.onclick = () => app.setCarte(cle);
@@ -7034,17 +7029,16 @@ function construireChoixCartes() {
   majApparence();
 }
 
-// Un rectangle gris ne montre pas grand-chose : c'est sur une VRAIE pochette
-// qu'on juge un reflet ou une inclinaison. On prend donc le premier jeu de la
-// ludotheque qui en a une, plutot qu'une image livree avec l'outil — celle-ci
-// aurait vieilli a part, et n'aurait rien dit du rendu sur les jaquettes de
-// l'utilisateur.
-// Aucune pochette disponible — installation neuve, aucune fiche en cache, ou
-// simplement une ludotheque sans jeu Switch. L'apercu restait alors vide, et
-// les trois effets a comparer n'avaient rien a habiller : on reglait a
-// l'aveugle. On dessine donc une pochette generique. Elle ne represente aucun
-// jeu, ce qui est exactement ce qu'on veut ici — et elle est en `data:`, donc
-// servie par la page elle-meme, sans requete ni exception a la CSP.
+// A grey rectangle does not show much: a reflection or a tilt is judged on a
+// REAL sleeve. So we take the first game in the library that has one, rather
+// than an image shipped with the tool — that one would have aged separately,
+// and would have said nothing about the rendering on the user's own covers.
+// No sleeve available — a fresh install, no cached entry, or simply a library
+// with no Switch game. The preview then stayed empty, and the three effects to
+// compare had nothing to dress: you were setting blind. So we draw a generic
+// sleeve. It represents no game, which is exactly what we want here — and it is
+// a `data:`, so served by the page itself, with no request and no CSP
+// exception.
 const JAQUETTE_EXEMPLE = 'data:image/svg+xml,' + encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 450">' +
     '<defs><linearGradient id="f" x1="0" y1="0" x2="0.4" y2="1">' +
@@ -7052,8 +7046,8 @@ const JAQUETTE_EXEMPLE = 'data:image/svg+xml,' + encodeURIComponent(
       '<stop offset="1" stop-color="#15161d"/></linearGradient></defs>' +
     '<rect width="300" height="450" fill="#1b1c24"/>' +
     '<rect width="300" height="450" fill="url(#f)"/>' +
-    // La silhouette d'une cartouche, la meme que sur une carte sans jaquette :
-    // l'apercu doit ressembler a ce que l'utilisateur verra vraiment.
+    // A cartridge's silhouette, the same as on a card without a cover: the
+    // preview must look like what the user will really see.
     '<rect x="110" y="146" width="80" height="126" rx="13" fill="#40425200"' +
       ' stroke="#5a5d70" stroke-width="3"/>' +
     '<rect x="132" y="240" width="36" height="13" rx="4" fill="#5a5d70"/>' +
@@ -7061,8 +7055,9 @@ const JAQUETTE_EXEMPLE = 'data:image/svg+xml,' + encodeURIComponent(
 
 function jaquetteExemple() {
   let liste = [];
-  // Meme en cas d'echec, on rend la pochette generique : un apercu vide ne
-  // dit rien, et l'echec ici n'a rien a voir avec le reglage qu'on regarde.
+  // Even on failure we return the generic sleeve: an empty preview says
+  // nothing, and the failure here has nothing to do with the setting on
+  // screen.
   try { liste = jeuxUnifies() || []; } catch (e) { return JAQUETTE_EXEMPLE; }
   const v = (DATA && DATA.covers_v) || 0;
   for (const x of liste) {
@@ -7085,17 +7080,16 @@ function majApercuJaquette() {
   });
 }
 
-// En « automatique », le systeme peut basculer pendant que la page est
-// ouverte (coucher du soleil, mode nuit programme) : la teinte de la barre
-// doit suivre, les couleurs le font deja seules via la requete media.
+// In "automatic", the system can switch while the page is open (sunset, a
+// scheduled night mode): the bar's tint must follow — the colours already do it
+// by themselves through the media query.
 (function () {
   const suivi = media(CLAIR_SYSTEME);
   if (suivi && suivi.addEventListener) suivi.addEventListener('change', majApparence);
 })();
 
-// L'en-tete ne prend son ombre qu'une fois la page defilee : au repos, une
-// ombre permanente donne l'impression d'un bandeau qui flotte au-dessus du
-// vide.
+// The header only takes its shadow once the page has scrolled: at rest, a
+// permanent shadow gives the impression of a bar floating above nothing.
 (function () {
   const tete = document.querySelector('header');
   if (!tete) return;
@@ -7106,17 +7100,17 @@ function majApercuJaquette() {
     requestAnimationFrame(() => {
       prevu = false;
       tete.classList.toggle('defile', scrollY > 6);
-      // Compactage : deux seuils differents, sinon la barre grandit et
-      // retrecit sans arret quand on s'arrete pile a la limite — et comme
-      // elle change la hauteur de page, elle provoquerait sa propre bascule.
+      // Compacting: two different thresholds, otherwise the bar grows and
+      // shrinks endlessly when you stop exactly at the limit — and since it
+      // changes the page height, it would trigger its own switching.
       const compact = document.body.classList.contains('compact');
       if (!compact && scrollY > 220) document.body.classList.add('compact');
       else if (compact && scrollY < 140) document.body.classList.remove('compact');
-      // La hauteur des barres ne change qu'a la bascule. La remesurer a chaque
-      // image forcerait un calcul de mise en page a chaque cran de molette,
-      // pour un resultat identique 99 fois sur 100.
+      // The bars' height only changes when it switches. Re-measuring it on
+      // every frame would force a layout computation at every notch of the
+      // wheel, for an identical result 99 times out of 100.
       if (document.body.classList.contains('compact') !== compact) {
-        // La transition dure : on relit une fois qu'elle est posee.
+        // The transition lasts: we read again once it has settled.
         setTimeout(mesurerBarres, 320);
       }
     });
@@ -7126,16 +7120,17 @@ function majApercuJaquette() {
 /* ============================================================================
    LOUPE — la jaquette en grand
    ----------------------------------------------------------------------------
-   Une pochette de 104 px dans la fiche ne se regarde pas, elle s'identifie.
-   Pour la LIRE — la tranche, le logo de l'editeur, la mention PEGI, le petit
-   texte du dos — il faut l'agrandir et pouvoir s'y promener.
+   A 104 px sleeve in the detail view is not looked at, it is identified. To
+   READ it — the spine, the publisher's logo, the PEGI mark, the small print on
+   the back — it must be enlarged and walkable.
 
-   Le deplacement se fait au curseur plutot qu'avec des barres : on pointe le
-   coin qu'on veut voir, il vient. C'est le geste d'une loupe posee sur une
-   photo, et il ne demande rien a apprendre.
+   Moving around is done with the cursor rather than with scrollbars: you point
+   at the corner you want to see, and it comes. It is the gesture of a
+   magnifying glass laid on a photograph, and it asks nothing to be learned.
    ========================================================================== */
-// Inclinaison maximale, en degres. Au-dela, l'affiche se deforme au lieu de
-// tourner : le raccourci de perspective devient plus visible que le relief.
+// Maximum tilt, in degrees. Beyond that, the poster distorts instead of
+// turning: the perspective foreshortening becomes more visible than the
+// relief.
 const LOUPE_INCLIN = 11;
 
 function loupeEl() {
@@ -7160,10 +7155,10 @@ function loupeEl() {
   const plan = el.querySelector('#loupeplan');
   const reflet = el.querySelector('#loupereflet');
 
-  // L'affiche ne grossit pas : elle TOURNE. On la regarde sous un angle, comme
-  // un boitier qu'on incline dans la main, et la lumiere glisse dessus. Le
-  // zoom, lui, obligeait a promener la souris pour reconstituer une image
-  // qu'on ne voyait jamais en entier.
+  // The poster does not grow: it TURNS. You look at it from an angle, like a
+  // case tilted in the hand, and the light slides across it. Zooming, on the
+  // other hand, forced you to walk the mouse around to reconstruct an image you
+  // never saw whole.
   cadre.addEventListener('mousemove', ev => {
     const r = cadre.getBoundingClientRect();
     // -1 a gauche/en haut, +1 a droite/en bas.
@@ -7172,8 +7167,8 @@ function loupeEl() {
     plan.style.transform =
       'rotateY(' + (x * LOUPE_INCLIN).toFixed(2) + 'deg)' +
       ' rotateX(' + (-y * LOUPE_INCLIN).toFixed(2) + 'deg)';
-    // Le point brillant se place la ou la souris est : c'est ce qui fait
-    // croire a une surface vernie plutot qu'a une image qui pivote.
+    // The highlight sits where the mouse is: that is what makes it read as a
+    // varnished surface rather than an image that pivots.
     reflet.style.setProperty('--rx', ((x + 1) / 2 * 100).toFixed(1) + '%');
     reflet.style.setProperty('--ry', ((y + 1) / 2 * 100).toFixed(1) + '%');
     reflet.style.opacity = '1';
@@ -7215,25 +7210,24 @@ function loupeOuverte() {
 /* ============================================================================
    PALETTE DE COMMANDES
    ----------------------------------------------------------------------------
-   Sur 273 jeux, retrouver un titre a la souris est le vrai goulot : deplier le
-   selecteur de plateforme, viser le champ, effacer, taper, parcourir. La
-   palette fait les deux choses d'un coup — aller a un JEU, ou declencher une
-   ACTION — au clavier, sans quitter les mains.
+   Across 273 games, finding a title with the mouse is the real bottleneck:
+   unfold the platform selector, aim at the field, clear it, type, scan. The
+   palette does both things at once — go to a GAME, or fire an ACTION — from the
+   keyboard, without lifting your hands.
 
-   La recherche est « approximative par sous-suite » : les lettres tapees
-   doivent apparaitre dans l'ordre, pas forcement cote a cote. « anch » trouve
-   « ANimal CHrossing »… et surtout « hgl » trouve « HoGwarts Legacy ». Une
-   recherche stricte obligerait a connaitre l'orthographe exacte, ce qui est
-   precisement ce qu'on cherche a eviter.
+   The search is "fuzzy by subsequence": the typed letters must appear in order,
+   not necessarily side by side. "anch" finds "ANimal CHrossing"… and above all
+   "hgl" finds "HoGwarts Legacy". A strict search would require knowing the
+   exact spelling, which is precisely what we are trying to avoid.
    ========================================================================== */
 
-// Les actions offertes. Chaque entree porte de quoi la retrouver (`mots`) :
-// « sombre » doit tomber sur le theme meme si le libelle dit « Thème sombre ».
+// The actions on offer. Each entry carries what it takes to find it (`mots`):
+// "sombre" must land on the theme even if the label says "Thème sombre".
 function commandesDisponibles() {
   const c = [
-    // i18n:ok - les seconds champs sont des mots-cles de recherche,
-    // jamais affiches ; seuls les libelles le sont.
-    ['Aller à la bibliothèque', 'jeux grille', () => app.tab('jeux')],  // i18n:ok - 2e champ : mot-cle de recherche
+    // i18n:ok - the second fields are search keywords, never displayed; only
+    // the labels are.
+    ['Aller à la bibliothèque', 'jeux grille', () => app.tab('jeux')],  // i18n:ok - 2nd field: a search keyword
     ['Ouvrir les réglages', 'settings options', () => app.tab('settings')],  // i18n:ok - 2e champ : mot-cle de recherche
     ['Actualiser la bibliothèque', 'refresh relire', () => app.actualiser()],  // i18n:ok - 2e champ : mot-cle de recherche
     ['Chercher les fiches manquantes', 'jaquettes resume metadata', () => app.actualiserFiches()],  // i18n:ok - 2e champ : mot-cle de recherche
