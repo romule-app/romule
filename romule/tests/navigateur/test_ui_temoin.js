@@ -1,7 +1,7 @@
-/* Rend app.js dans un DOM minimal et verifie que la section « comptes »
-   se dessine et repond, sans navigateur. */
+/* Renders app.js in a minimal DOM and checks the "accounts" section draws and
+   answers, without a browser. */
 const fs = require('fs'), vm = require('vm'), path = require('path');
-// Les chemins des fichiers statiques sont relatifs a la racine du projet.
+// The static files' paths are relative to the project's root.
 process.chdir(path.resolve(__dirname, '..', '..', '..'));
 
 const html = fs.readFileSync('romule/static/index.html', 'utf8');
@@ -43,7 +43,7 @@ function faux(tag) {
   });
   return el;
 }
-// analyse tres sommaire : recupere classes et data-* des balises du gabarit
+// a very rough parse: collects the classes and data-* of the template's tags
 function analyser(h) {
   const out = [];
   for (const m of h.matchAll(/<(\w+)([^>]*)>/g)) {
@@ -69,10 +69,10 @@ const ctx = {
     documentElement: faux('html'),
   },
   requestAnimationFrame: f => f(),
-  // La traduction observe les ajouts au DOM : sans cette classe, app.js ne
-  // se charge pas du tout dans le faux DOM.
-  // app.js ecoute `resize`/`scroll` au niveau global : sans ces fonctions le
-  // module ne se charge pas du tout dans le faux DOM.
+  // The translation observes DOM additions: without this class, app.js does not
+  // load at all in the fake DOM.
+  // app.js listens for `resize`/`scroll` at the global level: without these
+  // functions the module does not load at all in the fake DOM.
   addEventListener: () => {},
   removeEventListener: () => {},
   ResizeObserver: function () { this.observe = () => {}; this.disconnect = () => {}; },
@@ -82,10 +82,9 @@ const ctx = {
     this.takeRecords = () => [];
   },
   NodeFilter: {SHOW_TEXT: 4},
-  // Un vrai navigateur expose `matchMedia` en global, pas seulement sur
-  // `window` : le theme automatique l'interroge pour savoir si le systeme
-  // est en clair. Sans lui, le test exercerait le repli au lieu du vrai
-  // chemin.
+  // A real browser exposes `matchMedia` globally, not only on `window`: the
+  // automatic theme queries it to know whether the system is in light mode.
+  // Without it, the test would exercise the fallback instead of the real path.
   matchMedia: () => ({matches: false, addEventListener() {}, addListener() {}}),
   XMLHttpRequest: function () {
     this.upload = {}; this.open = () => {}; this.setRequestHeader = () => {};
@@ -121,7 +120,7 @@ ctx.window.R = null; ctx.globalThis = ctx; ctx.self = ctx;
 vm.createContext(ctx);
 vm.runInContext(fs.readFileSync('romule/static/reactive.js', 'utf8'), ctx);
 ctx.R = ctx.window.R;
-// `const app = ...` reste dans la portee du script : on l'expose pour le test.
+// `const app = ...` stays within the script's scope: we expose it for the test.
 const SUFFIXE = "\n;globalThis.__t = {app, majBlocAuth, renderTache, uploadFiles, majFab, config: c => { DATA.config = c; }};";
 vm.runInContext(fs.readFileSync('romule/static/app.js', 'utf8') + SUFFIXE, ctx);
 
@@ -173,7 +172,7 @@ const fab = ids.get('fab'), jauge = ids.get('fabjauge');
   t('temoin actif pendant l\'envoi', fab.classList.contains('travaille'));
   t('titre indique la progression', /Envoi 1\/2/.test(ids.get('fabtitre').textContent),
     ids.get('fabtitre').textContent);
-  // 50 % du PREMIER fichier = 4500 / 10000 octets au total, soit 45 %
+  // 50 % of the FIRST file = 4500 / 10000 bytes in total, so 45 %
   ENVOIS[0].upload.onprogress({lengthComputable: true, loaded: 4500, total: 9000});
   t('avancement calcule sur le volume', jauge.style.strokeDasharray === '45 100',
     jauge.style.strokeDasharray);
@@ -188,7 +187,7 @@ const fab = ids.get('fab'), jauge = ids.get('fabjauge');
   const evt = (types) => ({dataTransfer: {types, files: []}, preventDefault() {}});
   ctx.window.declencher('dragenter', evt(['Files']));
   t('voile affiche quand on traine des fichiers', voile.classList.contains('on'));
-  ctx.window.declencher('dragenter', evt(['Files']));   // survol d'un enfant
+  ctx.window.declencher('dragenter', evt(['Files']));   // hovering a child
   ctx.window.declencher('dragleave', evt(['Files']));
   t('pas de clignotement en passant d\'un element a l\'autre', voile.classList.contains('on'));
   ctx.window.declencher('dragleave', evt(['Files']));
