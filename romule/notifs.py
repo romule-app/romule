@@ -1,23 +1,23 @@
-"""Notifications sortantes : Discord, Slack, Telegram, ntfy, Gotify, webhook.
+"""Outgoing notifications: Discord, Slack, Telegram, ntfy, Gotify, webhook.
 
-Romule savait deja prevenir — mais seulement la personne assise devant lui, par
-une notification de bureau. Or ce qu'il fait dure : une conversion de trente
-fichiers, un transfert de plusieurs gigaoctets. Ce sont precisement les moments
-ou l'on n'est PAS devant l'ecran.
+Romule could already tell you — but only the person sitting in front of it,
+with a desktop notification. And what it does takes time: a thirty-file
+conversion, a multi-gigabyte transfer. Those are precisely the moments when you
+are NOT in front of the screen.
 
-Un mot sur la forme choisie. Les outils comparables passent par Apprise, qui
-sait parler a quatre-vingts services — et qui est une dependance. Romule n'en a
-aucune, et cette regle n'est pas negociable. On implemente donc les cinq
-familles qui couvrent l'essentiel des installations auto-hebergees, plus un
-webhook generique pour tout le reste, en une centaine de lignes de `urllib`.
+A word on the shape chosen. Comparable tools reach for Apprise, which can talk
+to eighty services — and which is a dependency. Romule has none, and that rule
+is not negotiable. So the five families that cover most self-hosted setups are
+implemented here, plus a generic webhook for everything else, in about a
+hundred lines of `urllib`.
 
-Le TYPE est deduit de l'adresse. Demander a l'utilisateur de choisir « Discord »
-dans une liste apres avoir colle une URL qui commence par
-`https://discord.com/api/webhooks/` serait lui faire ressaisir ce qu'il vient de
-donner. Le champ reste modifiable : la deduction propose, elle n'impose pas.
+The TYPE is worked out from the address. Asking the user to pick "Discord" from
+a list after pasting a URL that starts with
+`https://discord.com/api/webhooks/` would be making them retype what they just
+gave. The field stays editable: the guess proposes, it does not impose.
 
-Ce module ne leve jamais et ne bloque jamais. Une notification est un CONFORT :
-un service qui echoue parce que Discord est en panne serait pire que le silence.
+This module never raises and never blocks. A notification is a CONVENIENCE: a
+service that fails because Discord is down would be worse than silence.
 """
 
 import json
@@ -28,8 +28,8 @@ from concurrent.futures import ThreadPoolExecutor
 
 from . import config, console, reseau
 
-# Les evenements notifiables. Le libelle est ce que voit l'utilisateur dans les
-# reglages ; la cle est ce qui est range dans la configuration.
+# The notifiable events. The label is what the user sees in the settings; the
+# key is what gets stored in the configuration.
 EVENEMENTS = {
     "tache_ok": "A task finished",
     "tache_echec": "A task failed",
@@ -38,23 +38,23 @@ EVENEMENTS = {
     "import": "Files were imported from the drop folder",
 }
 
-# Delai court : une notification qui traine retiendrait un fil pour rien.
+# Short timeout: a notification that drags would hold a thread for nothing.
 DELAI = 10
-# Au-dela, on renonce. Un service injoignable le reste generalement, et
-# reessayer indefiniment transformerait une panne distante en fuite de fils.
+# Past this, give up. An unreachable service usually stays unreachable, and
+# retrying forever would turn a remote outage into a thread leak.
 ESSAIS = 2
 
 MAX_DESTINATIONS = 10
 
-# Un seul pool, borne : dix destinations qui repondent en dix secondes ne
-# doivent pas ouvrir dix fils a chaque evenement.
+# One bounded pool: ten destinations that take ten seconds to answer must not
+# open ten threads on every event.
 _POOL = ThreadPoolExecutor(max_workers=3, thread_name_prefix="notif")
 
 
-# --------------------------------------------------------------- deduction
+# --------------------------------------------------------------- guessing
 
 def deviner(url):
-    """Le service que designe cette adresse, ou `webhook` par defaut."""
+    """The service this address points at, or `webhook` by default."""
     u = (url or "").strip().lower()
     hote = urllib.parse.urlparse(u).netloc
     if "discord.com" in hote or "discordapp.com" in hote:
@@ -63,8 +63,8 @@ def deviner(url):
         return "slack"
     if "api.telegram.org" in hote:
         return "telegram"
-    # ntfy s'auto-heberge : le domaine ne suffit pas, mais son chemin est
-    # toujours un simple sujet, sans segment supplementaire.
+    # ntfy is self-hosted: the domain alone is not enough, but its path is
+    # always a plain topic, with no extra segment.
     if "ntfy" in hote:
         return "ntfy"
     if "/message" in urllib.parse.urlparse(u).path and "token=" in (
@@ -73,20 +73,20 @@ def deviner(url):
     return "webhook"
 
 
-# --------------------------------------------------------------- redaction
+# --------------------------------------------------------------- composing
 
 def _corps(service, titre, texte, niveau):
-    """Le couple (donnees, en-tetes) attendu par ce service.
+    """The (body, headers) pair this service expects.
 
-    Chaque service a sa forme. Envoyer partout le meme JSON marcherait pour
-    aucun d'eux : Discord veut `content`, Slack veut `text`, ntfy veut du texte
-    brut avec le titre en en-tete.
+    Each service has its own shape. Sending the same JSON everywhere would work
+    for none of them: Discord wants `content`, Slack wants `text`, ntfy wants
+    plain text with the title in a header.
     """
     plein = "%s\n%s" % (titre, texte) if texte else titre
     entetes = {"User-Agent": "romule"}
     if service == "discord":
-        # Une couleur par gravite : dans un salon ou passent trente messages,
-        # c'est ce qui distingue « termine » de « echoue » sans lire.
+        # A colour per severity: in a channel where thirty messages go by,
+        # that is what tells "finished" from "failed" without reading.
         couleurs = {"ok": 0x2ECC71, "warn": 0xF1C40F, "error": 0xE74C3C,
                     "info": 0x95A5A6}
         d = {"embeds": [{"title": titre[:256], "description": texte[:4000],
@@ -96,13 +96,13 @@ def _corps(service, titre, texte, niveau):
         return (json.dumps({"text": plein[:3000]}).encode(),
                 dict(entetes, **{"Content-Type": "application/json"}))
     if service == "telegram":
-        # Telegram prend ses parametres en formulaire ; `chat_id` est deja dans
-        # l'URL fournie par l'utilisateur.
+        # Telegram takes its parameters as a form; `chat_id` is already in the
+        # URL the user supplied.
         return (urllib.parse.urlencode({"text": plein[:4000]}).encode(),
                 dict(entetes, **{"Content-Type": "application/x-www-form-urlencoded"}))
     if service == "ntfy":
-        # Le titre passe en en-tete, et il doit etre en latin-1 : un accent ou
-        # un emoji dans un nom de jeu ferait echouer l'envoi entier.
+        # The title travels in a header, and must be latin-1: an accent or an
+        # emoji in a game name would fail the whole send.
         return (texte.encode() or titre.encode(),
                 dict(entetes, **{"Title": _ascii(titre), "Priority":
                                  {"error": "high", "warn": "default"}.get(niveau, "low")}))
@@ -110,21 +110,21 @@ def _corps(service, titre, texte, niveau):
         d = {"title": titre[:100], "message": texte[:2000],
              "priority": {"error": 8, "warn": 5}.get(niveau, 2)}
         return json.dumps(d).encode(), dict(entetes, **{"Content-Type": "application/json"})
-    # Webhook generique : tout, en clair, pour que l'autre bout choisisse.
+    # Generic webhook: everything, in the open, so the far end can choose.
     d = {"service": "romule", "niveau": niveau, "titre": titre,
          "message": texte, "date": int(time.time())}
     return json.dumps(d).encode(), dict(entetes, **{"Content-Type": "application/json"})
 
 
 def _ascii(texte):
-    """Un en-tete HTTP ne porte pas d'accent : `Titre: Pokémon` casse l'envoi."""
+    """An HTTP header carries no accents: `Title: Pokémon` breaks the send."""
     return (texte or "").encode("ascii", "replace").decode("ascii")
 
 
-# --------------------------------------------------------------- envoi
+# --------------------------------------------------------------- sending
 
 def _poster(url, donnees, entetes):
-    """Rend (True, "") ou (False, raison). Ne leve pas."""
+    """Returns (True, "") or (False, reason). Does not raise."""
     for essai in range(ESSAIS):
         try:
             req = urllib.request.Request(url, data=donnees, headers=entetes,
@@ -132,7 +132,7 @@ def _poster(url, donnees, entetes):
             with reseau.ouvrir(req, timeout=DELAI) as r:
                 return (200 <= r.status < 300), "HTTP %d" % r.status
         except reseau.SchemaRefuse as exc:
-            return False, str(exc)          # inutile de reessayer un `file://`
+            return False, str(exc)          # no point retrying a `file://`
         except Exception as exc:
             dernier = "%s: %s" % (type(exc).__name__, exc)
             if essai + 1 < ESSAIS:
@@ -141,7 +141,7 @@ def _poster(url, donnees, entetes):
 
 
 def destinations(cfg=None):
-    """Les destinations enregistrees, assainies."""
+    """The saved destinations, sanitised."""
     cfg = cfg if cfg is not None else config.load_config()
     propres = []
     for d in (cfg.get("notif_destinations") or [])[:MAX_DESTINATIONS]:
@@ -157,8 +157,8 @@ def destinations(cfg=None):
             "url": url,
             "service": d.get("service") if d.get("service") in SERVICES
                        else deviner(url),
-            # Une liste vide veut dire TOUS les evenements : c'est ce qu'attend
-            # quelqu'un qui colle une adresse sans rien cocher.
+            # An empty list means EVERY event: that is what someone who
+            # pastes an address without ticking anything expects.
             "evenements": evts or list(EVENEMENTS),
             "actif": d.get("actif", True) is not False,
         })
@@ -169,11 +169,11 @@ SERVICES = ("discord", "slack", "telegram", "ntfy", "gotify", "webhook")
 
 
 def envoyer(evenement, titre, texte="", niveau="info", cfg=None, attendre=False):
-    """Previent les destinations abonnees a cet evenement.
+    """Tell the destinations subscribed to this event.
 
-    Rend le nombre de destinations sollicitees. L'envoi est asynchrone par
-    defaut : une tache ne doit pas attendre un serveur distant pour se terminer.
-    `attendre=True` sert au bouton « Tester » et aux tests, ou l'on veut savoir.
+    Returns how many destinations were contacted. Sending is asynchronous by
+    default: a task must not wait on a remote server to finish. `attendre=True`
+    is for the "Test" button and for tests, where we want to know.
     """
     cibles = [d for d in destinations(cfg)
               if d["actif"] and evenement in d["evenements"]]
@@ -190,9 +190,9 @@ def envoyer(evenement, titre, texte="", niveau="info", cfg=None, attendre=False)
 
 def _tenter(cible, donnees, entetes):
     reussi, raison = _poster(cible["url"], donnees, entetes)
-    # L'ADRESSE n'est jamais journalisee : un webhook Discord est un secret —
-    # qui l'a peut ecrire dans le salon. Le nom donne par l'utilisateur suffit
-    # a savoir laquelle a echoue.
+    # The ADDRESS is never logged: a Discord webhook is a secret — whoever
+    # holds it can post in the channel. The name the user gave is enough to
+    # know which one failed.
     nom = cible["nom"] or cible["service"]
     if reussi:
         console.evenement("Notification envoyee a %s" % nom, "debug", "notifs")
@@ -203,7 +203,7 @@ def _tenter(cible, donnees, entetes):
 
 
 def tester(url, service=None):
-    """Envoi d'essai vers UNE adresse, sans l'enregistrer. Rend (ok, raison)."""
+    """A trial send to ONE address, without saving it. Returns (ok, reason)."""
     service = service if service in SERVICES else deviner(url)
     donnees, entetes = _corps(
         service, "Romule", "Test notification — if you can read this, it works.",

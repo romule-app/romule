@@ -1,22 +1,22 @@
-"""Sorties reseau : un seul point de passage, et un seul controle.
+"""Outbound network: one way through, and one check.
 
-`urllib.request.urlopen` n'ouvre pas que du HTTP. Il accepte `file://`, `ftp://`
-et tout ce que les gestionnaires installes savent traiter. Or trois adresses
-utilisees par Romule viennent de la CONFIGURATION :
+`urllib.request.urlopen` does not only open HTTP. It accepts `file://`,
+`ftp://` and whatever the installed handlers know how to process. And three of
+the addresses Romule uses come from its CONFIGURATION:
 
-    cover_url      la source des jaquettes
-    versions_urls  les miroirs de la base titledb
-    oidc_issuer    l'emetteur d'identite
+    cover_url      where cover art comes from
+    versions_urls  the titledb mirrors
+    oidc_issuer    the identity provider
 
-Un `file:///etc/passwd` dans le champ des jaquettes faisait donc lire un
-fichier local au serveur, qui le renvoyait ensuite comme une image. Il faut
-etre administrateur pour poser ces champs, ce qui limite la portee — mais un
-administrateur n'a pas a pouvoir transformer le service en lecteur de fichiers
-par un champ de reglage, et une installation ou l'authentification est eteinte
-n'a justement pas d'administrateur distinct.
+A `file:///etc/passwd` in the cover-art field therefore made the server read a
+local file and hand it back as an image. Setting those fields requires
+administrator rights, which limits the reach — but an administrator has no
+business being able to turn the service into a file reader through a settings
+field, and an installation with authentication switched off has no distinct
+administrator in the first place.
 
-Le controle est ici, dans le seul chemin par lequel toutes les sorties passent,
-plutot que repete a neuf endroits ou l'un finirait par etre oublie.
+The check lives here, on the one path every outbound call goes through, rather
+than repeated in nine places where one would eventually be forgotten.
 """
 
 import urllib.error
@@ -27,11 +27,11 @@ SCHEMAS = ("http", "https")
 
 
 class SchemaRefuse(ValueError):
-    """Adresse dont le schema n'est pas autorise."""
+    """An address whose scheme is not allowed."""
 
 
 def verifier(url):
-    """Rend l'URL si elle est acceptable, leve `SchemaRefuse` sinon."""
+    """Return the URL if it is acceptable, raise `SchemaRefuse` otherwise."""
     schema = urllib.parse.urlparse(str(url or "")).scheme.lower()
     if schema not in SCHEMAS:
         raise SchemaRefuse(
@@ -41,19 +41,18 @@ def verifier(url):
 
 
 def ouvrir(cible, timeout=30):
-    """`urlopen`, mais seulement en http(s).
+    """`urlopen`, but http(s) only.
 
-    Accepte une chaine ou une `Request`, comme `urlopen`, pour pouvoir se
-    substituer aux appels existants sans les reecrire.
+    Accepts a string or a `Request`, like `urlopen`, so it can stand in for
+    existing calls without rewriting them.
     """
     url = cible.full_url if isinstance(cible, urllib.request.Request) else cible
     verifier(url)
-    # C'est LE seul `urlopen` du code livre, et le schema vient d'etre verifie
-    # deux lignes plus haut. Les marques portent leur raison : les outils ne
-    # peuvent pas voir cette verification, et une marque sans motif se recopie
-    # ensuite partout.
-    # Le motif est ecrit AU-DESSUS, jamais a la suite de la marque : bandit lit
-    # ce qui suit celle-ci comme une liste d'identifiants de regle, et une
-    # phrase y devient une suite de faux noms de test. (Ce commentaire evite
-    # pour la meme raison d'ecrire la marque en toutes lettres.)
+    # This is THE only `urlopen` in the shipped code, and the scheme was checked
+    # two lines above. The suppression markers carry their reason: tools cannot
+    # see that check, and a marker without a motive gets copied everywhere else.
+    # The reason is written ABOVE, never after the marker: bandit reads whatever
+    # follows it as a list of rule identifiers, and a sentence there becomes a
+    # string of fake test names. (This comment avoids spelling the marker out
+    # for the same reason.)
     return urllib.request.urlopen(cible, timeout=timeout)  # nosec B310  # noqa: S310
