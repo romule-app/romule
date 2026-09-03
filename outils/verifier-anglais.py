@@ -1,35 +1,35 @@
 #!/usr/bin/env python3
-"""Reste-t-il du francais dans les commentaires et les docstrings ?
+"""Is there any French left in the comments and the docstrings?
 
-Le code de Romule passe en anglais : le depot est public, sous AGPL, avec un
-README, une documentation et une interface en anglais. Des commentaires en
-francais protegeaient une coherence interne au prix de la seule chose qui
-compte pour un projet ouvert — qu'on puisse y entrer.
+Romule's code is moving to English: the repository is public, under the AGPL,
+with an English README, documentation and interface. French comments protected an
+internal consistency at the price of the only thing that matters for an open
+project — that one can get in.
 
-Sans ce controle, la traduction se re-degrade au premier commentaire ecrit par
-reflexe, et personne ne s'en apercoit avant qu'il y en ait cent.
+Without this check, the translation degrades again at the first comment written
+by reflex, and nobody notices until there are a hundred.
 
-Ce qu'il regarde, et ce qu'il ne regarde PAS
---------------------------------------------
-Uniquement la PROSE : commentaires `#`, docstrings, commentaires `//` et `/* */`.
+What it looks at, and what it does NOT
+--------------------------------------
+Only PROSE: `#` comments, docstrings, `//` and `/* */` comments.
 
-Le francais reste legitime ailleurs, et le confondre avec un oubli ferait
-signaler des lignes parfaitement justes :
+French stays legitimate elsewhere, and confusing it with an oversight would
+report perfectly correct lines:
 
-  * `romule/locales/fr.json` EST le catalogue de traduction — ses cles sont des
-    phrases francaises, c'est le mecanisme, pas un style ;
-  * les cles de configuration (`emulateur`, `systemes_perso`) sont ecrites sur
-    le disque de chaque installation et ne se renomment pas ;
-  * les chaines d'interface de `app.js` sont les cles de ce meme catalogue.
+  * `romule/locales/fr.json` IS the translation catalogue — its keys are French
+    sentences, that is the mechanism, not a style;
+  * the configuration keys (`emulateur`, `systemes_perso`) are written on every
+    installation's disk and are not renamed;
+  * `app.js`'s interface strings are the keys of that same catalogue.
 
-Une ligne peut porter `anglais:ok` quand elle CITE du francais a dessein — par
-exemple pour expliquer une cle de catalogue. La marque demande une raison a
-cote, comme `i18n:ok` et `fuite:ok` ailleurs dans le projet.
+A line may carry `anglais:ok` when it deliberately QUOTES French — to explain a
+catalogue key, for instance. The marker asks for a reason beside it, like
+`i18n:ok` and `fuite:ok` elsewhere in the project.
 
-Elle couvre le BLOC entier, pas la ligne seule. Une citation deborde souvent
-sur deux lignes — « Kirby et le Labyrinthe des Miroirs » ne tient pas sur
-celle qui porterait la marque — et exiger une marque par ligne pousserait a
-tordre la phrase pour plaire a l'outil, ce qui est le contraire du but.
+It covers the whole BLOCK, not the line alone. A quotation often spills over two
+lines — "Kirby et le Labyrinthe des Miroirs" does not fit on the one that would
+carry the marker — and demanding one marker per line would push towards twisting
+the sentence to please the tool, which is the opposite of the point.
 """
 import re
 import sys
@@ -37,10 +37,10 @@ from pathlib import Path
 
 RACINE = Path(__file__).resolve().parent.parent
 
-# Mots-outils francais SANS ambiguite avec l'anglais. Les faux amis sont
-# volontairement absents : « car », « on », « a », « an », « son », « plus »,
-# « la », « no », « pain », « comment » sont des mots anglais, et les inclure
-# ferait signaler de la prose anglaise irreprochable.
+# French function words with NO ambiguity against English. The false friends are
+# deliberately absent: "car", "on", "a", "an", "son", "plus", "la", "no", "pain",
+# "comment" are English words, and including them would report irreproachable
+# English prose.
 MARQUEURS = {
     "le", "les", "du", "des", "une", "qui", "que", "quoi", "pour", "pas",
     "est", "sont", "etait", "dans", "avec", "mais", "donc", "quand", "cette",
@@ -57,25 +57,24 @@ MARQUEURS = {
     "n'a", "n'y", "y a",
 }
 
-# Elisions : `l'interface`, `d'acces`, `qu'un`. Deux lettres au plus avant
-# l'apostrophe, ce qui exclut l'anglais possessif (`user's`, `Romule's`).
+# Elisions: `l'interface`, `d'acces`, `qu'un`. Two letters at most before the
+# apostrophe, which excludes the English possessive (`user's`, `Romule's`).
 ELISION = re.compile(r"\b(?:[ldjmtscn]|qu|jusqu|lorsqu|puisqu)'[a-zA-Zàâéèêëîïôûùç]", re.I)
 
 MOT = re.compile(r"[a-zàâäéèêëîïôöûùüç'-]+", re.I)
 
-# Ce qui est entre accents graves est du CODE cite, pas de la prose. Sans cette
-# coupe, `_est_admin()` et `_qui()` faisaient signaler des phrases anglaises
-# irreprochables — « est » et « qui » sont des marqueurs francais, mais ici ce
-# sont des morceaux de noms de fonctions. La solution alternative — semer des
-# marques `anglais:ok` sur chaque ligne qui cite un identifiant — aurait rendu
-# le detecteur insupportable, donc desactive.
+# What sits between backticks is quoted CODE, not prose. Without this cut,
+# `_est_admin()` and `_qui()` made irreproachable English sentences get reported —
+# "est" and "qui" are French markers, but here they are pieces of function names.
+# The alternative — scattering `anglais:ok` markers on every line that quotes an
+# identifier — would have made the detector unbearable, and therefore disabled.
 _CODE = re.compile(r"`[^`]*`")
 
 MUETTES = {".git", "node_modules", "__pycache__", "site", "locales"}
 
 
 def francais(texte):
-    """Les marqueurs francais trouves dans ce texte, ou un ensemble vide."""
+    """The French markers found in this text, or an empty set."""
     prose = _CODE.sub(" ", texte)
     mots = {m.lower() for m in MOT.findall(prose)}
     trouves = mots & MARQUEURS
@@ -85,11 +84,11 @@ def francais(texte):
 
 
 def blocs(lignes):
-    """Regroupe des (numero, texte) voisins, et ecarte ceux qui sont marques.
+    """Groups neighbouring (number, text) pairs, and sets aside the marked ones.
 
-    La marque `anglais:ok` couvre le bloc entier : une citation francaise dans
-    de la prose anglaise s'etale sur plusieurs lignes, et la marque ne tient
-    que sur l'une d'elles.
+    The `anglais:ok` marker covers the whole block: a French quotation inside
+    English prose spreads over several lines, and the marker only sits on one of
+    them.
     """
     groupes, courant = [], []
     for num, texte in lignes:
@@ -107,7 +106,7 @@ def blocs(lignes):
 
 
 def prose_python(source):
-    """Les (numero de ligne, texte) des commentaires et docstrings."""
+    """The (line number, text) pairs of the comments and docstrings."""
     lignes = source.splitlines()
     sorties, dans_doc, delim = [], False, ""
     for i, ligne in enumerate(lignes, 1):
@@ -117,8 +116,8 @@ def prose_python(source):
             if delim in nu:
                 dans_doc = False
             continue
-        # Un `#` a l'interieur d'une chaine n'est pas un commentaire. On coupe
-        # donc sur le premier `#` qui n'est precede d'aucun guillemet impair.
+        # A `#` inside a string is not a comment. So we cut on the first `#`
+        # that is not preceded by an odd number of quotes.
         if "#" in ligne:
             avant = ligne.split("#", 1)[0]
             if avant.count('"') % 2 == 0 and avant.count("'") % 2 == 0:
@@ -166,55 +165,55 @@ def move_to_trash(path):
     return path
 '''
 
-# De l'anglais qui PARLE du francais : la marque doit le laisser passer.
+# English that TALKS ABOUT French: the marker must let it through.
 CITATION_PY = '''# `fr.json` holds keys like "Aucune destination" -- anglais:ok, quoted key
 NAME = "x"
 '''
 
 
-# La meme citation, etalee sur deux lignes : la marque est sur la premiere et
-# doit couvrir la seconde.
+# The same quotation, spread over two lines: the marker sits on the first and
+# must cover the second.
 CITATION_LONGUE_PY = '''# The English title is the pivot -- anglais:ok, quoting a
 # French title: "Kirby et le Labyrinthe des Miroirs".
 NAME = "x"
 '''
 
 
-# Un identifiant francais cite dans une phrase anglaise : `_est_admin` porte
-# « est », `_qui` porte « qui ». Ce sont des noms, pas de la prose.
+# A French identifier quoted in an English sentence: `_est_admin` carries
+# "est", `_qui` carries "qui". Those are names, not prose.
 IDENTIFIANT_PY = '''# `_est_admin()` answers the role question, and `_qui()` does not.
 NAME = "x"
 '''
 
 
 def epreuve():
-    """Le detecteur voit-il le francais, et se tait-il sur l'anglais ?
+    """Does the detector see French, and keep quiet about English?
 
-    Les trois cas comptent autant. Un detecteur qui signale de l'anglais
-    correct serait desactive en une semaine, et il ne resterait rien.
+    All three cases matter equally. A detector that reports correct English
+    would be switched off within a week, and nothing would be left.
     """
     if any(francais(t) for _, t in prose_python(BON_PY)):
-        print("   EPREUVE ECHOUEE : de l'anglais correct est signale")
+        print("   SELF-TEST FAILED: correct English is reported")
         return False
     if not any(francais(t) for _, t in prose_python(MAUVAIS_PY)):
-        print("   EPREUVE ECHOUEE : du francais evident passe")
+        print("   SELF-TEST FAILED: obvious French gets through")
         return False
     if any(francais(t) for _, t in blocs(prose_python(CITATION_PY))):
-        print("   EPREUVE ECHOUEE : la marque `anglais:ok` ne protege pas")
+        print("   SELF-TEST FAILED: the `anglais:ok` marker does not protect")
         return False
-    # La marque doit couvrir le bloc, pas seulement sa propre ligne : une
-    # citation francaise deborde presque toujours sur la ligne suivante.
+    # The marker must cover the block, not only its own line: a French
+    # quotation almost always spills over onto the next line.
     if any(francais(t) for _, t in blocs(prose_python(CITATION_LONGUE_PY))):
-        print("   EPREUVE ECHOUEE : la marque ne couvre pas le bloc entier")
+        print("   SELF-TEST FAILED: the marker does not cover the whole block")
         return False
     if not any(francais(t) for _, t in blocs(prose_python(MAUVAIS_PY))):
-        print("   EPREUVE ECHOUEE : le regroupement en blocs laisse passer")
+        print("   SELF-TEST FAILED: grouping into blocks lets French through")
         return False
-    # Un nom de fonction francais dans une phrase anglaise n'est pas du
-    # francais : c'est un identifiant, et il sera traduit par la phase des
-    # identifiants, pas par celle de la prose.
+    # A French function name inside an English sentence is not French: it is an
+    # identifier, and it will be translated by the identifier phase, not by the
+    # prose one.
     if any(francais(t) for _, t in blocs(prose_python(IDENTIFIANT_PY))):
-        print("   EPREUVE ECHOUEE : un identifiant entre accents graves est signale")
+        print("   SELF-TEST FAILED: an identifier between backticks is reported")
         return False
     return True
 
@@ -225,7 +224,7 @@ def fichiers():
         for p in sorted(RACINE.rglob(motif)):
             if any(part in MUETTES for part in p.parts):
                 continue
-            if p.name == "verifier-anglais.py":       # il cite ce qu'il cherche
+            if p.name == "verifier-anglais.py":       # it quotes what it looks for
                 continue
             yield p, extracteur
 
@@ -250,9 +249,9 @@ def main(argv):
                 rel = p.relative_to(RACINE)
                 print("   %s:%d  %s" % (rel, num, " ".join(texte.split())[:88]))
     if total > montres:
-        print("   ... et %d autres (`--tout` pour la liste complete)"
+        print("   ... and %d more (`--tout` for the full list)"
               % (total - montres))
-    print("   %d ligne(s) de prose encore en francais." % total)
+    print("   %d line(s) of prose still in French." % total)
     return 1 if total else 0
 
 
