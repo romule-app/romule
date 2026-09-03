@@ -1,8 +1,8 @@
-"""IGDB : plomberie verifiee contre un faux fournisseur.
+"""IGDB: plumbing checked against a fake provider.
 
-Sans identifiants Twitch reels, c'est la seule facon de garantir que le jeton
-est renouvele au bon moment, qu'un echec n'est pas rejoue en boucle, et que
-l'absence de configuration ne declenche aucun appel reseau.
+Without real Twitch credentials, this is the only way to guarantee that the token
+is renewed at the right moment, that a failure is not replayed in a loop, and
+that the absence of configuration triggers no network call.
 """
 import json
 import os
@@ -19,12 +19,12 @@ os.environ.setdefault("ROMULE_ROOT", tempfile.mkdtemp())
 sys.path.insert(0, str(ICI.parent.parent))
 
 def _port_libre(variable):
-    """Un port qu'on demande au systeme, plutot qu'un numero fige.
+    """A port asked of the system, rather than a frozen number.
 
-    Un port fixe finit par rencontrer un serveur laisse par une execution
-    precedente, ou n'importe quoi d'autre sur la machine : le test s'adresse
-    alors a CE service-la, et rend un resultat qui ne parle pas du code qu'on
-    vient d'ecrire. La variable reste acceptee pour qui veut fixer.
+    A fixed port eventually meets a server left by an earlier run, or anything
+    else on the machine: the test then talks to THAT service, and returns a
+    result that says nothing about the code just written. The variable is still
+    accepted for whoever wants to pin it.
     """
     fixe = os.environ.get(variable)
     if fixe:
@@ -86,11 +86,11 @@ def main():
         igdb.chercher("titre introuvable zzz", cfg)
         t("echec non rejoue", len(compteurs()["requetes"]) == n)
 
-        # --- La jaquette IGDB (repli quand SteamGridDB n'a rien) ------------
+        # --- The IGDB cover (the fallback when SteamGridDB has nothing) -----
         #
-        # Chaque controle est double : ce que le repli doit RENDRE, et ce
-        # qu'il doit REFUSER. Un repli qui accepte tout rendrait des jaquettes
-        # de jeux sans rapport, ce qui est pire qu'une pochette vide.
+        # Every check is double: what the fallback must RETURN, and what it must
+        # REFUSE. A fallback that accepts everything would return covers of
+        # unrelated games, which is worse than an empty sleeve.
         u = igdb.jaquette("Chrono Trigger", cfg)
         t("jaquette : adresse construite depuis l'image_id",
           u == "https://images.igdb.com/igdb/image/upload/t_cover_big_2x/co-test.jpg", u)
@@ -112,8 +112,8 @@ def main():
           len(compteurs()["requetes"]) == n2)
 
         r = igdb.tester(cfg)
-        # La doublure renvoie desormais le titre CHERCHE : c'est ce que fait le
-        # vrai IGDB, et c'est ce que le filtre anti-hack exige.
+        # The double now returns the title SEARCHED FOR: that is what the real
+        # IGDB does, and what the anti-mismatch filter requires.
         t("test des identifiants",
           r["jeton"] and r["exemple"] == "The Legend of Zelda", r)
     finally:

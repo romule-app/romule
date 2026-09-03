@@ -1,8 +1,8 @@
-"""Journal du terminal : ce qui sort, et surtout ce qui ne sort pas.
+"""The terminal log: what comes out, and above all what does not.
 
-Un style de journalisation se juge a ses DEUX bords. Qu'il montre ce qu'on lui
-demande est la moitie facile ; qu'il taise le reste est ce qui rend un journal
-lisible. Chaque controle ici verifie les deux.
+A logging style is judged on BOTH its edges. That it shows what it is asked for
+is the easy half; that it keeps quiet about the rest is what makes a log
+readable. Every check here verifies both.
 """
 import io
 import json
@@ -29,7 +29,7 @@ def t(nom, cond, detail=""):
 
 
 def sortie(style, faire, no_color="1"):
-    """Ce que `faire()` ecrit sur la sortie standard, sous ce style."""
+    """What `faire()` writes to standard output, under this style."""
     from romule import console
     avant = dict(os.environ)
     os.environ["ROMULE_LOG"] = style
@@ -54,7 +54,7 @@ def main():
 
     tout = lambda c: [c.evenement(n, n) for n in console.NIVEAUX]  # noqa: E731
 
-    # --- les seuils, dans les deux sens ---------------------------------
+    # --- the thresholds, in both directions -----------------------------
     s = sortie("quiet", tout)
     t("quiet ne montre que les erreurs",
       "error" in s and "warn" not in s and "info" not in s, repr(s))
@@ -66,21 +66,21 @@ def main():
 
     s = sortie("verbose", tout)
     t("verbose montre info", "info" in s, repr(s))
-    # Le point qui compte : l'interface interroge /api/job en boucle et ces
-    # requetes sont journalisees en `debug`. Un verbose qui les montrerait
-    # noierait ce qu'on est venu lire.
+    # The point that matters: the interface polls /api/job in a loop and those
+    # requests are logged at `debug`. A verbose level that showed them would
+    # drown what you came to read.
     t("verbose tait DEBUG — sinon les requetes noient les taches",
       "debug" not in s, repr(s))
 
     s = sortie("debug", tout)
     t("debug montre tout", all(n in s for n in console.NIVEAUX), repr(s))
 
-    # --- le style debug porte ce qu'il faut pour situer une ligne --------
+    # --- the debug style carries what it takes to place a line -----------
     s = sortie("debug", lambda c: c.evenement("essai", "info", "moncar"))
     t("debug nomme le module", "moncar" in s, repr(s))
     import re as _re
-    # « 12.34s » : l'age du service depuis son demarrage. Ecrit tel quel, le
-    # controle passait sur n'importe quelle chaine contenant un « s ».
+    # "12.34s": the service's age since it started. Written as it stood, the
+    # check passed on any string holding an "s".
     t("debug donne l'age du service",
       bool(_re.search(r"\d+\.\d\ds", s)), repr(s))
     t("debug nomme le fil d'execution",
@@ -100,13 +100,13 @@ def main():
       and d.get("module") == "mod" and d.get("n") == 3, d)
     t("json n'ecrit aucune couleur", "\033" not in s, repr(s))
 
-    # --- le bandeau -------------------------------------------------------
+    # --- the banner -------------------------------------------------------
     faits = [("Version", "0.3.0"), ("Vide", ""), ("Ludotheque", "/jeux")]
     s = sortie("normal", lambda c: c.banniere(faits))
     t("le bandeau nomme le service", "ROMULE" in s or "██" in s, repr(s[:80]))
     t("le bandeau montre les faits renseignes",
       "0.3.0" in s and "/jeux" in s, repr(s))
-    # Une ligne « Console : » suivie de rien apprend moins que son absence.
+    # A "Console:" line followed by nothing teaches less than its absence.
     t("le bandeau tait les faits vides", "Vide" not in s, repr(s))
     t("quiet n'affiche aucun bandeau", sortie("quiet", lambda c: c.banniere(faits)) == "")
     s = sortie("json", lambda c: c.banniere(faits))
@@ -116,12 +116,12 @@ def main():
     # --- la couleur --------------------------------------------------------
     s = sortie("normal", lambda c: c.evenement("x", "error"), no_color="1")
     t("NO_COLOR eteint la couleur", "\033" not in s, repr(s))
-    # Hors terminal, la couleur remplirait un fichier de sequences
-    # d'echappement. `redirect_stdout` vers un StringIO est justement ce cas.
+    # Outside a terminal, colour would fill a file with escape sequences.
+    # `redirect_stdout` into a StringIO is precisely that case.
     s = sortie("normal", lambda c: c.evenement("x", "error"), no_color=None)
     t("hors terminal, pas de couleur non plus", "\033" not in s, repr(s))
 
-    # --- ne jamais tuer le service -----------------------------------------
+    # --- never kill the service --------------------------------------------
     avant = dict(os.environ)
     os.environ["ROMULE_LOG"] = "debug"
     console.relire()
