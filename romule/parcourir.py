@@ -1,32 +1,32 @@
-"""Navigation dans les dossiers de la machine qui heberge le service.
+"""Browsing the folders of the machine hosting the service.
 
-Pourquoi ce module existe : jusqu'ici le dossier des jeux ne pouvait etre
-designe que par une variable d'environnement. Sur un NAS, cela veut dire
-ouvrir un terminal, editer un fichier compose et redemarrer un conteneur —
-pour une information que l'interface est le seul endroit naturel ou saisir.
+Why this module exists: until now the games folder could only be named through
+an environment variable. On a NAS that means opening a terminal, editing a
+compose file and restarting a container — for a piece of information the
+interface is the only natural place to type.
 
-Un navigateur de fichiers dans un service reseau est une primitive sensible :
-il revele l'arborescence de la machine. Trois choses le tiennent.
+A file browser inside a network service is a sensitive primitive: it reveals
+the machine's directory tree. Three things hold it.
 
-1. Il est reserve a l'administrateur (`RESERVE_ADMIN` dans server.py).
-2. Il ne liste que des DOSSIERS. Le contenu des fichiers, leurs noms meme, ne
-   sortent pas d'ici — seul un comptage des jeux reconnus est renvoye, parce
-   que c'est ce qui permet a l'utilisateur de reconnaitre sa ludotheque.
-3. `ROMULE_BASES` permet de confiner la navigation a une liste de dossiers.
+1. It is administrator-only (`RESERVE_ADMIN` in server.py).
+2. It lists FOLDERS and nothing else. File contents, and even file names, do
+   not leave here — only a count of recognised games is returned, because that
+   is what lets the user recognise their library.
+3. `ROMULE_BASES` can confine browsing to a list of folders.
 
-Ce dernier point demande une explication, parce que le defaut peut surprendre :
-`ROMULE_BASES` n'est PAS posee par defaut. C'est le choix que font Jellyfin,
-Sonarr ou qBittorrent, et il n'est pas un relachement — c'est la reconnaissance
-de qui tient reellement la frontiere :
+That last point needs explaining, because the default may surprise:
+`ROMULE_BASES` is NOT set by default. It is the choice Jellyfin, Sonarr and
+qBittorrent make, and it is not a relaxation — it is an acknowledgement of who
+really holds the boundary:
 
-  * en conteneur, le processus ne voit que ce qui est monte. Le `volumes:` du
-    fichier compose EST la liste blanche, et elle est appliquee par le noyau
-    plutot que par du code applicatif ;
-  * en natif, la frontiere est le compte Unix qui fait tourner le service.
+  * in a container, the process only sees what is mounted. The compose file's
+    `volumes:` IS the allow-list, and it is enforced by the kernel rather than
+    by application code;
+  * natively, the boundary is the Unix account running the service.
 
-Une liste blanche applicative par-dessus donnerait surtout l'illusion d'une
-protection. `ROMULE_BASES` reste disponible pour qui installe en natif sous un
-compte large et veut se restreindre malgre tout.
+An application-level allow-list on top would mostly give the illusion of a
+protection. `ROMULE_BASES` stays available for anyone installing natively under
+a broad account who wants to restrict themselves anyway.
 """
 
 import os
@@ -34,23 +34,23 @@ from pathlib import Path
 
 from . import config, systems
 
-# `BASES` et le controle d'appartenance vivent dans `config` : la meme regle
-# doit valoir pour ce qu'on PARCOURT et pour ce qu'on CHOISIT.
+# `BASES` and the membership check live in `config`: the same rule must hold
+# for what we BROWSE and for what we CHOOSE.
 BASES = config.BASES
 autorise = config.dans_les_bases
 
-# Plafonds du comptage. Un dossier peut contenir un million de fichiers, et
-# l'utilisateur attend une reponse pendant que la fenetre est ouverte.
+# Counting ceilings. A folder may hold a million files, and the user is
+# waiting for an answer while the dialog is open.
 PROFONDEUR = 3
 PLAFOND = 20000
 
 
 def _extensions(cfg=None):
-    """Toutes les extensions reconnues, Switch et plateformes retro.
+    """Every recognised extension, Switch and retro platforms alike.
 
-    `cfg` est passe par l'appelant quand il l'a deja : sans lui,
-    `systems.liste()` relit le fichier de configuration a chaque clic dans la
-    fenetre de navigation.
+    `cfg` is passed by the caller when it already has it: without it,
+    `systems.liste()` re-reads the configuration file on every click in the
+    browsing dialog.
     """
     exts = set(config.EXTS)
     for s in systems.liste(cfg):
@@ -59,11 +59,11 @@ def _extensions(cfg=None):
 
 
 def compter_jeux(dossier, exts=None, cfg=None):
-    """Nombre de fichiers reconnus sous ce dossier, borne en profondeur.
+    """How many recognised files live under this folder, bounded by depth.
 
-    Borne, et pas exact : ce chiffre sert a repondre « oui, c'est bien ma
-    ludotheque », pas a inventorier. Le rendre exact couterait une traversee
-    complete a chaque clic dans la fenetre.
+    Bounded, not exact: this number answers "yes, that is my library", it does
+    not take stock. Making it exact would cost a full traversal on every click
+    in the dialog.
     """
     exts = exts if exts is not None else _extensions(cfg)
     vus = 0
@@ -91,13 +91,13 @@ def compter_jeux(dossier, exts=None, cfg=None):
 
 
 def lister(chemin="", cfg=None):
-    """Sous-dossiers d'un chemin. Renvoie un dict, ou {"error": ...}."""
+    """A path's subfolders. Returns a dict, or {"error": ...}."""
     brut = str(chemin or "").strip()
-    # Point de depart : la ludotheque courante. Mais elle peut se trouver HORS
-    # des bases declarees — c'est meme le cas normal d'un conteneur qui range
-    # ses donnees dans un volume et borne la navigation au montage des jeux.
-    # Sans ce repli, ouvrir la fenetre repondait « chemin hors des dossiers
-    # autorises » a quelqu'un qui n'avait encore rien demande.
+    # Starting point: the current library. But it may sit OUTSIDE the declared
+    # bases — that is even the normal case for a container that keeps its data
+    # in a volume and confines browsing to the games mount. Without this
+    # fallback, opening the dialog answered "path outside the allowed folders"
+    # to someone who had not asked for anything yet.
     depart = config.LUDO
     if not config.dans_les_bases(depart) and config.BASES:
         depart = config.BASES[0]
@@ -107,8 +107,8 @@ def lister(chemin="", cfg=None):
     except OSError as exc:
         return {"error": "chemin illisible : %s" % exc}
     if not autorise(cible):
-        # Volontairement avare : confirmer l'existence d'un chemin hors des
-        # bases serait deja repondre a la question qu'on refuse.
+        # Deliberately stingy: confirming that a path outside the bases
+        # exists would already answer the question we are refusing.
         return {"error": "chemin hors des dossiers autorises"}
     if not cible.is_dir():
         return {"error": "ce dossier n'existe pas"}
@@ -118,8 +118,8 @@ def lister(chemin="", cfg=None):
         with os.scandir(cible) as it:
             for e in it:
                 try:
-                    if not e.is_dir():          # suit les liens : un lien vers
-                        continue                # un dossier reste un dossier
+                    if not e.is_dir():          # follows links: a link to a
+                        continue                # folder is still a folder
                 except OSError:
                     continue
                 p = Path(e.path)
@@ -140,8 +140,8 @@ def lister(chemin="", cfg=None):
     parent = cible.parent
     return {
         "chemin": str(cible),
-        # Pas de parent hors des bases : la fenetre ne doit pas proposer un
-        # bouton qui repondra « refuse ».
+        # No parent outside the bases: the dialog must not offer a button
+        # that will answer "refused".
         "parent": str(parent) if parent != cible and autorise(parent) else "",
         "dossiers": dossiers,
         "ecrivable": os.access(cible, os.W_OK),
@@ -152,7 +152,7 @@ def lister(chemin="", cfg=None):
 
 
 def raccourcis():
-    """Points de depart proposes dans la fenetre."""
+    """The starting points offered in the dialog."""
     vus = set()
     out = []
     for libelle, p in (("Ludothèque actuelle", config.LUDO),
@@ -167,7 +167,7 @@ def raccourcis():
             continue
         vus.add(str(p))
         out.append({"nom": libelle, "chemin": str(p)})
-    # Les bases declarees sont, par definition, les endroits ou aller.
+    # The declared bases are, by definition, the places to go.
     for b in BASES:
         if str(b) not in vus and b.is_dir():
             vus.add(str(b))

@@ -1,13 +1,12 @@
-"""Systemes de jeu geres par l'outil.
+"""The game systems the tool handles.
 
-Le Switch a son moteur dedie (title IDs, nsz, titledb, GAMES/UPDATE/DLC) : il
-reste traite par scan.Library. Les autres systemes utilisent un moteur
-"generique" beaucoup plus simple : un fichier = un jeu, pas de mise a jour ni
-de DLC, jaquette cherchee par nom.
+The Switch has its own engine (title IDs, nsz, titledb, GAMES/UPDATE/DLC) and
+stays with scan.Library. Other systems use a much simpler "generic" engine: one
+file is one game, no updates, no DLC, cover art looked up by name.
 
 Rangement local :
-  - switch    : a la racine de la ludotheque (GAMES/UPDATE/DLC) — historique
-  - les autres: <racine>/<folder>/   (ex. PS2/, Dreamcast/)
+  - switch    : at the library root (GAMES/UPDATE/DLC) — historical
+  - the rest  : <root>/<folder>/   (e.g. PS2/, Dreamcast/)
 
 Rangement console : <roms_root>/<folder>  (ex. .../emulation/ROMs/PS2)
 """
@@ -17,8 +16,8 @@ from pathlib import Path
 
 from . import config
 
-# Extensions courantes par systeme. Volontairement large : mieux vaut proposer
-# que rater un fichier. Les archives sont gerees en amont (_import).
+# Common extensions per system. Deliberately broad: better to offer than to
+# miss a file. Archives are handled upstream (_import).
 SYSTEMS = [
     {"key": "switch",   "name": "Nintendo Switch",  "folder": "Switch",
      "engine": "switch", "exts": [".nsp", ".xci", ".nsz", ".xcz"]},
@@ -68,11 +67,11 @@ SYSTEMS = [
      "engine": "generic", "exts": [".exe", ".zip", ".7z", ".iso"]},
 ]
 
-# Les noms de dossier ne sont pas normalises : chaque frontal (EmulationStation,
-# RetroArch, Daijisho, Pegasus...) a ses habitudes. Un dossier « PS1 » ou
-# « Sega » n'etait rattache a aucune plateforme, donc ses jeux restaient
-# invisibles — 85 titres dans le cas rencontre. On reconnait donc les
-# appellations courantes, sans obliger l'utilisateur a renommer quoi que ce soit.
+# Folder names are not standardised: every front-end (EmulationStation,
+# RetroArch, Daijisho, Pegasus...) has its own habits. A "PS1" or "Sega" folder
+# matched no platform, so its games stayed invisible — 85 titles in the case we
+# hit. So we recognise the common spellings, without asking the user to rename
+# anything.
 ALIAS = {
     "psx": ["ps1", "playstation", "psone", "psxjap"],
     "ps2": ["playstation2"],
@@ -116,14 +115,14 @@ for _cle, _formes in ALIAS.items():
 def plateforme_du_dossier(nom, cfg=None):
     """Cle de plateforme correspondant a un nom de dossier, alias compris.
 
-    Renvoie None si le nom n'evoque rien de connu : mieux vaut demander que
-    ranger un dossier au hasard.
+    Returns None if the name evokes nothing known: better to ask than to file
+    a folder at random.
     """
     n = _normaliser(nom)
     if not n:
         return None
     if cfg:
-        # un dossier explicitement associe par l'utilisateur prime sur tout
+        # a folder the user explicitly mapped wins over everything
         for cle, chemin in (cfg.get("system_dirs") or {}).items():
             if _normaliser(Path(str(chemin)).name) == n:
                 return cle
@@ -137,12 +136,11 @@ SWITCH = BY_KEY["switch"]
 
 
 def liste(cfg=None):
-    """Plateformes connues : celles livrees, plus celles ajoutees par l'utilisateur.
+    """Known platforms: the shipped ones, plus those the user added.
 
-    Toutes les consoles ne sont pas dans la table livree, et certaines rangent
-    leurs jeux d'une facon qu'on ne peut pas deviner. Plutot que d'attendre une
-    mise a jour de l'outil, on laisse en declarer une : un nom, un dossier, des
-    extensions.
+    Not every console is in the shipped table, and some store their games in a
+    way nobody could guess. Rather than waiting for a tool update, one can be
+    declared: a name, a folder, some extensions.
     """
     cfg = cfg or config.load_config()
     out = list(SYSTEMS)
@@ -150,9 +148,9 @@ def liste(cfg=None):
         cle = cle_sure(p.get("key"))
         if not cle or cle in BY_KEY:
             continue
-        # Les extensions partent dans un `find` execute sur la console : une
-        # apostrophe y casserait la mise entre guillemets. On ne garde que des
-        # extensions qui ressemblent a des extensions.
+        # The extensions end up in a `find` run on the console: an apostrophe
+        # there would break the quoting. We only keep extensions that look like
+        # extensions.
         exts = [x for x in (extension_sure(e) for e in (p.get("exts") or [])) if x]
         out.append({"key": cle, "name": p.get("name") or cle,
                     "folder": dossier_sur(p.get("folder"), cle),
@@ -161,44 +159,43 @@ def liste(cfg=None):
     return out
 
 
-# Un nom de dossier venu de la configuration finit en `config.LUDO / folder`,
-# et l'outil DEPLACE des fichiers dedans. « ../.. » y suffisait donc a ranger
-# des ROMs n'importe ou sur la machine hote. On n'accepte qu'un nom simple.
+# A folder name coming from the configuration ends up as `config.LUDO / folder`
+# and the tool MOVES files into it. "../.." was therefore enough to file ROMs
+# anywhere on the host. Only a plain name is accepted.
 _NOM_DOSSIER = re.compile(r"^[^/\\:\x00]{1,64}$")
 
 
 def dossier_sur(nom, defaut):
-    """Nom de dossier utilisable, ou `defaut` si celui propose ne l'est pas."""
+    """A usable folder name, or `defaut` when the proposed one is not."""
     nom = str(nom or "").strip()
     if not nom or nom in (".", "..") or not _NOM_DOSSIER.match(nom):
         return defaut
     return nom
 
 
-# Le tiret bas est garde : il est sans danger dans un chemin comme dans une
-# chaine JavaScript, et le retirer renommerait des cles deja en place.
+# The underscore is kept: harmless in a path as in a JavaScript string, and
+# removing it would rename keys already in place.
 _CLE_INTERDITE = re.compile(r"[^a-z0-9_]+")
 
 
 def cle_sure(k):
-    """Cle de plateforme utilisable, ou "" si rien d'exploitable n'en reste.
+    """A usable platform key, or "" if nothing usable is left of it.
 
-    Le nom et le dossier passaient par un filtre, la cle non — elle se
-    contentait d'un `strip().lower()`, qui ne retire ni apostrophe, ni barre
-    oblique, ni chevron. Or cette cle sert d'identifiant partout : index des
-    plateformes, `system_dirs`, et jusque dans les gestionnaires de
-    l'interface.
+    The name and the folder went through a filter, the key did not — it made do
+    with a `strip().lower()`, which removes neither apostrophe, nor slash, nor
+    angle bracket. Yet that key is the identifier everywhere: the platform
+    index, `system_dirs`, and right into the interface's handlers.
 
-    On NORMALISE plutot que de rejeter : refuser ferait disparaitre en silence
-    une plateforme que quelqu'un avait deja declaree, et une plateforme perdue
-    est une ludotheque qu'on ne retrouve plus.
+    We NORMALISE rather than reject: refusing would silently make a platform
+    someone had already declared disappear, and a lost platform is a library
+    you cannot find again.
     """
     k = _CLE_INTERDITE.sub("-", str(k or "").strip().lower()).strip("-_")
     return k[:32]
 
 
 def extension_sure(e):
-    """Extension utilisable : elle finit dans des commandes distantes."""
+    """A usable extension: it ends up inside remote commands."""
     e = str(e or "").strip().lower()
     if not e:
         return ""
@@ -207,11 +204,11 @@ def extension_sure(e):
 
 
 def assainir_perso(entrees):
-    """Nettoie les plateformes ajoutees a la main, avant de les enregistrer.
+    """Clean hand-added platforms before storing them.
 
-    Meme travail que `liste()` fait a la lecture, applique cette fois a
-    l'ecriture. Deux controles valent mieux qu'un quand le champ vient d'une
-    requete HTTP et finit dans un chemin de fichier ou une commande distante.
+    The same work `liste()` does on read, applied here on write. Two checks
+    beat one when the field comes from an HTTP request and ends up in a file
+    path or a remote command.
     """
     propres = []
     for p in (entrees or []):
@@ -229,13 +226,13 @@ def assainir_perso(entrees):
 
 
 def get_cfg(key, cfg=None):
-    """Comme get(), mais connait aussi les plateformes ajoutees a la main."""
+    """Like get(), but also knows the hand-added platforms."""
     for s in liste(cfg):
         if s["key"] == (key or "switch"):
             return s
     return SWITCH
 
-# Nettoyage des noms : (USA), [!], (v1.0.3), tags de scene...
+# Name cleanup: (USA), [!], (v1.0.3), scene tags...
 _CLEAN = re.compile(r"\s*[\(\[][^)\]]*[\)\]]")
 
 
@@ -249,29 +246,29 @@ def pretty_name(filename):
 
 
 def local_dir(sys_key, cfg=None):
-    """Dossier local d'un systeme (le Switch reste a la racine, historique).
+    """A system's local folder (the Switch stays at the root, historically).
 
-    `cfg` permet de trouver aussi les plateformes ajoutees a la main : sans lui,
-    une ROM d'une plateforme perso n'avait nulle part ou aller.
+    `cfg` also finds hand-added platforms: without it, a ROM from a custom
+    platform had nowhere to go.
     """
     s = get_cfg(sys_key, cfg) if cfg else get(sys_key)
     if s["engine"] == "switch":
         return config.LUDO
     chemin = (config.LUDO / s["folder"]).resolve()
-    # Ceinture ET bretelles : meme si un nom passait le filtre, le chemin
-    # construit ne doit jamais sortir de la ludotheque.
+    # Belt AND braces: even if a name slipped through the filter, the path we
+    # build must never leave the library.
     if not str(chemin).startswith(str(config.LUDO.resolve())):
         raise ValueError("Dossier hors de la ludotheque : %s" % s["folder"])
     return chemin
 
 
 def device_dir(sys_key, cfg):
-    """Dossier de ce systeme sur la console.
+    """This system's folder on the console.
 
-    Par defaut <racine>/<Folder>, mais chaque plateforme peut avoir son propre
-    nom de dossier : les consoles ne s'accordent pas toutes sur « SNES » plutot
-    que « Super Nintendo ». Le reglage vit dans `system_dirs`, et evite d'avoir
-    un chemin a saisir pour chacune.
+    <root>/<Folder> by default, but each platform may have its own
+    folder name: consoles do not all agree on "SNES" rather than
+    "Super Nintendo". The setting lives in `system_dirs`, and saves having to
+    type a path for each of them.
     """
     s = get_cfg(sys_key, cfg)
     if s["engine"] == "switch":
@@ -280,9 +277,9 @@ def device_dir(sys_key, cfg):
     if not root:
         return ""
     perso = (cfg.get("system_dirs") or {}).get(sys_key, "").strip()
-    # Un chemin absolu prime : les consoles ne rangent pas toutes leurs ROMs sous
-    # une meme racine, et certaines nomment les dossiers autrement (« PS1 » plutot
-    # que « PSX », « Sega » plutot que « MegaDrive »).
+    # An absolute path wins: consoles do not all keep their ROMs under one
+    # root, and some name the folders differently ("PS1" rather than "PSX",
+    # "Sega" rather than "MegaDrive").
     if perso.startswith("/"):
         return perso.rstrip("/")
     if perso:
@@ -290,10 +287,10 @@ def device_dir(sys_key, cfg):
     return root + "/" + _dossier_reel(sys_key, s["folder"])
 
 
-# Noms de dossiers reellement vus sous la racine des ROMs, memorises lors de la
-# derniere lecture de la console. `device_dir` s'en sert pour retrouver un
-# dossier qui ne porte pas le nom attendu — « PS1 » pour PSX, « Sega » pour la
-# Mega Drive. Sans cela les jeux existent, mais l'outil regarde ailleurs.
+# Folder names actually seen under the ROMs root, remembered from the last read
+# of the console. `device_dir` uses them to find a folder that does not carry
+# the expected name — "PS1" for PSX, "Sega" for the Mega Drive. Without this the
+# games exist, but the tool looks elsewhere.
 _DOSSIERS_REELS = []
 
 
@@ -307,15 +304,15 @@ def _dossier_reel(sys_key, defaut):
         return defaut
     reels = {_normaliser(n): n for n in _DOSSIERS_REELS}
     if _normaliser(defaut) in reels:
-        return reels[_normaliser(defaut)]     # le nom attendu existe : rien a faire
+        return reels[_normaliser(defaut)]     # the expected name exists: nothing to do
     for norme, nom in sorted(reels.items()):
         if _INDEX_ALIAS.get(norme) == sys_key:
-            return nom                        # un alias connu pointe vers nous
+            return nom                        # a known alias points at us
     return defaut
 
 
 def roms_root(cfg):
-    """Racine des ROMs sur la console : configuree, ou deduite du dossier Switch."""
+    """The ROMs root on the console: configured, or derived from the Switch folder."""
     explicit = (cfg.get("roms_root") or "").strip().rstrip("/")
     if explicit:
         return explicit
@@ -328,13 +325,12 @@ def roms_root(cfg):
 
 
 def extensions_acceptees(cfg=None):
-    """Toutes les extensions deposables : celles de TOUTES les plateformes,
-    plus les archives.
+    """Every droppable extension: those of ALL platforms, plus archives.
 
-    Le depot n'acceptait que les formats Switch. Une ROM GBA ou une image PS2
-    etait refusee alors que l'outil sait parfaitement ou la ranger — et une
-    plateforme ajoutee a la main declare ses propres extensions, qu'on ne peut
-    pas connaitre a l'avance.
+    The drop folder only accepted Switch formats. A GBA ROM or a PS2 image was
+    refused although the tool knows perfectly well where to file it — and a
+    hand-added platform declares its own extensions, which cannot be known in
+    advance.
     """
     exts = set(config.ARCHIVES)
     for s in liste(cfg):
@@ -346,12 +342,12 @@ def extensions_acceptees(cfg=None):
 
 
 def system_for_file(filename):
-    """Devine le systeme d'un fichier d'apres son extension (None si ambigu).
+    """Guess a file's system from its extension (None when ambiguous).
 
-    Les formats d'archive (.zip, .7z, .rar) ne sont JAMAIS attribues a une
-    plateforme, meme si une seule les declare : un .zip est presque toujours un
-    jeu compresse a extraire. Deux jeux Switch telecharges en .zip s'etaient
-    ainsi retrouves ranges parmi les ROMs d'arcade.
+    Archive formats (.zip, .7z, .rar) are NEVER assigned to a platform, even if
+    only one declares them: a .zip is almost always a compressed game waiting
+    to be extracted. Two Switch games downloaded as .zip once ended up filed
+    among the arcade ROMs that way.
     """
     ext = Path(filename).suffix.lower()
     if ext in config.ARCHIVES:
@@ -361,11 +357,11 @@ def system_for_file(filename):
         return None
     if len(hits) == 1:
         return hits[0]
-    return None  # extension partagee (.iso, .chd, .bin...) : on ne devine pas
+    return None  # shared extension (.iso, .chd, .bin...): we do not guess
 
 
 def scan_local(sys_key, cfg=None):
-    """Inventaire generique d'un systeme : un fichier = un jeu."""
+    """Generic inventory of a system: one file is one game."""
     s = get_cfg(sys_key, cfg)
     root = local_dir(sys_key)
     if s["engine"] == "switch" or not root.is_dir():
@@ -374,12 +370,12 @@ def scan_local(sys_key, cfg=None):
     for p in sorted(root.rglob("*")):
         if not p.is_file() or p.suffix.lower() not in s["exts"]:
             continue
-        # Une archive n'est pas une ROM : elle attend d'etre extraite. La compter
-        # comme un jeu affichait deux jeux Switch en .zip parmi les bornes d'arcade.
+        # An archive is not a ROM: it is waiting to be extracted. Counting it
+        # as a game showed two Switch titles in .zip among the arcade cabinets.
         if p.suffix.lower() in config.ARCHIVES:
             continue
         from . import meta
-        fiche = meta.fiche_nom(p.name, cfg, reseau=False)   # cache seul : jamais de reseau ici
+        fiche = meta.fiche_nom(p.name, cfg, reseau=False)   # cache only: never any network here
         out.append({
             "path": str(p),
             "rel": str(p.relative_to(config.LUDO)),
@@ -394,18 +390,18 @@ def scan_local(sys_key, cfg=None):
 
 
 def detect_on_device(cfg):
-    """Plateformes reellement presentes sur la console, avec leur decompte.
+    """Platforms actually present on the console, with their counts.
 
-    Sans cela, l'utilisateur devait deviner quels dossiers existaient et lesquels
-    etaient vides : on lit une fois la racine des ROMs, puis on compte par
-    extension. Une seule commande shell, pas une par plateforme.
+    Without this the user had to guess which folders existed and which were
+    empty: we read the ROMs root once, then count by extension. One shell
+    command, not one per platform.
     """
     from . import device
     racine = roms_root(cfg)
     if not racine or device.state() != "device":
         return {"racine": racine, "connectee": False, "plateformes": []}
 
-    # un seul `find` pour tout l'arbre : le reste est du classement local
+    # a single `find` for the whole tree: the rest is local sorting
     fichiers = _lire_arbre(racine, _COMMANDE_FIND % (device._q(racine), device._q(racine)))
     _memoriser_depuis(racine, fichiers)
 
@@ -419,7 +415,7 @@ def detect_on_device(cfg):
                  if f["path"].startswith(prefixe)
                  and any(f["path"].lower().endswith(e) for e in s["exts"])]
         if not siens and not _dossier_existe(fichiers, prefixe):
-            continue                      # ni dossier ni fichier : on n'invente pas
+            continue                      # neither folder nor file: we invent nothing
         out.append({"key": s["key"], "name": s["name"], "folder": s["folder"],
                     "dir": dossier, "count": len(siens),
                     "bytes": sum(f["size"] for f in siens)})
@@ -427,11 +423,10 @@ def detect_on_device(cfg):
 
 
 def tout(cfg):
-    """Toutes les plateformes generiques d'un coup : jeux locaux et fichiers console.
+    """Every generic platform at once: local games and console files.
 
-    Une seule lecture de la console pour l'ensemble, au lieu d'une par
-    plateforme : indispensable pour afficher la ludotheque complete sans faire
-    attendre l'utilisateur.
+    One read of the console for all of them, instead of one per platform:
+    essential to show the whole library without making the user wait.
     """
     from . import device, meta
     racine = roms_root(cfg)
@@ -448,8 +443,8 @@ def tout(cfg):
         prefixe = (dossier.rstrip("/") + "/") if dossier else None
         siens = []
         if prefixe:
-            # Meme titre officiel que dans la vue par plateforme : sans lui, la
-            # vue « toutes les plateformes » retombait sur le nom de fichier.
+            # The same official title as in the per-platform view: without it,
+            # the "all platforms" view fell back to the file name.
             siens = [{"nom": f["name"], "chemin": f["path"], "taille": f["size"],
                       **_fiche_legere(meta.fiche_nom(f["name"], cfg, reseau=False))}
                      for f in distants
@@ -458,7 +453,7 @@ def tout(cfg):
                      and not any(f["path"].lower().endswith(a) for a in config.ARCHIVES)]
         locaux = scan_local(s["key"], cfg)
         if not locaux and not siens:
-            continue                       # plateforme absente des deux cotes
+            continue                       # platform absent on both sides
         out.append({"key": s["key"], "name": s["name"], "folder": s["folder"],
                     "games": locaux, "console": siens})
     return out
@@ -468,17 +463,17 @@ _COMMANDE_FIND = (
     "find %s -maxdepth 3 -type f -printf '%%s|%%p\\n' 2>/dev/null "
     "|| find %s -maxdepth 3 -type f -exec stat -c '%%s|%%n' {} \\; 2>/dev/null")
 
-# Le `find` complet sur la console prend plusieurs secondes en Wi-Fi, et il
-# etait relance a chaque lecture de page. On garde le resultat un court
-# instant : assez pour qu'un affichage n'interroge la console qu'une fois,
-# trop peu pour masquer un fichier qu'on vient d'envoyer.
+# A full `find` on the console takes several seconds over Wi-Fi, and it was
+# rerun on every page load. We keep the result for a short while: long enough
+# that one render queries the console once, short enough not to hide a file you
+# just pushed.
 _CACHE_ARBRE = {"racine": None, "expire": 0.0, "fichiers": []}
 DUREE_CACHE_ARBRE = 20.0
 
 
 def vider_cache_arbre():
-    """A appeler des qu'on ECRIT sur la console : le cache ne doit jamais
-    survivre a un envoi ou a une suppression."""
+    """Call this as soon as we WRITE to the console: the cache must never
+    survive a push or a deletion."""
     _CACHE_ARBRE["expire"] = 0.0
 
 
@@ -494,22 +489,22 @@ def _lire_arbre(racine, commande):
 
 
 def _fiche_legere(f):
-    """Ce que la carte d'un jeu a besoin de savoir : titre, resume, annee.
+    """What a game's card needs to know: title, summary, year.
 
-    Le reste de la fiche (identifiants, url) n'a rien a faire dans une reponse
-    envoyee pour chaque jeu.
+    The rest of the record (identifiers, urls) has no business in a response
+    sent for every single game.
     """
     f = f or {}
     return {"titre": f.get("nom", ""), "resume": f.get("resume", ""),
             "annee": f.get("annee", ""), "editeur": f.get("editeur", ""),
-            # La provenance du resume voyage avec lui : citer sa source n'est
-            # pas une option quand ce texte vient de Wikipedia.
+            # The summary's provenance travels with it: citing the source is
+            # not optional when the text comes from Wikipedia.
             "source_resume": f.get("source_resume", ""),
             "url_resume": f.get("url_resume", "")}
 
 
 def _memoriser_depuis(racine, fichiers):
-    """Noms de dossiers de premier niveau vus dans l'arborescence lue."""
+    """Top-level folder names seen in the tree we read."""
     base = racine.rstrip("/") + "/"
     noms = {p[len(base):].split("/", 1)[0]
             for p in (f.get("path") or "" for f in fichiers) if p.startswith(base)}
@@ -521,7 +516,7 @@ def _dossier_existe(fichiers, prefixe):
 
 
 def summary(cfg):
-    """Liste des systemes avec le nombre de jeux locaux (pour le selecteur)."""
+    """The systems with their local game counts (for the selector)."""
     out = []
     for s in liste(cfg):
         if s["engine"] == "switch":
