@@ -1,10 +1,10 @@
 """Serveur web (bibliotheque standard seule).
 
-Ecoute sur 127.0.0.1 par defaut. Il ne s'ouvre au reseau que si son
-proprietaire l'a demande : reglage `lan_access`, ROMULE_LAN, ROMULE_TOKEN,
-ou execution en conteneur — ou la publication de port fait office de
-decision explicite. La docstring precedente affirmait n'ecouter que sur
-127.0.0.1 alors que le socket etait lie a 0.0.0.0 depuis toujours.
+Listens on 127.0.0.1 by default. It only opens to the network when its owner
+has asked for it: the `lan_access` setting, ROMULE_LAN, ROMULE_TOKEN, or
+running in a container — where publishing a port stands for an explicit
+decision. The previous docstring claimed to listen on 127.0.0.1 only while the
+socket had been bound to 0.0.0.0 all along.
 """
 
 import gzip
@@ -47,14 +47,14 @@ LOCALES = config.PKG / "locales"
 
 
 def _langues():
-    """Langues disponibles, lues dans romule/locales/ (hors du code)."""
+    """The available languages, read from romule/locales/ (outside the code)."""
     out = []
     for f in sorted(LOCALES.glob("*.json")):
         try:
             m = json.loads(f.read_text(encoding="utf-8")).get("_meta", {})
-            # Le fichier dit « langue », pas « nom » : la lecture se rabattait
-            # donc toujours sur le nom du fichier, et le selecteur proposait
-            # « fr » et « en » au lieu de « Francais » et « English ».
+            # The file says "langue", not "nom": the read therefore always
+            # fell back to the file name, and the selector offered "fr" and
+            # "en" instead of "Francais" and "English".
             out.append({"code": m.get("code", f.stem),
                         "nom": m.get("langue") or m.get("nom") or f.stem})
         except (ValueError, OSError):
@@ -77,11 +77,11 @@ MANIFEST = {
 
 
 def _png_icon(size):
-    """Icone PNG generee sans dependance : carre sombre, cartouche ambre."""
+    """A PNG icon generated with no dependency: dark square, amber cartouche."""
     import struct
     import zlib
     bg, fg = (0x15, 0x1A, 0x23), (0xFF, 0xB4, 0x54)
-    m = size // 4                       # marges du cartouche central
+    m = size // 4                       # margins of the central cartouche
     rows = bytearray()
     for y in range(size):
         rows.append(0)                  # filtre de ligne : aucun
@@ -100,10 +100,10 @@ def _png_icon(size):
             + chunk(b"IEND", b""))
 
 
-# Champs qui ne doivent jamais quitter le serveur en clair.
-#   auth_secret        : signe les cookies de session — le lire, c'est pouvoir
-#                        fabriquer une session valide pour n'importe qui ;
-#   oidc_client_secret : authentifie l'application aupres du fournisseur.
+# Fields that must never leave the server in the clear.
+#   auth_secret        : signs the session cookies — reading it means being able
+#                        to forge a valid session for anybody;
+#   oidc_client_secret : authenticates the application to the provider.
 MASQUE = "\u2022" * 8
 SECRETS = ("oidc_client_secret", "igdb_client_secret")
 PRIVES = ("auth_secret", "jeton_auto")
@@ -122,7 +122,7 @@ def _lib_response():
     LIB.scan(log=JOB.log)
     LIB.enrich()
     shop = LIB.shopping_list()
-    a_installer = LIB.nand_rows()      # ne pas masquer le module `nand`
+    a_installer = LIB.nand_rows()      # do not shadow the `nand` module
     return {
         "files": LIB.files,
         "stats": LIB.stats(),
@@ -134,39 +134,39 @@ def _lib_response():
         "config": _config_publique(),
         "device": device.state(),
         "covers_v": covers.version(),
-        # titres traduits et resumes deja en cache : lecture disque seule, pour
-        # que l'affichage ne depende jamais du reseau
+        # translated titles and summaries already cached: disk reads only, so
+        # that rendering never depends on the network
         "meta": meta.bulk([titleid.tid_base(f["tid"]) for f in LIB.files if f["tid"]], CFG),
     }
 
 
 def _taille(n):
-    """Taille lisible : les octets bruts ne disent rien dans un message."""
+    """A readable size: raw bytes say nothing inside a message."""
     for unite in ("o", "Kio", "Mio", "Gio", "Tio"):
         if n < 1024 or unite == "Tio":
             return "%.1f %s" % (n, unite) if unite != "o" else "%d o" % n
         n /= 1024.0
 
 
-# --------------------------------------------------------------- BORNES
-# Un serveur qui accepte tout finit par tomber sur le premier venu qui insiste.
-# Trois limites, toutes reglables, toutes larges : elles ne genent pas un usage
-# normal et rendent le pire cas fini.
+# ---------------------------------------------------------------- LIMITS
+# A server that accepts everything eventually meets the first person who
+# insists. Three limits, all tunable, all generous: they do not hinder normal
+# use and they make the worst case finite.
 DELAI_SOCKET = int(config.env("TIMEOUT", "300"))       # secondes
 CONNEXIONS_MAX = int(config.env("MAX_CONN", "64"))
 APPELS_PAR_MINUTE = int(config.env("RATE", "600"))
 
 _PLACES = threading.BoundedSemaphore(CONNEXIONS_MAX)
 
-# Compteur d'appels par client. Volontairement grossier : une fenetre d'une
-# minute, remise a zero d'un bloc. Un limiteur exact demanderait un etat qui
-# grandit ; celui-ci se vide tout seul.
+# A per-client call counter. Deliberately coarse: a one-minute window, reset
+# wholesale. An exact limiter would need state that grows; this one empties
+# itself.
 _CADENCE = {}
 _CADENCE_VERROU = threading.Lock()
 
 
 def _trop_vite(client):
-    """Ce client a-t-il depasse son quota sur la minute en cours ?"""
+    """Has this client exceeded its quota for the current minute?"""
     minute = int(time.time() // 60)
     with _CADENCE_VERROU:
         fenetre, compte = _CADENCE.get(client, (minute, 0))
@@ -174,9 +174,9 @@ def _trop_vite(client):
             fenetre, compte = minute, 0
         compte += 1
         _CADENCE[client] = (fenetre, compte)
-        # Le dictionnaire ne doit pas grandir indefiniment : on le vide quand
-        # il devient gros, ce qui offre au passage un tour de grace a tout le
-        # monde — sans consequence, la fenetre ne dure qu'une minute.
+        # The dictionary must not grow forever: we empty it when it gets big,
+        # which incidentally grants everyone a free round — of no consequence,
+        # the window only lasts a minute.
         if len(_CADENCE) > 4096:
             _CADENCE.clear()
         return compte > APPELS_PAR_MINUTE
@@ -184,15 +184,16 @@ def _trop_vite(client):
 
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *a):
-        # Le format d'origine de `BaseHTTPRequestHandler` va sur stderr, sans
-        # niveau ni horodatage utilisable. On le remplace par le notre, dans
-        # `handle_one_request`, ou le CODE de reponse et la duree sont connus.
+        # `BaseHTTPRequestHandler`'s own format goes to stderr, with no level
+        # and no usable timestamp. We replace it with ours, in
+        # `handle_one_request`, where the response CODE and the duration are
+        # known.
         pass
 
     def send_response_only(self, code, message=None):
-        # Le seul point par lequel passent `send_response` ET `send_error` :
-        # noter le code ici, c'est le noter pour toutes les routes, y compris
-        # celles qui echouent — precisement celles qu'on cherche.
+        # The one point both `send_response` AND `send_error` go through:
+        # recording the code here records it for every route, including the
+        # ones that fail — precisely the ones we are after.
         self._code = code
         BaseHTTPRequestHandler.send_response_only(self, code, message)
 
@@ -202,8 +203,8 @@ class Handler(BaseHTTPRequestHandler):
         try:
             BaseHTTPRequestHandler.handle_one_request(self)
         finally:
-            # `ROMULE_LOG=debug` seulement : l'interface interroge `/api/job`
-            # en boucle, et ces lignes noieraient tout le reste ailleurs.
+            # `ROMULE_LOG=debug` only: the interface polls `/api/job` in a
+            # loop, and these lines would drown out everything else elsewhere.
             if console.montre("debug") and getattr(self, "command", None):
                 ms = (time.monotonic() - debut) * 1000
                 code = self._code or 0
@@ -219,25 +220,25 @@ class Handler(BaseHTTPRequestHandler):
         BaseHTTPRequestHandler.send_response(self, code, message)
 
     def end_headers(self):
-        # Un seul endroit d'application : impossible d'oublier une route.
+        # A single point of application: impossible to forget a route.
         if not getattr(self, "_secu_faite", True):
             self._secu_faite = True
             self._entetes_securite()
         BaseHTTPRequestHandler.end_headers(self)
 
-    # Types qui gagnent a etre compresses. `application/javascript` y figure
-    # explicitement : c'est le plus gros corps que le serveur envoie (app.js,
-    # 300 Kio) et il ne commence pas par `text/`.
+    # Types worth compressing. `application/javascript` is listed explicitly:
+    # it is the largest body the server sends (app.js, 300 KiB) and it does not
+    # start with `text/`.
     TYPES_GZIP = ("application/json", "application/javascript",
                   "application/manifest+json", "text/", "image/svg+xml")
-    # En dessous, l'en-tete et le temps de compression coutent plus que le gain.
+    # Below this, the header and the compression time cost more than the gain.
     SEUIL_GZIP = 1024
 
     def _accepte_gzip(self):
-        """Le client sait-il lire du gzip ?
+        """Can the client read gzip?
 
-        `gzip;q=0` veut dire « surtout pas » : c'est rare, mais l'ignorer
-        enverrait un corps illisible a qui l'a explicitement refuse.
+        `gzip;q=0` means "definitely not": rare, but ignoring it would send an
+        unreadable body to someone who explicitly refused it.
         """
         for bout in self.headers.get("Accept-Encoding", "").lower().split(","):
             morceaux = [m.strip() for m in bout.split(";")]
@@ -258,19 +259,19 @@ class Handler(BaseHTTPRequestHandler):
                 and self._accepte_gzip())
 
     def _ecrire(self, corps, ctype, code=200, entetes=(), cookie=False):
-        """Ecrit une reponse, compressee quand cela vaut la peine.
+        """Write a response, compressed when it is worth it.
 
-        Un seul chemin, parce qu'il y en avait six : compresser dans `_json`
-        seul aurait laisse passer `_static`, c'est-a-dire l'essentiel — app.js,
-        app.css et index.html font 507 Kio et repartent a CHAQUE chargement,
-        `_static` posant `Cache-Control: no-store`.
+        One path, because there were six: compressing in `_json` alone would
+        have let `_static` through, which is where it matters — app.js, app.css
+        and index.html weigh 507 KiB and go out on EVERY load, since `_static`
+        sets `Cache-Control: no-store`.
 
-        Mesure sur une ludotheque de 2 000 titres : /api/scan passe de 2,04 Mio
-        a 0,08 Mio, et les trois fichiers statiques de 507 a 153 Kio.
+        Measured on a 2 000-title library: /api/scan goes from 2.04 MiB to
+        0.08 MiB, and the three static files from 507 to 153 KiB.
 
-        `Vary: Accept-Encoding` est pose meme quand on ne compresse pas : sans
-        lui, un cache intermediaire sert la variante compressee a un client qui
-        ne sait pas la lire.
+        `Vary: Accept-Encoding` is set even when we do not compress: without it,
+        an intermediate cache serves the compressed variant to a client that
+        cannot read it.
         """
         entetes = list(entetes)
         if self._compressible(corps, ctype):
@@ -292,21 +293,21 @@ class Handler(BaseHTTPRequestHandler):
                      "application/json; charset=utf-8", code)
 
     def _json_revalide(self, obj, volatiles=()):
-        """JSON avec ETag : la reponse la plus lourde de l'outil (l'inventaire,
-        ~130 Ko) ne repart en entier que si elle a change. Le navigateur
-        revalide a chaque fois — donc jamais de donnee perimee — mais recoit
-        304 et quelques octets tant que rien ne bouge. C'est le poste le plus
-        couteux du demarrage sur telephone en Wi-Fi."""
+        """JSON with an ETag: the tool's heaviest response (the inventory,
+        ~130 KB) only goes out in full when it has changed. The browser
+        revalidates every time — so never stale data — but receives a 304 and a
+        few bytes while nothing moves. This is the most expensive part of
+        startup on a phone over Wi-Fi."""
         body = json.dumps(obj).encode()
-        # Certaines cles portent un horodatage regenere a chaque appel : les
-        # inclure rendrait chaque reponse unique et l'ETag inutile. Elles
-        # derivent toujours d'une autre cle, elle bien comparee.
+        # Some keys carry a timestamp regenerated on every call: including them
+        # would make every response unique and the ETag useless. They always
+        # derive from another key, which is compared properly.
         empreinte = json.dumps({k: v for k, v in obj.items() if k not in volatiles},
                                sort_keys=True, default=str).encode()
-        # L'ETag doit distinguer les deux representations : la compressee et
-        # l'autre n'ont pas les memes octets. Sans ce suffixe, un client qui
-        # cesse d'accepter le gzip recevrait un 304 pour un corps qu'il n'a
-        # jamais eu sous cette forme.
+        # The ETag must tell the two representations apart: the compressed one
+        # and the other do not share bytes. Without this suffix, a client that
+        # stops accepting gzip would receive a 304 for a body it never had in
+        # that form.
         gz = self._compressible(body, "application/json")
         etag = '"%s%s"' % (hashlib.sha256(empreinte).hexdigest()[:32],
                            "-gz" if gz else "")
@@ -319,7 +320,7 @@ class Handler(BaseHTTPRequestHandler):
             return
         self._ecrire(body, "application/json; charset=utf-8", 200,
                      entetes=[("ETag", etag),
-                              ("Cache-Control", "no-cache")])  # revalider, pas ignorer
+                              ("Cache-Control", "no-cache")])  # revalidate, not ignore
 
     def _static(self, name):
         path = config.STATIC / name
@@ -329,14 +330,14 @@ class Handler(BaseHTTPRequestHandler):
         self._ecrire(path.read_bytes(),
                      _CTYPES.get(path.suffix, "application/octet-stream")
                      + "; charset=utf-8", 200,
-                     # toujours la derniere version
+                     # always the latest version
                      entetes=[("Cache-Control", "no-store")], cookie=True)
 
-    # Un corps de requete JSON n'a aucune raison de depasser quelques centaines
-    # de kilo-octets : le plus gros est une liste de chemins. Sans borne, un
-    # POST annoncant 4 Go remplissait la memoire du serveur avant meme d'etre
-    # analyse. Les envois de fichiers ont leur propre route, en flux.
-    CORPS_MAX = 1 << 20            # 1 Mio
+    # A JSON request body has no reason to exceed a few hundred kilobytes: the
+    # largest is a list of paths. Without a bound, a POST announcing 4 GB filled
+    # the server's memory before it was even parsed. File uploads have their own
+    # route, streamed.
+    CORPS_MAX = 1 << 20            # 1 MiB
 
     def _payload(self):
         n = int(self.headers.get("Content-Length", 0) or 0)
@@ -346,16 +347,16 @@ class Handler(BaseHTTPRequestHandler):
 
     # ---------------------------------------------------------- GET
 
-    # Sans delai, une connexion ouverte et laissee muette immobilise un fil
-    # pour toujours : c'est le principe meme de l'attaque « slowloris ».
+    # With no timeout, a connection opened and left silent pins a thread
+    # forever: that is the whole principle of the "slowloris" attack.
     timeout = DELAI_SOCKET
 
     def handle(self):
-        """Une place, ou un refus poli.
+        """A slot, or a polite refusal.
 
-        `ThreadingHTTPServer` cree un fil par connexion, sans plafond. Un
-        millier de connexions simultanees creait un millier de fils avant que
-        la moindre regle ne s'applique.
+        `ThreadingHTTPServer` creates a thread per connection, with no ceiling.
+        A thousand simultaneous connections created a thousand threads before
+        any rule at all applied.
         """
         if not _PLACES.acquire(timeout=10):
             try:
@@ -372,11 +373,11 @@ class Handler(BaseHTTPRequestHandler):
             _PLACES.release()
 
     def _cookie(self, nom):
-        """Valeur d'un cookie, lue comme un cookie et non comme du texte.
+        """A cookie's value, read as a cookie and not as text.
 
-        La lecture precedente cherchait la sous-chaine « switch_token=<jeton> »
-        dans l'en-tete brut : un cookie voisin nomme `x_switch_token`, ou une
-        valeur qui contenait le jeton en prefixe, satisfaisaient le test.
+        The previous read looked for the substring "switch_token=<token>" in
+        the raw header: a neighbouring cookie named `x_switch_token`, or a value
+        containing the token as a prefix, satisfied the test.
         """
         brut = self.headers.get("Cookie")
         if not brut:
@@ -392,8 +393,8 @@ class Handler(BaseHTTPRequestHandler):
     def _token_ok(self):
         """Jeton fourni par cookie, en-tete ou ?token= (service expose 24/7).
 
-        Comparaison a temps constant : un `==` sur une chaine s'arrete au
-        premier octet different, ce qui laisse mesurer le prefixe correct.
+        Constant-time comparison: an `==` on a string stops at the first
+        differing byte, which lets the correct prefix be measured.
         """
         if not config.TOKEN:
             return False
@@ -405,8 +406,8 @@ class Handler(BaseHTTPRequestHandler):
             candidats.append(q[0])
         return any(hmac.compare_digest(c, attendu) for c in candidats if c)
 
-    # En-tetes ajoutes par un relais. Leur seule presence signifie que la
-    # requete n'arrive PAS directement de son auteur.
+    # Headers added by a relay. Their mere presence means the request is NOT
+    # arriving directly from its author.
     ENTETES_RELAI = ("X-Forwarded-For", "X-Real-IP", "Forwarded",
                      "X-Forwarded-Host", "X-Forwarded-Proto")
 
@@ -414,30 +415,30 @@ class Handler(BaseHTTPRequestHandler):
         return any(self.headers.get(h) for h in self.ENTETES_RELAI)
 
     def _client_reel(self):
-        """Adresse de l'auteur de la requete, ou None si elle est indeterminable.
+        """The request author's address, or None when it cannot be determined.
 
-        Le pair TCP suffit tant que personne ne relaie. Des qu'un relais
-        s'intercale, il devient l'adresse du RELAIS — et derriere un reverse
-        proxy pose sur la meme machine, c'est 127.0.0.1 pour tout le monde,
-        y compris pour l'Internet entier. C'est la faille que cette methode
-        ferme : on ne croit un en-tete que s'il vient d'un proxy declare.
+        The TCP peer is enough while nobody relays. As soon as a relay steps
+        in, it becomes the RELAY's address — and behind a reverse proxy on the
+        same machine, that is 127.0.0.1 for everybody, the whole internet
+        included. That is the hole this method closes: a header is only
+        believed when it comes from a declared proxy.
         """
         pair = self.client_address[0]
         if not self._relayee():
             return pair
         if not config.proxy_de_confiance(pair):
-            return None                     # quelqu'un relaie sans mandat
-        # Le proxy declare a ajoute a droite le pair qu'il a vu. On remonte la
-        # chaine en sautant les relais eux-memes declares.
+            return None                     # somebody is relaying without a mandate
+        # The declared proxy appended the peer it saw on the right. We walk
+        # back up the chain, skipping relays that are themselves declared.
         chaine = [a.strip() for a in
                   (self.headers.get("X-Forwarded-For") or "").split(",") if a.strip()]
         for adresse in reversed(chaine):
             if not config.proxy_de_confiance(adresse):
                 return adresse
-        # Toute la chaine est faite d'adresses declarees. Cela arrive quand le
-        # client est LUI-MEME sur la machine du proxy — le cas courant d'un
-        # nginx local devant l'application. La premiere entree reste alors la
-        # seule candidate.
+        # The whole chain is made of declared addresses. That happens when the
+        # client is ITSELF on the proxy's machine — the common case of a local
+        # nginx in front of the application. The first entry is then the only
+        # candidate left.
         if chaine:
             return chaine[0]
         return self.headers.get("X-Real-IP", "").strip() or None
@@ -455,17 +456,17 @@ class Handler(BaseHTTPRequestHandler):
                 or self.headers.get("Host") or "").lower()
 
     def _meme_origine(self):
-        """Le navigateur annonce-t-il que la requete part bien de CETTE page ?
+        """Does the browser say the request really comes from THIS page?
 
-        Sans ce controle, un site tiers ouvert dans un autre onglet pourrait
-        faire poster n'importe quelle action a la ludotheque avec le cookie de
-        session de l'utilisateur (CSRF). Le cookie est en `SameSite=Lax`, ce qui
-        couvre deja les navigateurs recents ; ceci ferme le reste.
+        Without this check, a third-party site open in another tab could make
+        the library perform any action using the user's session cookie (CSRF).
+        The cookie is `SameSite=Lax`, which already covers recent browsers;
+        this closes the rest.
         """
         origine = self.headers.get("Origin") or ""
         if not origine:
-            # Certains clients (curl, l'app installee) n'envoient pas d'Origin.
-            # Faute d'Origin, on se rabat sur Referer quand il existe.
+            # Some clients (curl, the installed app) send no Origin. Failing
+            # Origin, we fall back to Referer when it is there.
             ref = self.headers.get("Referer") or ""
             if not ref:
                 return True
@@ -478,47 +479,46 @@ class Handler(BaseHTTPRequestHandler):
         return bool(hote) and depuis == hote
 
     def _entetes_securite(self):
-        """En-tetes appliques a toutes les reponses.
+        """Headers applied to every response.
 
-        L'interface n'appelle aucun domaine tiers et ne charge aucun script
-        externe : une politique stricte ne casse rien et bloque l'injection de
-        contenu distant.
+        The interface calls no third-party domain and loads no external script:
+        a strict policy breaks nothing and blocks the injection of remote
+        content.
         """
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("X-Frame-Options", "DENY")
         self.send_header("Referrer-Policy", "same-origin")
-        # Aucune de ces capacites n'est utilisee par l'interface : les refuser
-        # explicitement evite qu'une injection future en dispose.
+        # None of these capabilities is used by the interface: refusing them
+        # explicitly stops a future injection from getting hold of one.
         self.send_header("Permissions-Policy",
                          "camera=(), microphone=(), geolocation=(), "
                          "payment=(), usb=(), interest-cohort=()")
-        # Isole la page des autres onglets : une fenetre ouverte depuis ici ne
-        # garde aucune prise sur celle-ci.
+        # Isolate the page from other tabs: a window opened from here keeps no
+        # hold on this one.
         self.send_header("Cross-Origin-Opener-Policy", "same-origin")
         self.send_header("Cross-Origin-Resource-Policy", "same-origin")
-        # Les reponses qui portent des comptes ou des reglages ne doivent
-        # laisser aucune trace dans un cache partage — ni proxy, ni disque.
+        # Responses carrying accounts or settings must leave no trace in a
+        # shared cache — neither proxy nor disk.
         if any(self.path.startswith(x) for x in
                ("/api/comptes", "/api/config", "/auth/", "/api/compte-")):
             self.send_header("Cache-Control", "no-store, private")
-        # HSTS uniquement quand la liaison est deja chiffree : l'annoncer en
-        # clair enfermerait l'utilisateur hors d'une installation sans TLS,
-        # et la plupart le sont.
+        # HSTS only when the link is already encrypted: announcing it in the
+        # clear would lock the user out of an installation without TLS, and
+        # most are.
         if self._secure():
             self.send_header("Strict-Transport-Security",
                              "max-age=15552000; includeSubDomains")
-        # `script-src 'self'` sans tolerance pour l'inline. C'etait impossible
-        # tant que l'interface reposait sur 153 attributs `onclick` : les
-        # refuser aurait rendu la quasi-totalite des boutons inertes, en
-        # silence. Ils sont tous passes en `data-act` (phase 4), et un seul
-        # <script> en ligne subsistait — le theme — qui est devenu
-        # `/theme.js`. Un navigateur refuse desormais tout script qui n'a pas
-        # ete servi par cette origine, y compris celui qu'une injection
-        # reussie ecrirait dans la page.
+        # `script-src 'self'` with no tolerance for inline. That was
+        # impossible while the interface rested on 153 `onclick` attributes:
+        # refusing them would have made almost every button inert, silently.
+        # They all moved to `data-act` (phase 4), and a single inline <script>
+        # remained — the theme — which became `/theme.js`. A browser now
+        # refuses any script this origin did not serve, including one a
+        # successful injection would write into the page.
         #
-        # `style-src` garde 'unsafe-inline' : les attributs `style=` restent
-        # nombreux, et un style ne s'execute pas. C'est une exception d'une
-        # autre nature, et elle est documentee comme telle.
+        # `style-src` keeps 'unsafe-inline': `style=` attributes are still
+        # numerous, and a style does not execute. That is an exception of a
+        # different nature, and it is documented as such.
         self.send_header("Content-Security-Policy",
                          "default-src 'self'; img-src 'self' data:; "
                          "style-src 'self' 'unsafe-inline'; "
@@ -527,11 +527,10 @@ class Handler(BaseHTTPRequestHandler):
                          "base-uri 'none'; form-action 'self'")
 
     def _cadence_ok(self):
-        """Refuse au-dela du quota, avec un 429 et le delai d'attente.
+        """Refuse past the quota, with a 429 and the wait time.
 
-        Seule la connexion etait limitee jusqu'ici. Tout le reste — y compris
-        les essais de jeton et les depots de fichiers — pouvait etre repete
-        sans fin.
+        Only the login was rate-limited until now. Everything else — token
+        attempts and file uploads included — could be repeated endlessly.
         """
         client = self._client_reel() or self.client_address[0]
         if not _trop_vite(client):
@@ -549,13 +548,13 @@ class Handler(BaseHTTPRequestHandler):
         return False
 
     def _cle_api(self):
-        """La cle presentee, s'il y en a une.
+        """The key presented, if there is one.
 
-        L'en-tete est la forme normale. Le parametre existe parce que certains
-        clients — une tuile de tableau de bord qui ne prend qu'une URL, un
-        `wget` dans un cron — ne savent pas poser d'en-tete. Il est moins bon :
-        une URL se retrouve dans les journaux du proxy et dans l'historique.
-        C'est ecrit dans la documentation plutot que refuse ici.
+        The header is the normal form. The parameter exists because some
+        clients — a dashboard tile that only takes a URL, a `wget` in a cron —
+        cannot set a header. It is the worse option: a URL ends up in the
+        proxy's logs and in the history. That is written in the documentation
+        rather than refused here.
         """
         entete = self.headers.get("X-Api-Key")
         if entete:
@@ -566,21 +565,22 @@ class Handler(BaseHTTPRequestHandler):
         return None
 
     def _allowed(self):
-        """Qui a le droit d'entrer.
+        """Who is allowed in.
 
-        L'authentification SSO, quand elle est active, s'applique AUSSI en local :
-        activer un SSO puis rester joignable sans mot de passe depuis la machine
-        elle-meme viderait la mesure de son sens des que le poste est partage.
+        SSO authentication, when active, applies LOCALLY too: switching on an
+        SSO and then staying reachable without a password from the machine
+        itself would empty the measure of its meaning as soon as the desk is
+        shared.
         """
-        # La cle d'API passe AVANT le SSO, et c'est deliberé. Aujourd'hui
-        # `auth.actif()` refuse tout ce qui n'a pas de cookie de session : c'est
-        # juste pour un navigateur, et cela rendrait l'API inutilisable
-        # precisement dans les installations qui la protegent le mieux.
+        # The API key comes BEFORE the SSO, and that is deliberate. As things
+        # stand `auth.actif()` refuses anything without a session cookie: right
+        # for a browser, and it would make the API unusable precisely in the
+        # installations that protect it best.
         #
-        # Elle est PORTEE AU CHEMIN. Sans cette limite, une cle confiee a un
-        # tableau de bord ouvrirait aussi `/api/compte-supprimer` — ce qui
-        # reviendrait a distribuer le mot de passe de l'administrateur en le
-        # nommant autrement.
+        # It is SCOPED TO THE PATH. Without that limit, a key handed to a
+        # dashboard would also open `/api/compte-supprimer` — which would
+        # amount to distributing the administrator's password under another
+        # name.
         cle = self._cle_api()
         if cle:
             if not apiv1.dans_la_portee(self.path.partition("?")[0]):
@@ -593,7 +593,7 @@ class Handler(BaseHTTPRequestHandler):
 
         if auth.actif(CFG):
             if self.path.startswith("/auth/"):
-                return True                       # le flux de connexion lui-meme
+                return True                       # the login flow itself
             return bool(auth.session(self.headers.get("Cookie")))
         if self._local():
             return True
@@ -602,8 +602,8 @@ class Handler(BaseHTTPRequestHandler):
         return bool(CFG.get("lan_access"))
 
     def _deny(self):
-        # Avec un SSO configure, on n'affiche pas un refus sec : on envoie
-        # l'utilisateur se connecter, ce qu'il vient precisement chercher.
+        # With an SSO configured we do not show a blunt refusal: we send the
+        # user to log in, which is precisely what they came for.
         if auth.actif(CFG):
             return self._page_connexion()
         if config.TOKEN:
@@ -615,11 +615,11 @@ class Handler(BaseHTTPRequestHandler):
         self._ecrire(msg.encode(), "text/plain; charset=utf-8", 403)
 
     def _set_token_cookie(self):
-        """Memorise le jeton apres un acces par ?token= : plus besoin de le retaper."""
+        """Remember the token after a ?token= access: no need to retype it."""
         if config.TOKEN and "token=" in self.path:
-            # HttpOnly : aucun script n'a besoin de relire ce jeton, et le
-            # cacher retire une cible aux injections. Secure des que la
-            # liaison est chiffree, pour qu'il ne reparte jamais en clair.
+            # HttpOnly: no script needs to read this token back, and hiding it
+            # removes a target from injections. Secure as soon as the link is
+            # encrypted, so it never goes back out in the clear.
             self.send_header("Set-Cookie",
                              "switch_token=%s; Path=/; Max-Age=31536000; "
                              "SameSite=Lax; HttpOnly%s"
@@ -628,10 +628,10 @@ class Handler(BaseHTTPRequestHandler):
     # ------------------------------------------------------- connexion SSO
 
     def _base_retour(self):
-        """Adresse de retour presentee au fournisseur. Elle doit correspondre au
-        mot pres a celle declaree dans Authentik / Keycloak : on la construit
-        donc de facon previsible, et on laisse l'utilisateur la figer si son
-        installation passe par un proxy."""
+        """The return address presented to the provider. It must match, word
+        for word, the one declared in Authentik / Keycloak: so we build it
+        predictably, and let the user pin it when their installation goes
+        through a proxy."""
         fixe = (CFG.get("oidc_redirect") or "").strip().rstrip("/")
         if fixe:
             return fixe + "/auth/callback"
@@ -653,8 +653,8 @@ class Handler(BaseHTTPRequestHandler):
              "background:#221e28;color:#eee")
 
     def _page_connexion(self, message="", code=401, email="", second=False):
-        """Page de connexion. `second` demande le code a usage unique : le mot
-        de passe est deja valide, on ne le refait pas saisir."""
+        """The login page. `second` asks for the one-time code: the password
+        has already been validated, we do not make them type it again."""
         erreur = ("<span class='tid' style='color:#f2a2a2'>%s</span>"
                   % html_escape(message)) if message else ""
         if CFG.get("auth_mode") == "interne":
@@ -688,7 +688,7 @@ class Handler(BaseHTTPRequestHandler):
         self._page("Connexion", corps, code=code)
 
     def _auth_route(self, p):
-        """Retourne True si la requete a ete traitee par le flux SSO."""
+        """Return True when the request was handled by the SSO flow."""
         if p == "/auth/login":
             try:
                 url, transit = auth.demarrer(CFG, self._base_retour())
@@ -740,7 +740,7 @@ class Handler(BaseHTTPRequestHandler):
         return False
 
     def _connexion_interne(self):
-        """Traite le formulaire email + mot de passe. Toujours en POST."""
+        """Handle the email + password form. Always over POST."""
         if not self._meme_origine():
             return self._page_connexion("Requete rejetee : origine inattendue.", 403)
         n = min(int(self.headers.get("Content-Length", 0) or 0), 4096)
@@ -751,7 +751,7 @@ class Handler(BaseHTTPRequestHandler):
                                   self.client_address[0],
                                   (champs.get("code") or [""])[0])
         except comptes.BesoinCode as exc:
-            # Le mot de passe est bon : on redemande seulement le code.
+            # The password is right: we only ask for the code again.
             journal_acces.noter("refus", self.client_address[0], email, str(exc))
             return self._page_connexion(str(exc), 401, email, second=True)
         except ValueError as exc:
@@ -768,8 +768,9 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def _binary(self, body, ctype):
-        # Les PNG et JPEG passent ici : `TYPES_GZIP` ne les contient pas, donc
-        # ils ressortent tels quels. Le manifeste, lui, est compresse.
+        # PNGs and JPEGs come through here: `TYPES_GZIP` does not list them,
+        # so they go out untouched. The manifest, on the other hand, is
+        # compressed.
         self._ecrire(body, ctype, 200,
                      entetes=[("Cache-Control", "max-age=86400")])
 
@@ -794,14 +795,14 @@ class Handler(BaseHTTPRequestHandler):
         elif p in ("/app.js", "/app.css", "/reactive.js", "/theme.js"):
             self._static(p.lstrip("/"))
         elif p == "/api/scan":
-            # `shop_text` contient la date de generation : elle change a chaque
-            # seconde alors que l'inventaire, lui, est identique.
+            # `shop_text` carries the generation date: it changes every second
+            # while the inventory itself is identical.
             #
-            # `moi` dit a l'interface ce qu'elle a le droit de MONTRER. Ce
-            # n'est pas une securite — c'est `RESERVE_ADMIN` qui refuse, cote
-            # serveur, et un test le verifie. Masquer une action qu'on ne peut
-            # pas faire est une politesse : sans cela un non-administrateur
-            # ouvre les Reglages et recolte des 403 sans comprendre pourquoi.
+            # `moi` tells the interface what it may SHOW. This is not a
+            # security measure — `RESERVE_ADMIN` is what refuses, server-side,
+            # and a test checks it. Hiding an action you cannot perform is a
+            # courtesy: without it a non-administrator opens Settings and
+            # collects 403s without understanding why.
             rep = _lib_response()
             rep["moi"] = self._moi()
             self._json_revalide(rep, volatiles=("shop_text", "moi"))
@@ -814,40 +815,38 @@ class Handler(BaseHTTPRequestHandler):
         elif p.startswith("/locales/"):
             f = LOCALES / (p.rsplit("/", 1)[-1].replace("..", ""))
             if f.is_file() and f.suffix == ".json":
-                # Les traductions changent avec le code : les mettre en cache un
-                # jour, c'est afficher l'ancienne version apres chaque mise a
-                # jour. On revalide, comme pour l'inventaire.
+                # Translations change with the code: caching them for a day
+                # means showing the old version after every upgrade. We
+                # revalidate, as with the inventory.
                 self._json_revalide(json.loads(f.read_text(encoding="utf-8")))
             else:
                 self._json({"error": "langue inconnue"}, 404)
         elif p == "/api/maj":
-            # Paresseuse : elle rend ce qu'elle sait et ne va sur le reseau que
-            # si le cache a plus d'un jour. Une panne de GitHub rend « je ne
-            # sais pas », jamais une erreur — une verification ratee ne doit
-            # pas se voir.
+            # Lazy: it returns what it knows and only goes out when the cache
+            # is more than a day old. A GitHub outage answers "I don't know",
+            # never an error — a failed check must not show.
             self._json(maj.etat(CFG))
         elif p == "/api/vues":
             self._json({"vues": vues.liste()})
         elif p == "/api/notifs":
-            # L'ADRESSE n'est jamais rendue en entier. Un webhook Discord est un
-            # secret porteur : qui l'obtient peut ecrire dans le salon. La
-            # montrer dans une reponse HTTP la mettrait dans l'historique du
-            # navigateur, dans les journaux du proxy, et sur toute capture
-            # d'ecran de la page des reglages.
+            # The ADDRESS is never returned in full. A Discord webhook is a
+            # bearer secret: whoever gets it can post in the channel. Showing it
+            # in an HTTP response would put it in the browser history, in the
+            # proxy's logs, and on any screenshot of the settings page.
             self._json({"destinations": [_notif_public(x)
                                          for x in notifs.destinations(CFG)],
                         "evenements": notifs.EVENEMENTS,
                         "services": list(notifs.SERVICES)})
 
         elif p == "/api/cles":
-            # L'interface est un navigateur avec une session : elle ne peut pas
-            # passer par /api/v1, qui exige justement une cle. Ces trois routes
-            # internes gerent les cles ; elles ne sont pas publiques et ne sont
-            # donc pas figees.
+            # The interface is a browser with a session: it cannot go through
+            # /api/v1, which requires a key in the first place. These three
+            # internal routes manage the keys; they are not public and are
+            # therefore not frozen.
             self._json({"cles": apikeys.liste(avec_revoquees=True)})
         elif p == "/api/trash-list":
-            # La purge automatique n'agit que si l'utilisateur a fixe un delai :
-            # par defaut (0) la corbeille n'est jamais videe toute seule.
+            # Automatic purging only acts when the user set a delay: by
+            # default (0) the trash is never emptied on its own.
             jours = CFG.get("trash_days", 0)
             if jours:
                 n, octets = trash.purge(jours, JOB.log)
@@ -857,16 +856,16 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"items": trash.listing(), "resume": trash.resume(),
                         "jours": jours})
         elif p == "/api/health":
-            # La sonde du conteneur interroge cette route en GET. Elle n'etait
-            # declaree qu'en POST : le HEALTHCHECK du Dockerfile recevait donc
-            # « route inconnue » depuis toujours, et le conteneur ne pouvait
-            # jamais etre declare sain.
+            # The container's probe queries this route with GET. It was only
+            # declared for POST: the Dockerfile's HEALTHCHECK had therefore been
+            # getting "unknown route" all along, and the container could never
+            # be declared healthy.
             self._json(_health())
         elif p == "/api/systems":          # lecture seule : accessible en GET
             self._json({"systems": systems.summary(CFG),
                         "roms_root": systems.roms_root(CFG),
-                        # le depot s'en sert pour filtrer, et pour la boite de
-                        # dialogue de choix de fichier
+                        # the drop folder uses this to filter, and so does the
+                        # file-picker dialog
                         "extensions": sorted(systems.extensions_acceptees(CFG))})
         elif p == "/api/saves-list":
             self._json({"items": saves.listing(), "dirs": saves.find_dirs(CFG)})
@@ -884,8 +883,8 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 self._binary(octets, mime)
         elif p.startswith("/cover/"):
-            # self.path, pas p : _cover a besoin du ?name=..., que la recherche
-            # par nom utilise quand le fichier ne porte aucun title ID.
+            # self.path, not p: _cover needs the ?name=..., which the
+            # search-by-name uses when the file carries no title ID.
             self._cover(self.path[len("/cover/"):])
         else:
             JOB.log("Route GET inconnue : %s" % p)
@@ -915,9 +914,9 @@ class Handler(BaseHTTPRequestHandler):
 
     def _upload(self):
         name = os.path.basename(unquote(self.headers.get("X-Filename", ""))).strip()
-        # Toutes les plateformes, pas seulement la Switch : l'outil sait ranger
-        # une ROM GBA ou une image PS2, il n'y a aucune raison de la refuser.
-        # Une plateforme ajoutee a la main apporte ses propres extensions.
+        # Every platform, not just the Switch: the tool knows how to file a GBA
+        # ROM or a PS2 image, there is no reason to refuse one. A hand-added
+        # platform brings its own extensions.
         permises = systems.extensions_acceptees(CFG)
         if not name or Path(name).suffix.lower() not in permises:
             return self._json(
@@ -927,9 +926,9 @@ class Handler(BaseHTTPRequestHandler):
         config.IMPORT.mkdir(exist_ok=True)
         dest = config.IMPORT / name
         left = int(self.headers.get("Content-Length", 0))
-        # Deux refus AVANT d'ouvrir le fichier : un depot sans plafond laissait
-        # n'importe quel appareil autorise saturer le disque de l'hote, et un
-        # disque plein ne casse pas que l'import — il casse la ludotheque.
+        # Two refusals BEFORE opening the file: an upload with no ceiling let
+        # any authorised device fill the host's disk, and a full disk breaks
+        # more than the import — it breaks the library.
         if left > config.TELEVERSEMENT_MAX:
             return self._json(
                 {"error": "Fichier trop volumineux : %s pour un maximum de %s."
@@ -958,30 +957,30 @@ class Handler(BaseHTTPRequestHandler):
         self._json({"message": name, "size": dest.stat().st_size})
 
     def _admin_requis(self):
-        """Renvoie une raison de refus, ou "" si l'appelant peut administrer.
+        """Return a reason to refuse, or "" when the caller may administer.
 
-        La regle depend du mode, et c'est volontaire :
+        The rule depends on the mode, and that is deliberate:
 
-        * authentification ACTIVE  -> il faut une session, et elle doit porter
-          le role d'administrateur ;
-        * authentification ETEINTE -> il n'existe aucune identite a verifier.
-          Exiger une session rendrait l'outil inutilisable dans son mode le
-          plus courant. `_allowed()` a deja tranche : cet appelant a le droit
-          d'etre la, et dans ce mode il a tous les droits — l'audit le signale
-          comme un point d'attention, ce qu'il est.
+        * authentication ON  -> a session is required, and it must carry the
+          administrator role;
+        * authentication OFF -> there is no identity to check. Requiring a
+          session would make the tool unusable in its most common mode.
+          `_allowed()` has already decided: this caller is entitled to be here,
+          and in that mode they have every right — the audit reports it as a
+          point of attention, which it is.
 
-        Cas a part, la creation du PREMIER compte : elle doit rester possible
-        alors qu'aucune session ne peut exister, mais pas depuis n'importe ou.
-        Sans cela, « le premier compte est administrateur » signifierait « le
-        premier venu sur le reseau devient administrateur ».
+        A case apart is creating the FIRST account: it must remain possible
+        while no session can exist, but not from anywhere. Without that, "the
+        first account is the administrator" would mean "the first person on the
+        network becomes the administrator".
         """
         if not auth.actif(CFG):
             return ""
-        # Session d'anti-verrouillage : elle est remise a celui qui vient
-        # d'activer l'authentification depuis un acces deja autorise, pour
-        # qu'il ne s'enferme pas dehors. Elle vaut donc administration — sinon
-        # activer un SSO mal configure rendrait les reglages inaccessibles a
-        # tout le monde, y compris a celui qui vient de les changer.
+        # The anti-lockout session: handed to whoever just switched
+        # authentication on from an already-authorised access, so they do not
+        # lock themselves out. It therefore counts as administration —
+        # otherwise enabling a mis-configured SSO would make the settings
+        # unreachable to everybody, the person who just changed them included.
         jeton = auth.session(self.headers.get("Cookie"))
         if jeton and jeton.get("src") == "config":
             return ""
@@ -994,19 +993,19 @@ class Handler(BaseHTTPRequestHandler):
     def _qui(self):
         """Compte INTERNE connecte, ou None.
 
-        Ne rend rien pour une session SSO : il n'y a pas de fiche locale a
-        rendre. C'est `_est_admin()` qui repond a la question du role, pour les
-        deux sources.
+        Returns nothing for an SSO session: there is no local record to
+        return. `_est_admin()` is what answers the role question, for both
+        sources.
         """
         s = auth.session(self.headers.get("Cookie"))
         return comptes.par_id(s.get("sub")) if s and s.get("src") == "interne" else None
 
     def _moi(self):
-        """Qui regarde, et avec quel role.
+        """Who is looking, and with what role.
 
-        `authentification` dit s'il y a une identite a avoir : sans elle, tout
-        le monde est administrateur — c'est le mode le plus courant de Romule,
-        et l'audit le signale deja comme un point d'attention.
+        `authentification` says whether there is an identity to have: without
+        one, everybody is an administrator — Romule's most common mode, and the
+        audit already reports it as a point of attention.
         """
         s = auth.session(self.headers.get("Cookie"))
         return {"authentification": bool(auth.actif(CFG)),
@@ -1016,13 +1015,13 @@ class Handler(BaseHTTPRequestHandler):
                 "admin": (not auth.actif(CFG)) or self._est_admin()}
 
     def _est_admin(self):
-        """Le role, quelle que soit la provenance de la session.
+        """The role, whatever the session came from.
 
-        Un compte interne porte son role dans le fichier des comptes ; une
-        session SSO le porte dans son jeton, inscrit a la connexion d'apres les
-        groupes du fournisseur. Sans cette seconde branche, `_qui()` ne
-        reconnaissant que l'interne, AUCUNE session SSO ne pouvait administrer
-        — et rien ne permettait de lui donner le role.
+        An internal account carries its role in the accounts file; an SSO
+        session carries it in its token, written at login from the provider's
+        groups. Without this second branch, `_qui()` recognising only internal
+        accounts, NO SSO session could administer — and nothing allowed giving
+        it the role.
         """
         s = auth.session(self.headers.get("Cookie"))
         if not s:
@@ -1055,7 +1054,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._connexion_interne()
         if not self._allowed():
             return self._deny()
-        # Tout POST modifie l'etat : on exige qu'il vienne de cette page.
+        # Every POST changes state: we require that it comes from this page.
         if not self._meme_origine():
             JOB.log("POST rejete sur %s : origine %s"
                     % (self.path, self.headers.get("Origin") or "?"), "warn")
@@ -1083,33 +1082,32 @@ class Handler(BaseHTTPRequestHandler):
             JOB.log("Erreur serveur sur %s : %s" % (p, exc))
             self._json({"error": "%s : %s" % (p, exc)}, 500)
 
-    # Le modele de roles disait « seul un administrateur modifie la
-    # configuration, gere les comptes ET lance les actions destructives ».
-    # Les deux premiers points etaient tenus route par route ; le troisieme ne
-    # l'etait pas. Concretement, tout compte non-administrateur pouvait
-    # restaurer une sauvegarde — qui contient le fichier des comptes, donc
-    # rendre le role d'administrateur a qui l'avait perdu —, effacer le
-    # journal, ou lire le journal des acces.
+    # The role model said "only an administrator changes the configuration,
+    # manages the accounts AND launches the destructive actions". The first two
+    # were enforced route by route; the third was not. Concretely, any
+    # non-administrator account could restore a backup — which contains the
+    # accounts file, hence hands the administrator role back to whoever lost
+    # it — clear the log, or read the access log.
     #
-    # Une liste a un seul endroit plutot qu'un appel repete dans trente
-    # branches : une garde qu'on doit se souvenir d'ajouter est une garde qu'on
-    # oublie. En mode sans authentification, `_admin_requis()` laisse passer :
-    # il n'y a pas d'identite a distinguer, et `_allowed()` a deja tranche.
+    # One list in one place rather than a call repeated across thirty branches:
+    # a guard you must remember to add is a guard you forget. In the
+    # no-authentication mode, `_admin_requis()` lets everything through: there
+    # is no identity to tell apart, and `_allowed()` has already decided.
     RESERVE_ADMIN = frozenset({
-        # --- effacent ou remettent en place des donnees
-        "/api/sauvegarde-restaurer",   # contient le fichier des comptes
+        # --- erase or restore data
+        "/api/sauvegarde-restaurer",   # contains the accounts file
         "/api/sauvegarde-creer",
         "/api/trash-purge",
         "/api/restore",
         "/api/covers-clear",
         "/api/meta-oublier",
-        "/api/journal-clear",          # ce qu'on efface d'abord pour se cacher
+        "/api/journal-clear",          # the first thing erased to cover tracks
         "/api/emuready-clear",
-        # --- deplacent des fichiers en masse
+        # --- move files in bulk
         "/api/reorganize-local",
         "/api/device-organize",
         "/api/device-mktree",
-        # --- ecrivent dans les fichiers d'un logiciel tiers
+        # --- write into another program's files
         "/api/eden-apply",
         "/api/eden-restore",
         "/api/eden-profile-save",
@@ -1122,22 +1120,22 @@ class Handler(BaseHTTPRequestHandler):
         "/api/wifi-connect",
         "/api/wifi-switch",
         "/api/wifi-forget",
-        # --- designent ou le service lit et ecrit sur la machine hote
-        "/api/parcourir",             # revele l'arborescence de l'hote
+        # --- choose where the service reads and writes on the host
+        "/api/parcourir",             # reveals the host's directory tree
         "/api/ludotheque",
-        # --- envoient vers l'exterieur au nom du service
-        "/api/notifs",              # les adresses sont des secrets porteurs
+        # --- send outward in the service's name
+        "/api/notifs",              # the addresses are bearer secrets
         "/api/notif-creer",
         "/api/notif-supprimer",
-        "/api/notif-tester",        # sinon : un scanner de ports par procuration
-        # --- renseignent sur qui se connecte, et sur la posture de securite
+        "/api/notif-tester",        # otherwise: a port scanner by proxy
+        # --- report on who connects, and on the security posture
         "/api/acces",
         "/api/audit",
         "/api/auth-test",
     })
 
     def _reserve_admin(self, p):
-        """Raison de refus si la route demande le role d'administrateur."""
+        """A reason to refuse when the route requires the administrator role."""
         return self._admin_requis() if p in self.RESERVE_ADMIN else ""
 
     def _route_post(self, p, d):
@@ -1163,9 +1161,9 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 reseau.verifier(url)
             except reseau.SchemaRefuse as exc:
-                # Le meme controle que pour les jaquettes et l'emetteur OIDC :
-                # un champ de reglage ne doit pas pouvoir faire lire un fichier
-                # local au serveur.
+                # The same check as for cover art and the OIDC issuer: a
+                # settings field must not be able to make the server read a
+                # local file.
                 return self._json({"error": str(exc)}, 400)
             liste = list(CFG.get("notif_destinations") or [])
             if len(liste) >= notifs.MAX_DESTINATIONS:
@@ -1193,9 +1191,9 @@ class Handler(BaseHTTPRequestHandler):
                                          for x in notifs.destinations(CFG)]})
 
         elif p == "/api/notif-tester":
-            # Deux cas : une adresse saisie mais pas encore enregistree, ou une
-            # destination existante — dont l'URL ne sort jamais du serveur et
-            # doit donc etre retrouvee par son identifiant.
+            # Two cases: an address typed but not yet saved, or an existing
+            # destination — whose URL never leaves the server and must
+            # therefore be found by its identifier.
             url = str(d.get("url") or "").strip()
             if not url:
                 cible = next((x for x in notifs.destinations(CFG)
@@ -1211,8 +1209,8 @@ class Handler(BaseHTTPRequestHandler):
         elif p == "/api/cle-creer":
             fiche, cle = apikeys.creer(d.get("nom") or "")
             JOB.log("Cle d'API creee : %s" % fiche["nom"])
-            # La cle en clair ne sortira qu'ICI, et une seule fois : elle n'est
-            # stockee que sous forme d'empreinte.
+            # The plaintext key goes out HERE and only once: it is stored as a
+            # digest and nothing else.
             self._json({"cle": fiche, "secret": cle})
 
         elif p == "/api/cle-revoquer":
@@ -1237,12 +1235,11 @@ class Handler(BaseHTTPRequestHandler):
         elif p == "/api/trash":
             n, where = trash.move(d.get("paths", []),
                                   "ecarte depuis l'interface web", JOB.log)
-            # On rend des FAITS, pas une phrase. La phrase etait composee ici,
-            # en francais, et s'affichait telle quelle dans une interface
-            # anglaise — l'i18n de Romule est entierement cote navigateur.
-            # `lot` est le nom du dossier horodate : c'est lui que
-            # `/api/restore` attend, donc c'est lui qui rend l'annulation
-            # possible.
+            # We return FACTS, not a sentence. The sentence used to be
+            # composed here, in French, and showed as-is in an English
+            # interface — Romule's i18n lives entirely in the browser. `lot` is
+            # the timestamped folder's name: it is what `/api/restore` expects,
+            # so it is what makes the undo possible.
             self._json({"n": n, "dossier": where,
                         "lot": where.rsplit("/", 1)[-1]})
 
@@ -1254,11 +1251,11 @@ class Handler(BaseHTTPRequestHandler):
 
         elif p == "/api/compte-creer":
             if not comptes.liste():
-                # Tout premier compte : il devient administrateur, donc sa
-                # creation ne peut pas etre ouverte au reseau. Sinon « le
-                # premier compte gouverne » signifierait « le premier appareil
-                # du reseau gouverne » — et l'acces reseau sans mot de passe
-                # est un mode que l'outil propose.
+                # The very first account: it becomes the administrator, so its
+                # creation cannot be open to the network. Otherwise "the first
+                # account governs" would mean "the first device on the network
+                # governs" — and passwordless network access is a mode the tool
+                # offers.
                 if not self._local():
                     return self._json(
                         {"error": "Le premier compte se cree depuis la machine "
@@ -1298,8 +1295,8 @@ class Handler(BaseHTTPRequestHandler):
             JOB.log("Mot de passe change : %s" % u["email"])
             journal_acces.noter("compte", self.client_address[0], u["email"],
                                 "mot de passe change")
-            # La session actuelle a ete signee avant le changement : on en
-            # redonne une valide a CE navigateur, les autres sont coupes.
+            # The current session was signed before the change: we hand THIS
+            # browser a valid one, the others are cut.
             self.send_response(200)
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_header("Set-Cookie", auth.entete_cookie(
@@ -1392,8 +1389,8 @@ class Handler(BaseHTTPRequestHandler):
 
         elif p == "/api/doublons":
             r = doublons.rapport(LIB, CFG)
-            # Les entrees completes sont lourdes : le client n'a besoin que du
-            # nom, de la taille et du chemin pour decider.
+            # The full entries are heavy: the client only needs the name, the
+            # size and the path in order to decide.
             def _leger(e):
                 return {"nom": e["nom"], "chemin": e["chemin"],
                         "taille": e["taille"], "plateforme": e["plateforme"]}
@@ -1457,8 +1454,8 @@ class Handler(BaseHTTPRequestHandler):
             self._json(systems.detect_on_device(CFG))
 
         elif p == "/api/meta-oublier":
-            # Forcer la reprise des fiches : on efface le cache, pas les
-            # jaquettes deja telechargees (elles ont leur propre bouton).
+            # Force the details to be fetched again: we clear the cache, not
+            # the covers already downloaded (they have their own button).
             n = 0
             for f in config.COVERS.glob("*.fiche.json"):
                 try:
@@ -1497,15 +1494,14 @@ class Handler(BaseHTTPRequestHandler):
         elif p == "/api/device-browse":
             self._json({"items": device.list_dir(d.get("path", CFG["device_dir"]))})
 
-        # ---- ou sont les jeux, sur la machine qui heberge le service
+        # ---- where the games are, on the machine hosting the service
         elif p == "/api/parcourir":
             self._json(parcourir.lister(d.get("chemin", ""), CFG))
 
         elif p == "/api/ludotheque":
-            # Un travail en cours tient des chemins absolus deja calcules :
-            # deplacer la ludotheque sous ses pieds ferait ecrire une
-            # conversion dans l'ancien dossier, ou echouer un deplacement a
-            # mi-parcours. On refuse, on ne met pas en file.
+            # A running job holds absolute paths already computed: moving the
+            # library out from under it would write a conversion into the old
+            # folder, or fail a move halfway. We refuse; we do not queue.
             if JOB.running:
                 return self._json(
                     {"error": "un travail est en cours — reessaie apres"}, 409)
@@ -1513,9 +1509,9 @@ class Handler(BaseHTTPRequestHandler):
                                               creer=bool(d.get("creer")))
             if souci:
                 return self._json({"error": souci}, 400)
-            # Vide quand le choix retombe sur le dossier du service : la
-            # configuration dit alors « par defaut », et suivra le jour ou le
-            # deploiement changera ce dossier.
+            # Empty when the choice falls back to the service folder: the
+            # configuration then says "default", and will follow the day the
+            # deployment changes that folder.
             CFG["library_path"] = ("" if config.LUDO == config.ROOT
                                    else str(config.LUDO))
             config.save_config(CFG)
@@ -1539,11 +1535,11 @@ class Handler(BaseHTTPRequestHandler):
         elif p == "/api/device-detect-dir":
             self._json({"dir": device.detect_games_dir()})
 
-        # ---- installer l'acces sur la console
+        # ---- setting up access on the console
         elif p == "/api/emulateur-detecter":
-            # Le nom du paquet Android change d'une version d'emulateur a
-            # l'autre. On demande a la console lequel est installe et on le
-            # retient, plutot que de reinterroger a chaque affichage.
+            # The Android package name changes from one emulator version to
+            # the next. We ask the console which one is installed and remember
+            # it, rather than asking again on every render.
             refus = self._admin_requis()
             if refus:
                 return self._json({"error": refus}, 403)
@@ -1580,7 +1576,7 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"ok": ok, "url": url,
                             "message": msg or ("Ouvert sur la console : %s" % url)})
 
-        # ---- connexion sans fil
+        # ---- wireless connection
         elif p == "/api/wifi-switch":
             ok, addr, msg = device.switch_to_wifi()
             if ok:
@@ -1662,8 +1658,8 @@ class Handler(BaseHTTPRequestHandler):
         elif p == "/api/system-games":
             key = d.get("system", "switch")
             dossier = systems.device_dir(key, CFG)
-            # Ce qui est deja sur la console pour CE systeme : sans cette liste,
-            # les autres consoles n'avaient aucun etat, contrairement a la Switch.
+            # What is already on the console for THIS system: without this
+            # list the other consoles had no state at all, unlike the Switch.
             distants = []
             if dossier and device.state() == "device":
                 distants = [
@@ -1738,12 +1734,12 @@ class Handler(BaseHTTPRequestHandler):
             emuready.clear()
             self._json({"message": "Cache EmuReady vide."})
 
-        # ---- configuration d'Eden
+        # ---- Eden's configuration
         elif p in ("/api/eden-config", "/api/eden-apply", "/api/emuready-apply") \
                 and not edenconf.pilotable():
-            # Tous les emulateurs n'exposent pas des reglages que l'on sache
-            # lire : Ryujinx les range en JSON, avec une autre arborescence.
-            # Mieux vaut le dire que d'ecrire au hasard dans ses fichiers.
+            # Not every emulator exposes settings we know how to read:
+            # Ryujinx keeps them in JSON, with a different layout. Better to say
+            # so than to write at random into its files.
             return self._json(
                 {"error": "Les reglages de %s ne sont pas pilotables depuis "
                           "Romule." % profils.actif(CFG)["nom"]}, 400)
@@ -1822,24 +1818,24 @@ class Handler(BaseHTTPRequestHandler):
             self._json(JOB.snapshot())
 
         elif p == "/api/config":
-            # L'etat AVANT toute modification : `CFG` est mute juste apres,
-            # donc le lire ensuite repondrait toujours « deja actif ».
+            # The state BEFORE any change: `CFG` is mutated just after, so
+            # reading it later would always answer "already active".
             refus = self._admin_requis()
             if refus:
                 return self._json({"error": refus}, 403)
             avant = auth.actif(CFG)
-            # Un champ renvoye masque signifie « ne change pas » : sinon
-            # enregistrer les reglages effacerait le secret a chaque fois.
+            # A field returned masked means "do not change": otherwise saving
+            # the settings would erase the secret every time.
             for k in SECRETS:
                 if d.get(k) == MASQUE:
                     d.pop(k)
-            # Liste FERMEE des reglages qu'un client peut ecrire. Une cle
-            # declaree dans `config.DEFAULTS`, affichee par l'interface, et
-            # absente d'ici produit le pire des comportements : le champ se
-            # remplit, le serveur repond 200, et rien ne change.
-            # `oidc_admin_groupes` et `emulateur` etaient dans ce cas — choisir
-            # un profil d'emulateur ne l'enregistrait pas. `test_reglages.py`
-            # compare desormais cette liste a `DEFAULTS` dans les deux sens.
+            # A CLOSED list of the settings a client may write. A key declared
+            # in `config.DEFAULTS`, shown by the interface, and missing from
+            # here produces the worst behaviour there is: the field fills in,
+            # the server answers 200, and nothing changes. `oidc_admin_groupes`
+            # and `emulateur` were in that state — choosing an emulator profile
+            # did not save it. `test_reglages.py` now compares this list against
+            # `DEFAULTS` in both directions.
             for k in ("device_dir", "jobs", "push_layout", "verify_mode",
                       "incremental", "cover_provider", "cover_url",
                       "steamgriddb_key", "igdb_client_id", "igdb_client_secret",
@@ -1854,22 +1850,21 @@ class Handler(BaseHTTPRequestHandler):
                       "maj_check"):
                 if k in d:
                     CFG[k] = d[k]
-            # Les plateformes ajoutees a la main sont assainies A L'ECRITURE,
-            # et pas seulement a la lecture. `systems.liste()` fait deja passer
-            # le dossier par `dossier_sur`, donc rien ne s'echappe aujourd'hui —
-            # mais garder un `../../..` dans le fichier de configuration, c'est
-            # armer le piege pour le prochain qui lira ce champ directement.
+            # Hand-added platforms are sanitised ON WRITE, not only on read.
+            # `systems.liste()` already puts the folder through `dossier_sur`,
+            # so nothing escapes today — but keeping a `../../..` in the
+            # configuration file arms the trap for the next person who reads
+            # that field directly.
             if "systemes_perso" in d:
                 CFG["systemes_perso"] = systems.assainir_perso(CFG["systemes_perso"])
             config.save_config(CFG)
             sauvegarde.auto("reglages")
             JOB.notify_end = bool(CFG.get("notify", True))
 
-            # Activer l'authentification depuis un navigateur qui n'a pas encore
-            # de session l'ejectait aussitot : la requete SUIVANTE recevait la
-            # page de connexion, y compris celle qui aurait servi a revenir en
-            # arriere. Celui qui vient de faire le changement etait bien
-            # autorise a le faire : on lui ouvre une session.
+            # Switching authentication on from a browser that has no session
+            # yet ejected it immediately: the NEXT request got the login page,
+            # including the one that would have undone the change. Whoever just
+            # made that change was entitled to: we open them a session.
             corps = json.dumps({"config": _config_publique()}).encode()
             self.send_response(200)
             self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -1879,10 +1874,10 @@ class Handler(BaseHTTPRequestHandler):
                 if CFG.get("auth_mode") == "interne":
                     liste = comptes.liste()
                     u = comptes.par_id(liste[0]["id"]) if liste else None
-                # Ce jeton n'est rattache a aucun compte : c'est un pont, le
-                # temps de finir de se configurer et de se connecter pour de
-                # bon. Lui donner les douze heures d'une vraie session en
-                # faisait un acces administrateur anonyme d'une demi-journee.
+                # This token is tied to no account: it is a bridge, just long
+                # enough to finish configuring and log in properly. Giving it
+                # the twelve hours of a real session made it an anonymous
+                # administrator access lasting half a day.
                 jeton = (auth.session_interne(u) if u else
                          auth._signer({"sub": "local", "nom": "Accès local",
                                        "email": "", "src": "config",
@@ -1899,16 +1894,16 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"error": "route inconnue : " + p}, 404)
 
     def _api_v1(self, chemin, methode):
-        """La surface publique. Elle ne partage RIEN avec le routage interne :
-        c'est ce qui permet de promettre qu'elle ne bougera pas pendant que
-        l'interface, elle, continue d'evoluer."""
+        """The public surface. It shares NOTHING with the internal routing:
+        that is what allows promising it will not move while the interface goes
+        on evolving."""
         params = parse_qs(self.path.partition("?")[2])
         try:
             reponse = apiv1.router(chemin, params, methode, _contexte_v1())
         except Exception as exc:
             JOB.log("Erreur API v1 sur %s : %s" % (chemin, exc), "warn")
-            # Le message d'exception n'est pas renvoye : il porte souvent un
-            # chemin absolu, donc l'arborescence du serveur.
+            # The exception message is not returned: it often carries an
+            # absolute path, hence the server's directory tree.
             return self._json({"error": "internal_error",
                                "message": "The request could not be served."},
                               500)
@@ -1928,12 +1923,12 @@ DEMARRAGE = time.time()
 
 
 def _inventaire_v1():
-    """L'inventaire enrichi, sans la liste de courses ni le texte a coller.
+    """The enriched inventory, without the shopping list or the paste-ready text.
 
-    `_lib_response()` construit aussi de quoi remplir un ecran — la liste de
-    courses, son rendu en texte, les fichiers en attente d'import. L'API n'en a
-    pas l'usage, et `shopping_text` change a chaque seconde, ce qui rendrait
-    toute mise en cache cote client inutile.
+    `_lib_response()` also builds what a screen needs — the shopping list, its
+    text rendering, the files waiting to be imported. The API has no use for
+    that, and `shopping_text` changes every second, which would make any
+    client-side caching pointless.
     """
     LIB.scan(log=JOB.log)
     LIB.enrich()
@@ -1941,8 +1936,8 @@ def _inventaire_v1():
 
 
 def _lancer_v1(quoi):
-    """Rend (lance, motif). Une seule tache a la fois : c'est ainsi que Romule
-    fonctionne, et l'API le dit plutot que de faire semblant d'une file."""
+    """Return (started, reason). One task at a time: that is how Romule works,
+    and the API says so rather than pretending there is a queue."""
     if JOB.snapshot()["running"]:
         return False, "Another task is already running."
     if quoi == "scan":
@@ -1973,16 +1968,16 @@ def _health():
     conn = device.connection()
     return {
         "ok": True,
-        # La licence AGPL demande qu'un utilisateur qui atteint le service par
-        # le reseau puisse en obtenir le code. Le dire ici le rend lisible par
-        # un outil autant que par l'interface.
+        # The AGPL requires that a user reaching the service over the network
+        # be able to obtain its source. Saying it here makes it readable by a
+        # tool as much as by the interface.
         "version": __version__,
         "licence": LICENCE,
         "source": SOURCE_URL,
         "first_run": not config.CONFIG_FILE.exists(),
         "root": str(config.ROOT),
-        # La ludotheque est distincte de la racine du service : c'est elle que
-        # l'assistant et les reglages proposent de choisir.
+        # The library is distinct from the service root: it is the one the
+        # wizard and the settings offer to choose.
         "ludotheque": str(config.LUDO),
         "ludotheque_imposee": config.LUDO_IMPOSEE,
         "problemes": list(config.PROBLEMES),
@@ -1997,18 +1992,18 @@ def _health():
             "device_dir": CFG.get("device_dir", ""),
             "lan": bool(CFG.get("lan_access")),
             "token": bool(config.TOKEN),
-            # Le navigateur en a besoin AVANT d'envoyer : refuser en cours de
-            # transfert coupe la connexion, et le message n'arrive jamais.
+            # The browser needs this BEFORE sending: refusing mid-transfer
+            # cuts the connection, and the message never arrives.
             "televersement_max": config.TELEVERSEMENT_MAX,
             "container": _in_container(),
-            # Conseils d'installation adaptes a CETTE machine. L'assistant
-            # affichait une commande Homebrew a tout le monde, y compris sur
-            # un NAS Debian ou dans un conteneur.
+            # Installation advice suited to THIS machine. The wizard used to
+            # show a Homebrew command to everyone, including on a Debian NAS or
+            # inside a container.
             "remede_nsz": cli.remede("nsz"),
             "remede_adb": cli.remede("adb"),
-            # De quoi juger si l'acces doit etre protege AVANT toute autre
-            # chose : un service joignable par le reseau et sans authentification
-            # est le defaut le plus grave qu'une installation neuve puisse avoir.
+            # Enough to judge whether access must be protected BEFORE anything
+            # else: a service reachable over the network with no authentication
+            # is the worst defect a fresh installation can have.
             "ecoute": _adresse_ecoute(),
             "expose": _adresse_ecoute() != "127.0.0.1",
             "auth_mode": CFG.get("auth_mode", "aucun"),
@@ -2022,32 +2017,32 @@ def _health():
 def _adresse_ecoute():
     """Sur quelle interface se poser.
 
-    Le socket etait lie a `0.0.0.0` en toutes circonstances, le filtrage se
-    faisant requete par requete. Cela marche, mais cela expose un port a tout
-    le reseau pour une installation que son proprietaire croit locale — et
-    toute erreur dans le filtrage devient immediatement joignable de partout.
+    The socket used to be bound to `0.0.0.0` in all circumstances, with
+    filtering done request by request. That works, but it exposes a port to the
+    whole network for an installation its owner believes local — and any error
+    in the filtering becomes immediately reachable from anywhere.
 
-    On ne s'ouvre donc que sur decision explicite. En conteneur, la decision
-    est prise par celui qui publie le port : y rester sur 127.0.0.1 rendrait
-    l'application injoignable.
+    So we only open on an explicit decision. In a container, the decision is
+    made by whoever publishes the port: staying on 127.0.0.1 there would make
+    the application unreachable.
     """
     if config.env("BIND", "").strip():
         return config.env("BIND").strip()
     ouvert = (CFG.get("lan_access") or config.ENV_LAN or config.TOKEN
               or _in_container())
-    # bandit signale toute ecoute sur 0.0.0.0. Ici elle est CONDITIONNELLE :
-    # elle n'a lieu que si l'operateur a ouvert l'acces (reglage `lan_access`,
-    # ROMULE_LAN, un jeton pose, ou un conteneur — ou une ecoute locale ne
-    # servirait a rien puisque le port est publie). Le defaut reste 127.0.0.1.
-    # C'est precisement ce que l'outil ne peut pas voir, d'ou la marque.
+    # bandit flags any listen on 0.0.0.0. Here it is CONDITIONAL: it only
+    # happens when the operator has opened access (the `lan_access` setting,
+    # ROMULE_LAN, a token set, or a container — where listening locally would
+    # be pointless since the port is published). The default stays 127.0.0.1.
+    # That is precisely what the tool cannot see, hence the marker.
     return "0.0.0.0" if ouvert else "127.0.0.1"  # nosec B104
 
 
 def _in_container():
-    """Detecte un deploiement conteneurise (pas de navigateur a ouvrir).
+    """Detect a containerised deployment (no browser to open).
 
-    La detection vit dans `config` : `cli` en a besoin avant tout import du
-    serveur, pour adapter le remede qu'il propose.
+    The detection lives in `config`: `cli` needs it before importing the server
+    at all, to tailor the remedy it offers.
     """
     return config.en_conteneur()
 
@@ -2060,7 +2055,7 @@ def _lan_ip():
     import socket
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
-        s.connect(("192.0.2.1", 1))     # adresse de test : aucun paquet n'est emis
+        s.connect(("192.0.2.1", 1))     # a test address: no packet is sent
         return s.getsockname()[0]
     except OSError:
         return None
@@ -2069,7 +2064,7 @@ def _lan_ip():
 
 
 def _reconnect_wifi():
-    """Retrouve la console en wifi au demarrage, sans rien demander a l'utilisateur."""
+    """Find the console again over Wi-Fi at startup, asking the user nothing."""
     addr = (CFG.get("wifi_addr") or "").strip()
     if not addr or device.connection()["kind"]:
         return
@@ -2079,14 +2074,14 @@ def _reconnect_wifi():
 
 
 def _audit_demarrage():
-    """Passe l'audit a chaque lancement et remonte ce qui cloche.
+    """Run the audit on every launch and surface what is wrong.
 
-    Hors ligne : un audit ne doit jamais retarder le demarrage ni dependre du
-    reseau. Le controle de version de Python, lui, se fait a la demande.
+    Offline: an audit must never delay startup nor depend on the network. The
+    Python version check happens on demand instead.
     """
     try:
         r = audit.lancer(CFG, hors_ligne=True)
-    except Exception as exc:                  # un audit casse ne casse pas l'outil
+    except Exception as exc:                  # a broken audit does not break the tool
         JOB.log("Audit de securite indisponible : %s" % exc, "warn")
         return
     for c in r["controles"]:
@@ -2103,15 +2098,15 @@ def _audit_demarrage():
 
 
 def _notif_public(d):
-    """Une destination telle qu'elle peut sortir du serveur.
+    """A destination as it may leave the server.
 
-    L'adresse est REMPLACEE par un apercu — l'hote, et rien de plus. Un webhook
-    Discord est un secret porteur : qui l'a peut ecrire dans le salon. Le rendre
-    a l'interface le poserait dans l'historique du navigateur, dans les journaux
-    du proxy, et sur la moindre capture d'ecran des reglages.
+    The address is REPLACED by a preview — the host, and nothing more. A Discord
+    webhook is a bearer secret: whoever holds it can post in the channel.
+    Returning it to the interface would put it in the browser history, in the
+    proxy's logs, and on any screenshot of the settings.
 
-    L'hote seul suffit a reconnaitre laquelle est laquelle, ce qui est la seule
-    chose qu'on demande a cet affichage.
+    The host alone is enough to tell which is which, and that is the only thing
+    this display is asked to do.
     """
     hote = urllib.parse.urlparse(d.get("url") or "").netloc or "?"
     return {"id": d.get("id"), "nom": d.get("nom"), "service": d.get("service"),
@@ -2120,22 +2115,23 @@ def _notif_public(d):
 
 
 def _jeton_de_premier_demarrage():
-    """Rend joignable un service expose qui n'a encore aucun moyen d'entrer.
+    """Make an exposed service reachable when it has no way in yet.
 
-    Le probleme, decouvert en ecrivant le test de fumee de l'image : un
-    conteneur se lie a 0.0.0.0 (sinon il serait injoignable depuis l'hote),
-    mais sans compte, sans jeton et sans `lan_access`, `_autorise()` refuse
-    tout client non local. `docker compose up` donnait donc un 403 disant
-    « active l'acces dans les reglages » — des reglages qu'on ne pouvait pas
-    atteindre. Un blocage complet, sur le chemin d'installation principal.
+    The problem, found while writing the image's smoke test: a container binds
+    to 0.0.0.0 (otherwise it would be unreachable from the host), but with no
+    account, no token and no `lan_access`, `_autorise()` refuses every non-local
+    client. `docker compose up` therefore returned a 403 saying "enable access
+    in the settings" — settings that could not be reached. A complete deadlock,
+    on the main installation path.
 
-    Ouvrir l'acces par defaut aurait resolu le blocage en livrant un service
-    sans mot de passe a tout le reseau. On engendre donc un jeton, une fois,
-    et on l'affiche : c'est ce que font les outils auto-heberges comparables,
-    et cela laisse l'installation sure par defaut ET utilisable.
+    Opening access by default would have solved the deadlock by handing a
+    passwordless service to the whole network. So we generate a token, once, and
+    print it: that is what comparable self-hosted tools do, and it leaves the
+    installation safe by default AND usable.
 
-    Rien n'est engendre si l'operateur a deja tranche — compte, SSO, jeton
-    d'environnement ou acces reseau assume : sa decision prime toujours.
+    Nothing is generated when the operator has already decided — an account, an
+    SSO, an environment token or network access taken on knowingly: their
+    decision always wins.
     """
     if _adresse_ecoute() == "127.0.0.1":
         return None
@@ -2147,20 +2143,20 @@ def _jeton_de_premier_demarrage():
         CFG["jeton_auto"] = jeton
         config.save_config(CFG)
         JOB.log("Jeton d'acces engendre au premier demarrage.")
-    # `config.TOKEN` est lu partout ailleurs : le renseigner ici evite de
-    # doubler chaque controle d'autorisation.
+    # `config.TOKEN` is read everywhere else: setting it here avoids
+    # duplicating every authorisation check.
     config.TOKEN = jeton
     return jeton
 
 
 def _faits_de_demarrage(url, ip, jeton_auto):
-    """Ce qu'on veut lire en premier quand un service ne fait pas ce qu'on croit.
+    """What you want to read first when a service does not do what you think.
 
-    Chaque ligne repond a une question qui, sans elle, se paie en une demi-heure
-    de recherche : « quelle version tourne vraiment », « ou est-ce qu'il range
-    ma configuration », « pourquoi le port publie ne repond pas », « pourquoi
-    il ne convertit rien ». Elles sont donc dites au demarrage plutot que
-    disponibles quelque part.
+    Every line answers a question that otherwise costs half an hour of
+    searching: "which version is really running", "where does it keep my
+    configuration", "why does the published port not answer", "why is it
+    converting nothing". So they are said at startup rather than being
+    available somewhere.
     """
     modes = {"aucun": "aucune", "interne": "comptes internes", "oidc": "OpenID Connect"}
     outils = [n for n, present in (("adb", bool(adb_hint())),
@@ -2174,11 +2170,11 @@ def _faits_de_demarrage(url, ip, jeton_auto):
             sys.version_info[2], sys.platform)),
         ("Interface", "%s   (Ctrl+C pour arreter)" % url),
     ]
-    # La ligne suit ce que fait le SOCKET, pas le reglage `lan_access`. Les deux
-    # divergent dans le cas le plus courant : en conteneur, Romule ecoute sur
-    # 0.0.0.0 et se protege par un jeton — `lan_access` reste faux, et le
-    # bandeau annoncait « Reseau : desactive » deux lignes au-dessus de
-    # l'adresse par laquelle on vient d'etre invite a entrer.
+    # The line follows what the SOCKET does, not the `lan_access` setting. The
+    # two diverge in the most common case: in a container Romule listens on
+    # 0.0.0.0 and protects itself with a token — `lan_access` stays false, and
+    # the banner announced "Network: disabled" two lines above the address you
+    # had just been invited to enter by.
     if _adresse_ecoute() == "127.0.0.1":
         faits.append(("Reseau", "cette machine seulement — ROMULE_BIND=0.0.0.0, "
                                 "ROMULE_LAN=1 ou un jeton, puis redemarrer"))
@@ -2194,8 +2190,8 @@ def _faits_de_demarrage(url, ip, jeton_auto):
          % (config.LUDO, "imposee par ROMULE_LIBRARY" if config.LUDO_IMPOSEE
             else "modifiable depuis l'interface")),
     ]
-    # Les deux dossiers ne sont distingues que s'ils different : sinon on
-    # cherche sa configuration dans le dossier des jeux, ou l'inverse.
+    # The two folders are only distinguished when they differ: otherwise you
+    # go looking for your configuration in the games folder, or the reverse.
     if config.LUDO != config.ROOT:
         faits.append(("Donnees", "%s   (configuration, comptes, jaquettes)"
                       % config.ROOT))
@@ -2213,17 +2209,17 @@ def _faits_de_demarrage(url, ip, jeton_auto):
 
 
 def serve(open_browser=True):
-    # Le dossier de donnees a deja ete valide par `cli._verifier_racine()`.
-    # Le depot, lui, est un CONFORT : la ludotheque peut etre en lecture seule
-    # et le reste du service rester parfaitement utile. On signale, on ne
-    # s'arrete pas.
+    # The data folder has already been validated by `cli._verifier_racine()`.
+    # The drop folder, on the other hand, is a CONVENIENCE: the library may be
+    # read-only and the rest of the service stay perfectly useful. We report,
+    # we do not stop.
     try:
         config.IMPORT.mkdir(exist_ok=True)
     except OSError as exc:
         JOB.log("Depot indisponible (%s) : %s" % (config.IMPORT, exc), "warn")
-    # Les comptes crees avant l'existence des roles n'en portent aucun :
-    # sans cette reprise, une installation existante se retrouverait sans
-    # administrateur apres la mise a jour.
+    # Accounts created before roles existed carry none: without this catch-up,
+    # an existing installation would find itself with no administrator after
+    # the upgrade.
     comptes.reprendre_roles()
     JOB.notify_end = bool(CFG.get("notify", True))
     jeton_auto = _jeton_de_premier_demarrage()
@@ -2233,8 +2229,8 @@ def serve(open_browser=True):
     threading.Thread(target=_reconnect_wifi, daemon=True).start()
     LIB.scan(log=JOB.log)
     versions.load(LIB, log=JOB.log)
-    # ROMULE_NO_BROWSER : la ludotheque lancee par launchd a chaque ouverture
-    # de session ne doit pas ouvrir un navigateur sans qu'on lui demande.
+    # ROMULE_NO_BROWSER: a library started by launchd on every login must not
+    # open a browser unasked.
     service = (_in_container() or config.ENV_LAN or config.TOKEN
                or config.env("NO_BROWSER", "").strip() not in ("", "0"))
     _audit_demarrage()
@@ -2244,8 +2240,8 @@ def serve(open_browser=True):
         console.dit("Accessible SANS MOT DE PASSE par tout appareil du reseau.",
                     "warn", "acces")
     if jeton_auto:
-        # Sans l'adresse complete, le jeton est une chaine que l'utilisateur
-        # doit recoller a la main au bon endroit — c'est la que ca echoue.
+        # Without the full address, the token is a string the user has to
+        # paste back by hand in the right place — that is where it fails.
         console.dit("Ce service est joignable par le reseau et n'a pas encore "
                     "de compte. Ouvre cette adresse, puis cree ton compte :",
                     "warn", "acces")
@@ -2260,8 +2256,8 @@ def serve(open_browser=True):
     srv = ThreadingHTTPServer((_adresse_ecoute(), config.PORT), Handler)
 
     def stop(*_):
-        # `docker stop` envoie SIGTERM : on previent la tache en cours et on
-        # rend la main proprement plutot que d'etre tue net.
+        # `docker stop` sends SIGTERM: we warn the running task and hand back
+        # cleanly rather than being killed outright.
         console.dit("Arret demande, fermeture...", "info", "serveur")
         JOB.cancel()
         threading.Thread(target=srv.shutdown, daemon=True).start()
@@ -2270,7 +2266,7 @@ def serve(open_browser=True):
         try:
             signal.signal(sig, stop)
         except (ValueError, OSError):
-            pass                      # pas de signaux hors du thread principal
+            pass                      # no signals outside the main thread
 
     try:
         srv.serve_forever()

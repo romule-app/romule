@@ -63,14 +63,23 @@ ELISION = re.compile(r"\b(?:[ldjmtscn]|qu|jusqu|lorsqu|puisqu)'[a-zA-Zàâéèê
 
 MOT = re.compile(r"[a-zàâäéèêëîïôöûùüç'-]+", re.I)
 
+# Ce qui est entre accents graves est du CODE cite, pas de la prose. Sans cette
+# coupe, `_est_admin()` et `_qui()` faisaient signaler des phrases anglaises
+# irreprochables — « est » et « qui » sont des marqueurs francais, mais ici ce
+# sont des morceaux de noms de fonctions. La solution alternative — semer des
+# marques `anglais:ok` sur chaque ligne qui cite un identifiant — aurait rendu
+# le detecteur insupportable, donc desactive.
+_CODE = re.compile(r"`[^`]*`")
+
 MUETTES = {".git", "node_modules", "__pycache__", "site", "locales"}
 
 
 def francais(texte):
     """Les marqueurs francais trouves dans ce texte, ou un ensemble vide."""
-    mots = {m.lower() for m in MOT.findall(texte)}
+    prose = _CODE.sub(" ", texte)
+    mots = {m.lower() for m in MOT.findall(prose)}
     trouves = mots & MARQUEURS
-    if ELISION.search(texte):
+    if ELISION.search(prose):
         trouves.add("elision")
     return trouves
 
@@ -171,6 +180,13 @@ NAME = "x"
 '''
 
 
+# Un identifiant francais cite dans une phrase anglaise : `_est_admin` porte
+# « est », `_qui` porte « qui ». Ce sont des noms, pas de la prose.
+IDENTIFIANT_PY = '''# `_est_admin()` answers the role question, and `_qui()` does not.
+NAME = "x"
+'''
+
+
 def epreuve():
     """Le detecteur voit-il le francais, et se tait-il sur l'anglais ?
 
@@ -193,6 +209,12 @@ def epreuve():
         return False
     if not any(francais(t) for _, t in blocs(prose_python(MAUVAIS_PY))):
         print("   EPREUVE ECHOUEE : le regroupement en blocs laisse passer")
+        return False
+    # Un nom de fonction francais dans une phrase anglaise n'est pas du
+    # francais : c'est un identifiant, et il sera traduit par la phase des
+    # identifiants, pas par celle de la prose.
+    if any(francais(t) for _, t in blocs(prose_python(IDENTIFIANT_PY))):
+        print("   EPREUVE ECHOUEE : un identifiant entre accents graves est signale")
         return False
     return True
 
