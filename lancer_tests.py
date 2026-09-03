@@ -20,6 +20,7 @@ Aucune dependance : ni pytest, ni selenium, ni playwright.
 """
 
 import os
+import socket
 import subprocess
 import sys
 import tempfile
@@ -30,7 +31,26 @@ from pathlib import Path
 
 RACINE = Path(__file__).resolve().parent
 TESTS = RACINE / "romule" / "tests"
-PORT_NAV = int(os.environ.get("LUDO_PORT_TESTS", "8798"))
+def _port_libre():
+    """Un port que personne n'occupe, demande au systeme.
+
+    Le port etait fige a 8798. Un serveur laisse par une execution
+    precedente — ou n'importe quoi d'autre sur la machine — s'y installait, et
+    la suite testait CE service-la : les resultats devenaient ceux d'une autre
+    version, rouges ou verts sans rapport avec le code qu'on venait d'ecrire.
+    C'est arrive, et le diagnostic a coute une heure.
+
+    `LUDO_PORT_TESTS` reste accepte pour qui veut fixer le port a la main.
+    """
+    fixe = os.environ.get("LUDO_PORT_TESTS")
+    if fixe:
+        return int(fixe)
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return int(s.getsockname()[1])
+
+
+PORT_NAV = _port_libre()
 
 VERT, ROUGE, GRIS, RAZ = "\033[32m", "\033[31m", "\033[90m", "\033[0m"
 
