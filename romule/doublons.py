@@ -1,17 +1,17 @@
-"""Detection des doublons dans la ludotheque.
+"""Finding duplicates in the library.
 
-Trois formes, qui n'ont pas les memes consequences :
+Three shapes, with different consequences:
 
-  * **fichier identique** — meme empreinte, deux emplacements. C'est de la
-    place perdue, rien de plus : on peut en supprimer un sans reflechir ;
-  * **meme jeu, deux plateformes** — « Pokemon FireRed » en Switch et en GBA.
-    Ce n'est pas une erreur, c'est un choix ; on le signale sans rien proposer ;
-  * **meme jeu, plusieurs regions ou revisions** — « (Europe) », « (USA) »,
-    « (Rev 1) ». La aussi c'est un choix, mais il est souvent involontaire :
-    on a telecharge deux fois le meme titre sans s'en rendre compte.
+  * **identical file** — same digest, two locations. That is wasted space and
+    nothing else: one can be deleted without thinking;
+  * **same game, two platforms** — "Pokemon FireRed" on Switch and on GBA.
+    Not a mistake, a choice; we report it and propose nothing;
+  * **same game, several regions or revisions** — "(Europe)", "(USA)",
+    "(Rev 1)". A choice too, but often an unintended one: the same title was
+    downloaded twice without anyone noticing.
 
-On ne supprime jamais rien ici. Le module repond a « qu'est-ce qui fait
-doublon ? », la decision reste a l'utilisateur.
+Nothing is ever deleted here. The module answers "what looks like a
+duplicate?"; the decision stays with the user.
 """
 
 import re
@@ -19,8 +19,8 @@ import unicodedata
 
 from . import systems
 
-# Ce qu'on retire d'un nom de fichier pour comparer des TITRES : region,
-# langue, revision, numero de version, marqueurs de scene, extension.
+# What is stripped from a file name to compare TITLES: region, language,
+# revision, version number, scene tags, extension.
 _BRUIT = [
     r"\((?:europe|usa|japan|france|germany|spain|italy|world|eur|us|jp|fr|de|es|it|"
     r"en|multi\d*|rev\s*\d+|v\d[\d.]*|proto|beta|demo|unl|beta\d*)\)",
@@ -32,14 +32,14 @@ _BRUIT = [
     r"md|gen|smd|nes|fds|3ds|cia|rvz|wbfs|pbp|cso|zip|7z|rar|gdi|cdi|wud|wux)$",
 ]
 
-# Mots qui ne distinguent pas deux titres.
+# Words that do not tell two titles apart.
 _VIDES = {"the", "a", "le", "la", "les", "of", "de", "du", "and", "et"}
 
 
 def titre_reduit(nom):
-    """Forme comparable d'un nom de jeu : minuscules, sans region ni version."""
-    # Sans depliage des accents, « Pokémon » devient « poke mon » : deux mots
-    # la ou il n'y en a qu'un, et un titre reduit illisible dans le rapport.
+    """A comparable form of a game name: lowercase, no region, no version."""
+    # Without unfolding accents, "Pokémon" becomes "poke mon": two words where
+    # there is one, and a reduced title that reads as nonsense in the report.
     s = unicodedata.normalize("NFKD", nom or "")
     s = "".join(c for c in s if not unicodedata.combining(c)).lower()
     for motif in _BRUIT:
@@ -50,11 +50,11 @@ def titre_reduit(nom):
 
 
 def _entrees(lib, cfg):
-    """Tous les jeux connus, Switch et autres plateformes, sous une meme forme."""
+    """Every known game, Switch and other platforms, in one common shape."""
     out = []
     for f in lib.files:
-        # Une mise a jour ou un DLC n'est pas un doublon du jeu : on ne compare
-        # que ce qui est jouable seul.
+        # An update or a DLC is not a duplicate of the game: we only compare
+        # what is playable on its own.
         if f.get("type") in ("UPDATE", "DLC"):
             continue
         out.append({"plateforme": "switch", "nom": f["name"], "chemin": f["path"],
@@ -69,10 +69,10 @@ def _entrees(lib, cfg):
 
 
 def chercher(lib, cfg, empreintes=None):
-    """Renvoie les trois familles de doublons."""
+    """Return the three families of duplicates."""
     entrees = _entrees(lib, cfg)
 
-    # 1. fichiers rigoureusement identiques (meme empreinte connue)
+    # 1. strictly identical files (same known digest)
     identiques = []
     if empreintes:
         par_sha = {}
@@ -83,8 +83,8 @@ def chercher(lib, cfg, empreintes=None):
                 identiques.append({"empreinte": sha, "taille": lot[0][1],
                                    "fichiers": [r for r, _ in lot]})
 
-    # 2. meme titre, plateformes differentes
-    # 3. meme titre, meme plateforme (regions/revisions)
+    # 2. same title, different platforms
+    # 3. same title, same platform (regions/revisions)
     par_titre = {}
     for e in entrees:
         cle = titre_reduit(e["nom"])
@@ -97,8 +97,8 @@ def chercher(lib, cfg, empreintes=None):
         if len(lot) < 2:
             continue
         plateformes = {e["plateforme"] for e in lot}
-        # Sur la Switch, deux fichiers de meme title ID de base sont le meme
-        # exemplaire vu deux fois, pas un doublon.
+        # On the Switch, two files sharing a base title ID are the same copy
+        # seen twice, not a duplicate.
         tids = {e["tid"][:13] for e in lot if e["tid"]}
         if len(plateformes) > 1:
             multi.append({"titre": cle, "plateformes": sorted(plateformes),

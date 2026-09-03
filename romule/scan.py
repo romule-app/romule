@@ -7,7 +7,7 @@ from . import config, nsztool, titleid
 
 
 def target_path(f):
-    """Chemin decompresse attendu pour un fichier compresse, sinon None."""
+    """Expected decompressed path for a compressed file, otherwise None."""
     if f["ext"] == "nsz":
         return f["path"][:-4] + ".nsp"
     if f["ext"] == "xcz":
@@ -32,26 +32,26 @@ class Library:
     # ------------------------------------------------------------ inventaire
 
     def _parcourir(self):
-        """Les fichiers retenus, en chemins ABSOLUS tries — sans `pathlib`.
+        """The files we keep, as sorted ABSOLUTE paths — without `pathlib`.
 
-        Cette boucle est le cout de chaque affichage : l'inventaire n'est pas
-        range quelque part, il est REFAIT a chaque `/api/scan`. Un profil sur
-        20 000 titres (39 525 fichiers) donnait 1 887 ms, dont :
+        This loop is the cost of every render: the inventory is not stored
+        anywhere, it is REBUILT on each `/api/scan`. A profile over 20 000
+        titles (39 525 files) gave 1 887 ms, of which:
 
             relative_to       744 ms   39 %
             sorted(Path)      362 ms   19 %   — 504 724 comparaisons
             stat              138 ms          — appele DEUX fois par fichier
 
-        La serialisation JSON, elle, n'apparaissait meme pas. C'est pourquoi
-        une base de donnees n'aurait rien change ici : le temps ne part pas a
-        lire des donnees, il part a construire des objets `Path` pour les jeter
-        aussitot. On garde donc des chaines, et `os.scandir` — qui rend le type
-        et la taille sans second appel systeme.
+        JSON serialisation did not even show up. Which is why a database would
+        have changed nothing here: the time does not go into reading data, it
+        goes into building `Path` objects and throwing them away. So we keep
+        strings, and `os.scandir` — which gives the type and the size without a
+        second system call.
 
-        `os.walk` elague les dossiers ignores EN PLACE, ce qui evite de
-        descendre dans `_corbeille/` pour ensuite rejeter chaque fichier un par
-        un. L'elagage ne vaut qu'a la racine, comme avant : `rel.parts[0]`
-        ne regardait que le premier segment.
+        `os.walk` prunes ignored folders IN PLACE, which avoids descending into
+        `_corbeille/` only to reject each file one by one. Pruning applies at
+        the root only, as before: `rel.parts[0]` looked at the first segment
+        and nothing else.
         """
         base = str(config.LUDO)
         coupe = len(base) + 1
@@ -63,13 +63,13 @@ class Library:
                 ext = os.path.splitext(nom)[1].lower()
                 if ext not in config.EXTS:
                     continue
-                # L'extension est portee avec le chemin : la recalculer plus
-                # bas ferait un second `splitext` par fichier, pour un
-                # resultat deja connu.
+                # The extension travels with the path: recomputing it below
+                # would mean a second `splitext` per file, for a result we
+                # already have.
                 trouves.append((os.path.join(dossier, nom), ext))
-        # `normcase` reproduit exactement l'ordre de `sorted(rglob("*"))` :
-        # `PurePath.__lt__` compare `_str_normcase`, c'est-a-dire la chaine
-        # complete, minusculisee sous Windows et inchangee ailleurs.
+        # `normcase` reproduces the order of `sorted(rglob("*"))` exactly:
+        # `PurePath.__lt__` compares `_str_normcase`, that is, the whole string,
+        # lowercased on Windows and unchanged elsewhere.
         trouves.sort(key=lambda c: os.path.normcase(c[0]))
         return trouves, coupe
 
@@ -88,28 +88,29 @@ class Library:
             elif deep and tid and titleid.tid_type(tid) == "BASE" and (
                     ver or (self.versions
                             and titleid.tid_patch(tid) not in self.versions)):
-                # Deux signaux trahissent un nom de fichier menteur :
-                #   - une base annoncee avec une version (une base est toujours
-                #     en v0) : c'est une mise a jour mal nommee ;
-                #   - un title ID que titledb ne connait pas : une coquille dans
-                #     le nom suffit a fabriquer un identifiant valide en apparence
-                #     mais inexistant, et le fichier forme alors un faux jeu a part.
-                # Dans les deux cas on tranche sur le contenu.
+                # Two signals give away a lying file name:
+                #   - a base announced with a version (a base is always v0):
+                #     that is a mis-named update;
+                #   - a title ID titledb does not know: one typo in the name is
+                #     enough to forge an identifier that looks valid but does
+                #     not exist, and the file then forms a phantom game of its
+                #     own.
+                # In both cases we decide on the contents.
                 reel = nsztool.container_tid(chemin)
                 if reel and reel != tid:
                     log("Nom trompeur : %s annonce %s, contient %s"
                         % (nom, tid, reel), "warn")
                     tid = reel
-            # `os.path.dirname(rel)` rend "" a la racine la ou
-            # `Path.parent.relative_to` rendait ".". La difference se voit dans
-            # l'interface : c'est le dossier affiche sous chaque carte.
+            # `os.path.dirname(rel)` returns "" at the root where
+            # `Path.parent.relative_to` returned ".". The difference is visible
+            # in the interface: it is the folder shown under each card.
             dossier_rel = os.path.dirname(rel) or "."
             try:
                 taille = os.stat(chemin).st_size
             except OSError:
-                # Un fichier qui disparait entre le parcours et la lecture
-                # n'est pas une panne : un transfert peut se terminer pendant
-                # l'inventaire. On l'ignore plutot que d'echouer entierement.
+                # A file that vanishes between the walk and the read is not a
+                # fault: a transfer may finish during the inventory. We skip it
+                # rather than failing the whole thing.
                 continue
             files.append({
                 "path": chemin,
@@ -130,8 +131,8 @@ class Library:
     # ------------------------------------------------------------ diagnostics
 
     def enrich(self):
-        """Ajoute les drapeaux : converti, orphelin, version obsolete, patch/DLC."""
-        from . import device  # tardif : device n'est pas requis par la CLI hors console
+        """Add the flags: converted, orphan, outdated version, patch/DLC."""
+        from . import device  # late: device is not needed by the CLI off-console
         files = self.files
         vdb = self.versions
 
@@ -144,7 +145,7 @@ class Library:
             if f["tid"] and f["version"] is not None:
                 owned[f["tid"]] = max(owned.get(f["tid"], -1), f["version"])
 
-        # Index DLC connus, construit UNE fois (evite un balayage de titledb par jeu).
+        # Index of known DLC, built ONCE (avoids scanning titledb per game).
         dlc_index = {}
         for k in vdb:
             dlc_index.setdefault(k[:13], []).append(k)
@@ -154,9 +155,9 @@ class Library:
             f["converted"] = _is_converted(f)
             f["needs_convert"] = bool(target_path(f)) and not f["converted"]
             f["missing_dlc"] = []
-            # Un telechargement interrompu produit une archive plus courte que ce
-            # qu'elle annonce. Le signaler ici evite de le decouvrir a l'envoi,
-            # ou pire sur la console avec un jeu qui ne demarre pas.
+            # An interrupted download produces an archive shorter than it
+            # claims. Flagging it here avoids finding out at push time, or
+            # worse on the console with a game that will not start.
             f["broken"] = device.integrity(f["path"])
             if f["broken"]:
                 flags.append(("broken", "fichier incomplet"))
@@ -174,9 +175,9 @@ class Library:
                 pid = titleid.tid_patch(f["tid"])
                 latest, mine = vdb.get(pid), owned.get(pid)
                 if latest:
-                    # Ces libelles s'affichent tels quels : ils doivent dire ce
-                    # que l'utilisateur doit FAIRE, pas reciter un numero de
-                    # version qui ne lui evoque rien.
+                    # These labels are shown as-is: they must say what the
+                    # user should DO, not recite a version number that means
+                    # nothing to them.
                     if mine is None:
                         flags.append(("nopatch",
                                       "Une mise à jour existe, tu ne l'as pas"))
@@ -196,7 +197,7 @@ class Library:
     # ------------------------------------------------------------ rapports
 
     def shopping_list(self):
-        """Ce qu'il reste a recuperer : patches perimes/absents, DLC manquants."""
+        """What is left to fetch: stale or missing patches, missing DLC."""
         vdb = self.versions
         live = [f for f in self.files if not _is_converted(f)]
         owned = {}
@@ -221,7 +222,7 @@ class Library:
         return out
 
     def nand_rows(self):
-        """Fichiers UPDATE/DLC decompresses a installer dans la NAND d'Eden."""
+        """Decompressed UPDATE/DLC files to install into Eden's NAND."""
         return sorted(
             (f for f in self.files
              if f["type"] in ("UPDATE", "DLC") and f["ext"] in ("nsp", "xci")),
@@ -229,9 +230,9 @@ class Library:
 
     def stats(self):
         f = self.files
-        # Un age en heures, pas une phrase : la phrase se traduit du cote de
-        # l'interface. Envoyee toute faite, elle restait en francais dans une
-        # interface anglaise, et personne ne pouvait la traduire.
+        # An age in hours, not a sentence: the sentence is translated on the
+        # interface side. Sent ready-made, it stayed French in an English
+        # interface, and nobody could translate it.
         heures = None
         if self.versions_at:
             heures = int((time.time() - self.versions_at) / 3600)

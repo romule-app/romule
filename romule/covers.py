@@ -1,12 +1,12 @@
-"""Jaquettes des jeux : telechargement paresseux + cache local `_covers/`.
+"""Cover art: lazy download plus a local `_covers/` cache.
 
-Trois sources (config `cover_provider`) :
-  - nlib        : icone Switch officielle par title ID (defaut, sans cle)
-  - steamgriddb : recherche par nom, necessite une cle API
-  - custom      : modele d'URL libre (`cover_url`, {tid} remplace)
+Three sources (`cover_provider` setting):
+  - nlib        : official Switch icon by title ID (default, no key needed)
+  - steamgriddb : search by name, requires an API key
+  - custom      : free-form URL template (`cover_url`, {tid} substituted)
 
-Les echecs sont memorises pour la session afin de ne pas retenter en boucle.
-Tout est optionnel : sans source valide, l'UI affiche un placeholder.
+Failures are remembered for the session so we do not retry in a loop.
+All of it is optional: with no working source the interface shows a placeholder.
 """
 
 import hashlib
@@ -32,24 +32,24 @@ def path_for(tid):
 
 
 def version():
-    """Jeton de fraicheur du cache : change des qu'une image est ajoutee ou
-    supprimee. Sert a invalider le cache du navigateur (sans lui, il garde
-    ses anciennes images pendant des heures)."""
+    """Cache freshness token: changes as soon as an image is added or removed.
+    Used to invalidate the browser cache (without it, the browser keeps its old
+    images for hours)."""
     try:
         return int(config.COVERS.stat().st_mtime)
     except OSError:
         return 0
 
 
-MINI = 100          # meme seuil qu'au telechargement : sous cette taille, ce
-                    # n'est pas une image mais une reponse vide ou une erreur
+MINI = 100          # same threshold as on download: below this size it is not
+                    # an image but an empty response or an error
 
 
 def cached(tid):
     p = path_for(tid)
-    # Un fichier non vide n'est pas forcement une image : des reponses de
-    # quelques octets sont restees en cache et privaient le jeu de jaquette
-    # pour toujours, puisqu'elles passaient pour valides.
+    # A non-empty file is not necessarily an image: a few-byte response once
+    # stayed in the cache and denied the game its artwork forever, because it
+    # passed for valid.
     return p if (p.exists() and p.stat().st_size >= MINI) else None
 
 
@@ -57,11 +57,11 @@ _JUNK = re.compile(r"[\[\(][^\])]*[\])]|\bv\d+(\.\d+)*\b|\b\d{4,}\b", re.I)
 
 
 def search_name(name):
-    """Nettoie un nom de fichier pour une recherche par titre.
+    """Clean a file name for a search by title.
 
-    « Super Smash Bros. Ultimate (01006A800016E000)(v0) » -> « Super Smash Bros. Ultimate »
+    "Super Smash Bros. Ultimate (01006A800016E000)(v0)" -> "Super Smash Bros. Ultimate"
     """
-    # toute extension de ROM, pas seulement celles de la Switch : « .gba », « .md »…
+    # any ROM extension, not only the Switch ones: ".gba", ".md"…
     s = re.sub(r"\.[a-z0-9]{2,4}$", "", name or "", flags=re.I)
     s = _JUNK.sub(" ", s)
     s = re.sub(r"[_\-–]+", " ", s)
@@ -70,22 +70,21 @@ def search_name(name):
 
 
 def cle_cache(tid, name=None):
-    """Identifiant sous lequel une jaquette est rangee.
+    """The identifier a cover is filed under.
 
-    Certains fichiers ne portent aucun title ID exploitable — les packs XCI qui
-    fusionnent jeu, mises a jour et DLC, notamment. Ils avaient droit a une
-    vignette vide alors qu'une recherche par nom aurait suffi : on leur donne
-    donc une cle derivee du nom.
+    Some files carry no usable title ID — XCI packs that merge game, updates
+    and DLC, notably. They got an empty thumbnail when a search by name would
+    have been enough, so they get a key derived from the name instead.
     """
     if tid:
         return tid.lower()
     propre = search_name(name or "")
     if not propre:
         return None
-    # Cle de cache, pas empreinte de securite : on veut un nom de fichier
-    # court et stable pour un titre donne. `usedforsecurity=False` le dit a
-    # l'API — et c'est ce qui permet a Romule de tourner sur une installation
-    # Python en mode FIPS, ou SHA-1 est refuse par defaut.
+    # A cache key, not a security digest: we want a short, stable file name
+    # for a given title. `usedforsecurity=False` says so to the API — and that
+    # is what lets Romule run on a FIPS-mode Python, where SHA-1 is refused by
+    # default.
     return "n" + hashlib.sha1(propre.encode("utf-8"),
                               usedforsecurity=False).hexdigest()[:15]
 
@@ -102,8 +101,8 @@ def fetch(tid, name=None, cfg=None):
         return None
     cfg = cfg or config.load_config()
 
-    # On essaie la source choisie, puis on se rabat sur l'icone officielle :
-    # mieux vaut une image correcte que pas d'image du tout.
+    # Try the chosen source, then fall back to the official icon: a correct
+    # image beats no image at all.
     urls = []
     principal = _resolve_url(tid, name, cfg)
     if principal:
@@ -111,13 +110,13 @@ def fetch(tid, name=None, cfg=None):
     if tid and cfg.get("cover_provider") != "nlib":
         urls.append(NLIB.replace("{tid}", tid))
     if not urls and name and (cfg.get("steamgriddb_key") or "").strip():
-        # sans title ID, SteamGridDB reste joignable par le nom
+        # without a title ID, SteamGridDB is still reachable by name
         secours = _sgdb_url(name, cfg["steamgriddb_key"].strip())
         if secours:
             urls.append(secours)
 
     def essayer(url):
-        """Range l'image et rend son chemin, ou None si elle ne vaut rien."""
+        """Store the image and return its path, or None if it is worthless."""
         try:
             data = _download(url)
         except Exception:
@@ -133,24 +132,22 @@ def fetch(tid, name=None, cfg=None):
         if p:
             return p
 
-    # DEUXIEME source, et non un secours de derniere chance. SteamGridDB est
-    # une base de visuels communautaires : riche sur ce qui se joue au clavier,
-    # pauvre sur les catalogues de consoles portables. IGDB, que Romule
-    # interrogeait deja pour ses resumes, publie aussi des jaquettes — il ne
-    # lui en demandait simplement jamais.
+    # A SECOND source, not a last-ditch fallback. SteamGridDB is a community
+    # artwork database: rich on what gets played with a keyboard, thin on
+    # handheld console catalogues. IGDB, which Romule already queried for
+    # summaries, publishes cover art too — it was simply never asked.
     #
-    # Elle est consultee APRES la boucle, et non ajoutee a `urls` : la question
-    # a laquelle il faut repondre est « aucune image », pas « aucune adresse ».
-    # Placee avant, une adresse nlib ou SteamGridDB qui rend un 404 aurait
-    # suffi a ecarter IGDB — le repli n'aurait alors jamais servi les jeux qui
-    # en ont le plus besoin.
+    # It is consulted AFTER the loop, not appended to `urls`: the question to
+    # answer is "no image", not "no address". Placed before, an nlib or
+    # SteamGridDB URL answering 404 would have been enough to rule IGDB out —
+    # and the fallback would never have served the games that need it most.
     if name:
-        # `search_name` et pas `name` : ici, `name` est le NOM DE FICHIER, et
-        # ses mots distinctifs comprennent « europe », « fr » et « 3ds ». Le
-        # rapprochement, qui exige les deux tiers d'entre eux, rejetait donc
-        # le bon jeu — le repli s'appelait, cherchait, trouvait, et refusait.
-        # `sgdb_infos` nettoie en interne ; IGDB attend un titre deja propre,
-        # comme pour `chercher()`.
+        # `search_name` and not `name`: here `name` is the FILE NAME, and its
+        # distinctive words include "europe", "fr" and "3ds". The matching
+        # rule, which demands two thirds of them, therefore rejected the right
+        # game — the fallback ran, searched, found, and refused. `sgdb_infos`
+        # cleans internally; IGDB expects an already-clean title, as for
+        # `chercher()`.
         from . import igdb
         depuis_igdb = igdb.jaquette(search_name(name), cfg)
         if depuis_igdb:
@@ -161,7 +158,7 @@ def fetch(tid, name=None, cfg=None):
     return None
 
 
-ECHEC_TTL = 600          # on retente au bout de 10 min plutot que jamais
+ECHEC_TTL = 600          # retry after 10 min rather than never
 
 
 def _fail(tid):
@@ -170,7 +167,7 @@ def _fail(tid):
 
 
 def _echec_recent(tid):
-    """Un echec passager ne doit pas priver le jeu de jaquette pour toujours."""
+    """A passing failure must not deny the game its cover forever."""
     with _LOCK:
         t = _FAILED.get(tid)
         if t is None:
@@ -199,10 +196,10 @@ def _download(url, headers=None):
 
 
 def sgdb_infos(name, key):
-    """Cherche un jeu sur SteamGridDB : renvoie {titre, url} ou None.
+    """Look a game up on SteamGridDB: returns {titre, url} or None.
 
-    La meme requete sert au titre ET a la jaquette : c'est le seul endroit ou
-    l'on dispose d'un nom officiel pour une ROM qui ne porte aucun identifiant.
+    The same request serves the title AND the artwork: it is the only place
+    where an official name is available for a ROM carrying no identifier.
     """
     base = "https://www.steamgriddb.com/api/v2"
     h = {"Authorization": "Bearer " + key, "User-Agent": "romule"}
@@ -210,13 +207,13 @@ def sgdb_infos(name, key):
         cherche = search_name(name)
         found = _json.loads(_download(base + "/search/autocomplete/"
                                       + urllib.parse.quote(cherche), h))
-        # PAS `data[0]`. SteamGridDB classe par SA pertinence, qui n'est pas la
-        # notre : sur « Crazy Construction » il rend d'abord un jeu nomme
-        # « Crazy ». Ce titre servait ensuite de pivot pour interroger IGDB,
-        # donc la carte affichait le nom ET le resume d'un autre jeu.
+        # NOT `data[0]`. SteamGridDB ranks by ITS relevance, which is not
+        # ours: on "Crazy Construction" it returns a game called "Crazy" first.
+        # That title was then the pivot for the IGDB lookup, so the card showed
+        # the name AND the summary of a different game.
         #
-        # Une fiche absente se voit ; une fiche fausse se croit. On prefere
-        # donc ne rien rendre.
+        # A missing entry is visible; a wrong one is believed. We would rather
+        # return nothing.
         jeu = rapprochement.meilleur(found.get("data") or [], cherche,
                                      nom=lambda j: j.get("name") or "")
         if not jeu:
@@ -225,8 +222,8 @@ def sgdb_infos(name, key):
         try:
             grids = _json.loads(_download(
                 base + "/grids/game/%d?dimensions=600x900&limit=1&types=static" % jeu["id"], h))
-            # Ce `[0]`-ci est legitime : le jeu est deja identifie, et on
-            # prend simplement sa premiere jaquette.
+            # This `[0]` is legitimate: the game is already identified, and
+            # we simply take its first cover.
             infos["url"] = grids["data"][0]["url"]
         except Exception:
             pass
@@ -236,12 +233,11 @@ def sgdb_infos(name, key):
 
 
 def tester_cle(cfg):
-    """Verifie une cle SteamGridDB et renvoie (ok, message).
+    """Check a SteamGridDB key and return (ok, message).
 
-    `sgdb_infos` avale toutes les erreurs : c'est le bon comportement quand on
-    cherche une jaquette parmi des centaines, mais l'assistant a besoin de
-    savoir POURQUOI ca n'a pas marche. Une cle mal collee et un jeu introuvable
-    ne se corrigent pas de la meme facon.
+    `sgdb_infos` swallows every error: the right behaviour when fetching one
+    cover among hundreds, but the wizard needs to know WHY it did not work. A
+    mis-pasted key and a game that does not exist are not fixed the same way.
     """
     key = (cfg.get("steamgriddb_key") or "").strip()
     if not key:
@@ -265,7 +261,7 @@ def _sgdb_url(name, key):
 
 
 def clear():
-    """Vide le cache disque et la liste d'echecs."""
+    """Empty the on-disk cache and the failure list."""
     with _LOCK:
         _FAILED.clear()
     n = 0

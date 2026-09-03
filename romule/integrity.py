@@ -1,10 +1,10 @@
-"""Verification d'integrite de la ludotheque.
+"""Integrity checking for the library.
 
-Deux niveaux :
-  - empreinte SHA-1 de chaque fichier, memorisee dans `_integrity.json` :
-    au passage suivant, un fichier dont la taille n'a pas bouge mais dont
-    l'empreinte a change est corrompu (corruption silencieuse du disque).
-  - pour les conteneurs Switch, verification interne via `nsz --verify`.
+Two levels:
+  - a SHA-1 digest of every file, recorded in `_integrity.json`: on the next
+    pass, a file whose size has not moved but whose digest has is corrupt
+    (silent disk corruption).
+  - for Switch containers, an internal check through `nsz --verify`.
 """
 
 import hashlib
@@ -35,8 +35,8 @@ def _save(reg):
 
 
 def sha1(path, job=None, chunk=1 << 22):
-    # Meme raison que `device.local_sha1` : on detecte un fichier abime, pas un
-    # fichier remplace. Le registre sert a reperer une copie qui a mal tourne.
+    # Same reason as `device.local_sha1`: we detect a damaged file, not a
+    # replaced one. The register is there to spot a copy that went wrong.
     h = hashlib.sha1(usedforsecurity=False)
     with open(path, "rb") as f:
         while True:
@@ -50,7 +50,7 @@ def sha1(path, job=None, chunk=1 << 22):
 
 
 def deep_verify(path):
-    """Verification interne d'un conteneur Switch via nsz. (ok, message)"""
+    """Internal check of a Switch container through nsz. (ok, message)"""
     if not nsztool.available():
         return (True, "nsz absent")
     try:
@@ -62,10 +62,10 @@ def deep_verify(path):
 
 
 def resume(files=None):
-    """Etat du registre : ce qui est couvert, et depuis quand.
+    """State of the register: what is covered, and since when.
 
-    Sans cela on ne sait pas si « aucun probleme » veut dire « tout est sain »
-    ou « rien n'a jamais ete verifie ».
+    Without it there is no telling whether "no problem" means "everything is
+    sound" or "nothing has ever been checked".
     """
     reg = _load()
     dates = sorted(v.get("checked", "") for v in reg.values() if v.get("checked"))
@@ -82,19 +82,18 @@ def resume(files=None):
 
 
 def _priorite(f, reg):
-    """Ordre de passage : jamais verifie d'abord, puis le plus ancien."""
+    """Order of processing: never-checked first, then the oldest."""
     e = reg.get(f.get("rel") or Path(f["path"]).name)
     return (1, e.get("checked", "")) if e else (0, "")
 
 
 def check(files, job, deep=False, budget_octets=None):
-    """Verifie une liste de fichiers ({path,rel,size}). Renvoie le rapport.
+    """Check a list of files ({path,rel,size}). Returns the report.
 
-    `budget_octets` permet une verification TOURNANTE : on traite d'abord ce
-    qui n'a jamais ete verifie, puis le plus ancien, jusqu'a epuisement du
-    budget. Une ludotheque de 160 Go demande une dizaine de minutes en un
-    bloc — personne ne lance ca souvent, donc en pratique rien n'etait jamais
-    verifie. Par tranches, la couverture progresse a chaque passage.
+    `budget_octets` allows a ROLLING check: never-verified files first, then
+    the oldest, until the budget runs out. A 160 GB library takes ten minutes
+    in one go — nobody runs that often, so in practice nothing was ever
+    checked. In slices, coverage grows on every pass.
     """
     reg = _load()
     if budget_octets:
@@ -126,7 +125,7 @@ def check(files, job, deep=False, budget_octets=None):
         size = p.stat().st_size
         job.set_detail("empreinte de %s…" % p.name[:48])
         digest = sha1(p, job)
-        if digest is None:            # interrompu pendant le hash
+        if digest is None:            # interrupted during hashing
             break
         old = reg.get(rel)
         mtime = int(p.stat().st_mtime)
@@ -141,9 +140,9 @@ def check(files, job, deep=False, budget_octets=None):
         else:
             verified += 1
 
-        # `mtime` distingue « tu as remplace le fichier » de « le disque l'a
-        # abime » : sans lui, une empreinte differente a taille egale etait le
-        # seul indice, et il manque le cas d'un remplacement de meme taille.
+        # `mtime` tells "you replaced the file" from "the disk damaged it":
+        # without it, a differing digest at equal size was the only clue, and
+        # it misses the case of a same-size replacement.
         reg[rel] = {"sha1": digest, "size": size, "mtime": int(p.stat().st_mtime),
                     "checked": datetime.now().strftime("%F %T")}
 
