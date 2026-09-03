@@ -1,18 +1,18 @@
-"""Un service expose doit etre joignable — et seulement par qui detient le jeton.
+"""An exposed service must be reachable — and only by whoever holds the token.
 
-Le defaut que ces controles empechent de revenir : un conteneur se lie a
-0.0.0.0, sinon il serait injoignable depuis l'hote. Mais sans compte, sans
-jeton et sans `lan_access`, toute requete non locale etait refusee — avec un
-message invitant a « activer l'acces dans les reglages », reglages qu'on ne
-pouvait justement pas atteindre. `docker compose up` menait donc a un 403 sans
-issue, sur le chemin d'installation principal.
+The defect these checks stop from coming back: a container binds to 0.0.0.0,
+otherwise it would be unreachable from the host. But with no account, no token
+and no `lan_access`, every non-local request was refused — with a message
+inviting you to "enable access in the settings", settings you could precisely not
+reach. `docker compose up` therefore led to a dead-end 403, on the main
+installation path.
 
-Trois proprietes, et la troisieme compte autant que les deux premieres :
+Three properties, and the third matters as much as the first two:
 
-  1. un service EXPOSE sans moyen d'entrer engendre un jeton et l'affiche ;
-  2. ce jeton, et lui seul, ouvre l'acces ;
-  3. un service LOCAL n'en engendre aucun — sinon on imposerait un jeton a qui
-     n'a jamais demande a etre joignable.
+  1. an EXPOSED service with no way in generates a token and prints it;
+  2. that token, and it alone, opens access;
+  3. a LOCAL service generates none — otherwise a token would be forced on
+     whoever never asked to be reachable.
 """
 import json
 import os
@@ -49,11 +49,11 @@ def libre():
 
 
 def adresse_reseau():
-    """L'adresse de cette machine SUR le reseau, ou None.
+    """This machine's address ON the network, or None.
 
-    Interroger 127.0.0.1 ne prouve rien : cette adresse est locale par
-    definition, donc toujours autorisee. Le refus ne se constate que depuis une
-    adresse que le serveur ne reconnait pas comme la sienne.
+    Querying 127.0.0.1 proves nothing: that address is local by definition, so
+    always allowed. The refusal can only be observed from an address the server
+    does not recognise as its own.
     """
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
@@ -65,7 +65,7 @@ def adresse_reseau():
 
 
 def demarrer(racine, port, **env):
-    """Lance un serveur en capturant sa sortie : le jeton s'y trouve."""
+    """Starts a server capturing its output: the token is in there."""
     srv = subprocess.Popen(
         [sys.executable, "-u", "-m", "romule", "serve"], cwd=RACINE_PROJET,
         env=dict(os.environ, ROMULE_ROOT=racine, ROMULE_WEB_PORT=port,
@@ -86,7 +86,7 @@ def demarrer(racine, port, **env):
 
 
 def arreter(srv):
-    """Rend la sortie complete du serveur, une fois qu'il a fini d'ecrire."""
+    """Returns the server's full output, once it has finished writing."""
     srv.terminate()
     try:
         return srv.communicate(timeout=20)[0] or ""
@@ -124,8 +124,8 @@ if distant:
 else:
     print("      (pas d'adresse reseau sur cette machine : refus non verifiable)")
 
-# Il doit etre range hors de la configuration publique : /api/scan renvoie la
-# configuration au navigateur, et un jeton qui s'y trouve n'en est plus un.
+# It must be stored outside the public configuration: /api/scan returns the
+# configuration to the browser, and a token found there is no longer one.
 conf = json.loads((Path(racine) / "_romule-config.json").read_text())
 t("le jeton est bien conserve sur disque", conf.get("jeton_auto") == jeton)
 
