@@ -12,13 +12,13 @@ from . import (config, convert, device, edenconf, emuready, integrity, nand,
 # --------------------------------------------------------------- dossier depot
 
 def scan_import():
-    """Fichiers et archives en attente dans _import, avec leur destination."""
+    """Files and archives waiting in _import, with their destination."""
     if not config.IMPORT.is_dir():
         return []
     out = []
     for p in sorted(config.IMPORT.rglob("*")):
-        # `.DS_Store` et consorts ne sont pas des jeux : les lister ne fait
-        # qu'ajouter du bruit et une fausse alerte a chaque rangement.
+        # `.DS_Store` and friends are not games: listing them only adds noise
+        # and a false alarm on every tidy-up.
         if not p.is_file() or p.name.startswith("."):
             continue
         ext = p.suffix.lower()
@@ -37,8 +37,8 @@ def scan_import():
                 "dest": _destination_for(tid, p.name),
             })
         else:
-            # ROM d'une autre plateforme : l'apercu annoncait « GAMES » pour un
-            # fichier .gba, alors que le rangement, lui, le mettait au bon endroit.
+            # A ROM from another platform: the preview announced "GAMES" for a
+            # .gba file, while the filing itself put it in the right place.
             s = systems.system_for_file(p.name)
             if s:
                 out.append({
@@ -48,9 +48,9 @@ def scan_import():
                     "dest": s["folder"],
                 })
             else:
-                # Extension partagee (.iso : PS2, PSP, Wii, Xbox…) ou inconnue.
-                # Ne PAS la lister revenait a la faire disparaitre : elle ne
-                # s'affichait nulle part et le rangement l'ignorait en silence.
+                # A shared extension (.iso: PS2, PSP, Wii, Xbox…) or an
+                # unknown one. NOT listing it amounted to making it vanish: it
+                # showed nowhere and the filing ignored it silently.
                 cands = [x["name"] for x in systems.liste()
                          if p.suffix.lower() in x["exts"]]
                 out.append({
@@ -65,8 +65,8 @@ def scan_import():
 
 
 def _destination_for(tid, filename, files=None, cfg=None):
-    """Dossier ou ranger un fichier. Layout 'type' -> GAMES/UPDATE/DLC ;
-    layout 'game' -> dossier du jeu de base (ancien comportement)."""
+    """Where to file a file. Layout 'type' -> GAMES/UPDATE/DLC; layout 'game'
+    -> the base game's folder (the old behaviour)."""
     layout = (cfg or config.load_config()).get("local_layout", "type")
     if layout == "type":
         return config.LAYOUT_FOLDER[titleid.tid_type(tid) if tid else "INCONNU"]
@@ -82,7 +82,7 @@ def _destination_for(tid, filename, files=None, cfg=None):
 # --------------------------------------------------------------- archives
 
 def _extract_one(archive, job):
-    """Extrait les jeux ET les archives imbriquees d'une archive vers _import."""
+    """Extract the games AND the nested archives from an archive into _import."""
     wanted = config.EXTS | config.ARCHIVES
     ext = archive.suffix.lower()
     n = 0
@@ -129,10 +129,10 @@ def _extract_one(archive, job):
 
 
 def _extract_archives(job):
-    """Decompresse toutes les archives de _import (sous-dossiers et archives
-    imbriquees compris), puis met en corbeille celles qui ont reussi."""
+    """Extract every archive in _import (subfolders and nested archives
+    included), then trash the ones that succeeded."""
     done, total = set(), 0
-    for _ in range(6):  # plusieurs passes : une archive peut en contenir d'autres
+    for _ in range(6):  # several passes: an archive may contain others
         archives = [p for p in config.IMPORT.rglob("*")
                     if p.is_file() and p.suffix.lower() in config.ARCHIVES
                     and str(p) not in done]
@@ -143,7 +143,7 @@ def _extract_archives(job):
             job.log("Decompression de %s..." % a.name)
             ok, n = _extract_one(a, job)
             if not ok:
-                continue  # erreur / pas d'outil : on la laisse dans _import
+                continue  # error / no tool: leave it in _import
             if n:
                 job.log("  %d element(s) extrait(s)." % n)
                 trash.move([str(a)], "archive decompressee", job.log)
@@ -155,7 +155,7 @@ def _extract_archives(job):
 
 
 def _clean_import_dirs():
-    """Supprime les sous-dossiers vides de _import apres rangement."""
+    """Remove _import's empty subfolders after filing."""
     dirs = [p for p in config.IMPORT.rglob("*") if p.is_dir()]
     for d in sorted(dirs, key=lambda p: len(p.parts), reverse=True):
         try:
@@ -167,13 +167,12 @@ def _clean_import_dirs():
 # --------------------------------------------------------------- taches de fond
 
 def suggestions_import(cfg=None):
-    """Pour chaque fichier que l'extension ne suffit pas a classer, propose une
-    plateforme.
+    """For each file the extension alone cannot classify, propose a platform.
 
-    L'extension donne les candidats POSSIBLES (.iso : sept plateformes) ; IGDB
-    dit sur lesquelles le jeu est REELLEMENT sorti. L'intersection tranche
-    souvent toute seule, et sinon elle reduit la liste a trois choix au lieu de
-    sept.
+    The extension gives the POSSIBLE candidates (.iso: seven platforms); IGDB
+    says which ones the game ACTUALLY came out on. The intersection often
+    decides on its own, and otherwise narrows the list to three choices instead
+    of seven.
     """
     from . import igdb
     cfg = cfg or config.load_config()
@@ -200,7 +199,7 @@ def suggestions_import(cfg=None):
 
 
 def classer_import(cfg, job, assignations):
-    """Range les fichiers du depot selon le choix de l'utilisateur."""
+    """File the drop folder's files according to the user's choice."""
     n, ranges = 0, []
     for chemin, cle in (assignations or {}).items():
         src = Path(chemin)
@@ -230,7 +229,7 @@ def classer_import(cfg, job, assignations):
 
 
 def _fiches_des_nouveaux(chemins, cfg, job):
-    """Titre, resume et jaquette des jeux qui viennent d'etre ranges."""
+    """Title, summary and cover for the games that were just filed."""
     from . import covers, meta
     nouveaux = [Path(c) for c in (chemins or [])]
     if not nouveaux:
@@ -258,11 +257,10 @@ def _fiches_des_nouveaux(chemins, cfg, job):
 
 
 def _expliquer_ambigus(items, job):
-    """Dire pourquoi un fichier reste dans le depot.
+    """Say why a file is staying in the drop folder.
 
-    Le laisser dormir sans explication est la pire des reponses : l'utilisateur
-    croit que l'import a echoue alors que l'outil ne peut simplement pas
-    deviner la plateforme.
+    Letting it sit there unexplained is the worst answer: the user thinks the
+    import failed when the tool simply cannot guess the platform.
     """
     for item in items:
         cands = item.get("candidats") or []
@@ -278,20 +276,20 @@ def _expliquer_ambigus(items, job):
 
 def import_files(lib, cfg, job, convert_after=True):
     _extract_archives(job)
-    # On ne range ici QUE les fichiers Switch. Une archive non extraite reste
-    # dans _import ; une ROM d'une autre plateforme est traitee plus bas, par la
-    # boucle qui connait son dossier.
+    # ONLY Switch files are filed here. An unextracted archive stays in
+    # _import; a ROM from another platform is handled further down, by the loop
+    # that knows its folder.
     #
-    # Sans ce filtre, cette boucle prenait TOUT : un fichier sans title ID
-    # tombait dans la branche « INCONNU » de `_destination_for`, c'est-a-dire
-    # GAMES/. Une ROM 3DS ou GBA atterrissait donc parmi les jeux Switch, et la
-    # boucle suivante ne trouvait plus rien a ranger.
+    # Without this filter, that loop took EVERYTHING: a file with no title ID
+    # fell into `_destination_for`'s "INCONNU" branch, that is, GAMES/. A 3DS or
+    # GBA ROM therefore landed among the Switch games, and the next loop found
+    # nothing left to file.
     pending = [i for i in scan_import()
                if i["type"] not in ("ARCHIVE", "AMBIGU")
                and i.get("systeme") in (None, "switch")]
-    # Pas de retour anticipe sur `pending` seul : il ne contient que les
-    # fichiers Switch. Les ROMs des autres plateformes sont rangees plus bas,
-    # et sortir ici les laissait indefiniment dans _import.
+    # No early return on `pending` alone: it only holds the Switch files. The
+    # other platforms' ROMs are filed further down, and returning here left
+    # them in _import indefinitely.
     roms = [i for i in scan_import()
             if i["type"] not in ("ARCHIVE", "AMBIGU")
             and i.get("systeme") not in (None, "switch")]
@@ -303,7 +301,7 @@ def import_files(lib, cfg, job, convert_after=True):
             job.log("Aucun jeu a ranger dans _import "
                     "(archives non extraites eventuellement laissees).")
         return
-    # Recalcule les destinations en tenant compte des jeux deja presents.
+    # Recompute the destinations, accounting for the games already present.
     moved = []
     for item in pending:
         src = Path(item["path"])
@@ -321,13 +319,13 @@ def import_files(lib, cfg, job, convert_after=True):
         except OSError as exc:
             job.log("Impossible de ranger %s : %s" % (src.name, exc))
 
-    # ROMs d'autres consoles presentes dans _import : chacune part dans son dossier
-    for s in systems.liste(cfg):          # plateformes ajoutees a la main comprises
+    # ROMs from other consoles sitting in _import: each goes to its folder
+    for s in systems.liste(cfg):          # hand-added platforms included
         if s["engine"] == "switch":
             continue
         hits = [p for p in config.IMPORT.rglob("*")
                 if p.is_file() and p.suffix.lower() in s["exts"]
-                and systems.system_for_file(p.name)  # extension non ambigue seulement
+                and systems.system_for_file(p.name)  # unambiguous extensions only
                 and systems.system_for_file(p.name)["key"] == s["key"]]
         if not hits:
             continue
@@ -344,17 +342,17 @@ def import_files(lib, cfg, job, convert_after=True):
             except OSError as exc:
                 job.log("Impossible de ranger %s : %s" % (p.name, exc))
 
-    # Ce qui reste et qu'on n'a pas su placer : le dire, plutot que de le
-    # laisser dormir dans _import sans explication. Une extension comme .iso est
-    # revendiquee par sept plateformes — l'outil ne peut pas deviner.
+    # What is left that we could not place: say so, rather than let it sit in
+    # _import unexplained. An extension like .iso is claimed by seven
+    # platforms — the tool cannot guess.
     _expliquer_ambigus([i for i in scan_import() if i["type"] == "AMBIGU"], job)
 
     _clean_import_dirs()
     lib.scan(log=job.log)
-    # Un jeu qui vient d'arriver n'a ni titre ni jaquette : les chercher tout de
-    # suite evite d'avoir une carte vide jusqu'a la prochaine synchronisation.
-    # On ne s'occupe QUE des nouveaux venus : relire les 120 autres a chaque
-    # import serait absurde.
+    # A game that just arrived has neither title nor cover: fetching them right
+    # away avoids an empty card until the next synchronisation. We deal ONLY
+    # with the newcomers: re-reading the other 120 on every import would be
+    # absurd.
     _fiches_des_nouveaux(moved, cfg, job)
     _auto_nand(lib, cfg, job, moved)
     todo = [p for p in moved if Path(p).suffix.lower() in config.COMPRESSED]
@@ -374,7 +372,7 @@ def convert_files(lib, cfg, job, paths):
 
 
 def _types_connus(lib):
-    """Type reel de chaque fichier, tel que la bibliotheque l'a determine."""
+    """Each file's real type, as the library determined it."""
     return {f["path"]: f["type"] for f in lib.files}
 
 
@@ -399,7 +397,7 @@ def organize_device(lib, cfg, job):
 # --------------------------------------------------------------- multi-systemes
 
 def push_system(lib, cfg, job, sys_key, paths):
-    """Envoie des ROMs d'un systeme non-Switch vers son dossier sur la console."""
+    """Send a non-Switch system's ROMs to its folder on the console."""
     target = systems.device_dir(sys_key, cfg)
     device.push_generic(paths, target, job,
                         cfg.get("verify_mode", "size") != "none",
@@ -407,7 +405,7 @@ def push_system(lib, cfg, job, sys_key, paths):
 
 
 def import_system_files(lib, cfg, job, sys_key):
-    """Range les ROMs de _import appartenant a un systeme donne."""
+    """File the _import ROMs belonging to a given system."""
     s = systems.get(sys_key)
     dest_dir = systems.local_dir(sys_key)
     dest_dir.mkdir(parents=True, exist_ok=True)
@@ -432,10 +430,10 @@ def import_system_files(lib, cfg, job, sys_key):
 # --------------------------------------------------------------- integrite / saves
 
 def verify_library(lib, cfg, job, deep=False, sys_key=None, budget_go=None):
-    """Verifie l'integrite des fichiers (empreintes + conteneurs Switch).
+    """Check file integrity (digests plus Switch containers).
 
-    `budget_go` limite le passage a une tranche : la verification devient une
-    habitude de quelques minutes plutot qu'une operation qu'on ne lance jamais.
+    `budget_go` limits the pass to a slice: verification becomes a few-minute
+    habit rather than an operation nobody ever starts.
     """
     if sys_key and systems.get(sys_key)["engine"] != "switch":
         files = systems.scan_local(sys_key)
@@ -455,11 +453,11 @@ def backup_saves(lib, cfg, job):
 
 
 def sync_meta(lib, cfg, job):
-    """Telecharge les fiches de jeu manquantes (titre traduit, resume)."""
+    """Download the missing game details (translated title, summary)."""
     from . import meta
-    # Le title ID du JEU, pas celui du fichier : un jeu dont on ne possede que
-    # la mise a jour, ou dont la base est un pack .xci non typé, n'a aucun
-    # fichier « BASE » — sa fiche n'etait donc jamais demandee.
+    # The GAME's title ID, not the file's: a game you only own the update for,
+    # or whose base is an untyped .xci pack, has no "BASE" file at all — so its
+    # details were never requested.
     tids = [titleid.tid_base(f["tid"]) for f in lib.files if f["tid"]]
     a_faire = meta.manquants(tids, cfg)
     if not a_faire:
@@ -482,23 +480,22 @@ def sync_meta(lib, cfg, job):
         job.set_detail("")
         job.log("%d fiche(s) Switch recuperee(s) sur %d." % (ok, len(a_faire)))
 
-    # Les autres plateformes n'ont pas de title ID : leur titre officiel vient
-    # de SteamGridDB, la meme source que les jaquettes.
+    # The other platforms have no title ID: their official title comes from
+    # SteamGridDB, the same source as the cover art.
     from . import igdb
     if not (cfg.get("steamgriddb_key") or "").strip() and not igdb.configure(cfg):
         job.log("Sans cle SteamGridDB ni identifiants IGDB, les jeux des autres "
                 "plateformes gardent le nom de leur fichier.", "warn")
         return
-    # Les jeux des autres plateformes vivent souvent UNIQUEMENT sur la console :
-    # ne regarder que le serveur laissait leur titre introuvable.
+    # The other platforms' games often live ONLY on the console: looking at
+    # the server alone left their titles unfindable.
     noms = []
     for sys in systems.tout(cfg):
         noms += [f["file"] for f in sys["games"]]
         noms += [x["nom"] for x in sys["console"]]
-    # Une fiche deja en cache mais SANS resume n'est pas une fiche faite : les
-    # premieres ont ete creees avant qu'IGDB ne soit configure, et les
-    # considerer comme terminees condamnait ces jeux a n'avoir jamais de
-    # description.
+    # A cached entry WITHOUT a summary is not a finished entry: the first ones
+    # were created before IGDB was configured, and treating them as done
+    # condemned those games never to have a description.
     langue = (cfg.get("meta_lang") or "fr").strip().lower()
     avec_resume = igdb.configure(cfg)
 
@@ -508,8 +505,8 @@ def sync_meta(lib, cfg, job):
             return True
         if avec_resume and not f.get("resume"):
             return True
-        # Un resume anglais alors que l'utilisateur lit le francais : la fiche
-        # est incomplete, meme si elle a l'air remplie.
+        # An English summary while the user reads French: the entry is
+        # incomplete, even though it looks filled in.
         return (langue not in ("", "en")
                 and bool(f.get("resume"))
                 and not str(f.get("source_resume", "")).endswith(langue))
@@ -549,11 +546,11 @@ def sync_meta(lib, cfg, job):
 
 
 def analyser_console(lib, cfg, job):
-    """Passe en revue toutes les plateformes de la console, et le dit.
+    """Review every platform on the console, out loud.
 
-    Une detection silencieuse laisse l'utilisateur sans moyen de comprendre
-    pourquoi telle plateforme reste vide. Ici chaque etape est journalisee :
-    dossier examine, extensions attendues, verdict.
+    A silent detection leaves the user with no way to understand why one
+    platform stays empty. Here every step is logged: folder examined,
+    extensions expected, verdict.
     """
     racine = systems.roms_root(cfg)
     if not racine:
@@ -595,7 +592,7 @@ def analyser_console(lib, cfg, job):
 
 
 def apply_eden_config(lib, cfg, job, changements, tid=None):
-    """Ecrit des reglages dans la configuration d'Eden (globale ou d'un jeu)."""
+    """Write settings into Eden's configuration (global or per-game)."""
     edenconf.write_config(changements, job, tid or None)
 
 
@@ -610,7 +607,7 @@ def apply_eden_profile(lib, cfg, job, nom, tid=None):
 
 
 def emuready_sync(lib, cfg, job, force=False):
-    """Recupere l'etat de compatibilite des jeux depuis EmuReady."""
+    """Fetch the games' compatibility status from EmuReady."""
     bases = [f for f in lib.files if f["type"] == "BASE" and f["tid"]]
     job.log("Consultation d'EmuReady pour %d jeu(x)…" % len(bases))
     emuready.sync(bases, cfg, job, force)
@@ -631,10 +628,10 @@ def emuready_apply(lib, cfg, job, listing_id, tid):
 
 
 def _auto_nand(lib, cfg, job, chemins):
-    """Active dans Eden les MAJ/DLC qui viennent d'arriver, si l'option est mise.
+    """Activate the updates/DLC that just arrived in Eden, when enabled.
 
-    Sans cela un fichier importe reste inerte : present sur le disque mais
-    invisible du jeu tant qu'il n'est pas inscrit dans la memoire de l'emulateur.
+    Without this an imported file stays inert: present on disk but invisible to
+    the game until it is registered in the emulator's own storage.
     """
     if not cfg.get("auto_nand"):
         return
@@ -657,12 +654,12 @@ def _auto_nand(lib, cfg, job, chemins):
 
 
 def deploy_games(lib, cfg, job, a_envoyer, a_activer, configs=None):
-    """Rend des jeux jouables sur la console, en une seule operation.
+    """Make games playable on the console, in a single operation.
 
-    Trois mecanismes distincts d'Eden, un seul geste pour l'utilisateur :
-      1. copier les fichiers jouables (.nsp/.xci) dans le dossier des jeux,
-      2. installer mises a jour et DLC dans la memoire interne de l'emulateur,
-      3. poser les reglages recommandes par la communaute (optionnel).
+    Three distinct Eden mechanisms, one gesture for the user:
+      1. copy the playable files (.nsp/.xci) into the games folder,
+      2. install updates and DLC into the emulator's internal storage,
+      3. apply the community's recommended settings (optional).
     """
     configs = configs or []
     etapes = 2 + (1 if configs else 0)
@@ -711,12 +708,12 @@ def deploy_games(lib, cfg, job, a_envoyer, a_activer, configs=None):
 
 
 def restore_eden_config(lib, cfg, job, tid, fichier):
-    """Remet une configuration de jeu telle qu'elle etait avant modification."""
+    """Put a game's configuration back as it was before the change."""
     edenconf.restore_backup(tid, fichier, job)
 
 
 def install_nand(lib, cfg, job, paths):
-    """Installe des MAJ/DLC dans la NAND d'Eden (sinon ils restent inactifs)."""
+    """Install updates/DLC into Eden's NAND (otherwise they stay inactive)."""
     nand.install(paths, job)
 
 
@@ -728,15 +725,15 @@ def _clean_empty_dirs():
         if rel.parts[0] in config.IGNORE_DIRS or d.name in keep:
             continue
         try:
-            d.rmdir()  # ne reussit que si vide
+            d.rmdir()  # only succeeds when empty
         except OSError:
             pass
 
 
 def reorganize_local(lib, cfg, job):
-    """Range toute la bibliotheque locale : chaque fichier va dans GAMES/UPDATE/DLC
-    selon son type, meme s'il etait dans un dossier de jeu a la racine. Les
-    dossiers devenus vides sont supprimes."""
+    """Tidy the whole local library: every file goes to GAMES/UPDATE/DLC by
+    type, even if it sat in a per-game folder at the root. Folders that become
+    empty are removed."""
     lib.scan(log=job.log)
     job.set_total(len(lib.files))
     moved = 0
@@ -761,7 +758,7 @@ def reorganize_local(lib, cfg, job):
 
 
 def import_from_device(lib, cfg, job, remote_paths, convert_after=True):
-    """Recupere des jeux depuis la console, les range et (option) les convertit."""
+    """Fetch games from the console, file them and (optionally) convert them."""
     got = device.pull(remote_paths, job)
     if not got:
         job.log("Rien de recupere depuis la console.")
