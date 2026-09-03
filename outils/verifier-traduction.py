@@ -1,41 +1,39 @@
 #!/usr/bin/env python3
-"""Refuse qu'une phrase francaise entre dans le code sans entrer au catalogue.
+"""Refuse to let a French sentence enter the code without entering the catalogue.
 
-L'interface est traduite par un mecanisme de type gettext ou la CLE est la
-phrase francaise : `romule/locales/fr.json` est le catalogue des chaines
-traduisibles, `en.json` porte leurs traductions.
+The interface is translated by a gettext-style mechanism where the KEY is the
+French sentence: `romule/locales/fr.json` is the catalogue of translatable
+strings, `en.json` carries their translations.
 
-Il existait deja un controle de parite entre ces deux fichiers — et il est
-parfait, donc vert quoi qu'il arrive. Ce qui manquait est l'autre moitie :
-personne ne comparait le CODE au catalogue. Environ 360 phrases francaises
-n'avaient donc aucune entree et s'affichaient telles quelles dans une interface
-anglaise, dont cinq sur l'ecran d'accueil d'une installation neuve.
+A parity check between those two files already existed — and it is perfect, so
+green whatever happens. What was missing is the other half: nobody compared the
+CODE to the catalogue. About 360 French sentences therefore had no entry and
+were displayed as they stood inside an English interface, five of them on the
+home screen of a fresh install.
 
-Ce script fait ce controle. Il lit les litteraux de `app.js` et les textes
-d'`index.html`, retient ceux qui ressemblent a du francais, et signale ceux
-qu'aucune cle ne couvre.
+This script does that check. It reads `app.js`'s literals and `index.html`'s
+texts, keeps those that look like French, and reports the ones no key covers.
 
-Il n'y a pas d'analyseur JavaScript dans la bibliotheque standard, et une
-expression reguliere sur des chaines echoue des la premiere apostrophe dans un
-commentaire. On lit donc le fichier caractere par caractere, avec un automate
-qui sait ou il se trouve : code, commentaire, chaine, gabarit, ou expression
-reguliere.
+There is no JavaScript parser in the standard library, and a regular expression
+over strings fails at the first apostrophe inside a comment. So the file is read
+character by character, with a state machine that knows where it is: code,
+comment, string, template, or regular expression.
 
-Exemptions — toujours avec leur motif ecrit a cote, jamais par liste de
-fichiers, qui se perime en silence :
+Exemptions — always with their reason written beside them, never by a list of
+files, which goes stale in silence:
 
-    JS    'AGPL-3.0'   // i18n:ok - nom de licence, pas une phrase
+    JS    'AGPL-3.0'   // i18n:ok - a licence name, not a sentence
     HTML  <span data-i18n-skip>…</span>
 
-`data-i18n-skip` est deja lu a l'execution par `traduisible()` : une exemption
-ne peut donc pas mentir, elle vaut pour l'outil ET pour l'affichage.
+`data-i18n-skip` is already read at runtime by `traduisible()`: an exemption
+therefore cannot lie, it holds for the tool AND for the display.
 
-    python3 outils/verifier-traduction.py            # signale les manquantes
-    python3 outils/verifier-traduction.py --liste    # avec leur ligne
+    python3 outils/verifier-traduction.py            # reports the missing ones
+    python3 outils/verifier-traduction.py --liste    # with their line
     python3 outils/verifier-traduction.py --json
-    python3 outils/verifier-traduction.py --autotest # verifie que le script mord
+    python3 outils/verifier-traduction.py --autotest # checks the script bites
 
-Sortie 0 si rien ne manque, 1 sinon.
+Exits 0 if nothing is missing, 1 otherwise.
 """
 
 import json
@@ -51,9 +49,10 @@ CATALOGUE = RACINE / "romule" / "locales" / "fr.json"
 
 MARQUE = "i18n:ok"
 
-# Mots-outils : deux d'entre eux suffisent a trahir du francais sans accent.
-# « Convertir les », « Rien dans », « Aucun jeu trouve » n'ont pas d'accent et
-# passaient sous le radar du test navigateur, qui ne cherchait que ceux-la.
+# Function words: two of them are enough to give away accent-free French.
+# "Convertir les", "Rien dans", "Aucun jeu trouve" -- anglais:ok, quoted French
+# samples -- carry no accent and slipped under the radar of the browser test,
+# which looked only for those.
 OUTILS = set((
     "le la les un une des du de d au aux et ou en dans sur sous pour par avec "
     "sans vers est sont ete etre a ce cette ces son sa ses ton ta tes votre "
@@ -61,23 +60,22 @@ OUTILS = set((
     "il elle on nous vous ils elles que qui quoi dont si mais donc car ne pas"
 ).split())
 ACCENTS = re.compile(r"[àâäçéèêëîïôöûùüÿœÀÂÄÇÉÈÊËÎÏÔÖÛÙÜŸŒ]")
-# Ce qui n'est pas de la prose : selecteurs, chemins, adresses, identifiants.
+# What is not prose: selectors, paths, addresses, identifiers.
 NON_PROSE = re.compile(
     r"^\s*[.#/]|://|^[a-z0-9_-]+$|^%[sd]$|^[-+*/=<>|&,;:()\[\]{}\s]+$"
-    # `attribut="valeur"` : du balisage, pas une phrase.
+    # `attribute="value"`: markup, not a sentence.
     r'|[a-z-]+="')
-# Un MOT SEUL en minuscules est rejete par NON_PROSE, parce que c'est presque
-# toujours un identifiant ou une valeur de reglage. Presque : « aucune » et
-# « inconnue » s'affichaient dans la fiche d'un jeu, en francais, dans une
-# interface anglaise — et ni ce controle ni le test navigateur ne pouvaient les
-# voir, l'un les jetant comme identifiants, l'autre exigeant un accent ou deux
-# mots-outils.
+# A SINGLE lowercase WORD is rejected by NON_PROSE, because it is almost always
+# an identifier or a setting's value. Almost: "aucune" and "inconnue" were
+# displayed in a game's detail view, in French, inside an English interface — and
+# neither this check nor the browser test could see them, one throwing them away
+# as identifiers, the other demanding an accent or two function words.
 #
-# Cette liste rouvre la porte pour les mots dont l'emploi comme identifiant est
-# rare et l'emploi comme texte certain. Elle produira quelques faux positifs —
-# un mot francais EST parfois une valeur de reglage — et c'est le bon sens du
-# compromis : un faux positif se voit et se leve avec `i18n:ok` et sa raison,
-# un oubli ne se voit pas du tout.
+# This list reopens the door for the words whose use as an identifier is rare and
+# whose use as text is certain. It will produce a few false positives — a French
+# word IS sometimes a setting's value — and that is the sense of the trade-off: a
+# false positive shows and is lifted with `i18n:ok` and its reason, an omission
+# does not show at all.
 SEULS = set((
     "aucun aucune aucuns aucunes inconnu inconnue inconnus inconnues "
     "jamais toujours plusieurs quelques autre autres chacun chacune "
@@ -87,17 +85,17 @@ BALISE = re.compile(r"<[^>]*>")
 MOT = re.compile(r"[a-zA-ZÀ-ÿ']{2,}")
 
 
-# ----------------------------------------------------------- lecture du JS
+# ----------------------------------------------------------- reading the JS
 
 def litteraux_js(source):
-    """(ligne, texte) de chaque litteral de chaine du fichier.
+    """(line, text) for every string literal in the file.
 
-    L'automate distingue sept etats. Le seul reellement delicat est la barre
-    oblique : elle ouvre une expression reguliere ou une division selon ce qui
-    precede. On tranche sur le dernier caractere significatif — un identifiant,
-    une parenthese fermante ou un chiffre annoncent une division, tout le reste
-    une expression reguliere. Se tromper avale une chaine, ce qui est un faux
-    NEGATIF, donc silencieux : d'ou l'autotest.
+    The state machine distinguishes seven states. The only really delicate one is
+    the slash: it opens either a regular expression or a division depending on
+    what precedes it. We decide on the last significant character — an
+    identifier, a closing parenthesis or a digit announce a division, everything
+    else a regular expression. Getting it wrong swallows a string, which is a
+    false NEGATIVE, so silent: hence the self-test.
     """
     sorties = []
     i, n, ligne = 0, len(source), 1
@@ -125,7 +123,7 @@ def litteraux_js(source):
             while i < n and source[i] != "/":
                 if source[i] == "\\":
                     i += 1
-                elif source[i] == "[":                # classe : / n'y ferme rien
+                elif source[i] == "[":                # a class: / closes nothing there
                     while i < n and source[i] != "]":
                         i += 2 if source[i] == "\\" else 1
                 elif source[i] == "\n":
@@ -163,24 +161,23 @@ def litteraux_js(source):
 
 
 def _recoller(litteraux, source):
-    """Fusionne les litteraux que `+` relie : a l'execution ils n'en font qu'un.
+    """Merges the literals `+` joins: at runtime they make only one.
 
-    Une phrase trop longue pour une ligne s'ecrit en deux morceaux colles par
-    `+`. Le DOM n'en voit qu'un seul noeud de texte, donc la CLE est la phrase
-    entiere. Les tester separement signalait comme manquantes des phrases
-    parfaitement traduites — et aurait fait ecrire des cles qui ne servent a
-    rien.
+    A sentence too long for one line is written as two pieces glued by `+`. The
+    DOM only sees a single text node, so the KEY is the whole sentence. Testing
+    them separately reported perfectly translated sentences as missing — and
+    would have led to writing keys that serve no purpose.
     """
     out = []
     for ligne, texte, debut, fin in litteraux:
         if out:
             entre = source[out[-1][3]:debut]
-            # Un commentaire de fin de ligne peut s'y glisser — c'est meme la
-            # que se pose une marque d'exemption. Il ne rompt pas la
-            # concatenation, il ne doit donc pas rompre le recollage.
+            # An end-of-line comment can slip in there — that is even where an
+            # exemption mark is put. It does not break the concatenation, so it
+            # must not break the merging.
             entre = re.sub(r"//[^\n]*", "", entre)
             entre = re.sub(r"/\*.*?\*/", "", entre, flags=re.S)
-            # Uniquement `+` et de la blancheur : c'est une continuation.
+            # Only `+` and whitespace: this is a continuation.
             if entre.strip() == "+":
                 out[-1][1] += texte
                 out[-1][3] = fin
@@ -189,15 +186,15 @@ def _recoller(litteraux, source):
     return [(l, t) for l, t, _, _ in out]
 
 
-# --------------------------------------------------------- lecture du HTML
+# --------------------------------------------------------- reading the HTML
 
 class LecteurHTML(HTMLParser):
-    """Textes affiches et attributs traduisibles, en sautant les exemptions."""
+    """Displayed texts and translatable attributes, skipping the exemptions."""
 
     ATTRIBUTS = ("title", "placeholder", "aria-label")
     MUETS = {"script", "style", "code", "pre", "textarea"}
-    # Elements sans fermeture : sans cette liste, `handle_endtag` n'est jamais
-    # appele pour eux et la pile ne redescend plus.
+    # Elements without a closing tag: without this list, `handle_endtag` is
+    # never called for them and the stack never comes back down.
     ORPHELINS = {"area", "base", "br", "col", "embed", "hr", "img", "input",
                  "link", "meta", "param", "source", "track", "wbr"}
 
@@ -211,10 +208,10 @@ class LecteurHTML(HTMLParser):
         d = dict(attrs)
         exempte = "data-i18n-skip" in d
         muet = tag in self.MUETS or exempte
-        # Les attributs sont releves AVANT d'entrer dans la zone muette, et
-        # seulement si l'element n'est pas lui-meme exempte. La version
-        # precedente disait `or exempte`, ce qui les relevait malgre
-        # l'exemption : une exemption qui ne dispense de rien.
+        # The attributes are collected BEFORE entering the mute zone, and only
+        # if the element is not itself exempt. The previous version said
+        # `or exempte`, which collected them despite the exemption: an exemption
+        # that exempts from nothing.
         if not self.saute and not muet:
             for a in self.ATTRIBUTS:
                 if d.get(a):
@@ -239,10 +236,10 @@ class LecteurHTML(HTMLParser):
             self.trouves.append((self.getpos()[0], data))
 
 
-# ------------------------------------------------------------- le catalogue
+# ------------------------------------------------------------- the catalogue
 
 def _plat(s):
-    """Meme normalisation que `_plat()` dans app.js."""
+    """The same normalisation as `_plat()` in app.js."""
     return re.sub(r"\s+", " ", str(s or "")).strip()
 
 
@@ -267,26 +264,26 @@ def couvert(texte, plates, gabarits):
     return any(g.match(plat) for g in gabarits)
 
 
-# ------------------------------------------------------------- l'heuristique
+# ------------------------------------------------------------- the heuristic
 
 def morceaux_de_texte(litteral):
-    """Les fragments de TEXTE d'un litteral, balises retirees.
+    """A literal's TEXT fragments, with the tags removed.
 
-    Ce code construit son interface en concatenant du HTML : la plupart des
-    phrases vivent dans des chaines qui commencent par `<div class=...>`.
-    Rejeter tout litteral commencant par `<`, comme le faisait la premiere
-    version, jetait donc l'essentiel du gisement — « Aucun événement » sortait
-    du radar parce que sa chaine commence par `<div class="jempty">`.
+    This code builds its interface by concatenating HTML: most sentences live in
+    strings that start with `<div class=...>`. Rejecting every literal starting
+    with `<`, as the first version did, therefore threw away most of the seam —
+    "Aucun événement" fell off the radar because its string starts with
+    `<div class="jempty">`.
     """
     if "<" not in litteral and ">" not in litteral:
         return [litteral]
     bouts = []
     for m in BALISE.split(litteral):
-        # Un litteral peut commencer ou finir au MILIEU d'une balise — quand
-        # une valeur interpolee la coupe en deux : `...onclick="f(' + x + ')">
-        # Détails</button>`. Il reste alors un morceau de balise autour du
-        # texte. Le texte d'interface ne contient jamais de chevron : on garde
-        # ce qui suit le dernier `>` et ce qui precede le premier `<`.
+        # A literal can start or end in the MIDDLE of a tag — when an
+        # interpolated value cuts it in two: `...onclick="f(' + x + ')">
+        # Détails</button>`. A piece of tag then remains around the text.
+        # Interface text never contains an angle bracket: we keep what follows
+        # the last `>` and what precedes the first `<`.
         if ">" in m:
             m = m.rsplit(">", 1)[1]
         if "<" in m:
@@ -298,12 +295,12 @@ def morceaux_de_texte(litteral):
 
 
 def vocabulaire(catalogue):
-    """Les mots deja vus dans des phrases francaises connues.
+    """The words already seen in known French sentences.
 
-    Plutot qu'un dictionnaire ecrit a la main — qui serait faux et se
-    perimerait — on se sert du catalogue lui-meme : ce sont, par construction,
-    des phrases d'interface en francais. « Dossier vide. » n'a ni accent ni
-    mot-outil, mais ses deux mots figurent dans des cles existantes.
+    Rather than a hand-written dictionary — which would be wrong and would go
+    stale — we use the catalogue itself: by construction, those are French
+    interface sentences. "Dossier vide." has neither accent nor function word,
+    but both its words appear in existing keys.
     """
     mots = set()
     for cle in catalogue:
@@ -312,19 +309,19 @@ def vocabulaire(catalogue):
     return mots
 
 
-# Une ligne qui COMPARE ne montre rien : `dataset.mvt === 'aucun'` teste une
-# valeur de reglage, `i.type === 'ARCHIVE' ? 'INCONNU' : …` choisit un suffixe
-# de classe CSS. C'est le contexte qui distingue une valeur d'un libelle, et
-# c'est la seule facon d'ouvrir la porte aux mots seuls sans noyer le rapport.
+# A line that COMPARES shows nothing: `dataset.mvt === 'aucun'` tests a
+# setting's value, `i.type === 'ARCHIVE' ? 'INCONNU' : …` picks a CSS class
+# suffix. Context is what tells a value from a label, and it is the only way to
+# open the door to single words without drowning the report.
 COMPARAISON = re.compile(r"===|!==|\bcase\s")
 
 
 def candidat(texte, vocab=frozenset(), ligne_brute=""):
-    """Ce texte ressemble-t-il a une phrase d'interface en francais ?"""
+    """Does this text look like a French interface sentence?"""
     t = _plat(texte)
     if not (4 <= len(t) <= 220):
         return False
-    # Avant NON_PROSE : c'est lui qui jetait ces mots-la.
+    # Before NON_PROSE: it is what threw those words away.
     if t.strip().lower() in SEULS:
         return not COMPARAISON.search(ligne_brute)
     if NON_PROSE.search(t):
@@ -334,9 +331,9 @@ def candidat(texte, vocab=frozenset(), ligne_brute=""):
     mots = [m.lower() for m in MOT.findall(t)]
     if sum(1 for m in mots if m in OUTILS) >= 2:
         return True
-    # Faisceau : au moins deux mots, et la plupart deja vus dans une phrase
-    # francaise connue. C'est ce qui rattrape « Dossier vide. », que ni
-    # l'accent ni les mots-outils ne trahissent.
+    # A bundle of clues: at least two words, most of them already seen in a
+    # known French sentence. That is what catches "Dossier vide.", which neither
+    # the accent nor the function words give away.
     if len(mots) >= 2 and vocab:
         connus = sum(1 for m in mots if m in vocab)
         return connus >= 2 and connus / len(mots) >= 0.6
@@ -376,13 +373,13 @@ def manquantes(source_js=None, source_html=None, catalogue=None):
 
 # ------------------------------------------------------- pluriels paresseux
 
-# « 1 fichier(s) » n'est pas un pluriel, c'est un aveu — et il etait sur presque
-# chaque ecran. La notation `{singulier|pluriel}` le remplace, et la langue
-# choisit : en francais 0 et 1 sont au singulier, en anglais seul 1 l'est.
+# "1 fichier(s)" is not a plural, it is a confession — and it was on nearly
+# every screen. The `{singular|plural}` notation replaces it, and the language
+# chooses: in French 0 and 1 are singular, in English only 1 is.
 #
-# Ce controle interdit le retour de la forme paresseuse. Il ne regarde que les
-# CHAINES : `String(s)` et `compte(s)` sont des appels de fonction, et une
-# premiere version qui balayait le fichier entier les avait transformes.
+# This check forbids the lazy form from coming back. It looks only at STRINGS:
+# `String(s)` and `compte(s)` are function calls, and a first version that swept
+# the whole file had transformed them.
 PARESSEUX = re.compile(r"[0-9A-Za-zÀ-ÿ'’/-]+\((s|x|es)\)")
 
 
@@ -410,7 +407,7 @@ def pluriels_paresseux(source_js=None, source_html=None):
 # ----------------------------------------------------------------- autotest
 
 def autotest():
-    """Un detecteur qu'on n'a pas vu detecter ne prouve rien."""
+    """A detector nobody has seen detect proves nothing."""
     ok = ko = 0
 
     def t(nom, cond, detail=""):
@@ -447,21 +444,22 @@ def autotest():
          "const k = 'switch-lite';", False),
         ("un selecteur CSS n'est pas une phrase",
          "el.querySelector('.gcard .gname');", False),
-        # Ce code construit son interface en concatenant du HTML : rejeter tout
-        # litteral commencant par `<` jetait l'essentiel du gisement.
+        # This code builds its interface by concatenating HTML: rejecting every
+        # literal starting with `<` threw away most of the seam.
         ("une phrase noyee dans un fragment HTML est vue",
          "el.innerHTML = '<div class=\"x\">Une phrase absente du catalogue.</div>';",
          True),
         ("un fragment HTML sans texte est ignore",
          "el.innerHTML = '<div class=\"jempty\"></div>';", False),
-        # Le vocabulaire vient du catalogue lui-meme : une phrase sans accent
-        # ni mot-outil est reconnue si ses mots ont deja servi ailleurs.
+        # The vocabulary comes from the catalogue itself: a sentence with no
+        # accent and no function word is recognised if its words have already
+        # served elsewhere.
         ("une phrase sans accent ni mot-outil est reconnue par son vocabulaire",
          "toast('Bonjour traduit');", True),
-        # Une phrase trop longue pour une ligne s'ecrit en deux morceaux colles
-        # par `+`. A l'execution ils ne font qu'un noeud de texte : la cle est
-        # la phrase entiere, et les tester separement signalait comme
-        # manquantes des phrases parfaitement traduites.
+        # A sentence too long for one line is written as two pieces glued by
+        # `+`. At runtime they make a single text node: the key is the whole
+        # sentence, and testing them separately reported perfectly translated
+        # sentences as missing.
         ("deux morceaux colles par + ne font qu'une phrase",
          "toast('Déjà ' +\n      'traduit');", False),
         ("deux chaines SANS + restent distinctes",
@@ -471,8 +469,8 @@ def autotest():
         vu = bool(manquantes(source_js=code, source_html="", catalogue=cat))
         t(nom, vu == attendu, "detecte=%s" % vu)
 
-    # Les phrases d'epreuve portent deux mots-outils : c'est le seuil, et un
-    # cas de test qui ne l'atteint pas mesurerait le cas de test, pas l'outil.
+    # The trial sentences carry two function words: that is the threshold, and a
+    # test case that does not reach it would measure the test case, not the tool.
     ABSENTE = "Une phrase absente du catalogue."
     html_cas = [
         ("un texte HTML absent est signale", "<p>%s</p>" % ABSENTE, True),
@@ -490,9 +488,9 @@ def autotest():
         vu = bool(manquantes(source_js="", source_html=html, catalogue=cat))
         t(nom, vu == attendu, "detecte=%s" % vu)
 
-    # Le mot SEUL : la classe qui a laisse « aucune » s'afficher en francais
-    # dans une interface anglaise. NON_PROSE le jetait comme identifiant, et
-    # les deux heuristiques exigeaient un accent ou deux mots-outils.
+    # The SINGLE word: the class that let "aucune" show in French inside an
+    # English interface. NON_PROSE threw it away as an identifier, and both
+    # heuristics demanded an accent or two function words.
     seuls_cas = [
         ("un mot francais seul, affiche -> detecte",
          "el.textContent = 'aucune';", True),
