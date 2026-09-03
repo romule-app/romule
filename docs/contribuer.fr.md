@@ -57,8 +57,13 @@ défaut honnête.
 
 ## Style de la maison
 
-Les commentaires et les docstrings sont **en français** ; tout ce qui s'adresse
-à l'utilisateur est en anglais. Un commentaire dit *pourquoi*, jamais *quoi* :
-s'il redit la ligne d'en dessous, supprime-le. Ceux qui valent la peine
-expliquent une contrainte invisible dans le code — une règle qui en combat une
-autre, une valeur mesurée, un bogue qu'une réécriture naïve ramènerait.
+Les commentaires et les docstrings sont **en anglais**, comme tout ce que le
+dépôt montre. `outils/verifier-anglais.py` y refuse la prose française et la CI
+le lance ; une ligne qui *cite* volontairement du français porte `anglais:ok`
+avec sa raison à côté. Les chaînes d'interface, elles, restent en français —
+ce sont les clés du catalogue i18n, un mécanisme et non un style.
+
+Un commentaire dit *pourquoi*, jamais *quoi* : s'il redit la ligne d'en dessous,
+supprime-le. Ceux qui valent la peine expliquent une contrainte invisible dans
+le code — une règle qui en combat une autre, une valeur mesurée, un bogue qu'une
+réécriture naïve ramènerait.

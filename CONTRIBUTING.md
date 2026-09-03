@@ -51,15 +51,19 @@ your fork as it does on a branch here.
 
 The codebase has conventions that are deliberate, not accidental:
 
-- **Comments and docstrings are in French.** Everything user-facing — README,
-  documentation, default interface language — is in English. Do not translate
-  the comments; do not write new ones in English.
+- **Comments and docstrings are in English**, like everything else the
+  repository shows: README, documentation, default interface language.
+  `outils/verifier-anglais.py` refuses French prose in comments and docstrings,
+  and CI runs it. A line that deliberately *quotes* French — a catalogue key,
+  for instance — carries `anglais:ok` with its reason beside it.
 - **A comment says why, never what.** If it restates the line below it, delete
   it. The ones worth writing explain a constraint that is invisible in the
   code: a rule that fights another rule, a value that was measured, a bug that
   a naive rewrite would bring back.
 - **French is the i18n key.** `romule/locales/fr.json` is the catalogue,
-  `en.json` the translation. A missing entry falls back to French.
+  `en.json` the translation. A missing entry falls back to French. This is a
+  mechanism, not a style: the interface strings in the code are French because
+  they are the catalogue's keys, and that has not changed.
 - **Never assemble a translatable sentence from fragments.** `'Found ' + n + '
   games'` produces three keys no catalogue can hold. Use a `%s` / `%d`
   template and translate it whole.
