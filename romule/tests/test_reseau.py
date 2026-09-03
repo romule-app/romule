@@ -1,15 +1,14 @@
-"""Une sortie reseau ne doit pas pouvoir lire un fichier local.
+"""An outbound call must not be able to read a local file.
 
-`urllib.request.urlopen` n'ouvre pas que du HTTP : il accepte `file://`,
-`ftp://`, et tout ce que les gestionnaires installes savent traiter. Trois
-adresses utilisees par Romule viennent de la configuration — la source des
-jaquettes, les miroirs de titledb, l'emetteur OIDC — et rien ne verifiait leur
-schema. Un `file:///etc/passwd` dans le champ des jaquettes faisait donc lire
-un fichier local au serveur, qui le renvoyait comme une image.
+`urllib.request.urlopen` does not only open HTTP: it accepts `file://`, `ftp://`,
+and whatever the installed handlers know how to process. Three of the addresses
+Romule uses come from the configuration — the cover source, the titledb mirrors,
+the OIDC issuer — and nothing checked their scheme. A `file:///etc/passwd` in the
+cover field therefore made the server read a local file and hand it back as an
+image.
 
-Ce test tient les deux moities de la propriete : ce qui doit passer passe, et
-ce qui doit etre refuse l'est — y compris sous les formes qui contournent une
-comparaison naive.
+This test holds both halves of the property: what must pass passes, and what must
+be refused is — including in the shapes that bypass a naive comparison.
 """
 import sys
 import urllib.request
@@ -42,8 +41,8 @@ def test_accepte_http():
 
 
 def test_refuse_le_reste():
-    # `file:` est le cas qui compte : c'est celui qui transforme le service en
-    # lecteur de fichiers. Les autres sont refuses par la meme regle.
+    # `file:` is the case that matters: it is the one that turns the service
+    # into a file reader. The others are refused by the same rule.
     for u in ("file:///etc/passwd", "FILE:///etc/passwd", "ftp://h/f",
               "gopher://h/", "data:text/plain,bonjour", "/etc/passwd",
               "etc/passwd", "", None):
@@ -55,7 +54,7 @@ def test_refuse_le_reste():
 
 
 def test_ouvrir_verifie_aussi_les_Request():
-    """Le controle doit porter sur l'URL portee par la requete, pas sur l'objet."""
+    """The check must be on the URL the request carries, not on the object."""
     req = urllib.request.Request("file:///etc/passwd",
                                  headers={"User-Agent": "romule"})
     try:
@@ -68,10 +67,10 @@ def test_ouvrir_verifie_aussi_les_Request():
 
 
 def test_aucune_sortie_directe_dans_le_code_livre():
-    """Le garde ne vaut que si personne ne le contourne.
+    """The guard is only worth something if nobody bypasses it.
 
-    Un controle centralise se perime des qu'un appel direct reapparait ailleurs.
-    On le verifie sur le source, pas sur l'intention.
+    A centralised check goes stale as soon as a direct call reappears elsewhere.
+    We verify it on the source, not on the intention.
     """
     racine = Path(__file__).resolve().parent.parent
     fautifs = []
