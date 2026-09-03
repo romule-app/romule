@@ -1,14 +1,14 @@
-"""La verification de version : elle informe, elle ne derange pas.
+"""The version check: it informs, it does not intrude.
 
-Trois proprietes, et la troisieme est celle qui compte le plus :
+Three properties, and the third is the one that matters most:
 
-  * la comparaison porte sur des NOMBRES. « 0.10.0 » vient apres « 0.9.0 »,
-    ce qu'une comparaison de chaines rend faux — et un outil qui annonce une
-    mise a jour a l'envers perd toute credibilite ;
-  * elle se coupe, et le reglage est respecte AVANT toute sortie reseau ;
-  * une panne ne se voit pas. GitHub indisponible, quota atteint, machine hors
-    ligne : la fonction rend « je ne sais pas », jamais une erreur. Une
-    verification ratee n'est pas un evenement pour l'utilisateur.
+  * the comparison is on NUMBERS. "0.10.0" comes after "0.9.0", which a string
+    comparison gets wrong — and a tool that announces an update backwards loses
+    all credibility;
+  * it can be switched off, and the setting is honoured BEFORE any network call;
+  * a failure does not show. GitHub unavailable, quota reached, machine offline:
+    the function returns "I don't know", never an error. A failed check is not an
+    event for the user.
 """
 import json
 import sys
@@ -51,8 +51,8 @@ def test_comparaison():
 
 
 def test_le_reglage_coupe_avant_le_reseau():
-    """Le reglage doit etre lu AVANT la sortie : sinon « desactive » voudrait
-    dire « on interroge quand meme, mais on n'affiche pas »."""
+    """The setting must be read BEFORE going out: otherwise "disabled" would
+    mean "we ask anyway, but we do not display"."""
     appels = []
     vrai = maj.reseau.ouvrir
     maj.reseau.ouvrir = lambda *a, **k: appels.append(a) or (_ for _ in ()).throw(
@@ -85,7 +85,7 @@ def test_une_panne_ne_se_voit_pas():
 
 
 def test_le_cache_evite_les_appels():
-    """GitHub limite les requetes anonymes. Un cache frais doit suffire."""
+    """GitHub limits anonymous requests. A fresh cache must be enough."""
     maj.CACHE.write_text(json.dumps({
         "version": "v99.0.0", "titre": "Essai", "notes": "des notes",
         "url": "https://exemple.fr", "verifie": int(__import__("time").time())}),
@@ -106,11 +106,11 @@ def test_le_cache_evite_les_appels():
 
 
 def test_le_prefixe_du_tag_est_retire():
-    """« Version v0.3.0 disponible » fait doublon a l'ecran.
+    """"Version v0.3.0 available" reads twice on screen.
 
-    GitHub nomme ses tags `v0.3.0` ; l'interface ecrit deja le mot « Version »
-    devant. On retire donc le prefixe a l'AFFICHAGE — sans toucher a la
-    comparaison, qui ne l'a jamais lu.
+    GitHub names its tags `v0.3.0`; the interface already writes the word
+    "Version" in front. So the prefix is stripped for DISPLAY — without touching
+    the comparison, which never read it.
     """
     import io
 
@@ -129,8 +129,8 @@ def test_le_prefixe_du_tag_est_retire():
           r["version"])
         t("et la version reste reconnue comme plus recente",
           r["disponible"] is True, r)
-        # Le prefixe n'a jamais gene la comparaison : `_triplet` l'ignore. Le
-        # verifier evite de croire que ce nettoyage la corrige.
+        # The prefix never troubled the comparison: `_triplet` ignores it.
+        # Checking it avoids believing this cleanup fixes it.
         t("la comparaison acceptait deja le prefixe",
           maj.plus_recente("v9.9.9", "0.1.0") is True)
     finally:
@@ -139,8 +139,8 @@ def test_le_prefixe_du_tag_est_retire():
 
 
 def test_la_sortie_est_gardee():
-    """Toute sortie reseau de Romule passe par `reseau.ouvrir()`, qui refuse
-    les schemas autres que http/https. Ce module ne doit pas y echapper."""
+    """Every outbound call in Romule goes through `reseau.ouvrir()`, which
+    refuses schemes other than http/https. This module must not escape it."""
     src = (Path(maj.__file__)).read_text(encoding="utf-8")
     t("maj.py n'appelle pas urlopen directement",
       "urlopen(" not in src)
