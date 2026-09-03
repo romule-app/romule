@@ -1,17 +1,17 @@
-"""Lecture et ecriture de la configuration d'Eden (globale et par jeu).
+"""Reading and writing Eden's configuration (global and per game).
 
 Eden stocke ses reglages en INI facon Qt :
 
-  config/config.ini            reglages globaux
-  config/custom/<TITLEID>.ini  surcharges d'un jeu
+  config/config.ini            global settings
+  config/custom/<TITLEID>.ini  per-game overrides
 
-Chaque cle est accompagnee de marqueurs :
-  - global   : `cle\\default=true|false` puis `cle=valeur`
-  - par jeu  : `cle\\use_global=false`, `cle\\default=false`, `cle=valeur`
-    (`use_global=true` signifie « suivre le reglage global »)
+Every key comes with markers:
+  - global   : `key\\default=true|false` then `key=value`
+  - per game : `key\\use_global=false`, `key\\default=false`, `key=value`
+    (`use_global=true` means "follow the global setting")
 
-On analyse et on reecrit le fichier en preservant l'ordre et les sections :
-Eden reste maitre du fichier, on ne fait qu'y poser des valeurs.
+We parse and rewrite the file preserving order and sections: Eden stays the
+file's owner, we only place values in it.
 """
 
 import json
@@ -21,9 +21,9 @@ from pathlib import Path
 
 from . import config, device, profils
 
-# Les chemins de configuration viennent du profil : chaque emulateur range ses
-# reglages a sa facon, et certains — Ryujinx — n'ont pas de format que cet
-# outil sache lire. `pilotable()` dit lequel.
+# The configuration paths come from the profile: every emulator files its
+# settings its own way, and some — Ryujinx — use a format this tool cannot
+# read. `pilotable()` says which is which.
 
 
 def _conf():
@@ -31,7 +31,7 @@ def _conf():
 
 
 def pilotable():
-    """L'emulateur actif expose-t-il des reglages que l'on sache modifier ?"""
+    """Does the active emulator expose settings we know how to change?"""
     return profils.config_pilotable()
 
 
@@ -54,7 +54,7 @@ _SECTION = re.compile(r"^\[(.+)\]\s*$")
 # ------------------------------------------------------------------ analyse
 
 def parse(texte):
-    """INI -> [(section, [(cle, valeur), ...]), ...] en preservant l'ordre."""
+    """INI -> [(section, [(key, value), ...]), ...], preserving order."""
     out, courante = [], None
     for ligne in texte.splitlines():
         m = _SECTION.match(ligne.strip())
@@ -68,7 +68,7 @@ def parse(texte):
 
 
 def dump(data):
-    """Reconstruit le texte INI a partir de la structure analysee."""
+    """Rebuild the INI text from the parsed structure."""
     blocs = []
     for nom, paires in data:
         lignes = ["[%s]" % nom] + ["%s=%s" % (k, v) for k, v in paires]
@@ -77,7 +77,7 @@ def dump(data):
 
 
 def to_dict(data):
-    """Vue simple : {section: {cle: valeur}} en ignorant les marqueurs."""
+    """A plain view: {section: {key: value}}, ignoring the markers."""
     out = {}
     for nom, paires in data:
         vals = {k: v for k, v in paires if "\\" not in k}
@@ -87,7 +87,7 @@ def to_dict(data):
 
 
 def apply_changes(data, changements, par_jeu):
-    """Pose des valeurs dans la structure. changements = {section: {cle: val}}."""
+    """Place values into the structure. changements = {section: {key: val}}."""
     index = {nom: paires for nom, paires in data}
     poses = 0
     for section, valeurs in changements.items():
@@ -137,11 +137,10 @@ def _sauvegarder(chemin, texte):
     (BACKUP / ("%s_%s" % (nom, horo))).write_text(texte or "", encoding="utf-8")
 
 
-# Un title ID Switch fait 16 chiffres hexadecimaux, toujours. Le chemin
-# construit ici part vers `adb push` et `adb shell rm -f` : sans cette
-# verification, un « tid » comme « ../../../../data/x » ecrivait et effacait
-# des fichiers arbitraires sur la console. La mise entre guillemets protege
-# des metacaracteres du shell, pas des chemins relatifs.
+# A Switch title ID is 16 hexadecimal digits, always. The path built here goes
+# to `adb push` and `adb shell rm -f`: without this check, a "tid" like
+# "../../../../data/x" wrote and erased arbitrary files on the console. Quoting
+# protects against shell metacharacters, not against relative paths.
 _TID = __import__("re").compile(r"^[0-9A-Fa-f]{16}$")
 
 
@@ -153,20 +152,20 @@ def game_ini(tid):
 
 
 def read_config(tid=None):
-    """Configuration globale, ou celle d'un jeu. Renvoie (texte, structure)."""
+    """The global configuration, or a game's. Returns (text, structure)."""
     chemin = game_ini(tid) if tid else global_ini()
     texte = _lire(chemin)
     return texte, parse(texte)
 
 
 def games_with_config():
-    """Title IDs ayant une configuration propre sur la console."""
+    """Title IDs with a configuration of their own on the console."""
     out = device._shell("ls -1 %s 2>/dev/null" % device._q(custom_dir()), timeout=30)
     return [l.strip()[:-4].lower() for l in out.splitlines() if l.strip().endswith(".ini")]
 
 
 def write_config(changements, job, tid=None):
-    """Applique des valeurs a la config globale ou a celle d'un jeu."""
+    """Apply values to the global configuration or to a game's."""
     if device.state() != "device":
         job.log("Console non connectee.")
         return False
@@ -189,16 +188,16 @@ def write_config(changements, job, tid=None):
     return True
 
 
-# Reglages qui decrivent la machine du contributeur, pas le jeu. Une config
-# EmuReady les transporte telle quelle : driver_path pointe vers le dossier de
-# l'appareil d'origine (souvent « Android/data/null/... ») et vers un pilote GPU
-# que l'utilisateur n'a pas installe. Eden tente alors de charger un pilote
-# introuvable et renonce a demarrer, sans afficher la moindre erreur.
+# Settings that describe the contributor's machine, not the game. An EmuReady
+# config carries them verbatim: driver_path points at the original device's
+# folder (often "Android/data/null/...") and at a GPU driver the user has not
+# installed. Eden then tries to load a driver that is not there and gives up
+# starting, without showing the slightest error.
 CLES_LOCALES = ("driver_path",)
 
 
 def _purger_locales(data, job=None):
-    """Retire les reglages propres a l'appareil d'origine ; renvoie leur nombre."""
+    """Strip the settings specific to the source device; return how many."""
     retires = 0
     for _section, paires in data:
         garde, touche = [], False
@@ -221,10 +220,10 @@ def _purger_locales(data, job=None):
 
 
 def write_raw(contenu, job, tid):
-    """Remplace la configuration d'un jeu par un fichier fourni (EmuReady).
+    """Replace a game's configuration with a supplied file (EmuReady).
 
-    Le fichier est valide avant ecriture : on refuse tout ce qui ne ressemble
-    pas a une configuration Eden.
+    The file is validated before writing: anything that does not look like an
+    Eden configuration is refused.
     """
     if not tid:
         job.log("Un jeu doit etre precise.")
@@ -251,7 +250,7 @@ def write_raw(contenu, job, tid):
 # ------------------------------------------------------- retours en arriere
 
 def backups_for(tid):
-    """Sauvegardes disponibles pour un jeu, de la plus recente a la plus ancienne."""
+    """Backups available for a game, newest first."""
     if not tid or not BACKUP.is_dir():
         return []
     prefixe = "%s.ini_" % tid.upper()
@@ -276,11 +275,11 @@ def backups_for(tid):
 
 
 def restore_backup(tid, fichier, job):
-    """Remet une sauvegarde en place sur la console."""
+    """Put a backup back in place on the console."""
     if not tid or not fichier:
         job.log("Sauvegarde non precisee.")
         return False
-    p = BACKUP / Path(fichier).name          # jamais de chemin fourni par le client
+    p = BACKUP / Path(fichier).name          # never a path supplied by the client
     if not p.is_file() or not p.name.upper().startswith(tid.upper() + ".INI_"):
         job.log("Sauvegarde introuvable pour ce jeu.")
         return False
@@ -288,7 +287,7 @@ def restore_backup(tid, fichier, job):
         job.log("Console non connectee.")
         return False
     chemin = game_ini(tid)
-    _sauvegarder(chemin, _lire(chemin))      # l'etat courant devient restaurable a son tour
+    _sauvegarder(chemin, _lire(chemin))      # the current state becomes restorable in turn
     texte = p.read_text(encoding="utf-8", errors="ignore")
     if not texte.strip():
         # la sauvegarde correspond a « aucune configuration » : on efface
@@ -335,7 +334,7 @@ def profile_save(nom, valeurs, portee="global", description=""):
 
 
 def capture(tid=None, sections=None):
-    """Capture la configuration actuelle (globale ou d'un jeu) en profil."""
+    """Capture the current configuration (global or per game) as a profile."""
     _, data = read_config(tid)
     vals = to_dict(data)
     if sections:

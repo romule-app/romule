@@ -1,13 +1,13 @@
 """EmuReady (beta) : reglages recommandes par la communaute, par jeu et par appareil.
 
-https://www.emuready.com — plateforme ouverte de rapports de compatibilite.
-On utilise uniquement des endpoints publics, en lecture, avec un cache local
-pour ne pas solliciter leur service inutilement.
+https://www.emuready.com — an open platform of compatibility reports. We only
+use public, read-only endpoints, with a local cache so as not to hammer their
+service for nothing.
 
-L'appariement d'un jeu se fait a trois niveaux, jamais a l'aveugle :
-  confirme  le title ID renvoye par EmuReady est identique au notre
-  probable  jeu trouve par son nom officiel, sans confirmation possible
-  absent    rien dans leur base
+A game is matched at three levels, never blindly:
+  confirme  the title ID EmuReady returns is identical to ours
+  probable  game found by its official name, with no way to confirm
+  absent    nothing in their database
 """
 
 import json
@@ -20,12 +20,12 @@ from . import config, meta, reseau
 
 BASE = "https://www.emuready.com/api/mobile/trpc"
 CACHE = config.ROOT / "_emuready-cache.json"
-CACHE_TTL = 7 * 24 * 3600          # une semaine : ces donnees bougent lentement
+CACHE_TTL = 7 * 24 * 3600          # a week: this data moves slowly
 
-# Echelle de performance d'EmuReady (rang 1 = le mieux).
+# EmuReady's performance scale (rank 1 is best).
 RANGS = {"Perfect": 1, "Great": 2, "Playable": 3, "Poor": 4,
          "Ingame": 5, "Intro": 6, "Loadable": 7, "Nothing": 8}
-# Regroupement lisible pour l'interface.
+# A readable grouping for the interface.
 NIVEAUX = {1: ("parfait", "Parfait"), 2: ("parfait", "Très bon"),
            3: ("jouable", "Jouable"), 4: ("limite", "Problèmes"),
            5: ("limite", "Problèmes"), 6: ("limite", "Ne démarre pas"),
@@ -35,7 +35,7 @@ _TM = re.compile(r"[™®©]")
 
 
 def clean_title(nom):
-    """Nom exploitable pour la recherche : sans marques deposees ni parasites."""
+    """A usable name for searching: no trademarks, no noise."""
     n = _TM.sub("", nom or "")
     n = re.sub(r"\s*[\[\(][^\])]*[\])]", " ", n)
     return re.sub(r"\s{2,}", " ", n).strip(" .-")
@@ -84,7 +84,7 @@ def clear():
 # ------------------------------------------------------------------ appareils
 
 def devices(recherche="", force=False):
-    """Appareils connus d'EmuReady (mis en cache)."""
+    """The devices EmuReady knows about (cached)."""
     c = _load()
     if c["appareils"] and not force and (time.time() - c.get("maj", 0)) < CACHE_TTL:
         liste = c["appareils"]
@@ -107,12 +107,12 @@ def devices(recherche="", force=False):
 
 
 def suggest_devices(modele):
-    """Variantes plausibles pour un modele detecte (« AYN Thor » -> Thor Base/Lite/Pro/Max)."""
+    """Plausible variants of a detected model ("AYN Thor" -> Thor Base/Lite/Pro/Max)."""
     mots = [m for m in re.split(r"\W+", clean_title(modele or "")) if len(m) > 2]
     if not mots:
         return []
     tous = devices()
-    for m in reversed(mots):                    # le dernier mot est le plus discriminant
+    for m in reversed(mots):                    # the last word is the most discriminating
         hits = [d for d in tous if m.lower() in d["nom"].lower()]
         if hits:
             return sorted(hits, key=lambda d: d["nom"])
@@ -135,7 +135,7 @@ def match_game(tid, nom_fichier, cfg=None):
     if not cands:
         return None
 
-    # niveau 1 : leur title ID confirme le notre
+    # level 1: their title ID confirms ours
     for c in cands:
         try:
             r = call("games.getBestSwitchTitleId", {"gameName": c["title"]}) or {}
@@ -156,7 +156,7 @@ def match_game(tid, nom_fichier, cfg=None):
 # ------------------------------------------------------------------ rapports
 
 def listings_for(game_id, device_id=None, emulateur="eden"):
-    """Rapports d'un jeu, filtres sur l'emulateur et tries du meilleur au pire."""
+    """A game's reports, filtered by emulator and sorted best to worst."""
     try:
         r = call("listings.byGame", {"gameId": game_id}) or {}
     except Exception:
@@ -177,14 +177,14 @@ def listings_for(game_id, device_id=None, emulateur="eden"):
             "rang": RANGS.get(perf.get("label"), 9),
             "notes": (x.get("notes") or "")[:400],
         })
-    # priorite : mon appareil d'abord, puis la meilleure note
+    # priority: my device first, then the best rating
     out.sort(key=lambda l: (0 if (device_id and l["appareil_id"] == device_id) else 1,
                             l["rang"]))
     return out
 
 
 def config_of(listing_id):
-    """Contenu du fichier de configuration Eden d'un rapport."""
+    """The contents of a report's Eden configuration file."""
     r = call("listings.getEmulatorConfig", {"listingId": listing_id}) or {}
     if (r.get("type") or "").lower() != "eden":
         raise RuntimeError("ce rapport ne fournit pas de configuration Eden")
@@ -194,7 +194,7 @@ def config_of(listing_id):
 # ------------------------------------------------------------ synchronisation
 
 def sync(jeux, cfg, job, force=False):
-    """Met a jour l'etat de compatibilite des jeux de la ludotheque."""
+    """Refresh the compatibility status of the library's games."""
     c = _load()
     device_id = (cfg.get("emuready_device") or "").strip() or None
     job.set_total(len(jeux))
@@ -240,7 +240,7 @@ def sync(jeux, cfg, job, force=False):
 
 
 def badge(tid):
-    """Etat compact d'un jeu pour l'affichage : (classe, texte) ou None."""
+    """A game's compact status for display: (class, text) or None."""
     e = _load()["jeux"].get((tid or "").lower())
     if not e or e.get("etat") == "absent":
         return None
@@ -249,7 +249,7 @@ def badge(tid):
         return ("inconnu", "Non testé")
     cls, txt = NIVEAUX.get(best["rang"], ("inconnu", best["note"]))
     if not e.get("pour_mon_appareil") and best.get("appareil"):
-        # nommer la console testee plutot que dire « autre appareil », qui
-        # laissait l'utilisateur deviner de quoi il s'agissait
+        # name the console that was tested rather than saying "another
+        # device", which left the user guessing what it was
         txt += " (sur %s)" % best["appareil"]
     return (cls, txt)

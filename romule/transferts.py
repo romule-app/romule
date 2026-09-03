@@ -1,14 +1,13 @@
-"""Memoire des transferts interrompus.
+"""Memory of interrupted transfers.
 
-Un envoi de plusieurs dizaines de gigaoctets s'arrete pour trois raisons :
-la console est debranchee, l'utilisateur met en pause, ou le serveur est
-arrete. Dans les trois cas les fichiers deja envoyes sont bons — la
-verification de taille le garantit, et un fichier partiel est efface — mais
-la LISTE de ce qu'il restait a faire etait perdue : il fallait retrouver la
-meme selection a la main.
+A send of several dozen gigabytes stops for three reasons: the console is
+unplugged, the user pauses, or the server is stopped. In all three cases the
+files already sent are sound — the size check guarantees it, and a partial file
+is erased — but the LIST of what was left to do was lost: you had to rebuild
+the same selection by hand.
 
-On garde donc le reste-a-faire dans un petit fichier. Il ne contient que des
-chemins : aucun secret, rien de volumineux.
+So we keep the to-do list in a small file. It holds nothing but paths: no
+secrets, nothing bulky.
 """
 
 import json
@@ -36,7 +35,7 @@ def marquer_fait(chemin):
 
 
 def terminer():
-    """Transfert alle au bout : plus rien a reprendre."""
+    """The transfer went all the way: nothing left to resume."""
     try:
         FICHIER.unlink()
     except OSError:
@@ -52,7 +51,7 @@ def etat():
 
 
 def resume():
-    """Ce qu'il faut montrer a l'utilisateur, ou None s'il n'y a rien."""
+    """What to show the user, or None when there is nothing."""
     d = etat()
     if not d:
         return None

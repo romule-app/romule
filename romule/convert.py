@@ -1,4 +1,4 @@
-"""Conversion .nsz/.xcz -> .nsp/.xci via nsz, en parallele et sans surprise."""
+"""Converting .nsz/.xcz to .nsp/.xci through nsz, in parallel and without surprises."""
 
 import os
 from concurrent.futures import ThreadPoolExecutor
@@ -8,7 +8,7 @@ from . import nsztool
 
 
 def run(paths, jobs, threads, precheck, maxkey, job, verify=True):
-    """Convertit une liste de fichiers. Precontrole optionnel des master keys."""
+    """Convert a list of files. Optional pre-check of the master keys."""
     jobs = max(1, jobs)
     tpj = max(1, threads // jobs)
 
