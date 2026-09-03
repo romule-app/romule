@@ -275,11 +275,15 @@ def coherence_doc():
     `verifier-rendu.py` is NOT here: it reads the built site, which requires
     MkDocs — a dependency this repository does not have. It stays in the
     documentation workflow, which already installs it.
+
+    `verifier-anglais.py` is here rather than with the documentation checks: it
+    reads the SOURCE, and the moment it stops being run is the moment the first
+    French comment comes back.
     """
     titre("coherence de la documentation")
     ok = True
     for outil in ("verifier-reglages-doc.py", "verifier-chiffres.py",
-                  "verifier-traduction.py"):
+                  "verifier-traduction.py", "verifier-anglais.py"):
         r = subprocess.run([sys.executable, str(RACINE / "outils" / outil)],
                            cwd=str(RACINE), capture_output=True, text=True)
         etat = "OK" if r.returncode == 0 else "ECHEC"

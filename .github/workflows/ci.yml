@@ -149,6 +149,13 @@ jobs:
       - name: Les nombres cites dans la documentation valent-ils encore ?
         run: python3 outils/verifier-chiffres.py
 
+      # Le code du depot est en anglais. Sans ce controle, la traduction se
+      # re-degrade au premier commentaire ecrit par reflexe, et personne ne s'en
+      # apercoit avant qu'il y en ait cent. Le script s'eprouve lui-meme a
+      # chaque execution — dans les deux sens — avant de juger le depot.
+      - name: Reste-t-il du francais dans les commentaires ?
+        run: python3 outils/verifier-anglais.py --tout
+
       - name: La specification OpenAPI est-elle a jour ?
         run: |
           python -m romule.apiv1 > /tmp/openapi-attendu.json
