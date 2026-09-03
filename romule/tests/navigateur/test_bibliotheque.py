@@ -1,29 +1,27 @@
-"""La bibliotheque : la bonne vue, gardee, alignee, et filtrable.
+"""The library: the right view, kept, aligned, and filterable.
 
-Ce que ce fichier tient, et que la lecture du code ne montre pas :
+What this file holds, and that reading the code does not show:
 
-  * la bibliotheque **s'ouvre sur toutes les plateformes**, et le choix
-    precedent de l'utilisateur prime — il etait ECRIT dans le stockage local a
-    chaque changement, mais jamais relu, donc perdu a chaque ouverture ;
-  * les trois rangees de la barre **partagent un axe et une hauteur**, et les
-    gouttieres entre elles sont egales. Personne ne sait dire pourquoi une
-    barre « fait desordre » ; on le mesure ;
-  * la liste unifiee est **gardee** tant que rien ne bouge, et **reconstruite**
-    des que quelque chose bouge — les deux moities comptent ;
-  * **revenir sur une plateforme deja vue ne redemande rien** au serveur ;
-  * les filtres se comptent, s'effacent d'un geste, et s'enregistrent.
+  * the library **opens on all platforms**, and the user's previous choice wins
+    — it WAS written to local storage on every change, but never read back, so
+    lost on every opening;
+  * the bar's three rows **share an axis and a height**, and the gutters between
+    them are equal. Nobody can say why a bar "looks untidy"; we measure it;
+  * the unified list is **kept** as long as nothing moves, and **rebuilt** as
+    soon as something moves — both halves matter;
+  * **returning to an already-seen platform asks the server for nothing**;
+  * the filters are counted, cleared in one gesture, and saved.
 
-Une promesse a ete RETIREE d'ici, et il vaut la peine de dire pourquoi : « la
-grille ne se vide jamais pendant une bascule ». Trois versions du controle ont
-ete essayees — la hauteur de `#lib` image par image, le nombre de cartes, puis
-les deux avec 400 ms de latence emulee et 900 ms de retard force sur la
-reponse. Les trois restaient VERTES sur le code casse, celui qui vidait les
-listes avant d'attendre le reseau. Un controle qu'on n'a jamais vu echouer ne
-prouve rien.
+One promise was REMOVED from here, and it is worth saying why: "the grid never
+empties during a switch". Three versions of the check were tried — `#lib`'s
+height frame by frame, the number of cards, then both with 400 ms of emulated
+latency and a 900 ms forced delay on the answer. All three stayed GREEN on the
+broken code, the one that emptied the lists before waiting for the network. A
+check nobody has ever seen fail proves nothing.
 
-La propriete est donc tenue la ou elle se verifie sans ambiguite : un invariant
-de source dans `test_ui_injection.js` interdit d'affecter une liste vide avant
-le premier `await` de `setSystem`.
+So the property is held where it can be checked without ambiguity: a source
+invariant in `test_ui_injection.js` forbids assigning an empty list before
+`setSystem`'s first `await`.
 """
 import os
 import sys
@@ -34,20 +32,19 @@ ICI = Path(__file__).resolve().parent
 sys.path.insert(0, str(ICI))
 from cdp import Navigateur
 
-# `LUDO_URL` est OBLIGATOIRE, et il n'y a volontairement pas de defaut.
+# `LUDO_URL` is REQUIRED, and there is deliberately no default.
 #
-# Il y en avait un : `http://127.0.0.1:8799/`. Or c'est un port ou tourne
-# facilement une VRAIE instance — la mienne, en l'occurrence. Lance seul, ce
-# test pilotait donc la ludotheque de quelqu'un : il rapportait « 189
-# gestionnaires en ligne » parce qu'il examinait une version d'il y a trois
-# mois, et il cliquait dans de vraies donnees.
+# There used to be one: `http://127.0.0.1:8799/`. But that is a port where a REAL
+# instance easily runs — mine, as it happens. Run on its own, this test therefore
+# drove someone's library: it reported "189 inline handlers" because it was
+# examining a three-month-old version, and it clicked inside real data.
 #
-# Un defaut qui vise un service plausible est pire qu'une erreur : il donne un
-# resultat, et ce resultat parle d'autre chose. `lancer_tests.py` pose la
-# variable ; qui veut viser un serveur de developpement la pose lui-meme.
+# A default that aims at a plausible service is worse than an error: it gives a
+# result, and that result talks about something else. `lancer_tests.py` sets the
+# variable; whoever wants to aim at a development server sets it themselves.
 URL = os.environ.get("LUDO_URL", "")
 if not URL:
-    print("LUDO_URL n'est pas posee. Lance `python3 lancer_tests.py "
+    print("LUDO_URL is not set. Run `python3 lancer_tests.py "
           "--navigateur`,\nou vise explicitement un serveur d'essai :\n"
           "    LUDO_URL=http://127.0.0.1:9871/ python3 %s"
           % __file__, file=sys.stderr)
@@ -62,11 +59,11 @@ def t(nom, cond, detail=""):
         print("      OK   %s" % nom)
     else:
         ko += 1
-        print("      ECHEC %s   %s" % (nom, detail))
+        print("      FAIL  %s   %s" % (nom, detail))
 
 
-# Compte les appels reseau. Pose avant le chargement de la page : c'est la
-# seule facon de voir le tout premier appel.
+# Counts the network calls. Set before the page loads: the only way to see the
+# very first call.
 MOUCHARD = r"""
 (function () {
   window.__appels = [];
@@ -107,24 +104,23 @@ def cartes(n):
 
 
 def vue_par_defaut(n):
-    print("   -- la vue par defaut --")
-    # Le choix precedent prime : on repart d'une ardoise propre pour eprouver
-    # le DEFAUT et non un reste d'essai anterieur.
+    print("   -- the default view --")
+    # The previous choice wins: we start from a clean slate to test the
+    # DEFAULT and not a leftover from an earlier run.
     n.js("localStorage.removeItem('systeme')")
     n.cmd("Page.reload", {})
     time.sleep(3)
     attendre_pret(n)
     time.sleep(2)
-    t("la bibliotheque s'ouvre sur toutes les plateformes",
+    t("the library opens on all platforms",
       n.js("SYS") == "all", n.js("SYS"))
 
 
 def pluriels(n):
-    print("   -- l'accord suit la langue --")
-    # « 1 fichier(s) » n'est pas un pluriel, c'est un aveu. Et les regles ne
-    # sont pas les memes : en francais 0 et 1 sont au singulier, en anglais
-    # seul 1 l'est. On verifie les DEUX langues, sinon on remplace une faute
-    # par une autre sans le voir.
+    print("   -- agreement follows the language --")
+    # "1 fichier(s)" is not a plural, it is a confession. And the rules are not
+    # the same: in French 0 and 1 are singular, in English only 1 is. We check
+    # BOTH languages, otherwise one mistake replaces another unnoticed.
     cas = n.js("""
       (async () => {
         const rendu = [];
@@ -148,10 +144,10 @@ def pluriels(n):
     }
     for ligne in cas:
         langue, *vus = ligne
-        t("accord en %s" % langue, vus == attendu.get(langue), vus)
-    t("les deux langues ont ete eprouvees", len(cas) == 2, len(cas))
+        t("agreement in %s" % langue, vus == attendu.get(langue), vus)
+    t("both languages were exercised", len(cas) == 2, len(cas))
 
-    # Et rien a l'ecran ne doit plus porter la forme paresseuse.
+    # And nothing on screen may carry the lazy form any more.
     restes = n.js(r"""
       (function () {
         const out = [];
@@ -162,27 +158,27 @@ def pluriels(n):
         }
         return out;
       })()""") or []
-    t("aucun « (s) » a l'ecran", not restes, restes[:3])
+    t("no \"(s)\" on screen", not restes, restes[:3])
 
 
 def mobile(n):
-    print("   -- sur telephone, le contenu vient avant les reglages --")
-    # Mesure avant : 19 controles entre le haut de l'ecran et la premiere
-    # jaquette. On faisait defiler un panneau de configuration pour atteindre
-    # ce qu'on etait venu voir.
+    print("   -- on a phone, the content comes before the settings --")
+    # Measured before: 19 controls between the top of the screen and the first
+    # cover. You scrolled through a configuration panel to reach what you had
+    # come to see.
     n.cmd("Emulation.setDeviceMetricsOverride",
           {"width": 430, "height": 932, "deviceScaleFactor": 2, "mobile": True})
     time.sleep(1.5)
-    # Sans cette verification, tout ce qui suit serait mesure sur un ecran
-    # large et passerait pour vrai : un test qui croit etre sur telephone et
-    # ne l'est pas ne prouve rien.
-    t("la fenetre est bien celle d'un telephone",
+    # Without this check, everything that follows would be measured on a wide
+    # screen and would pass for true: a test that believes it is on a phone and
+    # is not proves nothing.
+    t("the viewport really is a phone's",
       n.js("window.matchMedia('(max-width:700px)').matches"),
       n.js("window.innerWidth"))
-    # Ce qu'on compte : les controles DES BARRES DE LA BIBLIOTHEQUE — le
-    # panneau qu'on fait defiler pour atteindre la grille. Pas l'en-tete de
-    # l'application (onglets, etat de la console) : il est present sur tous les
-    # ecrans et ne fait pas partie de ce qui s'interpose.
+    # What is counted: the controls OF THE LIBRARY'S BARS — the panel you
+    # scroll through to reach the grid. Not the application's header (tabs,
+    # console state): it is present on every screen and is not part of what
+    # stands in the way.
     avant = n.js("""
       (function () {
         // Chaque terme doit etre prefixe : `'.libbar ' + 'a, b'` ne porte que
@@ -195,11 +191,11 @@ def mobile(n):
         return [...document.querySelectorAll(sel)]
           .filter(e => e.getClientRects().length > 0).length;
       })()""")
-    t("des controles sont mesurables avant la premiere jaquette",
+    t("controls are measurable before the first cover",
       avant is not None, avant)
     if avant is not None:
-        t("moins de dix controles avant le premier jeu", avant < 10, avant)
-    t("le bouton de repli est visible sur telephone",
+        t("fewer than ten controls before the first game", avant < 10, avant)
+    t("the fold button is visible on a phone",
       bool(n.js("document.getElementById('replier').getClientRects().length > 0")),
       n.js("""(function(){
         const r = document.getElementById('replier');
@@ -210,9 +206,9 @@ def mobile(n):
       })()"""))
     n.js("app.basculerFiltres()")
     time.sleep(0.5)
-    t("il deplie les filtres",
+    t("it unfolds the filters",
       bool(n.js("document.getElementById('toolbar').getClientRects().length > 0")))
-    t("et l'annonce aux lecteurs d'ecran",
+    t("and announces it to screen readers",
       n.js("document.getElementById('replier').getAttribute('aria-expanded')")
       == "true")
     n.js("app.basculerFiltres()")
@@ -222,19 +218,19 @@ def mobile(n):
 
 
 def croix(n):
-    print("   -- la grille se parcourt a la croix directionnelle --")
-    # Sur une console portable, le pouce est sur la croix. Ces appareils
-    # emettent des evenements clavier standards : ce test les rejoue.
+    print("   -- the grid is walked with the D-pad --")
+    # On a handheld, the thumb is on the D-pad. These devices emit standard
+    # keyboard events: this test replays them.
     n.js("app.effacerFiltres()")
     time.sleep(0.5)
     total = cartes(n)
     if total < 2:
-        t("assez de cartes pour se deplacer", False, total)
+        t("enough cards to move around", False, total)
         return
     n.js("document.querySelector('#lib .gcard').focus()")
-    t("la premiere carte prend le focus",
+    t("the first card takes the focus",
       n.js("document.activeElement.classList.contains('gcard')"))
-    t("elle porte un nom pour les lecteurs d'ecran",
+    t("it carries a name for screen readers",
       bool(n.js("document.activeElement.getAttribute('aria-label')")))
 
     def touche(k):
@@ -248,19 +244,19 @@ def croix(n):
     depart = n.js("document.activeElement.dataset.key")
     touche("ArrowRight")
     apres = n.js("document.activeElement.dataset.key")
-    t("la fleche droite change de carte", apres != depart, (depart, apres))
+    t("the right arrow changes card", apres != depart, (depart, apres))
     touche("ArrowLeft")
-    t("la fleche gauche revient",
+    t("the left arrow comes back",
       n.js("document.activeElement.dataset.key") == depart)
-    # Sortir de la grille ne doit RIEN faire : sur une console, un rebond se
-    # lit comme un bouton qui n'a pas repondu.
+    # Leaving the grid must do NOTHING: on a handheld, a wrap-around reads as a
+    # button that did not answer.
     touche("ArrowLeft")
-    t("sortir par la gauche ne bouge pas",
+    t("leaving on the left does not move",
       n.js("document.activeElement.dataset.key") == depart)
     touche("ArrowDown")
-    t("la fleche bas descend d'une rangee ou ne bouge pas",
+    t("the down arrow moves one row down or not at all",
       n.js("document.activeElement.classList.contains('gcard')"))
-    t("l'anneau de focus est dessine",
+    t("the focus ring is drawn",
       n.js("""(function(){
         const st = getComputedStyle(document.activeElement);
         return st.outlineStyle !== 'none' || st.boxShadow !== 'none';
@@ -268,11 +264,11 @@ def croix(n):
 
 
 def annuler(n):
-    print("   -- la corbeille se defait d'un clic --")
-    # La corbeille EST l'annulation : demander « êtes-vous sûr ? » avant d'y
-    # mettre un fichier fait payer a chaque fois le prix d'une erreur qui ne
-    # coute rien. Encore faut-il que le bouton « Annuler » RESTAURE
-    # reellement — sinon on a remplace une gene par un mensonge.
+    print("   -- the trash is undone in one click --")
+    # The trash IS the undo: asking "are you sure?" before putting a file in it
+    # charges every time the price of a mistake that costs nothing. But the
+    # "Undo" button must really RESTORE — otherwise an annoyance has been
+    # replaced by a lie.
     n.js("app.effacerFiltres(); app.tab('jeux')")
     time.sleep(0.8)
     avant = cartes(n)
@@ -284,50 +280,50 @@ def annuler(n):
         return g && g.g.files && g.g.files[0] ? g.g.files[0].path : '';
       })()""" % ("'" + (cle or "").replace("'", "\\'") + "'"))
     if not chemin:
-        t("un fichier a mettre a la corbeille", False, cle)
+        t("a file to send to the trash", False, cle)
         return
     n.js("app.trashFile('%s')" % chemin.replace("'", "\\'"))
     time.sleep(2.5)
-    t("le jeu quitte la grille", cartes(n) < avant, (avant, cartes(n)))
-    t("un toast propose d'annuler",
+    t("the game leaves the grid", cartes(n) < avant, (avant, cartes(n)))
+    t("a toast offers to undo",
       bool(n.js("!!document.querySelector('.toast.agir button')")))
     n.js("document.querySelector('.toast.agir button').click()")
     time.sleep(3.0)
-    t("annuler le remet dans la grille", cartes(n) == avant,
+    t("undoing puts it back in the grid", cartes(n) == avant,
       (avant, cartes(n)))
 
 
 def alignement(n):
-    print("   -- les rangees de la barre sont alignees --")
-    # Mesure avant correction : trois axes verticaux dans la MEME rangee
-    # (245, 249, 250 px) et des gouttieres de 14 puis 10 px. Deux causes, dont
-    # aucune ne se lit : un `margin-bottom` herite qui decale la boite centree,
-    # et une bordure qui rend un groupe 2 px plus haut que ses voisins.
+    print("   -- the bar's rows are aligned --")
+    # Measured before the fix: three vertical axes within the SAME row (245,
+    # 249, 250 px) and gutters of 14 then 10 px. Two causes, neither of them
+    # readable: an inherited `margin-bottom` that offsets the centred box, and a
+    # border that makes one group 2 px taller than its neighbours.
     geo = n.js(GEOMETRIE) or {}
     ctrl = geo.get("ctrl") or []
-    t("les controles de la rangee sont mesurables", len(ctrl) >= 4, len(ctrl))
+    t("the row's controls are measurable", len(ctrl) >= 4, len(ctrl))
     if ctrl:
         hauts = sorted({c["h"] for c in ctrl})
         hauteurs = sorted({c["b"] - c["h"] for c in ctrl})
-        t("ils partagent le meme axe a 1 px pres",
+        t("they share the same axis to within 1 px",
           max(hauts) - min(hauts) <= 1, hauts)
-        t("ils ont la meme hauteur a 1 px pres",
+        t("they have the same height to within 1 px",
           max(hauteurs) - min(hauteurs) <= 1, hauteurs)
     if geo.get("libbar") and geo.get("filtres") and geo.get("barre"):
         g1 = geo["filtres"]["h"] - geo["libbar"]["b"]
         g2 = geo["barre"]["h"] - geo["filtres"]["b"]
-        t("les gouttieres entre rangees sont egales",
+        t("the gutters between rows are equal",
           abs(g1 - g2) <= 1, "%d puis %d" % (g1, g2))
 
 
 def liste_gardee(n):
-    print("   -- la liste unifiee est gardee, et refaite quand il faut --")
-    # Reconstruire et RETRIER toute la bibliotheque coutait 16,5 ms sur 5 000
-    # titres, a chaque frappe. Un cache qui ne se renouvelle pas afficherait
-    # une liste perimee : on verifie les DEUX moities.
-    t("deux appels de suite rendent la meme liste",
+    print("   -- the unified list is kept, and redone when needed --")
+    # Rebuilding and RE-SORTING the whole library cost 16.5 ms across 5 000
+    # titles, on every keystroke. A cache that never refreshes would show a stale
+    # list: we check BOTH halves.
+    t("two calls in a row return the same list",
       n.js("jeuxUnifies() === jeuxUnifies()"))
-    t("changer de tri la reconstruit", n.js("""
+    t("changing the sort rebuilds it", n.js("""
       (function () {
         const avant = jeuxUnifies();
         const ancien = TRI;
@@ -338,7 +334,7 @@ def liste_gardee(n):
         app.setTri(ancien);
         return apres !== avant;
       })()"""))
-    t("un changement d'inventaire la reconstruit", n.js("""
+    t("a change of inventory rebuilds it", n.js("""
       (function () {
         const avant = jeuxUnifies();
         inventaireChange();
@@ -347,41 +343,41 @@ def liste_gardee(n):
 
 
 def recherche(n):
-    print("   -- la recherche filtre ce qui est affiche --")
+    print("   -- the search filters what is displayed --")
     avant = cartes(n)
     n.js("document.getElementById('filter').value = 'zzzzimprobable';"
          " app.chercher()")
     time.sleep(0.6)
-    t("une requete sans resultat vide la grille", cartes(n) == 0, avant)
+    t("a query with no result empties the grid", cartes(n) == 0, avant)
     n.js("document.getElementById('filter').value = ''; app.chercher()")
     time.sleep(0.6)
-    t("effacer la requete la remplit", cartes(n) == avant, avant)
+    t("clearing the query fills it again", cartes(n) == avant, avant)
 
 
 def filtres(n):
-    print("   -- filtres : compter, effacer --")
+    print("   -- filters: counting, clearing --")
     n.js("app.effacerFiltres()")
     time.sleep(0.4)
-    t("sans filtre, « Tout effacer » est cache",
+    t("with no filter, \"Clear all\" is hidden",
       n.js("document.getElementById('effacefiltres').hidden"))
     n.js("document.getElementById('filter').value = 'jeu'; app.chercher()")
     time.sleep(0.5)
-    t("avec un filtre, il apparait",
+    t("with a filter, it appears",
       not n.js("document.getElementById('effacefiltres').hidden"))
-    t("le compteur figure sur le bouton",
+    t("the counter shows on the button",
       "1" in (n.js("document.getElementById('favbtn').textContent") or ""),
       n.js("document.getElementById('favbtn').textContent"))
     n.js("app.effacerFiltres()")
     time.sleep(0.4)
-    t("« Tout effacer » vide la recherche",
+    t("\"Clear all\" empties the search",
       n.js("document.getElementById('filter').value") == "")
-    t("et remet la pastille d'etat", n.js("FILTER") == "all", n.js("FILTER"))
+    t("and resets the state pill", n.js("FILTER") == "all", n.js("FILTER"))
 
 
 def vues(n):
-    print("   -- une vue enregistree se rejoue --")
-    # Le parcours complet, par le serveur : c'est la seule facon de savoir
-    # qu'une vue survit et se relit.
+    print("   -- a saved view replays --")
+    # The full round trip, through the server: the only way to know a view
+    # survives and is read back.
     n.js("document.getElementById('filter').value = 'jeu'; app.chercher()")
     time.sleep(0.4)
     n.js("""
@@ -391,28 +387,28 @@ def vues(n):
         VUES = r.vues || []; dessinerVues();
       })()""")
     time.sleep(1.4)
-    t("la vue apparait comme une puce",
+    t("the view appears as a pill",
       (n.js("document.querySelectorAll('#vues .vue').length") or 0) >= 1)
     n.js("app.effacerFiltres()")
     time.sleep(0.4)
     n.js("(function () { const v = VUES.find(x => x.nom === 'Essai');"
          " if (v) app.appliquerVue(v.id); })()")
     time.sleep(1.0)
-    t("l'appliquer restaure la recherche",
+    t("applying it restores the search",
       n.js("document.getElementById('filter').value") == "jeu",
       n.js("document.getElementById('filter').value"))
     n.js("(function () { const v = VUES.find(x => x.nom === 'Essai');"
          " if (v) app.supprimerVue(v.id); })()")
     time.sleep(1.2)
-    t("l'oublier la retire",
+    t("forgetting it removes it",
       not any(v.get("nom") == "Essai" for v in (n.js("VUES") or [])))
     n.js("app.effacerFiltres()")
 
 
 def cache(n, cible):
-    print("   -- revenir ne redemande rien --")
-    # Les DEUX vues sont d'abord chargees : sans cette mise en bouche on
-    # compterait un premier chargement legitime et non un retour.
+    print("   -- returning asks for nothing --")
+    # BOTH views are loaded first: without this warm-up we would be counting a
+    # legitimate first load and not a return.
     n.js("app.setSystem('%s')" % cible)
     time.sleep(1.8)
     n.js("app.setSystem('all')")
@@ -424,7 +420,7 @@ def cache(n, cible):
     time.sleep(1.5)
     appels = [a for a in (n.js("window.__appels") or [])
               if "/api/library-all" in a or "/api/system-games" in a]
-    t("aucun appel d'inventaire au retour sur une plateforme vue",
+    t("no inventory call when returning to a seen platform",
       not appels, appels)
 
 
@@ -453,9 +449,9 @@ def main():
         filtres(n)
         vues(n)
 
-        # La plateforme cible doit avoir DES JEUX : basculer vers une liste
-        # vide ne distingue pas un code qui vide la grille d'un code qui ne la
-        # vide pas. `lancer_tests.py` seme une plateforme GBA pour cela.
+        # The target platform must have GAMES: switching to an empty list does
+        # not tell code that empties the grid from code that does not.
+        # `lancer_tests.py` seeds a GBA platform for this.
         systemes = n.js("Array.from(document.getElementById('sysel').options)"
                         ".map(o => o.value)") or []
         cible = None
@@ -465,13 +461,13 @@ def main():
             if cartes(n) > 0:
                 cible = k
                 break
-        t("une seconde plateforme peuplee existe dans le decor", bool(cible),
+        t("a second populated platform exists in the fixture", bool(cible),
           "aucune plateforme non-Switch ne contient de jeu")
         if cible:
             cache(n, cible)
     finally:
         n.fermer()
-    print("   %d ok, %d echecs" % (ok, ko))
+    print("   %d ok, %d failures" % (ok, ko))
     return 1 if ko else 0
 
 
