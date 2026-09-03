@@ -6,6 +6,7 @@ l'absence de configuration ne declenche aucun appel reseau.
 """
 import json
 import os
+import socket
 import subprocess
 import sys
 import tempfile
@@ -17,7 +18,23 @@ ICI = Path(__file__).resolve().parent
 os.environ.setdefault("ROMULE_ROOT", tempfile.mkdtemp())
 sys.path.insert(0, str(ICI.parent.parent))
 
-PORT = int(os.environ.get("LUDO_PORT_IGDB", "9911"))
+def _port_libre(variable):
+    """Un port qu'on demande au systeme, plutot qu'un numero fige.
+
+    Un port fixe finit par rencontrer un serveur laisse par une execution
+    precedente, ou n'importe quoi d'autre sur la machine : le test s'adresse
+    alors a CE service-la, et rend un resultat qui ne parle pas du code qu'on
+    vient d'ecrire. La variable reste acceptee pour qui veut fixer.
+    """
+    fixe = os.environ.get(variable)
+    if fixe:
+        return int(fixe)
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return int(s.getsockname()[1])
+
+
+PORT = _port_libre("LUDO_PORT_IGDB")
 BASE = "http://127.0.0.1:%d" % PORT
 ok = fail = 0
 
