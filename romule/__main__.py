@@ -1,9 +1,9 @@
-"""Point d'entree du paquet : `python3 -m romule`.
+"""The package's entry point: `python3 -m romule`.
 
-Le script `switch.py` a la racine reste valable — c'est ce que lancent les
-tests et ce que documentait l'ancien projet — mais un paquet installe n'a pas
-de script a la racine. Le fichier ne peut pas s'appeler `romule.py` : il vivrait
-a cote du dossier `romule/` et Python ne saurait plus lequel importer.
+The root `switch.py` script still works — it is what the tests run and what the
+old project documented — but an installed package has no script at its root.
+This file cannot be called `romule.py`: it would sit beside the `romule/`
+folder and Python would no longer know which to import.
 """
 import sys
 

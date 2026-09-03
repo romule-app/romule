@@ -1,4 +1,4 @@
-"""Encapsulation de l'outil `nsz` (inspection, conversion, master keys)."""
+"""A wrapper around the `nsz` tool (inspection, conversion, master keys)."""
 
 import json
 import re
@@ -23,16 +23,16 @@ def _inspect(path):
         return ""
 
 
-"""Cache des title IDs lus dans les conteneurs.
+"""Cache of the title IDs read from inside containers.
 
-Chaque lecture lance `nsz -i`, un sous-processus qui coute environ un quart de
-seconde. Huit fichiers mal nommes suffisaient a rallonger de deux secondes
-CHAQUE affichage de la page — alors que le title ID grave dans un fichier ne
-change pas tant que le fichier lui-meme ne change pas.
+Each read runs `nsz -i`, a subprocess costing about a quarter of a second.
+Eight badly named files were enough to add two seconds to EVERY page render —
+when the title ID carved into a file does not change while the file itself does
+not.
 
-La cle retient la taille et la date de modification : remplacer un fichier par
-un autre invalide donc l'entree. L'absence de title ID (`None`) est memorisee
-elle aussi — c'est un resultat comme un autre, et il coutait aussi cher.
+The key records size and modification time: replacing one file with another
+therefore invalidates the entry. The absence of a title ID (`None`) is
+remembered too — it is a result like any other, and it cost just as much.
 """
 _TID_CACHE = None
 
@@ -57,7 +57,7 @@ def _cache_ecrire():
         config.TIDCACHE.write_text(
             json.dumps(_TID_CACHE, ensure_ascii=False), encoding="utf-8")
     except OSError:
-        pass          # cache non ecrit : on relira, sans dommage
+        pass          # cache not written: we will read again, no harm done
 
 
 def _signature(path):
@@ -66,7 +66,7 @@ def _signature(path):
 
 
 def container_tid(path):
-    """Lit le title ID a l'interieur du conteneur (pour les fichiers mal nommes)."""
+    """Read the title ID from inside the container (for badly named files)."""
     cle = str(path)
     cache = _cache_charger()
     try:
@@ -92,7 +92,7 @@ def required_master_key(path):
 
 
 def max_master_key(keyfile):
-    """Plus haute master key disponible dans prod.keys (0 si aucune)."""
+    """The highest master key available in prod.keys (0 when there is none)."""
     keyfile = Path(keyfile)
     if not keyfile.exists():
         return 0
@@ -130,7 +130,7 @@ def convert(src, outdir, threads, verify=True):
     if r.returncode == 0 and tgt.exists():
         return (True, tgt, "")
 
-    if tgt.exists():  # sortie partielle : on ne garde pas de fichier tronque
+    if tgt.exists():  # partial output: we do not keep a truncated file
         try:
             tgt.unlink()
         except OSError:

@@ -1,10 +1,10 @@
-"""Sauvegarde des sauvegardes de jeu depuis la console vers le serveur.
+"""Backing up game saves from the console to the server.
 
-C'est le contenu le plus precieux : un jeu se re-telecharge, pas 200 h de
-progression. Les sauvegardes partent dans `_saves/<date>/`, jamais ecrasees.
+This is the most precious content: a game can be downloaded again, 200 hours of
+progress cannot. Saves go into `_saves/<date>/`, never overwritten.
 
-Le chemin des saves depend de l'emulateur et de sa version : on cherche parmi
-les emplacements connus, et l'utilisateur peut en imposer un.
+Where the saves live depends on the emulator and its version: we look through
+the known locations, and the user can pin one.
 """
 
 from datetime import datetime
@@ -12,13 +12,13 @@ from datetime import datetime
 from . import config, device
 
 def candidats():
-    """Ou chercher les sauvegardes, du plus precis au plus general.
+    """Where to look for saves, from the most specific to the most general.
 
-    Cette liste etait ecrite en dur, et elle nommait Eden sous un paquet
-    (`dev.eden_emu.eden`) que `nand.py` orthographiait autrement
-    (`dev.eden.eden_emulator`) : l'un des deux etait forcement faux. On part
-    desormais du profil actif, puis de tous les autres — un utilisateur qui
-    change d'emulateur veut retrouver ses anciennes sauvegardes.
+    This list used to be hard-coded, and it named Eden under a package
+    (`dev.eden_emu.eden`) that `nand.py` spelled differently
+    (`dev.eden.eden_emulator`): one of the two was necessarily wrong. We now
+    start from the active profile, then all the others — someone switching
+    emulator wants their old saves back.
     """
     from . import profils
     out = []
@@ -33,8 +33,8 @@ def candidats():
             racine = gabarit % paquet
             for rel in (prof.get("sauvegardes") or ["nand/user/save"]):
                 out.append(racine + "/" + rel.lstrip("/"))
-    # Anciennes installations, avant que les emulateurs ne passent au dossier
-    # applicatif d'Android.
+    # Older installations, from before emulators moved to Android's
+    # application folder.
     out += ["/storage/emulated/0/eden/nand/user/save",
             "/storage/emulated/0/yuzu/nand/user/save"]
     vus, uniques = set(), []
@@ -62,14 +62,14 @@ def find_dirs(cfg=None):
             found.append(c)
     if found:
         return found
-    # rien de connu : on cherche un dossier "save" sous les donnees d'emulateurs
+    # nothing known: look for a "save" folder under the emulators' data
     out = device._shell(
         "find /storage/emulated/0/Android/data -maxdepth 6 -type d -name save 2>/dev/null | head -5")
     return [l.strip() for l in out.splitlines() if l.strip()]
 
 
 def backup(job, cfg=None):
-    """Copie les sauvegardes de la console vers _saves/<date>/."""
+    """Copy the console's saves into _saves/<date>/."""
     if device.state() != "device":
         job.log("Console non connectee.")
         return None

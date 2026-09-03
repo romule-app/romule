@@ -1,18 +1,18 @@
-"""romule — moteur d'une ludotheque de jeux auto-hebergee.
+"""romule — the engine of a self-hosted game library.
 
-Source unique de verite : toute la logique metier vit ici, partagee par
-l'interface web (server.py) et la ligne de commande (cli.py).
+Single source of truth: all the business logic lives here, shared by the web
+interface (server.py) and the command line (cli.py).
 
-Le coeur connait la Switch en detail (title IDs, NSP/XCI, mises a jour et
-DLC) ; les autres plateformes passent par un inventaire par fichier. L'appareil
-cible et l'emulateur sont des profils, pas du code (voir profils.py).
+The core knows the Switch in detail (title IDs, NSP/XCI, updates and DLC);
+other platforms go through a per-file inventory. The target device and the
+emulator are profiles, not code (see profils.py).
 """
 
 __version__ = "0.3.1"
 
-# Romule est distribue sous licence AGPL-3.0-or-later. La licence demande
-# qu'un utilisateur qui atteint le service PAR LE RESEAU puisse en obtenir le
-# code : c'est le sens du lien affiche en pied d'interface, et de ce que
-# renvoie /api/health.
+# Romule is distributed under AGPL-3.0-or-later. The licence requires that a
+# user reaching the service OVER THE NETWORK be able to obtain its source: that
+# is the point of the link in the interface footer, and of what /api/health
+# returns.
 SOURCE_URL = "https://github.com/romule-app/romule"
 LICENCE = "AGPL-3.0-or-later"
