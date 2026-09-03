@@ -1,8 +1,8 @@
-"""Client Chrome DevTools minimal, en bibliotheque standard seule.
+"""A minimal Chrome DevTools client, in the standard library alone.
 
-Assez pour piloter un vrai navigateur : dimensions d'ecran, navigation,
-evaluation de JavaScript, clics reels et captures d'ecran. Sans cela, on ne
-peut que supposer ce que fait la mise en page sur telephone.
+Enough to drive a real browser: screen dimensions, navigation, JavaScript
+evaluation, real clicks and screenshots. Without it, one can only guess what the
+layout does on a phone.
 """
 import base64
 import json
@@ -16,9 +16,9 @@ import time
 import urllib.request
 from pathlib import Path
 
-# Chemins usuels, du plus specifique au plus generique. Un seul chemin en dur
-# rendait ces tests impossibles a jouer ailleurs que sur un Mac — donc absents
-# de l'integration continue, la ou ils servent le plus.
+# The usual paths, from the most specific to the most generic. A single
+# hard-coded path made these tests impossible to run anywhere but on a Mac — so
+# absent from continuous integration, where they are most useful.
 CHROMES = [
     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
     "/Applications/Chromium.app/Contents/MacOS/Chromium",
@@ -31,10 +31,10 @@ CHROMES = [
 
 
 def trouver_chrome():
-    """Chemin de Chrome, ou une erreur qui dit quoi faire.
+    """Chrome's path, or an error that says what to do.
 
-    ROMULE_CHROME passe avant tout : c'est ce qui permet a un poste ou a un
-    conteneur de designer un binaire que cette liste ne connait pas.
+    ROMULE_CHROME comes first: that is what lets a workstation or a container
+    point at a binary this list does not know.
     """
     impose = os.environ.get("ROMULE_CHROME", "").strip()
     if impose:
@@ -117,29 +117,29 @@ class Navigateur:
                 "--remote-debugging-port=%d" % port,
                 "--no-first-run", "--no-default-browser-check", "--disable-gpu",
                 "--hide-scrollbars",
-                # /dev/shm fait 64 Mio dans la plupart des conteneurs : Chrome y
-                # place sa memoire partagee et meurt sans un mot. Sans effet
-                # ailleurs, donc pose partout.
+                # /dev/shm is 64 MiB in most containers: Chrome puts its shared
+                # memory there and dies without a word. No effect elsewhere, so
+                # it is set everywhere.
                 "--disable-dev-shm-usage",
                 "--user-data-dir=%s" % (Path(tempfile.gettempdir())
                                         / ("cdp-profil-%d" % port)),
                 "about:blank"]
-        # Le bac a sable de Chrome demande des espaces de noms utilisateur que
-        # les executeurs d'integration continue n'accordent pas. Sans cette
-        # option Chrome demarre puis se tait, et l'erreur qu'on lit est
-        # « Chrome n'a pas repondu » — qui ne dit pas pourquoi.
+        # Chrome's sandbox needs user namespaces that continuous-integration
+        # runners do not grant. Without this option Chrome starts then falls
+        # silent, and the error you read is "Chrome did not answer" — which does
+        # not say why.
         #
-        # C'est un relachement de securite : il n'est pose QUE lorsque `CI` est
-        # dans l'environnement, jamais sur un poste de travail.
+        # This is a loosening of security: it is set ONLY when `CI` is in the
+        # environment, never on a workstation.
         if os.environ.get("CI", "").strip():
             args.insert(1, "--no-sandbox")
         self.proc = subprocess.Popen(args, stdout=subprocess.DEVNULL,
                                      stderr=subprocess.PIPE)
         cible = None
-        # 60 s : un executeur froid met bien plus de temps que le poste de
-        # developpement, et l'ancienne limite de 24 s le coupait en route.
+        # 60 s: a cold runner takes far longer than the development machine,
+        # and the old 24 s limit cut it off mid-way.
         for _ in range(150):
-            if self.proc.poll() is not None:      # Chrome est mort : inutile d'attendre
+            if self.proc.poll() is not None:      # Chrome is dead: no point waiting
                 break
             try:
                 d = json.load(urllib.request.urlopen(
@@ -151,7 +151,7 @@ class Navigateur:
                 pass
             time.sleep(0.4)
         if not cible:
-            # Rendre la raison, pas seulement le symptome.
+            # Return the reason, not only the symptom.
             self.proc.kill()
             try:
                 bruit = (self.proc.stderr.read() or b"").decode("utf-8", "replace")
@@ -169,9 +169,9 @@ class Navigateur:
             "mobile": True})
         self.cmd("Emulation.setTouchEmulationEnabled", {"enabled": True,
                                                         "maxTouchPoints": 5})
-        # Le profil est reutilise d'un essai a l'autre : un fichier mis en cache
-        # avec une longue duree de vie survivrait au changement de reglage cote
-        # serveur, et le test jugerait une version perimee.
+        # The profile is reused from one run to the next: a file cached with a
+        # long lifetime would survive a setting change on the server, and the
+        # test would judge a stale version.
         self.cmd("Network.enable")
         self.cmd("Network.clearBrowserCache")
         self.cmd("Network.setCacheDisabled", {"cacheDisabled": True})
@@ -202,8 +202,8 @@ class Navigateur:
         return r.get("result", {}).get("value")
 
     def taper(self, x, y):
-        """Un vrai tap : c'est ce que le navigateur route vers l'element du
-        DESSUS, ce qu'aucune inspection du DOM ne peut simuler."""
+        """A real tap: it is what the browser routes to the TOPMOST element,
+        which no DOM inspection can simulate."""
         for t in ("mousePressed", "mouseReleased"):
             self.cmd("Input.dispatchMouseEvent", {
                 "type": t, "x": x, "y": y, "button": "left", "clickCount": 1})
