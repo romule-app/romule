@@ -1397,14 +1397,13 @@ body.sansdefilement{overflow:hidden}
        [data-theme="clair"]{ --surface:#f6f3ef; --text:#1b1820; ... }
    No component needs to be touched.
    ================================================================================ */
-/* Les valeurs de ces jetons ont demenage en section APPARENCE (fin de
-   fichier), ou elles existent en deux exemplaires : un jeu sombre et un jeu
-   clair. Les declarer ici EN PLUS obligerait a modifier deux endroits a
-   chaque retouche, et le theme clair heriterait silencieusement d'une valeur
-   sombre le jour ou l'un des deux serait oublie. */
+/* These tokens' values moved to the APPEARANCE section (end of file), where
+   they exist in two copies: a dark set and a light set. Declaring them here AS
+   WELL would mean editing two places on every tweak, and the light theme would
+   silently inherit a dark value the day one of the two was forgotten. */
 
-/* --------------------------------------------------------------- BOUTON
-   Base neutre. Les variantes ne touchent QUE ces quatre jetons. */
+/* --------------------------------------------------------------- BUTTON
+   A neutral base. The variants touch ONLY these four tokens. */
 button{
   --btn-fond:        var(--surface-2);
   --btn-texte:       var(--text);
@@ -1425,10 +1424,10 @@ button:hover:not(:disabled){
 button:active:not(:disabled){filter:brightness(.94)}
 button:disabled{opacity:.42;cursor:not-allowed;filter:grayscale(.35)}
 button:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
-/* le detail dans un bouton suit toujours la couleur du bouton */
+/* the detail inside a button always follows the button's colour */
 button .tid{color:inherit;opacity:.75;font-weight:400}
 
-/* --- variante principale : l'action attendue */
+/* --- primary variant: the expected action */
 button.go{
   --btn-fond:var(--primary);        --btn-texte:var(--on-primary);
   --btn-trait:var(--primary);       --btn-fond-survol:var(--primary-vif);
@@ -1437,7 +1436,7 @@ button.go{
 }
 button.go:hover:not(:disabled){box-shadow:0 4px 18px -8px var(--primary)}
 
-/* --- variante discrete : presente sans appeler */
+/* --- quiet variant: present without calling out */
 button.ghost{
   --btn-fond:transparent;           --btn-texte:var(--text-2);
   --btn-trait:var(--line);          --btn-fond-survol:var(--surface-2);
@@ -1462,15 +1461,15 @@ button.lien{
 button.lien:hover:not(:disabled){color:var(--text)}
 
 /* ================================================================================
-   TACHE EN COURS — carte compacte, jamais un bandeau
+   RUNNING TASK — a compact card, never a banner
    --------------------------------------------------------------------------------
-   Le bandeau du bas mangeait une bande d'ecran entiere, ce qui est ruineux sur un
-   handheld en paysage. La carte se pose en haut a droite, sous l'en-tete, et
-   renvoie au journal d'un clic pour le detail complet.
+   The bottom banner ate a whole strip of screen, which is ruinous on a handheld
+   in landscape. The card settles at the top right, under the header, and leads
+   to the log in one click for the full detail.
    ================================================================================ */
-/* Le detail de ce qui tourne vit maintenant DANS le panneau du bouton « + » :
-   une bulle flottante separee repetait ce que le bouton affichait deja, a un
-   autre endroit de l'ecran. */
+/* The detail of what is running now lives INSIDE the "+" button's panel: a
+   separate floating bubble repeated what the button already showed, somewhere
+   else on the screen. */
 .tachewrap{position:fixed;right:22px;bottom:calc(var(--dock-h,46px) + 82px);z-index:31;
   width:min(380px,92vw);padding:16px 18px;border-radius:14px;
   background:var(--panel);border:1px solid var(--rule);
@@ -1489,7 +1488,7 @@ button.lien:hover:not(:disabled){color:var(--text)}
   background:var(--surface-3);overflow:hidden}
 .tache-barre i{display:block;height:100%;width:0;border-radius:3px;
   background:var(--primary);transition:width .35s var(--ease)}
-/* total inconnu : on montre qu'il se passe quelque chose sans mentir sur l'avancement */
+/* total unknown: we show something is happening without lying about progress */
 .tache.indetermine .tache-barre i{width:38% !important;
   animation:vaEtVient 1.5s var(--ease) infinite}
 @keyframes vaEtVient{0%{margin-left:-38%}100%{margin-left:100%}}
@@ -1497,12 +1496,12 @@ button.lien:hover:not(:disabled){color:var(--text)}
   color:var(--text-3);font-variant-numeric:tabular-nums}
 #tachereste{color:var(--primary)}
 
-/* le bouton du journal devient un temoin : une tache tourne, on le voit */
+/* the log button becomes an indicator: a task is running, and you see it */
 .jfab.occupe{color:var(--primary);border-color:var(--primary)}
 .jfab.occupe .jfab-ic{animation:battement 1.6s ease-in-out infinite}
 @keyframes battement{0%,100%{opacity:1}50%{opacity:.35}}
 
-/* plus de bandeau en bas : les elements flottants reprennent leur place */
+/* no banner at the bottom any more: the floating elements take their place back */
 :root{--dock-h:0px}
 @media(max-height:520px){
   .tachewrap{right:10px;width:min(340px,calc(100vw - 20px));padding:13px 14px}
@@ -1514,8 +1513,8 @@ button.lien:hover:not(:disabled){color:var(--text)}
 }
 
 /* ================================================================================
-   PLATEFORMES DETECTEES — le cœur du « plug & play »
-   L'utilisateur voit ce que sa console heberge, et y accede d'un clic.
+   DETECTED PLATFORMS — the heart of "plug & play"
+   The user sees what their console hosts, and reaches it in one click.
    ================================================================================ */
 .plateformes{margin:12px 0}
 .pfgrille{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:8px}
@@ -1529,10 +1528,10 @@ button.lien:hover:not(:disabled){color:var(--text)}
 .pftaille,.pfdir{font-family:var(--mono);font-size:10px;color:var(--text-3)}
 .pfdir{opacity:.7}
 
-/* Les reglages propres a une plateforme sont desormais REELLEMENT groupes
-   dans le HTML, sous « Console et émulateur ». L'ordre n'a plus a etre
-   rattrape par CSS : un ordre visuel qui contredit l'ordre du document se
-   paie au clavier et a la lecture d'ecran. */
+/* A platform's own settings are now REALLY grouped in the HTML, under "Console
+   et émulateur". The order no longer has to be caught up by CSS: a visual order
+   that contradicts the document order is paid for at the keyboard and by the
+   screen reader. */
 .setwrap{display:flex;flex-direction:column}
 .setwrap > .sepgroupe{margin:22px 0 4px;padding-top:16px;border-top:1px solid var(--line);
   font-family:var(--disp);font-size:15px;letter-spacing:.3px;color:var(--text-2);
@@ -1566,7 +1565,7 @@ button.lien:hover:not(:disabled){color:var(--text)}
 @media(prefers-reduced-motion:reduce){.dropicone{animation:none}}
 
 /* ================================================================================
-   DEMARRAGE — ne rien affirmer avant de savoir
+   STARTUP — assert nothing before knowing
    ================================================================================ */
 .chargeur{position:fixed;inset:0;z-index:60;display:flex;align-items:center;
   justify-content:center;background:var(--bg);
@@ -1578,12 +1577,12 @@ body.chargement .chargeur{opacity:1;pointer-events:auto}
   border:2.5px solid var(--line);border-top-color:var(--primary);
   animation:tourne .8s linear infinite}
 @keyframes tourne{to{transform:rotate(360deg)}}
-/* pendant le chargement, l'interface reste en place mais silencieuse */
+/* while loading, the interface stays in place but silent */
 body.chargement main,body.chargement header{opacity:.25;filter:blur(1px)}
 body.chargement main,body.chargement header,.chargeur{transition:opacity .3s var(--ease)}
 @media(prefers-reduced-motion:reduce){.chargeur-anneau{animation-duration:2s}}
 
-/* detail d'une plateforme, ouvert sous la grille */
+/* a platform's detail, opened under the grid */
 .pfcarte.on{--btn-trait:var(--primary);--btn-fond:var(--surface-3)}
 .pfdetail:not(:empty){margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
 .pftitre{display:flex;align-items:center;justify-content:space-between;gap:12px;
@@ -1592,57 +1591,56 @@ body.chargement main,body.chargement header,.chargeur{transition:opacity .3s var
 .pfdetail code{font-family:var(--mono);font-size:11.5px;color:var(--text-2)}
 .tok{color:var(--success)} .tko{color:var(--danger)}
 
-/* bouton « sur la console » dans l'en-tete : compact, il ne pousse rien */
+/* the "on the console" button in the header: compact, it pushes nothing */
 .surconsole{display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;
   padding:5px 10px;font-size:11.5px;white-space:nowrap}
 .surconsole .hicon{font-size:13px}
-/* La regle masquait « le dernier span » pour retirer le libelle sur petit
-   ecran. Le bouton ne portant plus qu'une icone, elle masquait justement
-   cette icone : un bouton de 44 px entierement vide. On ne cache que ce qui
-   est explicitement un libelle. */
+/* The rule hid "the last span" to remove the label on a small screen. Since the
+   button now carries only an icon, it hid precisely that icon: a 44 px button,
+   entirely empty. We only hide what is explicitly a label. */
 @media(max-width:820px){.surconsole .hlbl{display:none}}
 
 
-/* champ de dossier dans le detail d'une plateforme */
+/* the folder field in a platform's detail */
 .pfinput{width:min(220px,42vw);padding:5px 9px;border-radius:7px;
   background:var(--surface-2);border:1px solid var(--line);color:var(--text);
   font-family:var(--mono);font-size:11.5px}
 .pfinput:focus{outline:none;border-color:var(--primary)}
 
-/* pastille de plateforme sur la jaquette : discrete mais toujours lisible */
+/* the platform pill on the cover: quiet but always readable */
 .ov.ovsys{background:var(--primary);color:var(--on-primary);
   box-shadow:none;font-weight:700}
 .games.taille-compact .ov.ovsys{font-size:8.5px;padding:1px 5px}
 .setlab span.avert{color:var(--amber)}
 
-/* bouton « sur la console » : icone seule, il ne doit pas peser dans l'en-tete */
+/* the "on the console" button: icon only, it must not weigh on the header */
 .surconsole{padding:5px 8px;min-width:0}
 .surconsole .hicon{font-size:15px;line-height:1}
 
-/* champs de saisie dans une fenetre de dialogue */
+/* input fields inside a dialog */
 .dchamps{display:flex;flex-direction:column;gap:12px;margin:16px 0;
   padding:0 20px}
 .dchamp{display:flex;flex-direction:column;gap:5px}
 .dchamp span{font-size:12.5px;color:var(--text-2)}
-/* `flex:1 1 260px` porte sur la LARGEUR en rangee, sur la HAUTEUR en colonne :
-   dans cette pile, chaque champ montait a 260 px de haut. */
+/* `flex:1 1 260px` applies to the WIDTH in a row, to the HEIGHT in a column: in
+   this stack, every field grew to 260 px tall. */
 .dchamp input{flex:0 0 auto;width:100%;padding:9px 11px;border-radius:9px;
   background:var(--surface-2);border:1px solid var(--line);color:var(--text);
   font-size:13px;font-family:var(--body)}
 .dchamp input:focus{outline:none;border-color:var(--primary)}
-/* chemin d'une plateforme : lisible, non modifiable au clavier */
+/* a platform's path: readable, not editable from the keyboard */
 .pfchemin{font-family:var(--mono);font-size:11px;color:var(--text-2);
   word-break:break-all}
 
-/* `.sw` etait deja la classe des interrupteurs (44x25 px) : nommer ainsi les
-   groupes de reglages leur donnait cette taille, d'ou l'affichage ecrase.
-   Le nom est desormais explicite et ne peut plus entrer en collision. */
+/* `.sw` was already the switches' class (44x25 px): naming the setting groups
+   that way gave them that size, hence the crushed display. The name is now
+   explicit and can no longer collide. */
 .setgroup.groupe-plateforme{display:block;width:auto;height:auto;position:static}
 .setgroup.groupe-plateforme[hidden]{display:none}
 
-/* --- Console et emulateur : le selecteur et ses blocs ne font qu'un ensemble.
-   Le trait de gauche relie visuellement les reglages a la plateforme choisie
-   juste au-dessus, sans encadrer ni colorer le texte. */
+/* --- Console and emulator: the selector and its blocks form one whole.
+   The rule on the left visually ties the settings to the platform chosen just
+   above, without framing or colouring the text. */
 #groupe-console{margin-bottom:0}
 #pf-specifique{display:flex;flex-direction:column;gap:14px;
   margin:0 0 22px;padding-left:14px;border-left:2px solid var(--rule)}
@@ -1653,9 +1651,9 @@ body.chargement main,body.chargement header,.chargeur{transition:opacity .3s var
   #pf-specifique{padding-left:8px;gap:10px}
 }
 
-/* ------------------------------------------------------------- comptes
-   Carte « mon compte » et liste des personnes autorisees. Aucun cadre de
-   couleur autour du texte : seule la pastille d'avatar porte de la matiere. */
+/* ------------------------------------------------------------- accounts
+   The "my account" card and the list of the people allowed in. No coloured frame
+   around the text: only the avatar dot carries any material. */
 .moncompte{display:flex;align-items:center;gap:14px;flex-wrap:wrap;
   padding:14px;margin-bottom:16px;border-radius:12px;
   background:var(--panel2);border:1px solid var(--rule)}
@@ -1675,8 +1673,8 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
 .compte-nom{font-weight:600}
 .compte-ligne button{margin-left:auto}
 
-/* Sur l'ecran de la console, la carte passe en colonne plutot que de
-   comprimer les boutons. */
+/* On the handheld's screen, the card goes to a column rather than squeeze the
+   buttons. */
 @media (max-width:640px){
   .moncompte-act{margin-left:0;width:100%}
   .moncompte-act button{flex:1 1 auto}
@@ -1685,8 +1683,8 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
   font-family:var(--mono);font-size:11.5px;color:var(--mute)}
 
 /* ---------------------------------------------------------------- audit
-   Le niveau est porte par une etiquette a gauche, pas par un cadre autour
-   du texte : la couleur reste lisible sans encadrer quoi que ce soit. */
+   The level is carried by a label on the left, not by a frame around the text:
+   the colour stays readable without framing anything. */
 .auditliste{margin-top:12px;display:flex;flex-direction:column;gap:2px}
 .auditc{display:flex;gap:12px;align-items:flex-start;padding:10px 0;
   border-bottom:1px solid var(--rule)}
@@ -1702,16 +1700,16 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
 }
 
 /* ====================================================================== 
-   TEMOIN D'ACTIVITE ET DEPOT
+   ACTIVITY INDICATOR AND DROP AREA
    ====================================================================== */
 
-/* --- Le bouton « + » devient le temoin de ce qui tourne.
-   Au repos : un rond de 54 px. Pendant une tache : il s'allonge pour dire
-   quoi et pour combien de temps, et un anneau fait le tour du contour.
-   Aucun cadre de couleur : c'est la piste de l'anneau qui porte l'etat. */
-/* Une grille d'une seule case : le « + » et le temps restant s'y superposent
-   et se remplacent en fondu. En flex ils se seraient pousses l'un l'autre, et
-   le bouton aurait change de largeur a chaque seconde ecoulee. */
+/* --- The "+" button becomes the indicator of what is running.
+   At rest: a 54 px circle. During a task: it stretches to say what and for how
+   long, and a ring runs around its outline. No coloured frame: the ring's track
+   is what carries the state. */
+/* A grid with a single cell: the "+" and the time left overlap in it and swap
+   by fading. In flex they would have pushed each other, and the button would
+   have changed width with every second gone by. */
 .fab{display:grid;place-items:center;padding:0;overflow:visible;
   border-radius:50%;width:54px;
   transition:transform .25s var(--ease),box-shadow .25s}
@@ -1719,17 +1717,16 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
   display:flex;align-items:center;justify-content:center;
   transition:opacity var(--t-moyen) var(--ease),
              transform var(--t-moyen) var(--ease)}
-/* Le bouton reste un CERCLE pendant le travail. Il s'allongeait en pilule
-   pour afficher le nom de la tache, ce qui deplacait un objet flottant
-   pendant qu'on lisait la grille derriere — et l'anneau, epousant la pilule,
-   cessait d'etre un anneau de progression pour devenir un contour. Le nom
-   complet vit desormais dans l'infobulle et dans le panneau ; le bouton, lui,
-   ne porte que le temps restant. */
+/* The button stays a CIRCLE while working. It used to stretch into a pill to
+   show the task's name, which moved a floating object while you were reading the
+   grid behind it — and the ring, hugging the pill, stopped being a progress ring
+   and became an outline. The full name now lives in the tooltip and in the
+   panel; the button itself carries only the time left. */
 .fab .fabinfo{position:absolute;width:1px;height:1px;overflow:hidden;
   clip-path:inset(50%);white-space:nowrap}
 
-/* Le temps restant, au centre. Il remplace le « + » en fondu croise : les
-   deux occupent la meme case de la grille, donc rien ne bouge. */
+/* The time left, in the centre. It replaces the "+" by cross-fading: the two
+   occupy the same grid cell, so nothing moves. */
 .fab .fabmark,.fab .fabeta{grid-area:1 / 1}
 .fab .fabeta{position:relative;z-index:1;display:flex;align-items:center;
   justify-content:center;width:54px;
@@ -1740,7 +1737,7 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
              transform var(--t-moyen) var(--ease)}
 .fab.travaille .fabeta{opacity:1;transform:none}
 .fab.travaille .fabmark{opacity:0;transform:rotate(90deg) scale(.7)}
-/* Le chiffre change : il se pose, il ne saute pas. */
+/* The number changes: it settles, it does not jump. */
 @keyframes fabchiffre{
   from{opacity:0;transform:translateY(4px) scale(.9)}
   to{opacity:1;transform:none}
@@ -1748,8 +1745,8 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
 .fab .fabeta.change{animation:fabchiffre var(--t-moyen) var(--ease)}
 .fab.pause .fabeta{font-size:15px;letter-spacing:0}
 
-/* Trois points qui s'allument tour a tour, tant qu'il n'y a pas encore de
-   chiffre a annoncer. Le bouton n'est jamais vide pendant qu'il travaille. */
+/* Three dots lighting up in turn, as long as there is no figure to announce
+   yet. The button is never empty while it works. */
 .fabpoints{display:inline-flex;gap:3.5px;align-items:center}
 .fabpoints span{width:4px;height:4px;border-radius:50%;
   background:var(--on-primary);opacity:.3;
@@ -1759,43 +1756,43 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
 @keyframes fabpoint{0%,70%,100%{opacity:.3;transform:scale(1)}
   35%{opacity:1;transform:scale(1.3)}}
 
-/* L'anneau epouse le contour, quelle que soit la largeur du bouton :
-   `pathLength=100` (pose dans le HTML) rend la jauge directement en pourcent. */
+/* The ring hugs the outline, whatever the button's width: `pathLength=100`
+   (set in the HTML) makes the gauge read directly in per cent. */
 .fabring{position:absolute;inset:0;width:100%;height:100%;overflow:visible;
   pointer-events:none}
-/* L'anneau est pose HORS du bouton : ses couleurs doivent donc contraster
-   avec la PAGE, pas avec le laiton. Le trait etait reste en `--on-primary`,
-   c'est-a-dire presque noir — lisible tant qu'il epousait la pilule ambre,
-   invisible des qu'il s'en est ecarte. */
+/* The ring sits OUTSIDE the button: its colours must therefore contrast with
+   the PAGE, not with the brass. The stroke had stayed at `--on-primary`, that
+   is, nearly black — readable as long as it hugged the amber pill, invisible as
+   soon as it moved away from it. */
 .fabpiste,.fabjauge{fill:none;stroke-width:3.5;stroke-linecap:round}
 .fabpiste{stroke:var(--eclat-fort);opacity:0}
 .fabjauge{stroke:var(--primary-vif);opacity:0;
   stroke-dasharray:0 100;stroke-dashoffset:0;
   transition:stroke-dasharray .4s var(--ease),opacity .25s,stroke .3s}
 .fab.travaille .fabpiste,.fab.travaille .fabjauge{opacity:1}
-/* Assez d'ecart pour que le trait ne morde pas le bord du bouton. */
+/* Enough clearance for the stroke not to bite into the button's edge. */
 .fabring{transform:scale(1.16)}
 
-/* Total inconnu : au lieu d'annoncer un pourcentage invente, un segment
-   court tourne autour du bouton. */
+/* Total unknown: instead of announcing an invented percentage, a short segment
+   turns around the button. */
 .fab.cherche .fabjauge{transition:none;animation:fabtourne 1.5s linear infinite}
 @keyframes fabtourne{to{stroke-dashoffset:-100}}
 
-/* Respiration lente pendant le travail : visible du coin de l'oeil, sans
-   attirer l'attention en permanence. */
+/* A slow breath while working: visible out of the corner of the eye, without
+   demanding attention all the time. */
 .fab.travaille{animation:fabsouffle 2.8s ease-in-out infinite}
 @keyframes fabsouffle{
   0%,100%{box-shadow:0 0 0 1px var(--primary-trait),0 14px 30px -14px var(--primary-trait-fort)}
   50%    {box-shadow:0 0 0 1px var(--primary-trait-fort),0 16px 38px -12px var(--primary-trait-fort)}
 }
-/* En pause, la respiration s'arrete : c'est le signe le plus direct que rien
-   n'avance. */
+/* When paused, the breathing stops: the most direct sign that nothing is
+   moving. */
 .fab.pause{animation:none}
 .fab.pause .fabjauge{stroke:var(--sur-image);opacity:.55}
 
-/* Fin de tache : l'anneau se referme en vert, le bouton pousse une onde, puis
-   tout retombe. Une seconde, une seule fois — c'est un accuse de reception,
-   pas une celebration. */
+/* End of a task: the ring closes in green, the button pushes a ripple, then
+   everything settles. One second, once — this is an acknowledgement, not a
+   celebration. */
 @keyframes fabfini{
   0%   {box-shadow:0 0 0 0 var(--success-trait),0 12px 30px -10px var(--primary-halo)}
   55%  {box-shadow:0 0 0 12px var(--success-voile),0 12px 30px -10px var(--primary-halo)}
@@ -1808,12 +1805,12 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
 .fab.fini .fabpiste{transition:opacity .5s .55s}
 .fab.fini .fabpiste,.fab.fini .fabjauge{opacity:0}
 
-/* --- Depot : toute la fenetre accepte les fichiers. */
+/* --- Dropping: the whole window accepts files. */
 .dropzone{position:fixed;inset:0;z-index:60;display:flex;
   align-items:center;justify-content:center;padding:24px;
   background:var(--rideau);backdrop-filter:blur(6px);
   opacity:0;pointer-events:none;transition:opacity .18s var(--ease)}
-.dropzone.on{opacity:1;pointer-events:none}   /* laisse passer le drop au dessous */
+.dropzone.on{opacity:1;pointer-events:none}   /* lets the drop through underneath */
 .dropzone-in{display:flex;flex-direction:column;align-items:center;gap:10px;
   padding:44px 56px;border-radius:20px;text-align:center;
   border:2px dashed var(--amber);background:var(--primary-doux);
@@ -1825,15 +1822,15 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
 @keyframes dropentre{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}
 @keyframes dropflotte{0%,100%{transform:translateY(-3px)}50%{transform:translateY(3px)}}
 
-/* Sur l'ecran de la console, le bouton garde sa place mais borne son texte. */
+/* On the handheld's screen, the button keeps its place but bounds its text. */
 @media(max-width:720px){
   .fab.travaille .fabinfo{max-width:min(46vw,190px)}
   .fab .fabinfo b{font-size:11.5px}
   .dropzone-in{padding:30px 26px}
 }
 
-/* Quelqu'un qui a demande moins d'animation ne veut pas d'un bouton qui
-   respire ni d'un segment qui tourne : l'information reste, le mouvement part. */
+/* Someone who asked for less animation does not want a breathing button or a
+   turning segment: the information stays, the movement goes. */
 @media(prefers-reduced-motion:reduce){
   .fab.travaille{animation:none}
   .fab.cherche .fabjauge{animation:none;stroke-dasharray:50 100}
@@ -1841,13 +1838,13 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
 }
 
 /* ======================================================================
-   CIBLES TACTILES
+   TOUCH TARGETS
    ======================================================================
-   Au doigt, un controle de 26 a 36 px de haut se rate une fois sur deux.
-   44 px est le minimum couramment retenu (Apple HIG, WCAG 2.2 « Target
-   Size »). Ce bloc est volontairement en fin de fichier : il doit gagner
-   sur les regles qui compriment la mise en page en paysage, ou la hauteur
-   est rare mais ou le doigt n'a pas retreci. */
+   With a finger, a control 26 to 36 px tall is missed one time in two. 44 px is
+   the commonly accepted minimum (Apple HIG, WCAG 2.2 "Target Size"). This block
+   is deliberately at the end of the file: it must win over the rules that
+   compress the layout in landscape, where height is scarce but where the finger
+   has not shrunk. */
 @media (pointer:coarse){
   button,
   select,
@@ -1857,34 +1854,34 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
     min-height:44px;
   }
   nav.tabs button{min-height:44px}
-  /* Controles carres : ils doivent aussi etre assez LARGES. */
+  /* Square controls: they must be WIDE enough too. */
   #sens,#installwrap,.szbtn,.iconbtn{min-width:44px;min-height:44px}
-  /* Le sommaire des reglages est fait de liens : ils se visent au doigt
-     comme des boutons. */
+  /* The settings' table of contents is made of links: a finger aims at them
+     like at buttons. */
   .setnav a{min-height:44px;display:flex;align-items:center}
   #installwrap{padding:0 10px;justify-content:center}
   .szbtn{display:inline-flex;align-items:center;justify-content:center}
-  /* Le bouton « Détails » d'une carte : meme regle, la carte s'ajuste. */
+  /* A card's "Details" button: same rule, the card adjusts. */
   .gcard .pinfo{min-height:44px}
-  /* Deux boutons cote a cote dans une barre etroite : on les laisse passer
-     a la ligne plutot que de les ecraser. */
+  /* Two buttons side by side in a narrow bar: we let them wrap rather than
+     crush them. */
   .bar,.acts{flex-wrap:wrap}
 }
 
-/* Un ecran tactile bas (telephone en paysage) reste un ecran tactile :
-   la compression de hauteur ne doit pas reduire les cibles. */
+/* A short touch screen (a phone in landscape) is still a touch screen: the
+   height compression must not shrink the targets. */
 @media (pointer:coarse) and (max-height:560px){
   nav.tabs button{padding:10px 14px}
   .brand{font-size:12px}
 }
 
-/* Sur telephone, une valeur longue (chemin, « 19 jeu(x) · 272 Mio ») debordait
-   de sa ligne : l'etiquette et la valeur passent l'une sous l'autre. */
+/* On a phone, a long value (a path, "19 jeu(x) · 272 Mio") overflowed its row:
+   the label and the value now go one under the other. */
 @media (max-width:640px){
   .majrow{flex-direction:column;align-items:flex-start;gap:4px}
-  /* `.majrow.act b{margin-left:auto}` pousse la valeur a droite : utile sur
-     une ligne, absurde en colonne ou elle se retrouvait decalee sous son
-     etiquette. On neutralise la marge plutot que de la contourner. */
+  /* `.majrow.act b{margin-left:auto}` pushes the value to the right: useful on
+     one line, absurd in a column where it ended up offset under its label. We
+     neutralise the margin rather than work around it. */
   .majrow b{text-align:left;word-break:break-word;width:100%}
   .majrow.act b{margin-left:0}
   .majrow .pfchemin{white-space:normal;word-break:break-all}
@@ -1893,11 +1890,11 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
 }
 
 /* ====================================================================== 
-   BATTERIE DE LA CONSOLE
+   THE CONSOLE'S BATTERY
    ======================================================================
-   Une pastille dessinee plutot qu'un pourcentage noye dans une phrase : le
-   niveau se lit d'un coup d'oeil, ce qui est le seul interet de l'info avant
-   de lancer un transfert de plusieurs gigaoctets. */
+   A drawn pill rather than a percentage drowned in a sentence: the level reads
+   at a glance, which is the only point of the information before starting a
+   transfer of several gigabytes. */
 .batt{display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;
   font-family:var(--mono);font-size:11px;color:var(--mute);cursor:default}
 .batt-corps{position:relative;width:26px;height:13px;border-radius:3px;
@@ -1910,12 +1907,12 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
 
 .batt-ok{color:var(--green)}
 .batt-faible{color:var(--amber)}
-/* Sous 10 %, la pastille respire : c'est le seul cas ou l'on veut attirer
-   l'oeil sans que l'utilisateur ait rien demande. */
+/* Below 10 %, the pill breathes: the only case where we want to catch the eye
+   without the user having asked for anything. */
 .batt-critique{color:var(--red);animation:battAlerte 1.8s ease-in-out infinite}
 @keyframes battAlerte{0%,100%{opacity:1}50%{opacity:.45}}
 
-/* En charge : le remplissage monte en boucle, l'eclair reste fixe. */
+/* Charging: the fill rises in a loop, the bolt stays still. */
 .batt-charge{color:var(--green)}
 .batt-charge .batt-corps i{animation:battCharge 2.2s ease-in-out infinite}
 @keyframes battCharge{
@@ -1925,8 +1922,8 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
 }
 .batt-eclair{font-size:9px;line-height:1;margin-left:-2px}
 
-/* Sur telephone, on garde la pastille et on retire le chiffre : c'est le
-   niveau qu'on lit, pas la precision au pourcent. */
+/* On a phone we keep the pill and drop the figure: it is the level that is
+   read, not the precision to the per cent. */
 @media (max-width:520px){
   .batt-txt{display:none}
 }
@@ -1934,8 +1931,8 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
   .batt-critique,.batt-charge .batt-corps i{animation:none}
 }
 
-/* ---------------------------------------------------------- entretien
-   Cinq volets, un seul a l'ecran : la question posee reste lisible. */
+/* -------------------------------------------------------- maintenance
+   Five panels, one on screen at a time: the question asked stays readable. */
 .entretien{display:flex;flex-wrap:wrap;gap:8px}
 .entretien button.on{background:var(--panel2);color:var(--amber);
   border-color:var(--amber)}
@@ -1949,8 +1946,8 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
   line-height:1.55}
 .entretien-l li:last-child{border-bottom:0}
 .entretien-l code{font-size:11px;color:var(--mute);word-break:break-all}
-/* La couleur porte le type d'evenement par une pastille en tete de ligne,
-   jamais par un cadre autour du texte. */
+/* The colour carries the event's type through a dot at the head of the line,
+   never through a frame around the text. */
 .entretien-acces li{padding-left:14px;position:relative}
 .entretien-acces li::before{content:"";position:absolute;left:0;top:15px;
   width:6px;height:6px;border-radius:50%;background:var(--mute)}
@@ -1959,15 +1956,14 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
 .entretien-acces li.ac-compte::before{background:var(--amber)}
 
 /* ======================================================================
-   RÉGLAGES : SECTIONS
+   SETTINGS: SECTIONS
    ======================================================================
-   La page depassait 4 700 px d'un seul tenant, groupes ranges dans l'ordre
-   ou ils avaient ete ecrits. Cinq sections repondent maintenant a « qu'est-ce
-   que je suis en train de regler ? », et un sommaire colle en haut permet d'y
-   aller directement. */
-/* `--tete-h` est mesuree a l'execution : l'en-tete change de hauteur selon la
-   largeur (les onglets passent a la ligne). Colle a `top:0` comme lui, le
-   sommaire disparaissait derriere. */
+   The page ran past 4 700 px in one piece, with groups laid out in the order
+   they had been written. Five sections now answer "what am I setting right
+   now?", and a table of contents stuck at the top goes straight there. */
+/* `--tete-h` is measured at runtime: the header changes height with the width
+   (the tabs wrap). Stuck at `top:0` like it, the table of contents disappeared
+   behind it. */
 .setnav{position:sticky;top:var(--tete-h,60px);z-index:12;display:flex;gap:2px;flex-wrap:wrap;
   margin:0 0 26px;padding:6px;border-radius:11px;
   background:var(--verre-plein);backdrop-filter:blur(10px);
@@ -1983,23 +1979,22 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
   box-shadow:inset 0 0 0 1px var(--rule)}
 
 .setsection{display:flex;flex-direction:column;gap:16px;margin:0 0 46px;
-  /* en-tete + sommaire sont colles : sans cette marge, un titre vise atterrit
-     dessous et reste illisible */
+  /* header + table of contents are sticky: without this margin, a targeted
+     heading lands underneath them and stays unreadable */
   scroll-margin-top:calc(var(--tete-h,60px) + var(--somm-h,52px) + 16px)}
-/* La derniere section est courte : la page ne peut pas defiler assez pour
-   l'amener sous le sommaire, donc cliquer son entree ne menait nulle part et
-   le sommaire designait la precedente. Une hauteur minimale lui donne la
-   place de monter. */
-/* `dvh` et non `vh` : sur mobile, `100vh` vaut la hauteur SANS la barre
-   d'adresse. La page deborde donc tant que la barre est la, puis le contenu
-   saute quand elle se retracte. `dvh` suit la hauteur reellement disponible.
-   `vh` reste en repli pour les navigateurs qui ignorent `dvh`. */
+/* The last section is short: the page cannot scroll far enough to bring it
+   under the table of contents, so clicking its entry led nowhere and the table
+   pointed at the previous one. A minimum height gives it room to rise. */
+/* `dvh` and not `vh`: on mobile, `100vh` is the height WITHOUT the address
+   bar. So the page overflows as long as the bar is there, then the content jumps
+   when it retracts. `dvh` follows the height really available. `vh` stays as a
+   fallback for browsers that do not know `dvh`. */
 .setsection:last-of-type{margin-bottom:24px;min-height:calc(100vh - 150px);
   min-height:calc(100dvh - 150px)}
 .sectitre{font-family:var(--disp);font-size:26px;font-weight:600;
   letter-spacing:.01em;margin:0;color:var(--ink)}
 .sectxt{margin:-12px 0 4px;color:var(--mute);font-size:13px;max-width:62ch}
-/* Un filet sous le titre : il separe sans encadrer. */
+/* A rule under the heading: it separates without framing. */
 .sectitre::after{content:"";display:block;width:44px;height:2px;margin-top:9px;
   border-radius:2px;background:var(--amber);opacity:.75}
 
