@@ -19,7 +19,7 @@ import urllib.parse
 import urllib.request
 
 from . import config, reseau
-from . import rapprochement
+from . import matching
 
 NLIB = "https://api.nlib.cc/nx/{tid}/icon/256/256"
 
@@ -214,8 +214,8 @@ def sgdb_infos(name, key):
         #
         # A missing entry is visible; a wrong one is believed. We would rather
         # return nothing.
-        jeu = rapprochement.meilleur(found.get("data") or [], cherche,
-                                     nom=lambda j: j.get("name") or "")
+        jeu = matching.best(found.get("data") or [], cherche,
+                            name=lambda j: j.get("name") or "")
         if not jeu:
             return None
         infos = {"titre": jeu.get("name") or "", "url": None}
