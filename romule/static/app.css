@@ -747,24 +747,24 @@ html,body{overscroll-behavior:none}
    feedback comes from the button's own style, not from the system. */
 html{-webkit-tap-highlight-color:transparent}
 
-/* Un appui long qui surligne « Réglages » n'arrive dans aucune application.
-   Le texte de CONTENU — noms de jeux, chemins, journal — reste selectionnable :
-   c'est de l'information qu'on veut pouvoir copier. */
+/* A long press that highlights "Réglages" happens in no app. CONTENT text —
+   game names, paths, the log — stays selectable: that is information you want
+   to be able to copy. */
 nav.tabs,.chip,.szbtn,.jfab,.replier,.vue,.setnav a,.brand{
   -webkit-user-select:none;user-select:none}
 
-/* Les marges de securite : l'encoche en haut, la barre gestuelle en bas, et
-   les bords arrondis sur les cotes en paysage — le cas d'une console portable
-   tenue a l'horizontale. */
+/* The safe areas: the notch at the top, the gesture bar at the bottom, and the
+   rounded edges on the sides in landscape — the case of a handheld held
+   sideways. */
 header,.libbar{padding-left:env(safe-area-inset-left,0);
   padding-right:env(safe-area-inset-right,0)}
 .jfab{margin-right:env(safe-area-inset-right,0)}
 #fab{margin-right:env(safe-area-inset-right,0);
   margin-bottom:env(safe-area-inset-bottom,0)}
 
-/* ---- ecrans bas / mode paysage : la hauteur est la ressource rare */
+/* ---- short screens / landscape: height is the scarce resource */
 @media (max-height:560px){
-  header{position:static}                    /* rendre les ~60px a la lecture */
+  header{position:static}                    /* give the ~60px back to reading */
   .head-in{padding:8px 16px;gap:12px}
   .brand{font-size:12px}
   nav.tabs{padding:2px}
@@ -778,18 +778,18 @@ header,.libbar{padding-left:env(safe-area-inset-left,0);
   .tiles{margin-bottom:12px}
   .tile{padding:9px 11px}
   .tile b{font-size:18px}
-  /* le journal ne doit jamais manger la moitie de l'ecran */
+  /* the log must never eat half the screen */
   .dock.open #journal{max-height:34vh}
   #journal pre{max-height:calc(34vh - 26px)}
   body{padding-bottom:calc(44px + env(safe-area-inset-bottom,0))}
   .games{grid-template-columns:repeat(auto-fill,minmax(112px,1fr))}
-  .gcard .art{aspect-ratio:1}               /* moins haut : plus de jeux visibles */
+  .gcard .art{aspect-ratio:1}               /* shorter: more games visible */
   .modal{padding:12px}
   .sheet .gdesc{max-height:90px}
   .onboard{padding:12px}
 
-  /* Neutralise l'agrandissement tactile : en hauteur reduite, la place compte
-     plus que la taille des cibles (elles restent au-dessus de 32 px). */
+  /* Cancels the touch enlargement: on a short screen, room matters more than
+     target size (they stay above 32 px). */
   button{padding:7px 12px;font-size:12.5px}
   .chip{padding:6px 11px;font-size:12px}
   .chip b{font-size:13px}
@@ -817,29 +817,28 @@ header,.libbar{padding-left:env(safe-area-inset-left,0);
   *{transition:none!imporhavior:auto}
 }
 
-/* ================================================================ refonte
-   Bibliotheque unifiee : barre d'outils, tailles de vignette, pagination,
-   barre d'actions groupees et bouton d'ajout flottant. */
+/* ================================================================ rework
+   The unified library: toolbar, thumbnail sizes, pagination, grouped action bar
+   and floating add button. */
 
-/* --- barre d'outils : tri et taille d'affichage */
-/* Les trois rangees de la bibliotheque partagent une gouttiere et un axe.
-   Mesure avant correction : trois positions verticales dans la MEME rangee
-   (245, 249, 250 px) et des gouttieres de 14 puis 10 px.
+/* --- toolbar: sorting and display size */
+/* The library's three rows share one gutter and one axis.
+   Measured before the fix: three vertical positions within the SAME row (245,
+   249, 250 px) and gutters of 14 then 10 px.
 
-   Deux causes, et aucune n'etait visible a la lecture :
-   - `.tlbl` porte un `margin-bottom:10px` herite d'un autre contexte. Avec
-     `align-items:center`, la marge fait partie de la boite : celle-ci est
-     centree marge comprise, donc son CONTENU remonte de 5 px ;
-   - le groupe des tailles a une bordure que les autres controles n'ont pas,
-     ce qui le rend 2 px plus haut. */
+   Two causes, and neither was visible on reading:
+   - `.tlbl` carries a `margin-bottom:10px` inherited from another context. With
+     `align-items:center`, the margin is part of the box: the box is centred
+     margin included, so its CONTENT rises by 5 px;
+   - the size group has a border the other controls do not, which makes it 2 px
+     taller. */
 .toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
   margin:var(--gouttiere) 0}
 .toolbar .tlbl{margin-bottom:0}
-/* `min-height` ne suffit pas : les menus font 34 px, les boutons 44 — c'est la
-   hauteur du reste de l'interface (pastilles, barre du haut) qui fait foi, et
-   ce sont donc les menus qui doivent grandir. On impose la hauteur exacte,
-   bordures comprises, sinon le groupe des tailles reste 2 px plus haut que
-   les autres a cause de sa bordure. */
+/* `min-height` is not enough: the menus are 34 px, the buttons 44 — the height
+   of the rest of the interface (pills, top bar) is the authority, so it is the
+   menus that must grow. We impose the exact height, borders included, otherwise
+   the size group stays 2 px taller than the others because of its border. */
 .toolbar > *,.toolbar .tlbl,.toolbar .tlbl select,.toolbar select,
 .toolbar .szbtn,.toolbar .sizes{
   height:var(--h-controle);box-sizing:border-box}
@@ -853,7 +852,7 @@ header,.libbar{padding-left:env(safe-area-inset-left,0);
 .szbtn:hover{color:var(--ink);background:var(--panel2)}
 .szbtn.on{background:var(--primary);color:var(--on-primary);font-weight:700}
 
-/* --- tailles de vignette : une seule variable pilote la grille */
+/* --- thumbnail sizes: one single variable drives the grid */
 .games{grid-template-columns:repeat(auto-fill,minmax(var(--carte,158px),1fr))}
 .games.taille-compact{gap:11px}
 .games.taille-compact .gname{font-size:11.5px;-webkit-line-clamp:2}
@@ -863,14 +862,14 @@ header,.libbar{padding-left:env(safe-area-inset-left,0);
 .games.taille-grand .gname{font-size:14.5px}
 .games.taille-grand .ph{font-size:64px}
 
-/* L'entree en cascade des cartes est definie une seule fois, en section
-   APPARENCE : elle etait declaree ici ET 200 lignes plus bas, avec deux
-   `@keyframes cardin` differents, donc une duree qui dependait de l'ordre. */
+/* The cards' staggered entry is defined once, in the APPEARANCE section: it was
+   declared here AND 200 lines further down, with two different
+   `@keyframes cardin`, so a duration that depended on the order. */
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
 }
 
-/* --- lignes d'information sous le titre */
+/* --- information lines under the title */
 .erline{margin-top:6px;font-size:10.5px;font-weight:600;opacity:.92}
 .erline.b-ok{color:var(--green)} .erline.b-upd{color:var(--amber)}
 .erline.b-orph{color:var(--red)} .erline.b-dlc{color:var(--mute)}
@@ -882,7 +881,7 @@ header,.libbar{padding-left:env(safe-area-inset-left,0);
 .pager{display:flex;align-items:center;justify-content:center;gap:14px;margin:18px 0 4px}
 .pager button[disabled]{opacity:.35;cursor:default}
 
-/* --- barre d'actions : glisse depuis le bas des qu'une selection existe */
+/* --- action bar: slides up from the bottom as soon as a selection exists */
 .actionbar{position:fixed;left:50%;bottom:calc(var(--dock-h,46px) + 14px);transform:translate(-50%,140%);
   z-index:31;display:flex;align-items:center;gap:12px;max-width:min(1100px,94vw);
   padding:11px 16px;border-radius:14px;background:var(--verre-plein);
@@ -893,7 +892,7 @@ header,.libbar{padding-left:env(safe-area-inset-left,0);
 .actionbar .acts{display:flex;gap:8px;flex-wrap:wrap}
 .actionbar button .tid{font-weight:400}
 
-/* --- bouton flottant d'ajout */
+/* --- floating add button */
 .fab{position:fixed;right:22px;bottom:calc(var(--dock-h,46px) + 16px);z-index:31;width:54px;height:54px;border-radius:50%;
   border:0;background:var(--primary);color:var(--on-primary);font-size:30px;line-height:1;cursor:pointer;
   box-shadow:0 12px 30px -10px var(--primary-halo);
@@ -909,11 +908,11 @@ header,.libbar{padding-left:env(safe-area-inset-left,0);
 .dropwrap.on{opacity:1;transform:none;pointer-events:auto}
 .drophead{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 
-/* --- corbeille : le resume d'abord, le detail sur demande */
+/* --- trash: the summary first, the detail on request */
 .trashsum{padding:11px 14px;border-radius:10px;background:var(--panel2);
   border:1px solid var(--rule);margin-bottom:12px;font-size:13px}
 
-/* --- pastille de connexion : elle respire quand la console repond */
+/* --- connection dot: it breathes when the console answers */
 .cdot.on,.dot.on{animation:pulse 2.4s ease-in-out infinite}
 @keyframes pulse{
   0%,100%{box-shadow:0 0 0 3px var(--success-doux)}
@@ -985,44 +984,45 @@ header,.libbar{padding-left:env(safe-area-inset-left,0);
 .wsep:before,.wsep:after{content:"";position:absolute;top:50%;width:42%;height:1px;background:var(--rule)}
 .wsep:before{left:0} .wsep:after{right:0}
 
-/* Le dock du journal est fixe en bas : sans reserve, il recouvrait le bouton +
-   et la barre d'actions. Sa hauteur reelle est publiee par le JS. */
+/* The log dock is fixed at the bottom: without a reservation, it covered the +
+   button and the action bar. Its real height is published by the JS. */
 .actionbar,.fab,.dropwrap{transition-property:transform,opacity,bottom;}
 body{padding-bottom:calc(var(--dock-h,46px) + 18px)}
 
-/* Le bouton « Détails » doit s'aligner d'une carte a l'autre : sans cela il
-   flotte a une hauteur differente selon la longueur du titre et des notes. */
+/* The "Details" button must line up from one card to the next: without this it
+   floats at a different height depending on the length of the title and the
+   notes. */
 .gcard{display:flex;flex-direction:column}
 .gcard .art{flex:0 0 auto}
 .gcard .cap{flex:1;display:flex;flex-direction:column;min-height:0}
 .gcard .pinfo{margin-top:auto}
-.gcard .gname{min-height:2.6em}          /* deux lignes reservees, meme pour un titre court */
+.gcard .gname{min-height:2.6em}          /* two lines reserved, even for a short title */
 
 /* ================================================================================
    IDENTITE VISUELLE — « etagere de cartouches »
    --------------------------------------------------------------------------------
-   Les jaquettes sont l'element le plus colore de l'ecran : l'habillage doit se
-   taire pour les laisser parler. D'ou un graphite CHAUD (et non le bleu-noir
-   habituel), une seule couleur d'action (laiton), et un ardoise froid a la place
-   de l'ancien indigo violet — le violet etant devenu la signature involontaire
-   des interfaces generees.
-   Redefinir les jetons suffit a repeindre toute l'interface : chaque regle
-   existante passe deja par var().
+   The covers are the most colourful thing on screen: the chrome must keep quiet
+   and let them speak. Hence a WARM graphite (and not the usual blue-black), a
+   single action colour (brass), and a cold slate in place of the old violet
+   indigo — violet having become the involuntary signature of generated
+   interfaces.
+   Redefining the tokens is enough to repaint the whole interface: every existing
+   rule already goes through var().
    ================================================================================ */
-/* Meme remarque : les couleurs vivent en section APPARENCE. Ne restent ici que
-   les deux constantes qui ne dependent pas du theme. */
+/* Same remark: the colours live in the APPEARANCE section. Only the two
+   constants that do not depend on the theme remain here. */
 :root{
   --ease:cubic-bezier(.22,.61,.36,1);
-  --pas:4px;                 /* rythme : toutes les marges sont un multiple */
+  --pas:4px;                 /* the rhythm: every margin is a multiple of it */
 }
 
-/* --- typographie : les chiffres alignes donnent le ton « instrument » */
+/* --- typography: lining figures set the "instrument" tone */
 body{font-feature-settings:"kern" 1}
 .meta,.tid,.size,code,.mono,.chip b,.pager{font-variant-numeric:tabular-nums}
 .brand{letter-spacing:-.2px}
 h2,h3{font-family:var(--disp);letter-spacing:.2px}
 
-/* --- l'etat devient une etiquette serigraphiee, non une pastille flottante */
+/* --- the state becomes a screen-printed label, not a floating pill */
 .gcard .art{border-radius:0}
 .gcard .badge{
   left:0;right:0;bottom:0;border-radius:0;text-align:center;
@@ -1035,13 +1035,13 @@ h2,h3{font-family:var(--disp);letter-spacing:.2px}
 .badge.b-conv{color:var(--indigo)} .badge.b-orph,.badge.b-clean{color:var(--red)}
 .badge.b-dlc{color:var(--mute)}
 
-/* Dernier des trois blocs qui se disputaient le survol : c'est lui qui gagnait,
-   et il ANNULAIT le mouvement decrit ligne 143 (`transform:none`). Le survol est
-   maintenant decrit une seule fois, en section APPARENCE. */
+/* The last of the three blocks that fought over the hover: this one won, and it
+   CANCELLED the movement described on line 143 (`transform:none`). The hover is
+   now described once, in the APPEARANCE section. */
 .gcard .art{overflow:hidden}
 .gcard.sel{border-color:var(--amber);box-shadow:0 0 0 1px var(--amber)}
 
-/* --- legende : hierarchie nette entre titre, chiffres et remarques */
+/* --- caption: a clear hierarchy between title, figures and notes */
 .gcard .cap{padding:9px 11px 11px}
 .gcard .gname{font-size:12.5px;letter-spacing:.1px}
 .gcard .meta{font-size:10px;letter-spacing:.2px;opacity:.85}
@@ -1052,32 +1052,32 @@ h2,h3{font-family:var(--disp);letter-spacing:.2px}
   transition:color .16s,border-color .16s,background .16s}
 .gcard .pinfo:hover{color:var(--ink);border-color:var(--indigo);background:var(--panel2)}
 
-/* L'entree des cartes vit en section APPARENCE (voir reactive.js pour savoir
-   quelles cartes sont reellement nouvelles). */
+/* The cards' entry lives in the APPEARANCE section (see reactive.js to know
+   which cards are really new). */
 
-/* --- puces de filtre : plus proches d'un selecteur d'appareil que d'un bouton web */
+/* --- filter pills: closer to a device selector than to a web button */
 .chip{border-radius:7px;letter-spacing:.2px;font-size:12px}
 .chip.on{background:var(--primary-doux);border-color:var(--amber);color:var(--amber)}
 .szbtn.on{background:var(--amber);color:var(--on-primary)}
 
-/* --- en-tete : un filet laiton marque l'onglet actif, sans fond plein */
+/* --- header: a brass rule marks the active tab, with no solid fill */
 .tabs button{position:relative;letter-spacing:.3px}
 .tabs button.active:after{content:"";position:absolute;left:10px;right:10px;bottom:-1px;
   height:2px;background:var(--amber);border-radius:2px}
 
-/* --- barre d'actions : elle se pose comme un tiroir, pas comme une popup */
+/* --- action bar: it settles like a drawer, not like a popup */
 .actionbar{border-radius:12px;box-shadow:0 0 0 1px var(--rule),0 20px 46px -24px var(--ombre)}
 .fab{background:var(--amber);color:var(--on-primary);
   box-shadow:0 0 0 1px var(--primary-trait),0 14px 30px -14px var(--primary-trait-fort)}
 
 /* ================================================================================
-   CORRECTIFS DE LISIBILITE ET NOUVELLE PLACE DU JOURNAL
+   READABILITY FIXES AND THE LOG'S NEW PLACE
    ================================================================================ */
 
-/* --- EmuReady et remarques : du texte, pas des cadres.
-   `.erline` reutilisait les classes de pastille (.b-ok, .b-upd…), qui portent un
-   box-shadow : d'ou un rectangle autour du texte. On neutralise le cadre et on
-   remplace la couleur portante par une pastille discrete en tete de ligne. */
+/* --- EmuReady and notes: text, not frames.
+   `.erline` reused the pill classes (.b-ok, .b-upd…), which carry a box-shadow:
+   hence a rectangle around the text. We neutralise the frame and replace the
+   carrying colour with a quiet dot at the head of the line. */
 .erline{box-shadow:none;display:flex;align-items:center;gap:6px;
   color:var(--mute);font-weight:500}
 .erline:before{content:"";width:6px;height:6px;border-radius:50%;
@@ -1086,13 +1086,13 @@ h2,h3{font-family:var(--disp);letter-spacing:.2px}
 .erline.b-orph{color:var(--red)} .erline.b-dlc{color:var(--mute)}
 .erline .tid{color:var(--mute);font-weight:400}
 
-/* --- contraste des boutons : le detail en gris sur fond ambre etait illisible */
+/* --- button contrast: grey detail on an amber background was unreadable */
 button .tid{color:inherit;opacity:.72;font-weight:400}
 
 .gcard .pinfo{color:var(--text-2);border-color:var(--rule)}
 .gcard .pinfo:hover{color:var(--ink);border-color:var(--amber);background:var(--panel2)}
 
-/* --- bandeau de connexion : global, sous le menu, lisible d'un coup d'oeil */
+/* --- connection banner: global, under the menu, readable at a glance */
 .conn{position:sticky;top:57px;z-index:19;display:flex;align-items:center;gap:12px;
   flex-wrap:wrap;max-width:var(--largeur-page);margin:0 auto;padding:10px 22px;
   border-bottom:1px solid var(--rule);background:var(--bg)}
@@ -1104,13 +1104,13 @@ button .tid{color:inherit;opacity:.72;font-weight:400}
   .conn .clien{width:100%;order:9}
 }
 
-/* --- bandeau de tache : present uniquement pendant un travail */
+/* --- task banner: present only while work is running */
 .dock{transform:translateY(100%);transition:transform .28s var(--ease)}
 
-/* --- journal : bouton flottant a droite + tiroir lateral */
-/* `trap` n'existe pas : la declaration etait ignoree, et surtout il manquait
-   le recentrage vertical — le bouton pendait sous le milieu de l'ecran au lieu
-   d'y etre centre. */
+/* --- the log: floating button on the right + side drawer */
+/* `trap` does not exist: the declaration was ignored, and above all the
+   vertical re-centring was missing — the button hung below the middle of the
+   screen instead of being centred on it. */
 .jfab{position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:32;
   gap:8px;padding:12px 10px;
   border:1px solid var(--rule);border-right:0;border-radius:10px 0 0 10px;
@@ -1120,14 +1120,14 @@ button .tid{color:inherit;opacity:.72;font-weight:400}
   transition:color .16s,background .16s,box-shadow .16s,
              transform .18s var(--ease),opacity .18s;will-change:transform;
   touch-action:none}
-/* Pendant le glissement : pas de transition, sinon le bouton court apres le
-   doigt au lieu de le suivre. Et pas de selection de texte accidentelle. */
+/* While dragging: no transition, otherwise the button chases the finger
+   instead of following it. And no accidental text selection. */
 .jfab.glisse{transition:none;cursor:grabbing;user-select:none}
 .jfab:hover{color:var(--ink);background:var(--panel2);
   transform:translate(-3px,-50%);box-shadow:-6px 0 18px -10px var(--ombre)}
-/* Cible tactile confortable sans boite vide : le libelle etant masque sous
-   520 px, une hauteur de 96 px ne laissait qu'un grand rectangle vide autour
-   du chevron. 64 px suffit au doigt et reste discret. */
+/* A comfortable touch target without an empty box: since the label is hidden
+   below 520 px, a height of 96 px left only a large empty rectangle around the
+   chevron. 64 px is enough for a finger and stays quiet. */
 @media (pointer:coarse){
   .jfab{min-height:64px;padding:14px 11px;align-items:center;justify-content:center}
 }
@@ -1151,8 +1151,8 @@ button .tid{color:inherit;opacity:.72;font-weight:400}
 .jhead{display:flex;align-items:center;gap:10px;padding:14px 16px;
   border-bottom:1px solid var(--rule);flex:0 0 auto}
 .jhead b{font-family:var(--disp);font-size:16px;letter-spacing:.3px}
-/* le journal occupe toute la hauteur du tiroir et defile a l'interieur :
-   indispensable sur la console en paysage, ou la hauteur est tres faible */
+/* the log fills the drawer's whole height and scrolls inside it: essential on
+   a handheld in landscape, where the height is very small */
 .jdrawer #journal{max-width:none;margin:0;padding:0 16px 16px;
   max-height:none;overflow:auto;flex:1;min-height:0}
 .jdrawer .jbar{flex-direction:column;align-items:stretch;gap:8px;
@@ -1160,7 +1160,7 @@ button .tid{color:inherit;opacity:.72;font-weight:400}
 .jdrawer .jbar .search{width:100%;flex:0 0 auto}   /* en colonne, flex:1 etirerait la HAUTEUR */
 body.sansdefilement{overflow:hidden}
 
-/* --- responsive console : en paysage l'ecran est large mais tres bas */
+/* --- handheld responsive: in landscape the screen is wide but very short */
 @media(max-height:520px){
   .jfab{padding:9px 7px;font-size:10.5px}
   .jdrawer{width:min(380px,86vw)}
@@ -1174,9 +1174,9 @@ body.sansdefilement{overflow:hidden}
   .jdrawer{width:100vw}
 }
 
-/* --- fiche d'un jeu : information hierarchisee, plus de pastilles empilees.
-   `.status` designe AUSSI le bloc d'etat de l'en-tete : sans cette portee,
-   la regle en colonne s'y appliquait et cassait l'en-tete sur deux lignes. */
+/* --- a game's detail view: hierarchical information, no more stacked pills.
+   `.status` ALSO names the header's status block: without this scoping, the
+   column rule applied to it and broke the header onto two lines. */
 .sheet .status{display:flex;flex-direction:column;gap:6px;margin-top:10px}
 .stline{display:flex;align-items:flex-start;gap:9px;font-size:13px;line-height:1.45}
 .stline i{width:7px;height:7px;border-radius:50%;margin-top:6px;flex:0 0 auto;
@@ -1189,7 +1189,7 @@ body.sansdefilement{overflow:hidden}
 .stline.s-ok span{color:var(--ink)}
 .stline span{color:var(--ink)}
 
-/* chiffres cles : lecture immediate, alignes, sans cadre autour de chacun */
+/* key figures: read at once, aligned, with no frame around each */
 .chiffres{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));
   gap:1px;margin:14px 0;background:var(--rule);border:1px solid var(--rule);
   border-radius:10px;overflow:hidden}
@@ -1199,14 +1199,14 @@ body.sansdefilement{overflow:hidden}
   font-variant-numeric:tabular-nums}
 .chiffres span{font-size:11px;color:var(--mute);letter-spacing:.2px}
 
-/* intertitre de section dans la fiche */
+/* a section subheading inside the detail view */
 .ssect{margin:16px 0 8px;font-family:var(--disp);font-size:12px;letter-spacing:1px;
   text-transform:uppercase;color:var(--mute);
   display:flex;align-items:center;gap:8px}
 .ssect:after{content:"";flex:1;height:1px;background:var(--rule)}
 .ssect .tid{text-transform:none;letter-spacing:0}
 
-/* note EmuReady dans la fiche : pastille + texte, sans rectangle */
+/* the EmuReady note in the detail view: dot + text, no rectangle */
 .errow .note{display:inline-flex;align-items:center;gap:7px;min-width:104px;
   font-size:12.5px;font-weight:600;color:var(--mute)}
 .errow .note i{width:7px;height:7px;border-radius:50%;background:currentColor;flex:0 0 auto}
@@ -1215,11 +1215,11 @@ body.sansdefilement{overflow:hidden}
 .errow.mien{background:var(--primary-voile);border-radius:8px}
 
 /* ================================================================================
-   CARTES : les chiffres sur la jaquette, UNE ligne de texte sous le titre
+   CARDS: the figures on the cover, ONE line of text under the title
    --------------------------------------------------------------------------------
-   Avant : taille, contenu, note EmuReady et remarque s'empilaient sous le titre,
-   quatre lignes concurrentes dont aucune ne ressortait. Ce qui se chiffre se lit
-   mieux posé sur l'image ; ce qui se raconte tient en une ligne.
+   Before: size, contents, EmuReady note and remark stacked under the title, four
+   competing lines of which none stood out. What is a figure reads better laid on
+   the image; what is a sentence fits on one line.
    ================================================================================ */
 .ovslot{position:absolute;left:0;right:0;top:0;display:flex;align-items:flex-start;
   justify-content:space-between;gap:6px;padding:7px;pointer-events:none;
@@ -1231,11 +1231,11 @@ body.sansdefilement{overflow:hidden}
   text-transform:uppercase;padding:2px 6px;border-radius:4px;
   background:var(--capot);color:var(--sur-image);
   box-shadow:inset 0 0 0 1px var(--eclat-fort)}
-/* la coche passe au-dessus du degrade */
+/* the tick sits above the gradient */
 .pcheck{z-index:3}
 
-/* une seule ligne sous le titre : hauteur reservee pour que les boutons
-   « Détails » restent alignes d'une carte a l'autre */
+/* a single line under the title: height reserved so the "Details" buttons stay
+   aligned from one card to the next */
 .gcard .ligne{margin-top:5px;min-height:2.5em;font-size:10.5px;line-height:1.32;
   color:var(--mute);display:-webkit-box;-webkit-line-clamp:2;
   -webkit-box-orient:vertical;overflow:hidden}
@@ -1247,23 +1247,23 @@ body.sansdefilement{overflow:hidden}
 .gcard .ligne.er.b-upd{color:var(--amber)}
 .gcard .ligne.er.b-orph{color:var(--red)}
 .gcard .ligne.er.b-dlc{color:var(--mute)}
-/* en vignettes compactes, la ligne disparait : le badge et les pastilles suffisent */
+/* in compact thumbnails the line disappears: the badge and the dots are enough */
 .games.taille-compact .ligne{display:none}
 .games.taille-compact .ovtaille{font-size:9px}
 
-/* La lettre de remplacement etait en position absolue, donc peinte PAR-DESSUS
-   la jaquette : un « M » gris flottait au milieu de chaque image. On la place
-   derriere ; elle ne se voit que si l'image manque ou n'a pas pu etre chargee
-   (coverRate retire alors la balise). */
+/* The placeholder letter was absolutely positioned, so painted ON TOP of the
+   cover: a grey "M" floated in the middle of every image. We put it behind; it
+   only shows if the image is missing or could not be loaded (coverRate then
+   removes the tag). */
 .gcard .art{position:relative}
 .gcard .ph{z-index:0}
 .gcard .art img{position:absolute;inset:0;z-index:1}
 
 /* ================================================================================
-   ETIQUETTE DE LA JAQUETTE : où est le jeu · ce qu'il reste à faire
+   THE COVER'S LABEL: where the game is · what is left to do
    --------------------------------------------------------------------------------
-   Deux temoins allumes/eteints a gauche (Mac, Console), l'etat a droite. Le
-   vocabulaire reste celui d'un appareil : on lit une facade, pas un formulaire.
+   Two lit/unlit indicators on the left (Mac, Console), the state on the right.
+   The vocabulary stays that of a device: you read a front panel, not a form.
    ================================================================================ */
 .gcard .badge{display:flex;align-items:center;justify-content:space-between;gap:8px;
   padding:5px 8px;text-align:left;text-transform:none;letter-spacing:0}
@@ -1273,10 +1273,10 @@ body.sansdefilement{overflow:hidden}
   text-transform:uppercase;color:var(--mute);white-space:nowrap}
 .tem:before{content:"";width:6px;height:6px;border-radius:50%;flex:0 0 auto;
   background:transparent;box-shadow:inset 0 0 0 1.5px currentColor}
-/* allume : pastille pleine et halo — l'oeil accroche sans lire */
+/* lit: a solid dot and a halo — the eye catches it without reading */
 .tem.p-oui{color:var(--green)}
 .tem.p-oui:before{background:currentColor;box-shadow:0 0 0 2px var(--success-doux)}
-/* a moitie : pastille pleine mais ambre, sans halo */
+/* halfway: a solid dot but amber, with no halo */
 .tem.p-partiel{color:var(--amber)}
 .tem.p-partiel:before{background:currentColor}
 /* eteint : contour seul */
@@ -1284,8 +1284,8 @@ body.sansdefilement{overflow:hidden}
 .tem.p-inconnu{color:var(--text-3)}
 .tem.p-inconnu:before{box-shadow:inset 0 0 0 1.5px currentColor;opacity:.6}
 
-/* Les temoins sont muets : le `:before` EST la pastille. Sans largeur propre,
-   un `<i>` vide se reduirait a zero et la pastille disparaitrait. */
+/* The indicators are mute: the `:before` IS the dot. Without a width of its
+   own, an empty `<i>` would collapse to zero and the dot would vanish. */
 .tem{min-width:6px}
 .tem:empty{gap:0}
 
@@ -1293,22 +1293,22 @@ body.sansdefilement{overflow:hidden}
   text-transform:uppercase;text-align:right;white-space:nowrap;
   overflow:hidden;text-overflow:ellipsis}
 
-/* en vignettes compactes, seuls les temoins subsistent : l'etat reste lisible
-   par la couleur, et le nom du jeu reprend la place */
+/* in compact thumbnails only the indicators remain: the state stays readable
+   through the colour, and the game's name takes the room back */
 .games.taille-compact .tem{font-size:0;gap:0}
 .games.taille-compact .tem:before{width:7px;height:7px}
 .games.taille-compact .etatmot{font-size:8.5px;letter-spacing:.5px}
 
-/* meme code couleur dans la fiche que sur la carte : oui vert, en partie ambre */
+/* the same colour code in the detail view as on the card: yes green, partly amber */
 .chiffres .pres b.p-oui{color:var(--green)}
 .chiffres .pres b.p-partiel{color:var(--amber)}
 .chiffres .pres b.p-non{color:var(--mute)}
 .chiffres .pres b.p-inconnu{color:var(--text-3)}
 
-/* Empilement de la jaquette, declare en un seul endroit pour ne plus le casser
-   par accident : avoir donne un z-index a l'image (pour masquer la lettre de
-   remplacement) avait fait passer les surcouches DERRIERE elle.
-     0 lettre de remplacement · 1 image · 2 surcouches · 3 coche de selection */
+/* The cover's stacking, declared in one single place so as not to break it by
+   accident again: giving the image a z-index (to hide the placeholder letter)
+   had pushed the overlays BEHIND it.
+     0 placeholder letter · 1 image · 2 overlays · 3 selection tick */
 .gcard .ph{z-index:0}
 .gcard .art img{z-index:1}
 .gcard .ovslot,.gcard .badge{z-index:2}
@@ -1318,7 +1318,7 @@ body.sansdefilement{overflow:hidden}
 .gcard .ligne.resume{color:var(--text-3);font-style:normal;line-height:1.38;
   -webkit-line-clamp:3;min-height:3.7em}
 
-/* bloc EmuReady : du texte courant, jamais d'encart */
+/* the EmuReady block: running text, never a boxed insert */
 .erdit{margin:8px 0;font-size:12.5px;line-height:1.5;color:var(--mute)}
 .erdit.alerte{color:var(--amber)}
 .erdit.petit{font-size:11.5px;margin-top:10px}
@@ -1328,7 +1328,7 @@ body.sansdefilement{overflow:hidden}
 .errow .grow{font-size:12.5px}
 
 /* ================================================================================
-   EN-TETE UNIFIE : une seule ligne d'etat de la console
+   UNIFIED HEADER: one single console status line
    -------------------------------------------------------------------------------- */
 .status{display:flex;align-items:center;gap:12px;min-width:0}
 .conn{display:flex;align-items:center;gap:9px;min-width:0;
@@ -1342,7 +1342,7 @@ body.sansdefilement{overflow:hidden}
 .conn .lien{background:none;border:0;padding:0;font-size:11.5px;color:var(--amber);
   cursor:pointer;text-decoration:underline;text-underline-offset:2px}
 .conn .lien:hover{color:var(--ink)}
-/* sur un ecran etroit, on garde le nom et la pastille, on plie le reste */
+/* on a narrow screen we keep the name and the dot, and fold the rest */
 @media(max-width:820px){
   .head-in{flex-wrap:wrap;row-gap:8px}
   .status{width:100%;order:9}
@@ -1357,7 +1357,7 @@ body.sansdefilement{overflow:hidden}
 .szbtn:hover svg,.szbtn.on svg{opacity:1}
 .sensbtn{line-height:1}
 
-/* section « Mises à jour » de la fiche : un fait par ligne, aligne a droite */
+/* the detail view's "Updates" section: one fact per line, right aligned */
 .majbloc{border:1px solid var(--rule);border-radius:10px;overflow:hidden}
 .majrow{display:flex;align-items:baseline;justify-content:space-between;gap:14px;
   padding:9px 13px;font-size:12.5px}
@@ -1367,35 +1367,35 @@ body.sansdefilement{overflow:hidden}
 .majrow b.p-partiel{color:var(--amber);font-weight:500}
 .majrow b.p-non{color:var(--red);font-weight:500;word-break:break-word}
 
-/* une ligne de la section MAJ peut porter une action : le bouton reste a droite,
-   apres la valeur, pour que la colonne des faits garde son alignement */
+/* a row of the updates section can carry an action: the button stays on the
+   right, after the value, so the column of facts keeps its alignment */
 .majrow.act{gap:10px}
 .majrow.act b{margin-left:auto}
 .majrow.act button{flex:0 0 auto;padding:5px 12px;font-size:12px}
 .majrow.act button[disabled]{opacity:.45;cursor:default}
 
 /* ================================================================================
-   COUCHE DE COMPOSANTS — jetons semantiques et boutons reutilisables
+   COMPONENT LAYER — semantic tokens and reusable buttons
    --------------------------------------------------------------------------------
-   Pourquoi cette couche existe
-   ----------------------------
-   Les boutons etaient stylés par 40 regles dispersees, avec des couleurs ecrites
-   en dur. Consequence concrete : `button:hover:not(:disabled)` (specificite 0,2,1)
-   l'emportait sur `button.go` (0,1,1), donc le bouton d'action ambre virait au
-   gris au survol EN GARDANT son texte sombre — illisible.
+   Why this layer exists
+   ---------------------
+   The buttons were styled by 40 scattered rules, with hard-coded colours. The
+   concrete consequence: `button:hover:not(:disabled)` (specificity 0,2,1) beat
+   `button.go` (0,1,1), so the amber action button turned grey on hover WHILE
+   KEEPING its dark text — unreadable.
 
-   Principe retenu
-   ---------------
-   Une variante ne redefinit jamais une propriete : elle redefinit des JETONS.
-   Les etats (survol, actif, desactive, focus) consomment ces jetons. Il n'y a
-   donc plus de guerre de specificite possible, et changer de theme revient a
-   redefinir des variables — pas a reecrire des regles.
+   The principle adopted
+   ---------------------
+   A variant never redefines a property: it redefines TOKENS. The states (hover,
+   active, disabled, focus) consume those tokens. So there is no specificity war
+   left to have, and changing theme comes down to redefining variables — not to
+   rewriting rules.
 
-   Ajouter un theme
-   ----------------
-   Redefinir les jetons semantiques sous un selecteur de portee, par exemple :
+   Adding a theme
+   --------------
+   Redefine the semantic tokens under a scoping selector, for example:
        [data-theme="clair"]{ --surface:#f6f3ef; --text:#1b1820; ... }
-   Aucun composant n'a besoin d'etre touche.
+   No component needs to be touched.
    ================================================================================ */
 /* Les valeurs de ces jetons ont demenage en section APPARENCE (fin de
    fichier), ou elles existent en deux exemplaires : un jeu sombre et un jeu
