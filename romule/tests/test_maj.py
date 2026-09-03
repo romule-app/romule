@@ -54,8 +54,8 @@ def test_le_reglage_coupe_avant_le_reseau():
     """The setting must be read BEFORE going out: otherwise "disabled" would
     mean "we ask anyway, but we do not display"."""
     appels = []
-    vrai = maj.reseau.ouvrir
-    maj.reseau.ouvrir = lambda *a, **k: appels.append(a) or (_ for _ in ()).throw(
+    vrai = maj.net.open_url
+    maj.net.open_url = lambda *a, **k: appels.append(a) or (_ for _ in ()).throw(
         RuntimeError("ne doit pas etre appele"))
     try:
         r = maj.etat({"maj_check": False})
@@ -63,25 +63,25 @@ def test_le_reglage_coupe_avant_le_reseau():
         t("desactive : rien a montrer", r["disponible"] is False and not r["version"])
         t("desactive : l'interface le sait", r["actif"] is False)
     finally:
-        maj.reseau.ouvrir = vrai
+        maj.net.open_url = vrai
 
 
 def test_une_panne_ne_se_voit_pas():
     maj.CACHE.unlink(missing_ok=True)
-    vrai = maj.reseau.ouvrir
+    vrai = maj.net.open_url
 
     def casse(*a, **k):
-        raise OSError("reseau coupe")
+        raise OSError("network down")
 
-    maj.reseau.ouvrir = casse
+    maj.net.open_url = casse
     try:
         r = maj.etat({"maj_check": True})
-        t("reseau coupe : pas d'exception", isinstance(r, dict))
-        t("reseau coupe : rien a annoncer", r["disponible"] is False)
-        t("reseau coupe : la version courante est quand meme rendue",
+        t("network down: no exception", isinstance(r, dict))
+        t("network down: nothing to announce", r["disponible"] is False)
+        t("network down: the current version is returned all the same",
           r["courante"] == maj.__version__)
     finally:
-        maj.reseau.ouvrir = vrai
+        maj.net.open_url = vrai
 
 
 def test_le_cache_evite_les_appels():
@@ -91,8 +91,8 @@ def test_le_cache_evite_les_appels():
         "url": "https://exemple.fr", "verifie": int(__import__("time").time())}),
         encoding="utf-8")
     appels = []
-    vrai = maj.reseau.ouvrir
-    maj.reseau.ouvrir = lambda *a, **k: appels.append(a) or (_ for _ in ()).throw(
+    vrai = maj.net.open_url
+    maj.net.open_url = lambda *a, **k: appels.append(a) or (_ for _ in ()).throw(
         RuntimeError("ne doit pas etre appele"))
     try:
         r = maj.etat({"maj_check": True})
@@ -101,7 +101,7 @@ def test_le_cache_evite_les_appels():
         t("cache frais : elle est annoncee plus recente", r["disponible"] is True)
         t("cache frais : les notes suivent", r["notes"] == "des notes")
     finally:
-        maj.reseau.ouvrir = vrai
+        maj.net.open_url = vrai
         maj.CACHE.unlink(missing_ok=True)
 
 
@@ -121,8 +121,8 @@ def test_le_prefixe_du_tag_est_retire():
     corps = json.dumps({"tag_name": "v9.9.9", "name": "Essai",
                         "body": "notes", "html_url": "https://exemple.fr",
                         "published_at": "2026-01-01T00:00:00Z"}).encode()
-    vrai = maj.reseau.ouvrir
-    maj.reseau.ouvrir = lambda *a, **k: Fausse(corps)
+    vrai = maj.net.open_url
+    maj.net.open_url = lambda *a, **k: Fausse(corps)
     try:
         r = maj.etat({"maj_check": True}, forcer=True)
         t("le `v` du tag ne remonte pas a l'interface", r["version"] == "9.9.9",
@@ -134,17 +134,17 @@ def test_le_prefixe_du_tag_est_retire():
         t("la comparaison acceptait deja le prefixe",
           maj.plus_recente("v9.9.9", "0.1.0") is True)
     finally:
-        maj.reseau.ouvrir = vrai
+        maj.net.open_url = vrai
         maj.CACHE.unlink(missing_ok=True)
 
 
 def test_la_sortie_est_gardee():
-    """Every outbound call in Romule goes through `reseau.ouvrir()`, which
+    """Every outbound call in Romule goes through `net.open_url()`, which
     refuses schemes other than http/https. This module must not escape it."""
     src = (Path(maj.__file__)).read_text(encoding="utf-8")
     t("maj.py n'appelle pas urlopen directement",
       "urlopen(" not in src)
-    t("maj.py passe par reseau.ouvrir", "reseau.ouvrir(" in src)
+    t("maj.py goes through net.open_url", "net.open_url(" in src)
 
 
 for fn in (test_comparaison, test_le_reglage_coupe_avant_le_reseau,

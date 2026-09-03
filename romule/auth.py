@@ -33,7 +33,7 @@ import time
 import urllib.parse
 import urllib.request
 
-from . import config, reseau
+from . import config, net
 
 DUREE_SESSION = 12 * 3600      # past this, back through the provider
 # How long the "bridge" handed to whoever just switched authentication on
@@ -96,7 +96,7 @@ def _http_json(url, donnees=None, entetes=None, timeout=15):
         url,
         data=urllib.parse.urlencode(donnees).encode() if donnees else None,
         headers=entetes or {"Accept": "application/json"})
-    with reseau.ouvrir(req, timeout=timeout) as r:
+    with net.open_url(req, timeout=timeout) as r:
         return json.loads(r.read().decode("utf-8", "replace"))
 
 

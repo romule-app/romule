@@ -18,7 +18,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-from . import config, reseau
+from . import config, net
 from . import matching
 
 NLIB = "https://api.nlib.cc/nx/{tid}/icon/256/256"
@@ -191,7 +191,7 @@ def _resolve_url(tid, name, cfg):
 
 def _download(url, headers=None):
     req = urllib.request.Request(url, headers=headers or {"User-Agent": "romule"})
-    with reseau.ouvrir(req, timeout=25) as r:
+    with net.open_url(req, timeout=25) as r:
         return r.read()
 
 

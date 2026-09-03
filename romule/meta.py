@@ -8,7 +8,7 @@ import json
 import threading
 import urllib.request
 
-from . import config, reseau
+from . import config, net
 
 _FAILED = set()
 _LOCK = threading.Lock()
@@ -180,7 +180,7 @@ def fetch(tid, cfg=None):
     try:
         url = "https://api.nlib.cc/nx/%s?lang=%s" % (tid, lang)
         req = urllib.request.Request(url, headers={"User-Agent": "romule"})
-        with reseau.ouvrir(req, timeout=20) as r:
+        with net.open_url(req, timeout=20) as r:
             data = json.loads(r.read().decode("utf-8", "ignore"))
         keep = {k: data.get(k) for k in _KEEP if data.get(k) not in (None, "")}
         config.COVERS.mkdir(exist_ok=True)

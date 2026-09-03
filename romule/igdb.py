@@ -22,7 +22,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-from . import config, reseau
+from . import config, net
 from . import matching
 
 TOKEN_URL = "https://id.twitch.tv/oauth2/token"
@@ -63,7 +63,7 @@ def jeton(cfg=None, force=False):
         }).encode()
         try:
             req = urllib.request.Request(_url_jeton(cfg), data=donnees)
-            with reseau.ouvrir(req, timeout=15) as r:
+            with net.open_url(req, timeout=15) as r:
                 d = json.loads(r.read().decode("utf-8", "replace"))
         except Exception:
             return ""
@@ -107,7 +107,7 @@ def _requete(cfg, chemin, corps, essais=3):
                      "Authorization": "Bearer " + t,
                      "Accept": "application/json"})
         try:
-            with reseau.ouvrir(req, timeout=20) as r:
+            with net.open_url(req, timeout=20) as r:
                 d = json.loads(r.read().decode("utf-8", "replace"))
             return d if isinstance(d, list) else []
         except urllib.error.HTTPError as exc:
