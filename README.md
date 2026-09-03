@@ -7,7 +7,7 @@
 
 <p align="center">
   <a href="#licence"><img alt="Licence AGPL-3.0" src="https://img.shields.io/badge/licence-AGPL--3.0-blue"></a>
-  <img alt="Version 0.3.0" src="https://img.shields.io/badge/version-0.3.0-orange">
+  <img alt="Version 0.3.1" src="https://img.shields.io/badge/version-0.3.1-orange">
   <img alt="Python 3.10+" src="https://img.shields.io/badge/python-3.10%2B-green">
   <img alt="Zero dependencies" src="https://img.shields.io/badge/dependencies-none-brightgreen">
   <img alt="Beta" src="https://img.shields.io/badge/status-beta-yellow">
