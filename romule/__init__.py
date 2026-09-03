@@ -8,7 +8,7 @@ DLC) ; les autres plateformes passent par un inventaire par fichier. L'appareil
 cible et l'emulateur sont des profils, pas du code (voir profils.py).
 """
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 
 # Romule est distribue sous licence AGPL-3.0-or-later. La licence demande
 # qu'un utilisateur qui atteint le service PAR LE RESEAU puisse en obtenir le

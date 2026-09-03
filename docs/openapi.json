@@ -73,7 +73,7 @@
             "content": {
               "application/json": {
                 "example": {
-                  "version": "0.3.0",
+                  "version": "0.3.1",
                   "api": "v1",
                   "uptime_s": 8412,
                   "licence": "AGPL-3.0-or-later",
