@@ -1778,10 +1778,9 @@ function carteOverlay({g, e}) {
   // The platform's name, essential as soon as several are mixed, and useful
   // elsewhere to remove any doubt about what you are looking at.
   if (g.sysNom) bouts.push('<span class="ov ovsys">' + esc(g.sysNom) + '</span>');
-  // La langue vaut pour TOUS les jeux, pas seulement les versions groupees :
-  // savoir qu'une cartouche est en japonais avant de la lancer evite un
-  // aller-retour. Et pour trois versions au meme titre, c'est la seule chose
-  // qui les distingue.
+  // Language matters for ALL games, not only for grouped versions: knowing a
+  // cartridge is Japanese before launching it saves a round trip. And for three
+  // versions under the same title, it is the only thing telling them apart.
   const lg = etiquetteLangues(g);
   if (lg) {
     bouts.push('<span class="ov ovlangue" title="' + esc(lg.long) +
@@ -1794,20 +1793,20 @@ function carteOverlay({g, e}) {
          (bouts.length ? '<span class="ovdroite">' + bouts.join('') + '</span>' : '');
 }
 
-// Un jeu qui vient d'arriver n'a encore ni titre officiel ni jaquette. Plutot
-// qu'une carte vide dont on ne sait pas si elle finira par se remplir, on
-// annonce que la recherche est en cours.
+// A game that just arrived has neither an official title nor a cover yet.
+// Rather than an empty card you cannot tell will ever fill in, we say the
+// lookup is running.
 function sansFiche(g) {
   if (!g) return false;
   if (g.tid) return !(META[String(g.tid).toLowerCase()] || {}).nom;
   const f = (g.files && g.files[0]) || g;
   return !(g.titre || f.titre);
 }
-// Une ligne de la fenetre des versions : de quoi choisir sans ouvrir chaque
-// fiche — la langue, la taille, l'etat, et ou se trouve le fichier.
-// La derniere fenetre ouverte passe devant, et elle seule. On ne fait pas
-// grimper un compteur : les couches au-dessus (assistant, loupe, voile de
-// depot) doivent rester au-dessus, quoi qu'il arrive.
+// One row of the versions dialog: enough to choose without opening every
+// detail view — the language, the size, the status, and where the file is.
+// The last dialog opened comes to the front, and it alone. We do not push a
+// counter up: the layers above (wizard, magnifier, drop overlay) must stay
+// above, whatever happens.
 function auPremierPlan(el) {
   document.querySelectorAll('.modal').forEach(m => m.classList.remove('devant'));
   el.classList.add('devant');
@@ -1838,18 +1837,18 @@ function carteHtml(x) {
   const attente = RECHERCHE_FICHES && sansFiche(g);
   return '<div class="gcard' + (coche ? ' sel' : '') + (attente ? ' sansfiche' : '') +
     (g.groupeN ? ' groupe' : '') +
-    // Le support sert de liseré en vue « toutes les plateformes » : c'est la
-    // seule ou il apprend quelque chose. Dans une vue Switch, trente-quatre
-    // liserés identiques ne seraient que du bruit.
+    // The medium serves as an edging in the "all platforms" view: the only one
+    // where it teaches anything. In a Switch view, thirty-four identical
+    // edgings would be noise.
     '" data-media="' + esc(vueTotale() ? mediaDe(g) : '') +
     '" data-lettre="' + esc(lettreDe(g)) +
     '" data-key="' + esc(g.key) + '"' + attrsTeinte(g) +
     ' tabindex="0" role="button" aria-label="' + esc(nomJeu(g)) + '"' +
     ' data-act="cardClick" data-arg="' + esc(g.key) + '">' +
     '<div class="art">' + coverImg(g) +
-    // Sans jaquette, la silhouette du support dit au moins de quoi il s'agit.
-    // Une initiale geante ne disait rien : deux jeux sur trois commencent par
-    // la meme lettre dans une bibliotheque triee.
+    // With no cover, the medium's silhouette at least says what this is. A
+    // giant initial said nothing: two games in three start with the same letter
+    // in a sorted library.
     '<span class="ph">' + (silhouetteHtml(g) ||
        esc((nomJeu(g)[0] || '?').toUpperCase())) + '</span>' +
     '<span class="ovslot">' + carteOverlay(x) + '</span>' +
@@ -1858,23 +1857,23 @@ function carteHtml(x) {
     (attente ? '<span class="enattente">Recherche des infos…</span>' : '') + '</div>' +
     '<div class="cap"><div class="gname">' + esc(nomJeu(g)) + '</div>' +
     '<div class="ligne ' + cls + '">' + esc(txt) + '</div>' +
-    // La cle du groupe vient d'un nom de fichier : elle passe par un attribut
-    // `data-`, jamais dans la chaine JavaScript du `onclick` — une apostrophe
-    // dans un titre y casserait le gestionnaire.
+    // The group key comes from a file name: it travels through a `data-`
+    // attribute, never inside the `onclick`'s JavaScript string — an apostrophe
+    // in a title would break the handler there.
     (g.groupeN ? '<button class="pgrp" data-grp="' + esc(g.groupeCle) +
        '" data-act="voirVersions" data-arg="' + esc(g.groupeCle) + '">' +
        g.groupeN + ' versions…</button>' : '') +
     '<button class="pinfo" data-act="openGame" data-arg="' + esc(g.key) + '">Détails</button></div></div>';
 }
 
-// Met a jour une carte deja presente. Chaque ecriture est conditionnelle : rien
-// ne bouge si rien n'a change, donc aucune transition ne se relance pour rien.
+// Update a card already present. Every write is conditional: nothing moves if
+// nothing changed, so no transition restarts for nothing.
 function majCarte(el, x) {
   const {g, e} = x;
   const coche = dsel2.has(g.key);
   R.classe(el, 'sel', coche);
-  // Des que la fiche arrive, le voile d'attente disparait sans redessiner
-  // la carte — donc sans faire clignoter la jaquette.
+  // As soon as the details arrive, the waiting veil disappears without
+  // redrawing the card — hence without making the cover flicker.
   const attente = RECHERCHE_FICHES && sansFiche(g);
   R.classe(el, 'sansfiche', attente);
   const art = el.querySelector('.art');
@@ -1902,10 +1901,10 @@ function majChips() {
 }
 
 function renderToolbar(tous) {
-  // Nomme `selTri` et non `t` : `t()` est la fonction de traduction, et une
-  // variable locale de ce nom la masque dans toute la fonction. L'appel
-  // devient alors « t is not a function » — au premier rendu seulement, donc
-  // un ecran blanc au demarrage et rien du tout ensuite.
+  // Named `selTri` and not `t`: `t()` is the translation function, and a local
+  // variable of that name shadows it throughout the function. The call then
+  // becomes "t is not a function" — on the first render only, hence a blank
+  // screen at startup and nothing at all afterwards.
   const selTri = $('tri');
   if (selTri && !selTri.dataset.rempli) {
     selTri.dataset.rempli = '1';
@@ -1927,17 +1926,17 @@ function renderToolbar(tous) {
   document.querySelectorAll('#tailles .szbtn').forEach(b =>
     b.classList.toggle('on', b.dataset.sz === TAILLE));
 
-  // Chaque filtre avance affiche combien de jeux il retiendrait : on sait
-  // avant de cliquer si ca vaut la peine.
+  // Each advanced filter shows how many games it would keep: you know before
+  // clicking whether it is worth it.
   const pop = $('favlist');
   if (pop) pop.innerHTML = Object.entries(FAVANCES).map(([k, [lib, fn]]) =>
     '<label class="favrow"><input type="checkbox" ' + (FAV.has(k) ? 'checked ' : '') +
     'data-act-change="toggleFav" data-arg="' + esc(k) + '"><span class="grow">' + esc(lib) + '</span>' +
     '<span class="mono">' + tous.filter(fn).length + '</span></label>').join('');
-  // Le LIBELLE de ce bouton appartient a `majBarreFiltres()`, et a elle seule :
-  // il comptait ici les seuls filtres avances, alors que la recherche et la
-  // pastille d'etat filtrent tout autant. Deux ecrivains sur le meme texte,
-  // c'est le dernier qui gagne — et c'etait celui qui comptait le moins bien.
+  // This button's LABEL belongs to `majBarreFiltres()`, and to it alone: here
+  // it counted only the advanced filters, while the search and the status chip
+  // filter just as much. Two writers on the same text means the last one wins —
+  // and it was the one that counted worst.
   const b = $('favbtn');
   if (b) b.classList.toggle('on', FAV.size > 0);
   majBarreFiltres();
@@ -1956,9 +1955,9 @@ function renderPager(total, pages, parPage) {
     '<button class="ghost" ' + (PAGE < pages - 1 ? '' : 'disabled') + ' data-act="page" data-val="1">Suivant ›</button>';
 }
 
-// La barre d'actions n'apparait qu'une fois des jeux coches, et ne propose que
-// ce qui est realisable sur CETTE selection : un bouton grise sans explication
-// laisse l'utilisateur deviner pourquoi.
+// The action bar only appears once games are ticked, and only offers what is
+// doable on THIS selection: a greyed-out button with no explanation leaves the
+// user guessing why.
 function renderActionBar() {
   const bar = $('actionbar');
   if (!isSwitch() || !dsel2.size) { bar.classList.remove('on'); return; }
@@ -1967,9 +1966,9 @@ function renderActionBar() {
   const surConsole = c.supprConsole.length;
   const boutons = [];
   if (c.envoyer.length || c.activer.length)
-    // Meme action que le bouton de la fiche : meme phrase. « Mettre sur la
-    // console » et « Envoyer vers la console » designaient le meme geste, ce
-    // qui oblige a verifier a chaque fois qu'il s'agit bien de la meme chose.
+    // The same action as the detail view's button: the same words. "Put on the
+    // console" and "Send to the console" named the same gesture, which forces
+    // you to check every time that it really is the same thing.
     boutons.push(['go', 'appliquer', 'Envoyer vers la console',
                   c.envoyer.length ? fmt(c.poids)
                                    : nb(c.activer.length, 'MAJ/DLC')]);
@@ -1980,15 +1979,15 @@ function renderActionBar() {
   if (c.local.length)
     boutons.push(['', 'corbeilleSelection', 'Mettre à la corbeille', nb(c.local.length, '{fichier|fichiers}')]);
 
-  // Le compteur est ecrit UNE fois puis mis a jour en place : le reconstruire
-  // a chaque clic remplacerait le <b>, et le chiffre sauterait au lieu de
-  // defiler.
+  // The counter is written ONCE then updated in place: rebuilding it on every
+  // click would replace the <b>, and the number would jump instead of
+  // rolling.
   const som = $('deploysum');
   if (!som.firstElementChild) som.innerHTML = t('<b>0</b> {jeu|jeux} {sélectionné|sélectionnés}');
   chiffreAnime(som.firstElementChild, dsel2.size);
 
-  // « Tout cocher » disparait quand tout est deja coche : un bouton qui ne
-  // peut rien faire est un bouton qui ment.
+  // "Select all" disappears once everything is ticked: a button that can do
+  // nothing is a button that lies.
   const visibles = jeuxFiltres(jeuxUnifies()).length;
   const tout = $('touscocher');
   if (tout) {
@@ -1996,19 +1995,19 @@ function renderActionBar() {
     tout.textContent = 'Tout cocher';
   }
   $('actions').innerHTML = boutons.map(([cls, fn, lib, det]) =>
-    // `fn` vient de la liste `boutons` ecrite dix lignes plus haut, donc de
-    // noms litteraux. Ce qui garantit qu'il en restera ainsi n'est pas cette
-    // proximite, c'est `ACTES` : un nom absent de la liste blanche ne fait
-    // rien, et `test_gestes.py` echoue si l'un d'eux y manque.
+    // `fn` comes from the `boutons` list written ten lines above, hence from
+    // literal names. What guarantees it stays that way is not that proximity,
+    // it is `ACTES`: a name missing from the allow-list does nothing, and
+    // `test_gestes.py` fails when one of them is absent from it.
     '<button class="' + cls + '" data-act="' + esc(fn) + '">' + esc(lib) +
     '<span class="mono"> · ' + esc(det) + '</span></button>').join('') ||
     '<span class="mono">Rien à faire sur cette sélection.</span>';
 }
 
-// ---------------------------------------------------------------- detail jeu
-// Section « Mises à jour » de la fiche. C'est ici, et nulle part ailleurs, que
-// l'on parle de versions : la carte doit rester consacrée au jeu lui-même.
-// Chaque affirmation est sourcée — l'utilisateur doit pouvoir aller vérifier.
+// -------------------------------------------------------------- game detail
+// The detail view's "Updates" section. Here, and nowhere else, is where
+// versions are discussed: the card must stay devoted to the game itself.
+// Every claim is sourced — the user must be able to go and check.
 const SOURCE_MAJ = 'https://github.com/blawar/titledb';
 
 function majSection(g, e) {
@@ -2020,23 +2019,23 @@ function majSection(g, e) {
   const drapeaux = (base.flags || []).filter(x => ['nopatch', 'outdated', 'nodlc'].includes(x[0]));
   const casses = (e.casses || []).filter(f => f.type !== 'BASE');
 
-  // rien a dire : ni mise a jour connue, ni DLC manquant, ni fichier abime
+  // nothing to say: no known update, no missing DLC, no damaged file
   if (!maj.length && !drapeaux.length && !casses.length && !g.dlcCount
       && !(e.aActiver || []).length) return '';
 
   const l = [];
-  // Un seul mot, sans accent : ni le controle statique ni le test navigateur
-  // ne pouvaient le voir — leurs deux heuristiques demandent un accent OU deux
-  // mots-outils. Le plancher a ete abaisse depuis, mais ces deux-la avaient
-  // deja traverse, et « aucune » s'affichait dans une interface anglaise.
+  // A single word, without an accent: neither the static check nor the browser
+  // test could see it — both heuristics need an accent OR two function words.
+  // The floor has been lowered since, but these two had already got through,
+  // and "aucune" showed in an English interface.
   l.push('<div class="majrow"><span>Version installée</span><b>' +
     (mienne != null ? 'v' + mienne
                     : t(maj.length ? 'inconnue' : 'aucune')) + '</b></div>');
   if (g.dlcCount)
     l.push('<div class="majrow"><span>DLC présents</span><b>' + g.dlcCount + '</b></div>');
 
-  // Ce qui est copie sur la console mais pas encore actif dans Eden. L'action
-  // vit ici, a cote du fait qui la justifie, plutot que dans une barre lointaine.
+  // What is copied to the console but not yet active in Eden. The action lives
+  // here, beside the fact that justifies it, rather than in a distant bar.
   if ((e.aActiver || []).length) {
     l.push('<div class="majrow act"><span>À activer dans Eden</span>' +
       '<b class="p-partiel">' + nb(e.aActiver.length, '{élément|éléments}') + '</b>' +
@@ -2063,8 +2062,8 @@ function majSection(g, e) {
 function openGameHtml(g) {
   const lines = [];
   const e = etatDe(g);
-  // L'etat ne parle QUE de disponibilite : le detail des mises a jour a sa
-  // propre section plus bas, avec le bouton qui va avec.
+  // The status talks ONLY about availability: the update detail has its own
+  // section below, with the button that goes with it.
   const libelles = {
     pret:     ['ok',   'Prêt à jouer sur la console'],
     activer:  ['upd',  'Sur la console — voir « Mises à jour » ci-dessous'],
@@ -2090,8 +2089,8 @@ function openGameHtml(g) {
     '<span class="size">' + fmt(f.size) + '</span>' +
     '<button class="iconbtn" data-act="trashFile" data-arg="' + esc(f.path) + '">corbeille</button></div>').join('');
 
-  // Les actions proposees dependent de l'etat : proposer « Envoyer vers la
-  // console » a un jeu qui n'existe QUE sur la console n'a aucun sens.
+  // The offered actions depend on the status: offering "Send to the console"
+  // for a game that exists ONLY on the console makes no sense.
   const acts = [];
   if (g.needsConvert)
     acts.push('<button class="go" data-act="convertGame" data-arg="' + esc(g.key) + '">Convertir ce jeu</button>');
@@ -2102,22 +2101,22 @@ function openGameHtml(g) {
   acts.push('<button class="ghost" data-act="closeGame">Fermer</button>');
 
   return '<div class="sheet"' + attrsTeinte(g) + ' data-interieur>' +
-    // La jaquette ne dependait que du title ID Switch : tous les jeux des
-    // autres plateformes ouvraient donc une fiche sans image, alors meme que
-    // leur carte en affichait une. `coverImg` sait chercher par nom — c'est
-    // deja ce qu'il fait dans la grille.
+    // The cover depended on the Switch title ID alone: every game from the
+    // other platforms therefore opened a detail view with no image, even
+    // though its card showed one. `coverImg` can search by name — that is
+    // already what it does in the grid.
     '<div class="top">' + (coverImg(g, 'cover',
         'role="button" tabindex="0" title="' +
         esc(t('Voir la jaquette en grand')) + '"' +
         ' data-act="loupeJaquette"') ||
       '<div class="cover"></div>') +
     '<div><h3>' + esc(nomJeu(g)) + '</h3>' +
-    // Le support, en toutes lettres et en image : c'est l'information qui
-    // manquait le plus dans une ludotheque qui melange vingt-trois consoles.
+    // The medium, spelled out and drawn: the piece of information most missing
+    // from a library that mixes twenty-three consoles.
     '<div class="supportligne">' + silhouetteHtml(g, 'support gros') +
       '<span>' + esc(nomPlateforme(g)) + '</span>' +
-      // Ici, la place ne manque pas : on nomme les langues au lieu de les
-      // reduire a « MULTI » comme sur la jaquette.
+      // Here there is room: we name the languages instead of reducing them to
+      // "MULTI" as on the cover.
       (function () {
         const l = etiquetteLangues(g);
         return l ? '<span class="sep">·</span><span class="langues">' +
@@ -2125,15 +2124,15 @@ function openGameHtml(g) {
       })() +
     '</div>' +
     '<div class="sub2" id="gm-info">' + (g.tid ? 'chargement des infos…' : '') + '</div>' +
-    // Un etat par ligne, avec une pastille de couleur : empiler des pastilles
-    // encadrees rendait la fiche illisible des qu'il y avait deux informations.
+    // One status per line, with a coloured dot: stacking framed pills made the
+    // detail view unreadable as soon as there were two pieces of information.
     '<div class="status">' + lines.map(l =>
       '<div class="stline s-' + l[0] + '"><i></i><span>' + esc(l[1]) + '</span></div>').join('') +
     '</div></div></div>' +
     '<div class="body">' +
     '<p class="gdesc" id="gm-desc"></p>' +
-    // Le texte de Wikipedia est sous CC BY-SA : cette licence demande de citer
-    // la source. La ligne reste vide quand le resume vient d'ailleurs.
+    // Wikipedia's text is CC BY-SA: that licence requires citing the source.
+    // The line stays empty when the summary comes from elsewhere.
     '<p class="gcredit" id="gm-credit">' + creditResume(g) + '</p>' +
     '<div class="chiffres">' +
       '<div><b>' + fmt(g.size) + '</b><span>total</span></div>' +
@@ -2156,13 +2155,13 @@ function fmtDate(d) {
   return /^\d{8}$/.test(s) ? s.slice(0, 4) + '-' + s.slice(4, 6) + '-' + s.slice(6, 8) : s;
 }
 
-// ---------------------------------------------------------------- depot
-// Depot : l'apercu regroupe par plateforme, pour qu'on voie d'un coup ce qui
-// va ou. Une ROM .gba etait auparavant annoncee dans « GAMES », le dossier
-// Switch, alors que le rangement la mettait au bon endroit — un apercu qui ment
-// est pire que pas d'apercu.
-// Le bouton de classement n'a de sens que s'il reste quelque chose a classer :
-// affiche en permanence, il donnait a croire qu'une action etait en attente.
+// ------------------------------------------------------------ drop folder
+// The drop folder: the preview groups by platform, so you see at a glance what
+// goes where. A .gba ROM used to be announced under "GAMES", the Switch folder,
+// while the filing put it in the right place — a preview that lies is worse
+// than no preview.
+// The filing button only makes sense while something is left to file: shown
+// permanently, it suggested an action was pending.
 function majBoutonClasser(n) {
   const b = $('btnclasser');
   if (!b) return;
@@ -2211,20 +2210,20 @@ function renderImport(items) {
     '</div>').join('');
 }
 
-// ---------------------------------------------------------------- console
-// L'etat de la console vit dans un seul bloc (renderConn).
+// ----------------------------------------------------------------- console
+// The console's state lives in a single block (renderConn).
 //
-// Cette fonction declenchait une detection quand elle voyait un appareil sans
-// connexion connue. Un rendu qui lance un appel reseau produit exactement ce
-// qu'on a observe : `render()` appelait `detect()`, qui rendait, qui rappelait
-// detect... d'ou les notifications en double au demarrage. Un rendu decrit un
-// etat, il ne provoque rien.
-// Il n'y a plus de pastille distincte a mettre a jour : `renderConn` dessine
-// l'etat complet de la console, pastille comprise. Cette fonction ne servait
-// plus qu'a relancer une detection depuis un rendu, ce qui doublait les
-// appels et les notifications au demarrage.
+// This function used to trigger a detection when it saw a device with no known
+// connection. A render that starts a network call produces exactly what we
+// observed: `render()` called `detect()`, which rendered, which called detect
+// again... hence the duplicate notifications at startup. A render describes a
+// state, it causes nothing.
+// There is no longer a separate pill to update: `renderConn` draws the
+// console's full state, pill included. This function only served to restart a
+// detection from a render, which doubled the calls and the notifications at
+// startup.
 
-// « il y a 3 min », « depuis 2 h » — une duree se lit mieux qu'un horodatage.
+// "3 min ago", "for 2 h" — a duration reads better than a timestamp.
 function duree(s) {
   s = Math.max(0, Math.round(s || 0));
   if (s < 60) return 'à l\'instant';
@@ -2234,10 +2233,10 @@ function duree(s) {
   return 'depuis ' + h + ' h' + (m % 60 ? String(m % 60).padStart(2, '0') : '');
 }
 
-// Batterie de la console : une pastille dessinee, pas un pourcentage perdu
-// dans une phrase. Le remplissage suit le niveau reel, la couleur previent
-// avant qu'un transfert de 12 Go ne s'arrete en chemin.
-// ------------------------------------------------------------- entretien
+// The console's battery: a drawn pill, not a percentage lost inside a
+// sentence. The fill follows the real level, the colour warns before a 12 GB
+// transfer stops halfway.
+// ---------------------------------------------------------- maintenance
 function _lignes(paires) {
   return '<div class="majbloc">' + paires.map(([k, v]) =>
     '<div class="majrow"><span>' + esc(k) + '</span><b>' + v + '</b></div>').join('')
@@ -2362,9 +2361,9 @@ function batterieHtml(b) {
 }
 
 function renderConn(d) {
-  // Bloc unique de l'en-tete. Il repond a quatre questions et pas une de plus :
-  // quelle console, par quel lien, depuis quand, sous quel Android. L'adresse
-  // IP et le numero de serie appartiennent aux Reglages, pas a l'en-tete.
+  // The header's single block. It answers four questions and not one more:
+  // which console, over which link, for how long, on which Android. The IP
+  // address and the serial number belong in Settings, not in the header.
   const c = (d && d.connection) || {};
   CONN = c;
   if (d && d.info) CONN_INFO = d.info;
@@ -2392,11 +2391,11 @@ function renderConn(d) {
   } else {
     el.className = 'conn off';
     el.innerHTML = '<span class="cdot off"></span>' +
-      // `cnom` porte le NOM de la console, une donnee : il est dans
-      // CLASSES_DONNEES pour n'etre jamais traduit. Le libelle « aucune
-      // console », lui, doit l'etre — et il portait la meme classe, donc il
-      // restait en francais dans une interface anglaise. Meme defaut que la
-      // classe `tid`, qui servait a la fois de marqueur et de style.
+      // `cnom` carries the console's NAME, a piece of data: it is in
+      // CLASSES_DONNEES so as never to be translated. The "no console" label,
+      // on the other hand, must be — and it carried the same class, so it
+      // stayed French in an English interface. The same defect as the `tid`
+      // class, which served as both marker and style.
       '<span class="cvide">Aucune console</span>' +
       '<span class="cfaits">' +
         '<button class="lien" data-act="detect">Détecter</button><i>·</i>' +
@@ -2407,8 +2406,8 @@ function renderConn(d) {
   }
 }
 
-// Les actions proposees dependent de l'etat : inviter a « Détecter » une console
-// deja connectee n'apprend rien et encombre.
+// The offered actions depend on the state: inviting you to "Detect" a console
+// that is already connected teaches nothing and clutters.
 function renderBarreConsole(info) {
   const el = $('barreconsole');
   if (!el) return;
@@ -2472,13 +2471,13 @@ function renderBrowser(path, items) {
   $('browser').innerHTML = '<div class="card">' + up + (dirs.concat(files).join('') ||
     '<div class="brow"><span class="fn">Dossier vide.</span></div>') + '</div>';
 }
-// ---- navigateur du SERVEUR (a ne pas confondre avec celui de la console)
-// Celui-ci ne rend que des dossiers : le serveur ne renvoie aucun nom de
-// fichier. Le seul chiffre affiche est le nombre de jeux reconnus, parce que
-// c'est ce qui permet de reconnaitre sa ludotheque sans ouvrir un terminal.
-// `cible` dit lequel des deux ecrans affiche le navigateur. L'assistant se
-// redessine en entier a chaque changement d'etat : y injecter le resultat d'un
-// appel asynchrone serait efface au rendu suivant. Il lit donc `LUDO.etat`.
+// ---- the SERVER's browser (not to be confused with the console's)
+// This one only returns folders: the server sends back no file name. The one
+// figure shown is the count of recognised games, because that is what lets you
+// recognise your library without opening a terminal.
+// `cible` says which of the two screens is showing the browser. The wizard
+// redraws entirely on every state change: injecting the result of an async call
+// into it would be wiped by the next render. So it reads `LUDO.etat`.
 let LUDO = {chemin: '', etat: null, cible: 'set'};
 
 function htmlLudo(r) {
@@ -2519,7 +2518,7 @@ function renderLudo(r) {
   $('ludobrowser').innerHTML = h.browser;
 }
 
-// Le meme navigateur, en chaine, pour l'etape « ta bibliotheque ».
+// The same browser, as a string, for the "your library" step.
 function renduLudoOnboard() {
   if (!LUDO.etat) return '';
   const h = htmlLudo(LUDO.etat);
@@ -2536,23 +2535,22 @@ function renduLudoOnboard() {
     '</div></div>';
 }
 
-// Le chemin affiche dans les reglages, et le bouton qui va avec. Une
-// ludotheque imposee par ROMULE_LIBRARY doit se voir : sans cela on clique sur
-// « Changer » et on ne comprend pas le refus.
+// The path shown in the settings, and the button beside it. A library pinned by
+// ROMULE_LIBRARY must be visible: without that you click "Change" and do not
+// understand the refusal.
 function majLudotheque() {
   const el = $('s-ludo'), b = $('b-ludo');
   if (!el || !HEALTH) return;
-  // Le chemin complet reste dans l'infobulle : la boite le tronque par le
-  // milieu, et un chemin tronque qu'on ne peut pas lire en entier est un
-  // chemin qu'on ne peut pas verifier.
+  // The full path stays in the tooltip: the box truncates it in the middle, and
+  // a truncated path you cannot read in full is a path you cannot check.
   //
-  // Affectation directe et NON `poserAttr()` : celui-ci garde la valeur comme
-  // une cle de traduction a rejouer a chaque changement de langue. Un chemin
-  // est une donnee, pas une phrase.
+  // A direct assignment and NOT `poserAttr()`: that one keeps the value as a
+  // translation key to replay on every language change. A path is data, not a
+  // sentence.
   const chemin = HEALTH.ludotheque || HEALTH.root || '';
-  // `<bdi>` isole le chemin du sens RTL impose a la boite. Sans lui, la barre
-  // oblique du debut migrait visuellement a la FIN : le chemin semblait se
-  // terminer par « / », ce qui est faux et trompeur.
+  // `<bdi>` isolates the path from the RTL direction forced on the box.
+  // Without it, the leading slash visually migrated to the END: the path looked
+  // as if it ended with "/", which is false and misleading.
   el.innerHTML = '<bdi>' + esc(chemin) + '</bdi>';
   el.title = chemin;
   if (b) {
@@ -2563,8 +2561,8 @@ function majLudotheque() {
   (HEALTH.problemes || []).forEach(p => annonce(p, 'warn'));
 }
 
-// Nom de fichier nu, seul repere fiable quand le title ID du nom est absent
-// ou mensonger : c'est ce nom qu'adb a ecrit sur la console.
+// The bare file name, the only reliable marker when the title ID in the name is
+// missing or lying: it is the name adb wrote on the console.
 
 function baseName(f) {
   return String(f.rel || f.path || f.name || '').split('/').pop().toLowerCase();
@@ -2578,10 +2576,10 @@ function buildConset() {
   });
 }
 
-// Un fichier de la bibliotheque est-il deja sur la console ? Le title ID de la
-// bibliotheque vient du contenu, celui de la console du nom du fichier : quand
-// le nom ment ou n'en porte pas, les deux ne peuvent pas se rencontrer. On
-// retombe alors sur le nom de fichier, comme le fait _console_index cote serveur.
+// Is a library file already on the console? The library's title ID comes from
+// the contents, the console's from the file name: when the name lies or carries
+// none, the two cannot meet. We then fall back to the file name, as
+// _console_index does server-side.
 function surLaConsole(f) {
   return (f.tid && CONSET.has(f.tid + '|' + f.version)) || CONSET.has('n|' + baseName(f));
 }
@@ -2589,9 +2587,9 @@ function consoleName(n) {
   return n.replace(/\.(nsz|xcz|nsp|xci)$/i, '').replace(/\s*\[0100.*/i, '').trim() || n;
 }
 
-// Titre reduit a son essence, pour reconnaitre deux fichiers du meme jeu quand
-// leurs noms different : « MARVEL Cosmic Invasion (v1.0.1) (EU) SuperXCI-MBC.xci »
-// et « MARVEL Cosmic Invasion v1.0.2[...] » designent bien le meme jeu.
+// A title reduced to its essence, to recognise two files of the same game when
+// their names differ: "MARVEL Cosmic Invasion (v1.0.1) (EU) SuperXCI-MBC.xci"
+// and "MARVEL Cosmic Invasion v1.0.2[...]" do name the same game.
 function titreNormalise(n) {
   return String(n || '')
     .replace(/\.(nsz|xcz|nsp|xci)$/i, '')
@@ -2622,8 +2620,8 @@ function groupDeviceGames(games) {
   }).sort((a, b) => a.name.localeCompare(b.name));
 }
 
-// Ce que la console heberge vraiment. Cliquer une ligne bascule la bibliotheque
-// sur cette plateforme : le reglage devient un point de depart, pas une impasse.
+// What the console really holds. Clicking a row switches the library to that
+// platform: the setting becomes a starting point, not a dead end.
 function renderPlateformes(r) {
   const el = $('plateformes');
   if (!el) return;
@@ -2653,22 +2651,22 @@ function renderPlateformes(r) {
     phrase('%s {plateforme|plateformes} sous %s', p.length,
            '<code>' + esc(r.racine) + '</code>') + ' · ' +
     phrase('%d {jeu|jeux} au total', p.reduce((n, s) => n + s.count, 0)) + '</div>';
-  // Le detail d'une plateforme vit desormais dans « Console et émulateur » :
-  // cliquer une carte y conduit, plutot que d'ouvrir un second editeur ici.
+  // A platform's detail now lives in "Console and emulator": clicking a card
+  // leads there, rather than opening a second editor here.
 }
 
 let BATTERIE = null;
 let PLATEFORMES = [], PF_OUVERTE = '';
 
-// ------------------------------------------------- reglages par plateforme
-// Un seul endroit decide de quelle console on parle. Le selecteur choisit,
-// `#pf-commun` montre ce que TOUTE plateforme possede (son dossier sur la
-// console), et `#pf-specifique` ne laisse visibles que les blocs portant le
-// `data-plateforme` correspondant.
+// -------------------------------------------------- per-platform settings
+// One place decides which console we are talking about. The selector chooses,
+// `#pf-commun` shows what EVERY platform has (its folder on the console), and
+// `#pf-specifique` only leaves visible the blocks carrying the matching
+// `data-plateforme`.
 let PF_REGLAGES = localStorage.getItem('pf-reglages') || 'switch';
 
-// « generic » et « switch » sont des mots du code : a l'ecran ils ne disent
-// rien. On nomme ce que l'utilisateur reconnait.
+// "generic" and "switch" are words from the code: on screen they say nothing.
+// We name what the user recognises.
 function moteurLisible(engine) {
   return {switch: 'Eden', generic: 'lecteur de ROMs (RetroArch, autonome…)'}[engine]
     || engine || '—';
@@ -2677,8 +2675,8 @@ function moteurLisible(engine) {
 function remplirSelecteurPlateforme() {
   const sel = $('s-plateforme');
   if (!sel || !SYSTEMS.length) return;
-  // Les plateformes qui ont des reglages propres passent devant : ce sont
-  // celles pour lesquelles on vient ici.
+  // Platforms with settings of their own come first: they are the ones you
+  // come here for.
   const propres = new Set([...document.querySelectorAll('#pf-specifique [data-plateforme]')]
     .map(e => e.dataset.plateforme));
   const ordre = [...SYSTEMS].sort((a, b) =>
@@ -2713,9 +2711,9 @@ function majReglagesPlateforme() {
   renderPfCommun(sys);
 }
 
-// Le dossier sur la console : le seul reglage que TOUTE plateforme possede.
-// Il se saisissait auparavant a deux endroits — ici et dans la fiche d'une
-// plateforme detectee — avec le risque d'afficher deux valeurs differentes.
+// The folder on the console: the one setting EVERY platform has. It used to be
+// typed in two places — here and in a detected platform's card — with the risk
+// of showing two different values.
 function renderPfCommun(sys) {
   const el = $('pf-commun');
   if (!el) return;
@@ -2764,7 +2762,7 @@ function renderTree() {
   const el = $('tree');
   const dir = DATA.config && DATA.config.device_dir;
   const layout = (DATA.config && DATA.config.push_layout) || 'type';
-  // ne rien afficher tant que l'utilisateur n'a pas choisi son dossier cible
+  // show nothing until the user has chosen their target folder
   if (!dir || layout !== 'type') { el.innerHTML = ''; return; }
   const folders = ['GAMES', 'UPDATE', 'DLC'];
   const missing = folders.some(f => TREE[f] === false);
@@ -2781,10 +2779,10 @@ function renderTree() {
     (missing ? '<button class="go" style="margin-top:9px" data-act="mkTree">Créer les dossiers manquants</button>' : '') +
     '</div>';
 }
-// statut d'un jeu vis-a-vis de la console : ['ok','sur la console'] | ['upd','en partie'] | ['conv','nouveau'] | null (console non lue)
-// ------------------------------------------------- configuration d'Eden
-// Reglages les plus utiles, avec leur nom technique : on n'invente pas de
-// libelle qui masquerait la cle reelle attendue par l'emulateur.
+// a game's status regarding the console: ['ok','on the console'] | ['upd','partly'] | ['conv','new'] | null (console not read)
+// ---------------------------------------------------- Eden configuration
+// The most useful settings, with their technical name: we do not invent a label
+// that would hide the real key the emulator expects.
 const EC_CLES = [
   ['Renderer', 'resolution_setup', 'Résolution'],
   ['Renderer', 'scaling_filter', 'Filtre de mise à l\'échelle'],
@@ -2849,9 +2847,9 @@ const ER_NIV = {1: ['parfait', 'Parfait'], 2: ['parfait', 'Très bon'], 3: ['jou
                 4: ['limite', 'Problèmes'], 5: ['limite', 'Problèmes'], 6: ['limite', 'Ne démarre pas'],
                 7: ['limite', 'Ne démarre pas'], 8: ['limite', 'Ne démarre pas']};
 
-// Renvoie [classe, note, entree, appareil] — `appareil` n'est renseigne que si
-// le rapport vient d'une AUTRE console que la tienne. « (autre appareil) » ne
-// disait pas lequel : nommer la machine reste informatif sans etre enigmatique.
+// Returns [class, rating, entry, device] — `device` is only set when the report
+// comes from a console OTHER than yours. "(another device)" did not say which:
+// naming the machine stays informative without being cryptic.
 function erBadge(tid) {
   if (!ER.actif || !tid) return null;
   const e = ER.jeux[tid.toLowerCase()];
@@ -2862,18 +2860,18 @@ function erBadge(tid) {
   return [cls, txt, e, autre];
 }
 
-// Bloc EmuReady de la fiche. UNE regle par situation, et jamais deux messages
-// qui se contredisent — l'ancien affichait « voici les autres appareils »
-// juste avant « aucun rapport pour ce jeu ».
+// The detail view's EmuReady block. ONE rule per situation, and never two
+// messages that contradict each other — the old one showed "here are the other
+// devices" right before "no report for this game".
 //
-//   1. module desactive .................. rien
-//   2. jeu introuvable sur EmuReady ...... une phrase, fin
-//   3. jeu trouve, personne n'a partage .. une phrase, fin
-//   4. reglages pour TA console .......... les tiens d'abord, puis les autres
-//   5. reglages d'autres consoles seules . on le dit une fois, puis la liste
-//   6. ta console non renseignee ......... invitation a la preciser
-// Le mode d'emploi (« Voir »/retour arriere) n'apparait QUE s'il y a au moins
-// un reglage a poser.
+//   1. module disabled ................... nothing
+//   2. game not found on EmuReady ........ one sentence, done
+//   3. game found, nobody shared ......... one sentence, done
+//   4. settings for YOUR console ......... yours first, then the others
+//   5. other consoles' settings only ..... said once, then the list
+//   6. your console not specified ........ an invitation to say which
+// The instructions ("View"/undo) only appear when there is at least one setting
+// to apply.
 function erSection(g) {
   if (!ER.actif || (g.systeme && g.systeme !== 'switch')) return '';
   const tete = '<div class="ssect">Réglages communautaires <span class="mono">EmuReady</span></div>';
@@ -2899,7 +2897,7 @@ function erSection(g) {
     intro = phrase('Rien de testé sur ta %s. Voici d\'autres appareils, '
                    + 'à titre indicatif.', esc(ER.appareil_nom));
 
-  // Le titre trouve ne s'affiche que s'il y a un doute : sinon c'est du bruit.
+  // The title found is only shown when there is doubt: otherwise it is noise.
   const doute = e.confiance === 'incertain'
     ? '<p class="erdit alerte">' +
       phrase('Le titre trouvé est « %s » : vérifie qu\'il s\'agit bien de ton jeu.',
@@ -2924,8 +2922,8 @@ function erSection(g) {
     '<div id="er-backups"></div>';
 }
 
-// ------------------------------------------------ etat d'un jeu sur la console
-// Un jeu est « pret » quand ses fichiers jouables sont sur la console ET que
+// -------------------------------------------- a game's state on the console
+// A game is "ready" when its playable files are on the console AND
 // ses mises a jour / DLC sont actifs dans Eden. On fusionne les deux sources.
 const dsel2 = new Set();                 // jeux selectionnes pour le deploiement
 
