@@ -33,7 +33,7 @@ import urllib.request
 # to reach its author: a project handed to strangers cannot present itself as
 # "personal game library" with no contact. Too vague an identity gets everyone
 # rate-limited, then blocked, all at once.
-from . import SOURCE_URL, __version__, reseau
+from . import SOURCE_URL, __version__, net
 
 AGENT = "Romule/%s (%s)" % (__version__, SOURCE_URL)
 WIKIDATA = "https://www.wikidata.org/w/api.php"
@@ -69,7 +69,7 @@ def _lire(url, essais=3):
         _attendre()
         try:
             req = urllib.request.Request(url, headers={"User-Agent": AGENT})
-            with reseau.ouvrir(req, timeout=20) as r:
+            with net.open_url(req, timeout=20) as r:
                 return json.loads(r.read().decode("utf-8", "replace"))
         except urllib.error.HTTPError as exc:
             if exc.code == 429:

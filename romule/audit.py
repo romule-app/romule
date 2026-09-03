@@ -30,7 +30,7 @@ import sys
 import urllib.request
 from pathlib import Path
 
-from . import config, reseau
+from . import config, net
 
 NIVEAUX = {"grave": 3, "alerte": 2, "info": 1, "bon": 0}
 
@@ -316,7 +316,7 @@ def _python(hors_ligne):
     try:
         req = urllib.request.Request("https://endoflife.date/api/python.json",
                                      headers={"User-Agent": "romule-audit"})
-        with reseau.ouvrir(req, timeout=10) as r:
+        with net.open_url(req, timeout=10) as r:
             series = json.loads(r.read().decode("utf-8", "replace"))
     except Exception as exc:
         return [_c("info", "Version de Python",

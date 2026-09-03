@@ -1159,8 +1159,8 @@ class Handler(BaseHTTPRequestHandler):
             if not url:
                 return self._json({"error": "An address is required."}, 400)
             try:
-                reseau.verifier(url)
-            except reseau.SchemaRefuse as exc:
+                net.check(url)
+            except net.SchemeRefused as exc:
                 # The same check as for cover art and the OIDC issuer: a
                 # settings field must not be able to make the server read a
                 # local file.

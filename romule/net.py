@@ -23,31 +23,31 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-SCHEMAS = ("http", "https")
+SCHEMES = ("http", "https")
 
 
-class SchemaRefuse(ValueError):
+class SchemeRefused(ValueError):
     """An address whose scheme is not allowed."""
 
 
-def verifier(url):
-    """Return the URL if it is acceptable, raise `SchemaRefuse` otherwise."""
-    schema = urllib.parse.urlparse(str(url or "")).scheme.lower()
-    if schema not in SCHEMAS:
-        raise SchemaRefuse(
-            "schema refuse : %r (seuls %s sont acceptes)"
-            % (schema or "aucun", " et ".join(SCHEMAS)))
+def check(url):
+    """Return the URL if it is acceptable, raise `SchemeRefused` otherwise."""
+    scheme = urllib.parse.urlparse(str(url or "")).scheme.lower()
+    if scheme not in SCHEMES:
+        raise SchemeRefused(
+            "scheme refused: %r (only %s are accepted)"
+            % (scheme or "none", " and ".join(SCHEMES)))
     return url
 
 
-def ouvrir(cible, timeout=30):
+def open_url(target, timeout=30):
     """`urlopen`, but http(s) only.
 
     Accepts a string or a `Request`, like `urlopen`, so it can stand in for
     existing calls without rewriting them.
     """
-    url = cible.full_url if isinstance(cible, urllib.request.Request) else cible
-    verifier(url)
+    url = target.full_url if isinstance(target, urllib.request.Request) else target
+    check(url)
     # This is THE only `urlopen` in the shipped code, and the scheme was checked
     # two lines above. The suppression markers carry their reason: tools cannot
     # see that check, and a marker without a motive gets copied everywhere else.
@@ -55,4 +55,4 @@ def ouvrir(cible, timeout=30):
     # follows it as a list of rule identifiers, and a sentence there becomes a
     # string of fake test names. (This comment avoids spelling the marker out
     # for the same reason.)
-    return urllib.request.urlopen(cible, timeout=timeout)  # nosec B310  # noqa: S310
+    return urllib.request.urlopen(target, timeout=timeout)  # nosec B310  # noqa: S310

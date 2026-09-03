@@ -16,7 +16,7 @@ import time
 import urllib.parse
 import urllib.request
 
-from . import config, meta, reseau
+from . import config, meta, net
 
 BASE = "https://www.emuready.com/api/mobile/trpc"
 CACHE = config.ROOT / "_emuready-cache.json"
@@ -48,7 +48,7 @@ def call(route, payload=None, timeout=25):
     if payload is not None:
         url += "?input=" + urllib.parse.quote(json.dumps({"json": payload}))
     req = urllib.request.Request(url, headers={"User-Agent": "romule/emuready"})
-    with reseau.ouvrir(req, timeout=timeout) as r:
+    with net.open_url(req, timeout=timeout) as r:
         d = json.loads(r.read())
     if "error" in d:
         raise RuntimeError(d["error"]["json"].get("message", "erreur")[:200])

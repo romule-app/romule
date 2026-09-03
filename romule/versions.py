@@ -2,7 +2,7 @@
 
 import time
 
-from . import config, reseau
+from . import config, net
 
 
 def load(lib, force=False, log=lambda m, n=None: None):
@@ -31,7 +31,7 @@ def _download(log):
     for url in urls:
         log("Telechargement de la base de versions...")
         try:
-            with reseau.ouvrir(url, timeout=90) as r:
+            with net.open_url(url, timeout=90) as r:
                 data = r.read()
             if b"version" not in data[:80]:
                 raise ValueError("contenu inattendu")

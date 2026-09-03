@@ -26,7 +26,7 @@ import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
-from . import config, console, reseau
+from . import config, console, net
 
 # The notifiable events. The label is what the user sees in the settings; the
 # key is what gets stored in the configuration.
@@ -129,9 +129,9 @@ def _poster(url, donnees, entetes):
         try:
             req = urllib.request.Request(url, data=donnees, headers=entetes,
                                          method="POST")
-            with reseau.ouvrir(req, timeout=DELAI) as r:
+            with net.open_url(req, timeout=DELAI) as r:
                 return (200 <= r.status < 300), "HTTP %d" % r.status
-        except reseau.SchemaRefuse as exc:
+        except net.SchemeRefused as exc:
             return False, str(exc)          # no point retrying a `file://`
         except Exception as exc:
             dernier = "%s: %s" % (type(exc).__name__, exc)
