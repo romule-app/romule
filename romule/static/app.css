@@ -2679,13 +2679,13 @@ nav.tabs{position:relative}
   background:var(--surface-2);border-radius:4px;color:transparent}
 .gcard.squelette-carte .gname{height:1.9em}
 .gcard.squelette-carte .meta{height:.9em;width:60%}
-/* Le squelette ne vit que pendant le chargement, et disparait des que la
-   premiere vraie carte existe — sinon la grille afficherait les deux. */
+/* The skeleton only lives during the loading, and disappears as soon as the
+   first real card exists — otherwise the grid would show both. */
 #libsquelette{display:none}
 body.chargement #libsquelette{display:grid}
 body.chargement #lib{display:none}
 
-/* --- boutons : un appui doit s'entendre du doigt autant que de l'oeil */
+/* --- buttons: a press must be felt by the finger as much as seen by the eye */
 button:active:not(:disabled){transform:scale(.97)}
 button{transition:background var(--t-court) var(--ease),
                   color var(--t-court) var(--ease),
@@ -2704,14 +2704,14 @@ button{transition:background var(--t-court) var(--ease),
 .alpha.atteinte{animation:lettre-atteinte var(--t-long) var(--ease);
   color:var(--primary)}
 
-/* --- reglages : chaque bloc se pose a l'ouverture de l'onglet */
+/* --- settings: each block settles when the tab opens */
 @keyframes bloc-entre{
   from{opacity:0;transform:translateY(calc(10px * var(--amplitude)))}
   to{opacity:1;transform:none}
 }
-/* Une seule section est affichee a la fois : la cascade n'a plus lieu d'etre,
-   et un retard sur la cinquieme aurait fait attendre pour rien celui qui la
-   choisit. Ce sont les GROUPES de la section ouverte qui se posent. */
+/* Only one section is displayed at a time: the cascade no longer has a reason to
+   exist, and a delay on the fifth would have made whoever chose it wait for
+   nothing. It is the open section's GROUPS that settle. */
 .setsection[hidden]{display:none}
 .panel.active .setsection{animation:bloc-entre var(--t-moyen) var(--ease)}
 .setsection > .setgroup{animation:bloc-entre var(--t-moyen) var(--ease) backwards}
@@ -2719,20 +2719,20 @@ button{transition:background var(--t-court) var(--ease),
 .setsection > .setgroup:nth-of-type(3){animation-delay:calc(var(--t-cascade) * 2.4)}
 .setsection > .setgroup:nth-of-type(n+4){animation-delay:calc(var(--t-cascade) * 3.6)}
 
-/* --- lignes de reglage et de fichier : le survol suit le doigt sans traine */
+/* --- setting and file rows: the hover follows the finger without a trail */
 .setrow,.row,.brow,.drow,.jline{
   transition:background var(--t-court) var(--ease)}
 
-/* --- l'en-tete gagne une ombre seulement quand la page a defile : au repos,
-   une ombre permanente donne l'impression d'un bandeau qui flotte. */
+/* --- the header gains a shadow only once the page has scrolled: at rest, a
+   permanent shadow gives the impression of a floating bar. */
 header{transition:box-shadow var(--t-moyen) var(--ease),
                   background var(--t-moyen) var(--ease)}
 header.defile{box-shadow:0 10px 30px -22px var(--ombre)}
 
-/* --- en-tete compact : sur un handheld en paysage, la hauteur est la
-   ressource rare. Une fois la lecture engagee, le titre et l'etat de la
-   console n'ont plus a occuper trois lignes ; les CONTROLES, eux, restent
-   tous accessibles — on retrecit, on ne cache pas. */
+/* --- compact header: on a handheld in landscape, height is the scarce
+   resource. Once the reading is under way, the title and the console's state no
+   longer need three lines; the CONTROLS, on the other hand, all stay reachable —
+   we shrink, we do not hide. */
 .head-in,.libbar,.toolbar,.brand,.status{
   transition:padding var(--t-moyen) var(--ease),
              font-size var(--t-moyen) var(--ease),
@@ -2743,19 +2743,18 @@ body.compact .brand{font-size:13px}
 body.compact .libbar{padding:6px 0;margin-bottom:6px}
 body.compact .toolbar{padding:5px 0;margin-bottom:2px}
 body.compact .filters{margin-bottom:2px}
-/* L'etat de la console est une information de contexte, pas une commande :
-   c'est la seule chose qui s'efface, et elle revient des qu'on remonte. */
+/* The console's state is context, not a command: it is the only thing that
+   fades away, and it comes back as soon as you scroll up. */
 @media (max-width:900px){
   body.compact .status{opacity:0;pointer-events:none;height:0;overflow:hidden}
 }
 
 /* ================================================================================
-   APERCU DANS LES REGLAGES
+   PREVIEW IN THE SETTINGS
    --------------------------------------------------------------------------------
-   Choisir une animation sans la voir revient a choisir a l'aveugle. Le
-   selecteur montre donc six vraies cartes miniatures, chacune portant sa
-   propre variante — d'ou `data-apercu` en local plutot que `data-carte` sur
-   la racine.
+   Choosing an animation without seeing it comes down to choosing blind. So the
+   selector shows six real miniature cards, each carrying its own variant — hence
+   `data-apercu` locally rather than `data-carte` on the root.
    ================================================================================ */
 .animchoix{display:grid;gap:10px;width:100%;
   grid-template-columns:repeat(auto-fit,minmax(92px,1fr))}
@@ -2769,27 +2768,27 @@ body.compact .filters{margin-bottom:2px}
   overflow:hidden;background:var(--art-fond);
   transition:transform var(--t-moyen) var(--ease),
              box-shadow var(--t-moyen) var(--ease)}
-/* Une vraie pochette de la ludotheque : c'est le seul moyen de juger un
-   reflet ou une inclinaison. Si elle manque, le degrade du fond reste. */
+/* A real sleeve from the library: the only way to judge a reflection or a tilt.
+   If it is missing, the background gradient stays. */
 .animopt .apimg{position:absolute;inset:0;z-index:0;
   width:100%;height:100%;object-fit:cover;display:block}
-/* le bandeau d'etat, comme sur une vraie carte : c'est lui qui donne a la
-   vignette sa silhouette reconnaissable */
+/* the status strip, as on a real card: that is what gives the thumbnail its
+   recognisable silhouette */
 .animopt .apbandeau{position:absolute;left:0;right:0;bottom:0;height:19%;
   z-index:2;background:var(--capot);border-top:1px solid var(--eclat)}
-/* les effets (reflet, legende, lisere) passent au-dessus de la pochette */
+/* the effects (reflection, caption, edge) go above the sleeve */
 .animopt .apercu::before,.animopt .apercu::after{z-index:3}
 .animopt .anom{font-size:11.5px;font-weight:600;color:var(--text-2);
   line-height:1.25}
 .animopt.on .anom{color:var(--primary)}
 
-/* Chaque vignette rejoue sa variante, en reduit. Les selecteurs sont les memes
-   que plus haut mais portes par `data-apercu` : une vignette ne doit pas
-   dependre du reglage actuellement enregistre. */
+/* Each thumbnail replays its variant, scaled down. The selectors are the same as
+   above but carried by `data-apercu`: a thumbnail must not depend on the setting
+   currently saved. */
 @media (hover:hover){
   .animopt[data-apercu="0"]:hover .apercu{transform:translateY(-3px);
     box-shadow:0 10px 22px -14px var(--ombre)}
-  /* meme pivot haut que sur la vraie carte, pour que l'apercu ne mente pas */
+  /* the same high pivot as on the real card, so the preview does not lie */
   .animopt[data-apercu="1"] .apercu{transform-origin:50% 32%}
   .animopt[data-apercu="1"]:hover .apercu{
     transform:perspective(500px) rotateX(6deg) rotateY(-9deg) scale(1.04);
@@ -2822,32 +2821,33 @@ body.compact .filters{margin-bottom:2px}
   .animopt[data-apercu="5"]:hover .apercu{
     transform:perspective(400px) translateY(-5px) rotateX(6deg);
     box-shadow:0 16px 30px -16px var(--ombre)}
-  /* c'est le DECALAGE entre le bandeau et la jaquette qui fait l'effet : sans
-     lui, la vignette 5 serait indiscernable de la 0 */
+  /* it is the OFFSET between the strip and the cover that makes the effect:
+     without it, thumbnail 5 would be indistinguishable from 0 */
   .animopt[data-apercu="5"] .apbandeau{
     transition:transform var(--t-moyen) var(--ease)}
   .animopt[data-apercu="5"]:hover .apbandeau{transform:translateY(-4px)}
 }
 
-/* ------------------------------------------------------ VERSIONS REGIONALES
-   Le bouton porte le nombre de versions ET l'etat du pliage : c'est la seule
-   information qui distingue cette carte des autres, elle merite sa ligne. */
+/* -------------------------------------------------------- REGIONAL VERSIONS
+   The button carries the number of versions AND the fold's state: it is the only
+   information that sets this card apart from the others, and it deserves its own
+   line. */
 .gcard .pgrp{margin-top:8px;width:100%;padding:5px;font-size:11px;
   letter-spacing:.3px;border-radius:7px;background:var(--primary-voile);
   border:1px solid var(--primary-trait);color:var(--primary);
   --btn-fond:var(--primary-voile);--btn-texte:var(--primary);
   --btn-trait:var(--primary-trait);--btn-fond-survol:var(--primary-doux);
   --btn-trait-survol:var(--primary)}
-/* La carte qui porte un groupe se signale sans crier : un filet laiton sur la
-   tranche, du cote ou les versions vont se deplier. */
-/* Cette pastille se pose SUR une jaquette : elle garde donc le capot sombre
-   des autres, comme `--sur-image`. Une teinte diluee du theme y devenait
-   illisible des que la pochette etait claire — c'est exactement la regle que
-   `--capot` existe pour tenir. Le liseré laiton suffit a la distinguer. */
-/* Presence sur la console, en haut de la jaquette. Le boitier est toujours
-   dessine ; c'est l'ECRAN qui s'allume — plein et vert quand le jeu est la,
-   ambre quand il n'y est qu'en partie, eteint quand il manque. Le meme code
-   couleur que partout ailleurs dans l'outil. */
+/* The card that carries a group announces itself without shouting: a brass rule
+   on the edge, on the side where the versions will unfold. */
+/* This pill sits ON a cover: so it keeps the dark hood the others have, like
+   `--sur-image`. A dilute tint from the theme became unreadable there as soon as
+   the sleeve was light — which is exactly the rule `--capot` exists to hold. The
+   brass edge is enough to set it apart. */
+/* Presence on the console, at the top of the cover. The case is always drawn;
+   it is the SCREEN that lights up — solid and green when the game is there,
+   amber when it is only partly there, unlit when it is missing. The same colour
+   code as everywhere else in the tool. */
 .ov.ovconsole{background:var(--capot);padding:3px 6px;display:inline-flex;
   align-items:center;box-shadow:inset 0 0 0 1px var(--eclat)}
 .ov.ovconsole svg{display:block}
@@ -2860,9 +2860,9 @@ body.compact .filters{margin-bottom:2px}
   box-shadow:inset 0 0 0 1px var(--primary-trait-fort);
   text-transform:none;letter-spacing:.2px}
 .gcard.groupe{box-shadow:inset 3px 0 0 var(--primary-trait)}
-/* Les versions ont leur fenetre : une liste, pas un depliage dans la grille.
-   Depliees en ligne, elles se melangeaient aux autres jeux et plus rien ne
-   disait ou le groupe commencait. */
+/* The versions get their own dialog: a list, not an unfolding inside the grid.
+   Unfolded in place, they mixed with the other games and nothing said any more
+   where the group began. */
 .dlghead{display:flex;align-items:baseline;gap:10px;padding:16px 18px 12px}
 .dlghead h3{margin:0;font-size:16px;flex:1;min-width:0}
 .versions{max-height:min(58vh,460px);overflow:auto;
@@ -2890,19 +2890,19 @@ body.compact .filters{margin-bottom:2px}
   .vrow{gap:9px;padding:9px 12px}
 }
 
-/* ------------------------------------------------------ SUPPORTS PHYSIQUES
-   Six silhouettes pour vingt-trois plateformes. Elles ne cherchent pas a
-   remplacer une jaquette : elles occupent la place quand il n'y en a pas, et
-   nomment le support dans la fiche. */
+/* ---------------------------------------------------------- PHYSICAL MEDIA
+   Six silhouettes for twenty-three platforms. They do not try to replace a
+   cover: they take the space when there is none, and name the medium in the
+   detail view. */
 .support{width:100%;height:100%;display:block;color:var(--text-3)}
 .gcard .ph{display:flex;align-items:center;justify-content:center;
   inset:0;padding:20%}
-/* Assez presente pour se lire, assez discrete pour qu'on voie tout de suite
-   qu'il manque une jaquette : c'est un emplacement vide, pas une illustration. */
+/* Present enough to read, quiet enough that you see at once a cover is missing:
+   this is an empty slot, not an illustration. */
 .gcard .ph .support{opacity:.42}
 .games.taille-compact .gcard .ph{padding:16%}
 
-/* Dans la fiche : le nom du support, precede de son dessin. */
+/* In the detail view: the medium's name, preceded by its drawing. */
 .supportligne{display:flex;align-items:center;gap:7px;margin:0 0 7px;
   font-family:var(--disp);font-size:11.5px;font-weight:600;letter-spacing:.08em;
   text-transform:uppercase;color:var(--text-3)}
@@ -2913,13 +2913,13 @@ body.compact .filters{margin-bottom:2px}
 .supportligne .langues{letter-spacing:.04em;text-transform:none;
   font-family:var(--body);font-size:12px;font-weight:500}
 
-/* Liseré du support, en haut de la jaquette. Il n'apparait qu'en vue
-   « toutes les plateformes », ou il distingue vraiment une carte d'une
-   autre ; ailleurs, ce serait trente-quatre fois la meme barre.
-   Les teintes restent desaturees : l'ambre garde le monopole de l'action. */
-/* Porte par `.gcard::after` et non par `.art::after` : ce dernier est deja
-   pris par le reflet de l'animation « affiche inclinee », et `.art::before`
-   par le degrade de la jaquette. */
+/* The medium's edge, at the top of the cover. It only appears in the "all
+   platforms" view, where it really tells one card from another; elsewhere it
+   would be the same bar thirty-four times over.
+   The tints stay desaturated: amber keeps the monopoly on action. */
+/* Carried by `.gcard::after` and not by `.art::after`: the latter is already
+   taken by the "tilted poster" animation's reflection, and `.art::before` by the
+   cover's gradient. */
 .gcard[data-media]:not([data-media=""])::after{
   content:"";position:absolute;left:0;right:0;top:0;height:3px;z-index:5;
   pointer-events:none;background:var(--media,var(--line-fort))}
@@ -2930,10 +2930,10 @@ body.compact .filters{margin-bottom:2px}
 .gcard[data-media="disque"]      {--media:#9aa3b2}
 .gcard[data-media="borne"]       {--media:#c08a3e}
 
-/* ----------------------------------------------------------------- LOUPE
-   La jaquette occupe presque tout l'ecran : c'est le sujet, le reste
-   s'efface. Le voile est plus opaque que celui d'une fenetre ordinaire —
-   on regarde une image, pas un formulaire pose sur la page. */
+/* ------------------------------------------------------------- MAGNIFIER
+   The cover fills nearly the whole screen: it is the subject, the rest fades
+   away. The veil is more opaque than an ordinary dialog's — you are looking at
+   an image, not at a form laid on the page. */
 .sheet .cover{cursor:pointer}
 .sheet .cover:focus-visible{outline:2px solid var(--focus);outline-offset:3px}
 .loupe{position:fixed;inset:0;z-index:70;display:none;
@@ -2941,22 +2941,22 @@ body.compact .filters{margin-bottom:2px}
   padding:24px;background:var(--rideau);backdrop-filter:blur(8px)}
 .loupe.on{display:flex;animation:voile-entre var(--t-court) var(--ease)}
 
-/* L'affiche tourne, elle ne grossit pas. La perspective est portee par le
-   CADRE : posee sur l'image elle-meme, le point de fuite aurait suivi
-   l'image dans sa rotation et l'effet se serait aplati. */
+/* The poster turns, it does not grow. The perspective is carried by the FRAME:
+   set on the image itself, the vanishing point would have followed the image
+   through its rotation and the effect would have flattened out. */
 .loupecadre{perspective:1200px;cursor:pointer;
   animation:feuille-entre var(--t-moyen) var(--ease)}
 .loupeplan{position:relative;line-height:0;transform-style:preserve-3d;
   border-radius:12px;overflow:hidden;
   box-shadow:0 40px 90px -30px var(--ombre);
   transition:transform .45s var(--ease)}
-/* Le retour au repos est lent, la poursuite de la souris est immediate :
-   sinon l'affiche traine derriere le curseur. */
+/* The return to rest is slow, the chase of the mouse immediate: otherwise the
+   poster drags behind the cursor. */
 .loupecadre:hover .loupeplan{transition:transform .12s linear}
 .loupeplan img{display:block;max-width:min(560px,92vw);max-height:78vh;
   width:auto;height:auto;object-fit:contain;background:var(--creux)}
-/* Le point brillant : une tache de lumiere placee sous la souris, plus un
-   voile diagonal. C'est lui qui fait la surface vernie. */
+/* The highlight: a patch of light placed under the mouse, plus a diagonal veil.
+   That is what makes the varnished surface. */
 .loupereflet{position:absolute;inset:0;pointer-events:none;opacity:0;
   transition:opacity var(--t-moyen) var(--ease);
   background:
@@ -2969,7 +2969,7 @@ body.compact .filters{margin-bottom:2px}
   text-align:center;color:var(--sur-image);max-width:min(560px,92vw)}
 .loupepied #loupetitre{font-size:14.5px;font-weight:600;text-wrap:balance}
 .loupeaide{font:11px/1.4 var(--mono);color:rgba(247,242,238,.62)}
-/* Sans souris, il n'y a rien a suivre : l'affiche reste droite et l'aide le dit. */
+/* Without a mouse there is nothing to follow: the poster stays straight and the hint says so. */
 @media (hover:none){
   .loupeaide{font-size:0}
   .loupeaide::after{content:"Touche le fond pour fermer";font-size:11px}
@@ -2979,9 +2979,9 @@ body.compact .filters{margin-bottom:2px}
 }
 
 /* ---------------------------------------------------------------- PALETTE
-   Posee haut dans l'ecran plutot qu'au centre : on la lit en gardant la
-   bibliotheque visible derriere, et le regard n'a pas a redescendre pour
-   voir le resultat. */
+   Placed high on the screen rather than in the centre: you read it while keeping
+   the library visible behind, and the eye does not have to travel back down to
+   see the result. */
 .palette{position:fixed;inset:0;z-index:60;display:none;
   background:var(--rideau-leger);backdrop-filter:blur(3px);
   padding:12vh 16px 16px;justify-content:center;align-items:flex-start}
@@ -3018,20 +3018,20 @@ body.compact .filters{margin-bottom:2px}
   border:1px solid var(--line);border-radius:4px;padding:1px 5px;margin-right:3px}
 @media (max-width:560px){
   .palette{padding-top:6vh}
-  .palpied{display:none}          /* pas de clavier physique : rien a annoncer */
+  .palpied{display:none}          /* no physical keyboard: nothing to announce */
   .paldetail{display:none}
 }
 
-/* --- carte visee au clavier : le meme marquage que la selection ne
-   conviendrait pas — on peut viser une carte sans la cocher. */
+/* --- card targeted from the keyboard: the same marking as the selection would
+   not do — a card can be aimed at without being ticked. */
 .gcard:focus{outline:none}
 .gcard:focus-visible{outline:2px solid var(--focus);outline-offset:3px;
   box-shadow:0 0 0 4px var(--info-doux)}
 
-/* ---------------------------------------------------------------- APERCU
-   Fiche reduite qui parait apres un survol appuye. Volontairement etroite :
-   elle repond a « qu'est-ce que c'est, et ou en est-il ? », pas davantage —
-   sinon autant ouvrir la vraie fiche. */
+/* ---------------------------------------------------------------- PREVIEW
+   A reduced detail view that appears after a held hover. Deliberately narrow: it
+   answers "what is this, and where does it stand?", no more — otherwise you may
+   as well open the real detail view. */
 .apercujeu{position:fixed;z-index:40;width:270px;max-width:82vw;
   padding:13px 15px;border-radius:12px;
   background:var(--verre-plein);border:1px solid var(--line);
@@ -3054,8 +3054,8 @@ body.compact .filters{margin-bottom:2px}
 .apercujeu .apresume{margin:9px 0 0;font-size:11.5px;line-height:1.5;
   color:var(--text-3);border-top:1px solid var(--line);padding-top:9px}
 
-/* --- selecteur a segments : theme et mouvement se choisissent d'un coup
-   d'oeil, pas dans une liste deroulante qu'il faut ouvrir pour lire. */
+/* --- segmented selector: theme and motion are chosen at a glance, not from a
+   drop-down that has to be opened to be read. */
 .segment{display:inline-flex;background:var(--surface-2);
   border:1px solid var(--line);border-radius:9px;padding:3px;gap:3px}
 .segment button{border:none;background:transparent;border-radius:6px;
@@ -3068,11 +3068,11 @@ body.compact .filters{margin-bottom:2px}
 @media (pointer:coarse){.segment button{padding:10px 14px}}
 
 /* ===========================================================================
-   ASSISTANT DE PREMIER DEMARRAGE
+   FIRST-RUN WIZARD
    ---------------------------------------------------------------------------
-   Une etape a la fois. La carte garde une hauteur minimale : sans elle, passer
-   d'une etape courte a une etape longue faisait sauter le pied de page sous le
-   curseur, et l'utilisateur cliquait « Suivant » deux fois.
+   One step at a time. The card keeps a minimum height: without it, going from a
+   short step to a long one made the footer jump under the cursor, and the user
+   clicked "Next" twice.
    ========================================================================= */
 .onbcarte{max-width:600px;display:flex;flex-direction:column;gap:0}
 .onbtete{display:flex;align-items:center;justify-content:space-between;
@@ -3115,14 +3115,14 @@ body.compact .filters{margin-bottom:2px}
 @keyframes onbpuce{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
 
 .onbcorps>.go,.onbcorps>.ghost{margin-top:14px}
-/* Un chemin se coupe par le MILIEU, jamais par la fin.
-   `word-break:break-all` l'etalait sur quatre lignes dans les Reglages ; une
-   ellipse finale, elle, aurait cache la partie qui identifie le dossier. Le
-   debut dit ou l'on est, la fin dit lequel c'est — ce sont les deux bouts
-   qu'il faut garder. Le chemin entier reste en infobulle.
-   `direction:rtl` + `text-overflow:ellipsis` coupe a gauche ; le
-   `unicode-bidi` et le marquage LTR autour du texte evitent que la
-   ponctuation ne bascule de cote. */
+/* A path is cut in the MIDDLE, never at the end.
+   `word-break:break-all` spread it over four lines in the Settings; a trailing
+   ellipsis, for its part, would have hidden the part that identifies the folder.
+   The beginning says where you are, the end says which one it is — those are the
+   two ends to keep. The whole path stays in the tooltip.
+   `direction:rtl` + `text-overflow:ellipsis` cuts on the left; the `unicode-bidi`
+   and the LTR marks around the text stop the punctuation from swapping
+   sides. */
 .onbchemin{font-family:var(--mono);font-size:12px;color:var(--text);
   background:var(--puits);border:1px solid var(--rule);border-radius:8px;
   padding:11px 13px;margin-bottom:4px;
@@ -3132,14 +3132,14 @@ body.compact .filters{margin-bottom:2px}
 .onbchamps{display:flex;flex-direction:column;gap:12px;margin:0 0 14px}
 .onbchamps label{display:flex;flex-direction:column;gap:5px;font-size:12.5px;
   color:var(--text)}
-/* La regle globale donne `flex:1 1 260px` aux champs texte, pensee pour une
-   rangee horizontale. Dans une colonne, cette base de 260 px devient une
-   HAUTEUR : les champs faisaient 260 px de haut et la carte debordait. */
+/* The global rule gives text fields `flex:1 1 260px`, designed for a horizontal
+   row. In a column, that 260 px basis becomes a HEIGHT: the fields were 260 px
+   tall and the card overflowed. */
 .onbchamps input{flex:0 0 auto;width:100%}
 .onbaide{font-family:var(--mono);font-size:10.5px;color:var(--mute);
   letter-spacing:.02em;word-break:break-all}
 
-/* Resultat du scan : c'est la seule preuve que le dossier indique est le bon. */
+/* The scan's result: the only proof that the folder given is the right one. */
 .onbresultat{margin-top:14px;padding:13px 14px;border-radius:9px;
   border:1px solid var(--success-trait);background:var(--success-voile);
   font-size:13px;animation:enter .3s var(--ease)}
@@ -3160,8 +3160,8 @@ body.compact .filters{margin-bottom:2px}
 .onbpied button:disabled{opacity:.35;cursor:not-allowed}
 .onbpoints{display:flex;gap:14px;align-items:center;
   padding:16px 4px;margin:-16px 0}
-/* `min-height:44px` s'applique a tous les boutons pour le tactile : sur une
-   pastille de 8 px, il la transformait en ellipse haute de 44 px. */
+/* `min-height:44px` applies to every button for touch: on an 8 px dot, it
+   turned it into a 44 px tall ellipse. */
 .onbpoint{width:8px;height:8px;min-width:0;min-height:0;padding:0;flex:0 0 auto;
   border-radius:50%;border:0;background:var(--rule);cursor:pointer;
   transition:width .28s var(--ease),background .28s var(--ease)}
@@ -3179,29 +3179,29 @@ body.compact .filters{margin-bottom:2px}
   .onbcorps{min-height:0}
   .onbpied{flex-wrap:wrap;justify-content:center}
   .onbpoints{order:-1;width:100%;justify-content:center;margin:-16px 0 4px}
-  /* `>` obligatoire : sans lui, `flex:1` s'appliquait AUSSI aux pastilles,
-     qui redevenaient des ellipses etirees sur toute la largeur. */
+  /* `>` is required: without it, `flex:1` applied to the dots TOO, and they
+     became ellipses stretched across the whole width again. */
   .onbpied>button{flex:1}
 }
 
-/* Mouvement reduit : les etapes se remplacent, elles ne glissent plus. */
+/* Reduced motion: the steps replace each other, they no longer slide. */
 [data-mvt="off"] .onbcorps,
 [data-mvt="off"] .onbliste li,
 [data-mvt="off"] .onbpuce,
 [data-mvt="off"] .onbresultat{animation:none}
 [data-mvt="off"] .onbpoint{transition:none}
 
-/* ---------------------------------------------------------------- PIED
-   Discret, mais present sur toutes les pages : l'offre de code source de
-   l'AGPL ne vaut que si elle est atteignable depuis le service lui-meme. */
+/* ---------------------------------------------------------------- FOOTER
+   Quiet, but present on every page: the AGPL's source offer is only worth
+   anything if it can be reached from the service itself. */
 #pied{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;
   gap:9px;padding:26px 16px 34px;font-family:var(--mono);font-size:11px;
   color:var(--mute);opacity:.7;transition:opacity .2s var(--ease)}
 #pied:hover{opacity:1}
-/* Le lien du pied portait l'offre de code source exigee par l'AGPL sur une
-   cible de 13 px de haut — sous le minimum tactile de 44 px, donc difficile a
-   atteindre au doigt. La zone est agrandie par du remplissage vertical, sans
-   deplacer le texte : `align-items:center` du conteneur absorbe la hauteur. */
+/* The footer's link carried the source offer the AGPL requires on a target
+   13 px tall — below the 44 px touch minimum, so hard to reach with a finger.
+   The area is enlarged with vertical padding, without moving the text: the
+   container's `align-items:center` absorbs the height. */
 #pied a{color:var(--mute);text-decoration:underline;text-underline-offset:3px;
   display:inline-flex;align-items:center;min-height:44px}
 #pied a:hover{color:var(--amber)}
@@ -3210,42 +3210,42 @@ body.compact .filters{margin-bottom:2px}
   border-radius:999px;padding:2px 8px;font-size:10px;letter-spacing:.08em;
   text-transform:uppercase}
 
-/* ---- choix du dossier des jeux (navigateur du SERVEUR)
-   Deux ecrans partagent ce navigateur : le bloc « Emplacement » des reglages,
-   et l'etape « ta bibliotheque » de l'assistant. Dans l'assistant la carte a
-   une hauteur limitee, d'ou la liste qui defile chez elle plutot que de
-   pousser les boutons hors de l'ecran. */
+/* ---- picking the games folder (the SERVER's browser)
+   Two screens share this browser: the settings' "Emplacement" block, and the
+   wizard's "your library" step. In the wizard the card has a limited height,
+   hence the list scrolling inside it rather than pushing the buttons off the
+   screen. */
 .ludopick{margin-top:10px}
 .ludopick .crumb{margin:8px 0}
 .ludopick .card{max-height:min(38vh,300px);overflow:auto}
 #ludowrap #ludobrowser .card{max-height:min(46vh,420px);overflow:auto}
-/* Un dossier qu'on n'a pas le droit de lire reste visible — le masquer ferait
-   croire qu'il n'existe pas — mais il annonce qu'il ne mene nulle part. */
+/* A folder we are not allowed to read stays visible — hiding it would suggest
+   it does not exist — but it says it leads nowhere. */
 .brow.dir.muet{opacity:.5}
 .brow.dir.muet .ic{color:var(--mute)}
-/* Le chemin courant, dans une ligne de reglages. Il ne doit ni deborder ni
-   pousser le bouton hors de la ligne.
-   Une precedente version le laissait s'enrouler, et son commentaire disait
-   pourquoi : tronquer « /private/var/folders… » ne dit rien. L'objection est
-   juste, mais elle ne vise que la troncature FINALE. Le debut d'un chemin dit
-   ou l'on est, la fin dit lequel c'est — ce sont les deux bouts qu'il faut
-   garder, et c'est le milieu qu'il faut couper.
-   `direction:rtl` seul place l'ellipse au DEBUT, donc garde la fin — celle
-   qui nomme le dossier. Sans lui, la coupe tombe a la fin et on retrouve
-   exactement le « /private/var/folders… » que l'ancien commentaire refusait.
-   Pas de `unicode-bidi:plaintext` : il rend son sens naturel au texte, donc
-   annule l'effet, et l'ellipse repart a droite.
-   Le chemin entier reste en infobulle, parce qu'un chemin qu'on ne peut pas
-   lire en entier est un chemin qu'on ne peut pas verifier. */
+/* The current path, inside a settings row. It must neither overflow nor push
+   the button off the row.
+   An earlier version let it wrap, and its comment said why: truncating
+   "/private/var/folders…" says nothing. The objection is right, but it only
+   targets truncation at the END. The start of a path says where you are, the end
+   says which one it is — those are the two ends to keep, and it is the middle
+   that must be cut.
+   `direction:rtl` alone puts the ellipsis at the START, so it keeps the end —
+   the part that names the folder. Without it, the cut falls at the end and you
+   get exactly the "/private/var/folders…" the old comment refused.
+   No `unicode-bidi:plaintext`: it gives the text its natural direction back, so
+   it cancels the effect, and the ellipsis goes back to the right.
+   The whole path stays in the tooltip, because a path you cannot read in full is
+   a path you cannot check. */
 .setctl>#s-ludo{flex:1 1 auto;min-width:0;margin-right:8px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   direction:rtl;text-align:left;word-break:normal}
-/* Le chemin lui-meme garde son sens de lecture : seule la BOITE est en RTL,
-   pour que la coupe tombe au debut. */
+/* The path itself keeps its reading direction: only the BOX is RTL, so that the
+   cut falls at the start. */
 #s-ludo bdi{direction:ltr;unicode-bidi:isolate}
 
-/* Provenance du resume, sous la description d'un jeu. Discrete : c'est une
-   obligation de licence, pas une information qu'on vient chercher. */
+/* Where the summary came from, under a game's description. Quiet: it is a
+   licence obligation, not information anyone comes looking for. */
 .gcredit{margin:6px 0 0;font-size:11.5px;color:var(--mute);line-height:1.4}
 .gcredit:empty{display:none}
 .gcredit a{color:var(--mute);text-decoration:underline}
