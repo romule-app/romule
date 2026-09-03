@@ -1,21 +1,21 @@
-"""Un reglage que le serveur refuse d'ecrire est un reglage qui ment.
+"""A setting the server refuses to write is a setting that lies.
 
-`/api/config` ne copie que les cles d'une liste blanche. C'est juste : sans
-elle, un client pourrait ecrire n'importe quoi dans le fichier d'etat.
+`/api/config` copies only the keys of an allow-list. That is right: without it, a
+client could write anything into the state file.
 
-Mais une cle qui existe dans `config.DEFAULTS`, que l'interface affiche, et que
-cette liste ne connait pas produit le pire des comportements : le champ
-s'affiche, on le remplit, on enregistre, le serveur repond 200 — et rien n'a
-change. C'est arrive avec `oidc_admin_groupes` : le reglage etait declare,
-l'interface le montrait, le serveur le jetait, et le role SSO ne s'activait
-jamais. Aucune erreur nulle part.
+But a key that exists in `config.DEFAULTS`, that the interface displays, and that
+this list does not know produces the worst possible behaviour: the field shows,
+you fill it in, you save, the server answers 200 — and nothing has changed. It
+happened with `oidc_admin_groupes`: the setting was declared, the interface
+showed it, the server threw it away, and the SSO role never activated. No error
+anywhere.
 
-Ce controle tient les deux sens :
+This check holds in both directions:
 
-  * la liste blanche ne cite que des cles qui EXISTENT — sinon c'est une faute
-    de frappe qui ne fera jamais rien ;
-  * toute cle affichee par l'interface est dans la liste blanche — sauf celles
-    qui n'ont rien a y faire, nommees ici avec leur raison.
+  * the allow-list names only keys that EXIST — otherwise it is a typo that will
+    never do anything;
+  * every key the interface displays is in the allow-list — except those that
+    have no business being there, named here with their reason.
 """
 import re
 import sys
@@ -38,29 +38,29 @@ def t(nom, cond, detail=""):
         print("  ECHEC %s   %s" % (nom, detail))
 
 
-# Ce que l'interface ne doit PAS pouvoir ecrire, et pourquoi.
+# What the interface must NOT be able to write, and why.
 HORS_INTERFACE = {
-    # Le secret qui signe les sessions. Le laisser modifier reviendrait a
-    # deconnecter tout le monde, ou pire, a le fixer a une valeur connue.
+    # The secret that signs the sessions. Letting it be edited would log
+    # everyone out, or worse, pin it to a known value.
     "auth_secret",
-    # Le dossier des jeux se choisit par `/api/ludotheque`, qui verifie que le
-    # chemin est autorise et qu'il existe. Passer par les reglages generiques
-    # contournerait ce controle.
+    # The games folder is chosen through `/api/ludotheque`, which checks the path
+    # is allowed and that it exists. Going through the generic settings would
+    # bypass that check.
     "library_path",
-    # Ecrites par l'outil lui-meme au fil de son usage, jamais saisies.
+    # Written by the tool itself as it is used, never typed in.
     "wifi_addr", "emuready_device", "emuready_device_nom",
     "systemes_perso", "emulateur_paquet",
-    # Les destinations de notification passent par `/api/notif-creer`, qui
-    # verifie le schema de l'adresse (`reseau.verifier`) et borne leur nombre.
-    # Les laisser entrer par les reglages generiques contournerait les deux —
-    # et une URL de reglage qui devient un `file://` est justement le defaut
-    # que `reseau.py` existe pour empecher.
+    # The notification destinations go through `/api/notif-creer`, which checks
+    # the address's scheme (`reseau.verifier`) and bounds their number. Letting
+    # them in through the generic settings would bypass both — and a setting's
+    # URL that becomes a `file://` is precisely the defect `reseau.py` exists to
+    # prevent.
     "notif_destinations",
 }
 
 
 def liste_blanche():
-    """Les cles que `/api/config` accepte, lues dans le source du serveur."""
+    """The keys `/api/config` accepts, read from the server's source."""
     src = (config.PKG / "server.py").read_text(encoding="utf-8")
     d = src.index('elif p == "/api/config":')
     bloc = src[d:d + 4000]
@@ -81,8 +81,8 @@ def test_tout_reglage_saisi_est_acceptable():
 
 
 def test_les_exceptions_existent_encore():
-    """Une exception qui designe une cle disparue n'exempte plus rien : elle
-    masque juste le controle pour un nom qui n'existe pas."""
+    """An exception naming a key that has disappeared exempts nothing any more:
+    it merely hides the check for a name that does not exist."""
     fantomes = sorted(HORS_INTERFACE - set(config.DEFAULTS))
     t("les exceptions designent des cles reelles", not fantomes, fantomes)
 

@@ -1,14 +1,14 @@
-"""Commandes de depannage : la porte de secours, et ses serrures.
+"""Troubleshooting commands: the emergency door, and its locks.
 
-`user passwd` repose un mot de passe SANS connaitre l'ancien. C'est
-exactement ce qu'un attaquant cherche, et c'est pourquoi elle n'existe que
-sur la ligne de commande : qui peut la lancer a deja les droits du service,
-donc l'acces au fichier des comptes. Elle ne donne rien de plus, elle rend
-seulement faisable sans se tromper ce que le systeme de fichiers permettait.
+`user passwd` sets a password again WITHOUT knowing the old one. That is exactly
+what an attacker is after, and it is why it exists only on the command line:
+whoever can run it already has the service's rights, so access to the accounts
+file. It grants nothing more, it merely makes doable without mistakes what the
+file system already allowed.
 
-Ce que ces tests verifient est donc autant ce qui marche que ce qui reste
-refuse : le dernier administrateur, un mot de passe faible, un compte
-inconnu, et les secrets qui ne doivent jamais s'afficher.
+So what these tests check is as much what works as what stays refused: the last
+administrator, a weak password, an unknown account, and the secrets that must
+never be displayed.
 """
 import json
 import os
@@ -32,10 +32,10 @@ def t(nom, cond, detail=""):
 
 
 def lancer(racine, *args, chemin=None):
-    """Lance la commande dans un vrai sous-processus, comme un utilisateur.
+    """Runs the command in a real sub-process, as a user would.
 
-    Rend (code, stdout, stderr) SEPARES : c'est la distinction qui compte pour
-    une commande dont la sortie est lue par un programme.
+    Returns (code, stdout, stderr) SEPARATELY: that distinction is what matters
+    for a command whose output is read by a program.
     """
     env = dict(os.environ, ROMULE_ROOT=str(racine), ROMULE_NO_BROWSER="1",
                ROMULE_ADB="/inexistant", NO_COLOR="1")
@@ -48,7 +48,7 @@ def lancer(racine, *args, chemin=None):
 
 
 def romule(racine, *args):
-    """Les deux sorties reunies, pour les controles qui ne les distinguent pas."""
+    """Both outputs together, for the checks that do not tell them apart."""
     code, out, err = lancer(racine, *args)
     return code, out + err
 
@@ -68,8 +68,8 @@ def main():
       "chef@exemple.fr" in sortie and "bob@exemple.fr" in sortie, sortie)
     t("le premier compte est marque administrateur",
       "oui" in sortie.split("chef@exemple.fr")[1].split("\n")[0], sortie)
-    # Le fichier des comptes contient des empreintes scrypt. Les afficher
-    # serait offrir a un rapport de bogue de quoi attaquer hors ligne.
+    # The accounts file holds scrypt hashes. Displaying them would hand a bug
+    # report the material for an offline attack.
     t("aucune empreinte de mot de passe n'est affichee",
       "scrypt" not in sortie and "$" not in sortie, sortie)
 
@@ -86,8 +86,8 @@ def main():
     t("l'ancien ne l'est plus",
       not comptes.verifier_mdp("brouette-tranquille-42", u["hash"]))
 
-    # Un compte bloque par des echecs repetes doit repartir : sinon la
-    # reinitialisation reussit et la connexion echoue quand meme.
+    # An account locked by repeated failures must start again: otherwise the
+    # reset succeeds and the login fails all the same.
     d["comptes"][0]["echecs"] = 9
     d["comptes"][0]["bloque"] = 2 ** 31
     (racine / "_romule-comptes.json").write_text(json.dumps(d))
@@ -97,7 +97,7 @@ def main():
       d["comptes"][0]["echecs"] == 0 and d["comptes"][0]["bloque"] == 0,
       d["comptes"][0])
 
-    # --- ce qui doit etre refuse -----------------------------------------
+    # --- what must be refused --------------------------------------------
     code, sortie = romule(racine, "user", "passwd", "chef@exemple.fr", "--mdp", "court")
     t("un mot de passe trop faible est refuse", code == 1, sortie)
     t("et le refus dit pourquoi", "12" in sortie, sortie)
@@ -108,8 +108,8 @@ def main():
     romule(racine, "user", "admin", "bob@exemple.fr")
     romule(racine, "user", "admin", "chef@exemple.fr", "--retirer")
     code, sortie = romule(racine, "user", "admin", "bob@exemple.fr", "--retirer")
-    # Une instance que personne ne peut administrer se repare a la main, dans
-    # un fichier. La commande ne doit donc pas pouvoir y mener.
+    # An instance nobody can administer is repaired by hand, in a file. So the
+    # command must not be able to lead there.
     t("le dernier administrateur ne peut pas etre retire", code == 1, sortie)
     t("et le refus l'explique", "administrateur" in sortie.lower(), sortie)
 
@@ -124,19 +124,19 @@ def main():
     code, out, err = lancer(racine, "config", "get", "trash_days")
     t("`config get` le relit", out.strip() == "7", (out, err))
 
-    # Le defaut que la CI a trouve et que ma machine cachait : les avis
-    # preliminaires (« nsz absent — ... ») partaient sur STDOUT, donc
-    # `VALEUR=$(romule config get x)` les capturait avec la valeur. On force
-    # ici l'absence des outils, au lieu d'esperer qu'ils manquent : le
-    # controle doit tomber sur toute machine, pas seulement sur celles qui
-    # n'ont pas `nsz`.
+    # The defect CI found and my machine hid: the preliminary notices ("nsz
+    # absent — ...") went to STDOUT, so `VALUE=$(romule config get x)` captured
+    # them along with the value. We force the tools' absence here, instead of
+    # hoping they are missing: the check must hold on every machine, not only on
+    # those without `nsz`.
     vide = str(racine / "aucun-outil-ici")
     os.makedirs(vide, exist_ok=True)
     code, out, err = lancer(racine, "config", "get", "trash_days", chemin=vide)
     t("un outil absent produit bien un avis", "absent" in err, (out, err))
     t("mais l'avis va sur stderr, pas sur stdout",
       out.strip() == "7", (out, err))
-    # Sans lecture JSON, « false » deviendrait la chaine « false », qui est vraie.
+    # Without JSON parsing, "false" would become the string "false", which is
+    # truthy.
     romule(racine, "config", "set", "incremental", "false")
     cfg = json.loads((racine / "_romule-config.json").read_text())
     t("« false » devient un booleen, pas une chaine",
@@ -146,7 +146,7 @@ def main():
     code, sortie = romule(racine, "config", "set", "cle_inventee", "x")
     t("un reglage inconnu est refuse", code == 1, sortie)
 
-    # --- les secrets ne s'affichent pas -------------------------------------
+    # --- the secrets are not displayed --------------------------------------
     cfg["auth_secret"] = "un-secret-de-signature"
     cfg["steamgriddb_key"] = "une-cle-sgdb"
     cfg["notif_destinations"] = [{"id": "1", "nom": "salon",
@@ -165,7 +165,7 @@ def main():
     for attendu in ("Romule", "Python", "ROMULE_ROOT", "Comptes", "adb",
                     "Notifications", "ROMULE_LOG"):
         t("doctor rapporte : %s" % attendu, attendu in sortie, "")
-    # Un rapport de diagnostic finit colle dans un ticket public.
+    # A diagnostic report ends up pasted into a public ticket.
     t("doctor ne divulgue aucun secret",
       "un-secret-de-signature" not in sortie and "une-cle-sgdb" not in sortie
       and "TRES-SECRET" not in sortie, sortie)
