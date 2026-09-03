@@ -6,7 +6,7 @@ from . import config, reseau
 
 
 def load(lib, force=False, log=lambda m, n=None: None):
-    """Charge la base de versions dans lib.versions. Telecharge si perimee."""
+    """Load the versions database into lib.versions. Downloads it when stale."""
     fresh = (config.VCACHE.exists()
              and (time.time() - config.VCACHE.stat().st_mtime) < 86400)
     if force or not fresh:
@@ -38,6 +38,6 @@ def _download(log):
             config.VCACHE.write_bytes(data)
             log("Base de versions enregistree (%.1f Mo)" % (len(data) / 1048576))
             return
-        except Exception as exc:  # reseau/miroir indisponible : on tente le suivant
+        except Exception as exc:  # network or mirror down: try the next one
             log("Miroir indisponible (%s) : %s" % (url.split("/")[2], exc))
     log("Telechargement impossible — on garde le cache existant s'il y en a un.")

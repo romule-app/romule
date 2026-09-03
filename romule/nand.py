@@ -1,15 +1,15 @@
-"""Installation de mises a jour et DLC dans la NAND virtuelle d'Eden.
+"""Installing updates and DLC into Eden's virtual NAND.
 
-Un `.nsp` est une archive **PFS0** dont les entrees sont deja nommees par leur
-content ID (`<32 hex>.nca`, `<32 hex>.cnmt.nca`) — exactement le nom qu'Eden
-attend dans `nand/user/Contents/registered/`. Installer revient donc a :
+A `.nsp` is a **PFS0** archive whose entries are already named by their content
+ID (`<32 hex>.nca`, `<32 hex>.cnmt.nca`) — exactly the name Eden expects in
+`nand/user/Contents/registered/`. Installing therefore comes down to:
 
-  1. extraire les .nca de l'archive,
-  2. les deposer dans registered/,
-  3. inscrire la cle de titre du ticket (.tik) dans `keys/title.keys`,
-     sans quoi le contenu chiffre reste illisible.
+  1. extracting the .nca files from the archive,
+  2. dropping them into registered/,
+  3. writing the ticket's title key (.tik) into `keys/title.keys`, without
+     which the encrypted content stays unreadable.
 
-Rien n'est ecrase : l'etat de la NAND est sauvegarde avant toute ecriture.
+Nothing is overwritten: the NAND's state is backed up before any write.
 """
 
 import struct
@@ -18,13 +18,13 @@ from pathlib import Path
 
 from . import config, device, profils
 
-# Ces chemins dependent de l'emulateur choisi : ils ne peuvent plus etre des
-# constantes de module. Ils l'etaient, figes sur Eden, ce qui rendait tout
-# autre emulateur inatteignable sans modifier le code.
+# These paths depend on the chosen emulator: they can no longer be module
+# constants. They used to be, pinned to Eden, which made every other emulator
+# unreachable without editing the code.
 
 
 def dossier():
-    """Dossier de donnees de l'emulateur actif, ou "" s'il est inconnu."""
+    """The active emulator's data folder, or "" when it is unknown."""
     return profils.dossier_donnees()
 
 
@@ -35,22 +35,22 @@ def registered():
 def title_keys():
     return profils.sous("keys/title.keys")
 
-# Emplacements du ticket (format Nintendo) : cle de titre chiffree et rights ID.
+# Ticket offsets (Nintendo format): encrypted title key and rights ID.
 TIK_KEY_OFF, TIK_RIGHTS_OFF = 0x180, 0x2A0
 
 
 # --------------------------------------------------------------------- PFS0
 
 class Incomplet(ValueError):
-    """L'archive annonce plus de donnees qu'elle n'en contient (telechargement rate)."""
+    """The archive announces more data than it holds (a failed download)."""
 
 
 def read_pfs0(path):
-    """Liste le contenu d'un .nsp : [(nom, offset_absolu, taille)].
+    """List a .nsp's contents: [(name, absolute_offset, size)].
 
-    L'archive est verifiee : un fichier tronque annonce des contenus qui
-    depassent sa taille reelle. Mieux vaut le refuser ici que d'installer
-    des donnees incompletes dans la NAND.
+    The archive is checked: a truncated file announces contents that run past
+    its real size. Better to refuse it here than to install incomplete data
+    into the NAND.
     """
     reel = Path(path).stat().st_size
     with open(path, "rb") as fh:
@@ -76,7 +76,7 @@ def read_pfs0(path):
 
 
 def extract(path, entry, dest_dir):
-    """Extrait une entree du .nsp vers un dossier local."""
+    """Extract one entry from the .nsp into a local folder."""
     nom, off, size = entry
     dest = Path(dest_dir) / nom
     with open(path, "rb") as src, dest.open("wb") as out:
@@ -94,7 +94,7 @@ def extract(path, entry, dest_dir):
 # ------------------------------------------------------------------ tickets
 
 def ticket_key(path):
-    """(rights_id, cle_de_titre_chiffree) d'un .tik, en hexa. None si illisible."""
+    """(rights_id, encrypted_title_key) of a .tik, in hex. None when unreadable."""
     data = Path(path).read_bytes()
     if len(data) < TIK_RIGHTS_OFF + 16:
         return None
@@ -108,7 +108,7 @@ def ticket_key(path):
 # ------------------------------------------------------------------ analyse
 
 def inspect(nsp_path):
-    """Ce que l'installation deposerait, sans rien ecrire."""
+    """What the install would drop, without writing anything."""
     contenu = read_pfs0(nsp_path)
     ncas = [(n, o, s) for n, o, s in contenu if n.lower().endswith(".nca")]
     tiks = [(n, o, s) for n, o, s in contenu if n.lower().endswith(".tik")]
@@ -123,7 +123,7 @@ def inspect(nsp_path):
 # ---------------------------------------------------------------- sauvegarde
 
 def backup_state(job):
-    """Note l'etat de registered/ et de title.keys avant d'y toucher."""
+    """Record the state of registered/ and title.keys before touching them."""
     liste = device._shell("ls -1 %s 2>/dev/null" % device._q(registered()), timeout=60)
     cles = device._shell("cat %s 2>/dev/null" % device._q(title_keys()), timeout=60)
     dossier = config.ROOT / "_eden-backup"
@@ -137,13 +137,13 @@ def backup_state(job):
 
 
 def installed_ids():
-    """Content IDs deja presents dans la NAND d'Eden."""
+    """Content IDs already present in Eden's NAND."""
     out = device._shell("ls -1 %s 2>/dev/null" % device._q(registered()), timeout=60)
     return {l.strip() for l in out.splitlines() if l.strip()}
 
 
 def content_names(nsp_path):
-    """Noms des .nca d'un .nsp. Renvoie (noms, probleme)."""
+    """The .nca names inside a .nsp. Returns (names, problem)."""
     try:
         return [n for n, _, _ in read_pfs0(nsp_path) if n.lower().endswith(".nca")], None
     except Incomplet as exc:
@@ -153,14 +153,14 @@ def content_names(nsp_path):
 
 
 def status(paths, installed=None):
-    """Pour chaque .nsp : est-il actif dans Eden ?
+    """For each .nsp: is it active in Eden?
 
-    'actif'     tous ses contenus sont dans la NAND
-    'partiel'   installation incomplete (interrompue ?)
-    'absent'    rien n'est installe
-    'incomplet' le fichier source est tronque : inutilisable
-    'illisible' fichier corrompu
-    'inconnu'   console non consultee, on ne peut rien affirmer
+    'actif'     all its contents are in the NAND
+    'partiel'   incomplete install (interrupted?)
+    'absent'    nothing is installed
+    'incomplet' the source file is truncated: unusable
+    'illisible' corrupt file
+    'inconnu'   console not consulted, nothing can be asserted
     """
     if installed is None:
         installed = installed_ids()
@@ -187,7 +187,7 @@ def status(paths, installed=None):
 # --------------------------------------------------------------- installation
 
 def install(paths, job):
-    """Installe des .nsp (MAJ/DLC) dans la NAND d'Eden, via adb."""
+    """Install .nsp files (updates/DLC) into Eden's NAND, over adb."""
     if device.state() != "device":
         job.log("Console non connectee.")
         return
@@ -243,8 +243,8 @@ def install(paths, job):
                         device.ouvrir_droits(registered() + "/" + nom)
                         job.log("  installe %s (%.1f Mo)" % (nom[:20] + "…", taille / 1048576))
                     else:
-                        # ne jamais laisser un contenu partiel dans la NAND :
-                        # Eden le chargerait et le jeu planterait.
+                        # never leave partial content in the NAND: Eden would
+                        # load it and the game would crash.
                         device.remote_rm(registered() + "/" + nom)
                         job.log("  ECHEC %s : %s" % (nom[:20] + "…",
                                 "copie incomplete (%s sur %s octets), retiree de la console"
@@ -273,7 +273,7 @@ def install(paths, job):
 
 
 def _merge_title_keys(nouvelles, job):
-    """Ajoute les cles de titre sans toucher a celles deja presentes."""
+    """Add the title keys without touching those already present."""
     actuel = device._shell("cat %s 2>/dev/null" % device._q(title_keys()), timeout=60)
     lignes, connues = [], set()
     for l in actuel.splitlines():

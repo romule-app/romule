@@ -1,12 +1,12 @@
-"""Journal des acces, ecrit sur disque.
+"""The access log, written to disk.
 
-Le journal de l'interface vit en memoire : un redemarrage efface la trace des
-tentatives de connexion. Or c'est precisement ce qu'on veut relire apres coup,
-quand on se demande si quelqu'un a essaye d'entrer.
+The interface's log lives in memory: a restart wipes the trace of login
+attempts. Yet that is precisely what you want to read back afterwards, when
+wondering whether someone tried to get in.
 
-Format : une ligne JSON par evenement (JSONL), en 0600, avec rotation par
-taille. Rien d'autre n'est conserve — ni mot de passe, ni cookie, ni jeton :
-un journal qui contient des secrets devient lui-meme un secret a proteger.
+Format: one JSON line per event (JSONL), 0600, rotated by size. Nothing else is
+kept — no password, no cookie, no token: a log holding secrets becomes a secret
+to protect in its own right.
 """
 
 import json
@@ -16,7 +16,7 @@ import time
 from . import config
 
 FICHIER = config.fichier_etat("_romule-acces.log", "_switch-acces.log")
-TAILLE_MAX = 1 << 20            # 1 Mio, puis rotation
+TAILLE_MAX = 1 << 20            # 1 MiB, then rotation
 ARCHIVES = 3
 
 
@@ -33,8 +33,8 @@ def _tourner():
 
 
 def noter(evenement, ip="", email="", detail=""):
-    """Enregistre un evenement d'acces. Ne leve jamais : un journal qui casse
-    l'authentification serait pire que pas de journal."""
+    """Record an access event. Never raises: a log that breaks authentication
+    would be worse than no log at all."""
     try:
         _tourner()
         ligne = json.dumps({
@@ -54,7 +54,7 @@ def noter(evenement, ip="", email="", detail=""):
 
 
 def dernieres(n=200):
-    """Les n derniers evenements, du plus recent au plus ancien."""
+    """The last n events, newest first."""
     try:
         lignes = FICHIER.read_text(encoding="utf-8").splitlines()
     except OSError:
@@ -69,7 +69,7 @@ def dernieres(n=200):
 
 
 def resume():
-    """De quoi repondre a « est-ce que quelqu'un a essaye d'entrer ? »."""
+    """Enough to answer "did somebody try to get in?"."""
     ev = dernieres(500)
     refus = [e for e in ev if e.get("e") == "refus"]
     return {

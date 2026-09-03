@@ -1,24 +1,23 @@
-"""Profils d'emulateur : ou vivent les jeux, la NAND, les sauvegardes.
+"""Emulator profiles: where the games, the NAND and the saves live.
 
-L'outil etait ecrit pour UN emulateur — Eden — dont le nom de paquet Android et
-l'arborescence etaient ecrits en dur dans `nand.py`, `saves.py` et
-`edenconf.py`. Trois modules a modifier pour en essayer un autre, et deux
-d'entre eux ne s'accordaient meme pas sur le nom du paquet : `nand.py` disait
-`dev.eden.eden_emulator`, `saves.py` disait `dev.eden_emu.eden`. Un profil
-porte donc PLUSIEURS noms candidats, et l'on demande a la console lequel est
-reellement installe.
+The tool was written for ONE emulator — Eden — whose Android package name and
+directory layout were hard-coded across `nand.py`, `saves.py` and
+`edenconf.py`. Three modules to edit to try another one, and two of them did
+not even agree on the package name: `nand.py` said `dev.eden.eden_emulator`,
+`saves.py` said `dev.eden_emu.eden`. So a profile carries SEVERAL candidate
+names, and we ask the console which one is actually installed.
 
 Un profil decrit :
 
-    paquets      les noms Android possibles, du plus recent au plus ancien
-    donnees      gabarit du dossier de donnees, ou {paquet} est substitue
-    jeux_defaut  ou l'emulateur lit ses jeux, au premier reglage
-    config       format des reglages, ou null s'ils ne sont pas pilotables
-    sauvegardes  chemins des sauvegardes, relatifs au dossier de donnees
-    verifie      ce profil a-t-il ete essaye sur du materiel reel
+    paquets      the possible Android names, newest first
+    donnees      template of the data folder, where {paquet} is substituted
+    jeux_defaut  where the emulator reads its games, on first setup
+    config       the settings format, or null when they cannot be driven
+    sauvegardes  save paths, relative to the data folder
+    verifie      has this profile been tried on real hardware
 
-`verifie` est important et volontairement visible : seul Eden l'est. Annoncer
-une prise en charge qu'on n'a pas pu eprouver serait une promesse en l'air.
+`verifie` matters and is deliberately visible: only Eden is. Announcing support
+we could not put to the test would be an empty promise.
 """
 
 import json
@@ -33,7 +32,7 @@ _CACHE = None
 
 
 def tous():
-    """Tous les profils livres, dans l'ordre d'affichage."""
+    """Every shipped profile, in display order."""
     global _CACHE
     if _CACHE is None:
         out = []
@@ -41,7 +40,7 @@ def tous():
             try:
                 out.append(json.loads(f.read_text(encoding="utf-8")))
             except (OSError, ValueError):
-                continue          # un profil illisible n'empeche pas les autres
+                continue          # an unreadable profile does not stop the others
         _CACHE = sorted(out, key=lambda p: (p.get("ordre", 50), p.get("nom", "")))
     return _CACHE
 
@@ -63,11 +62,11 @@ def actif(cfg=None):
 
 
 def paquet(cfg=None):
-    """Nom de paquet retenu : celui detecte sur la console, sinon le premier.
+    """The package name we keep: the one detected on the console, else the first.
 
-    La detection est faite ailleurs et rangee dans la configuration : la
-    resoudre ici obligerait a interroger la console a chaque appel, y compris
-    pour afficher une page.
+    Detection happens elsewhere and is stored in the configuration: resolving it
+    here would mean querying the console on every call, including to render a
+    page.
     """
     cfg = cfg if cfg is not None else config.load_config()
     trouve = (cfg.get("emulateur_paquet") or "").strip()
@@ -78,7 +77,7 @@ def paquet(cfg=None):
 
 
 def dossier_donnees(cfg=None):
-    """Dossier de donnees de l'emulateur sur la console, ou "" si inconnu."""
+    """The emulator's data folder on the console, or "" when unknown."""
     cfg = cfg if cfg is not None else config.load_config()
     gabarit = actif(cfg).get("donnees") or ""
     p = paquet(cfg)
@@ -88,22 +87,22 @@ def dossier_donnees(cfg=None):
 
 
 def sous(chemin, cfg=None):
-    """Chemin sous le dossier de donnees, ou "" si celui-ci est inconnu."""
+    """A path under the data folder, or "" when that folder is unknown."""
     base = dossier_donnees(cfg)
     return (base + "/" + chemin.lstrip("/")) if base else ""
 
 
 def config_pilotable(cfg=None):
-    """Peut-on lire et ecrire les reglages de cet emulateur ?"""
+    """Can we read and write this emulator's settings?"""
     return bool((actif(cfg).get("config") or {}).get("format") == "ini-qt")
 
 
 def detecter(cfg=None):
-    """Demande a la console lequel des paquets candidats est installe.
+    """Ask the console which of the candidate packages is installed.
 
-    Renvoie le nom du paquet, ou "" si aucun. C'est ce qui remplace le nom
-    ecrit en dur : deux emulateurs du meme profil peuvent porter des noms
-    differents selon leur version.
+    Returns the package name, or "" when none is. This is what replaces the
+    hard-coded name: two emulators of the same profile may carry different
+    names depending on their version.
     """
     from . import device
     if not device.adb_available():
@@ -116,7 +115,7 @@ def detecter(cfg=None):
 
 
 def public():
-    """Ce que l'interface a besoin de savoir, sans les details d'arborescence."""
+    """What the interface needs to know, without the layout details."""
     return [{"cle": p["cle"], "nom": p["nom"], "verifie": bool(p.get("verifie")),
              "reglages": bool((p.get("config") or {}).get("format")),
              "note": p.get("note", "")} for p in tous()]
