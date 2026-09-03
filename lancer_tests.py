@@ -78,7 +78,7 @@ def unitaires():
                 "romule.tests.test_reseau",
                 "romule.tests.test_apikeys",
                 "romule.tests.test_reglages",
-                "romule.tests.test_rapprochement",
+                "romule.tests.test_matching",
                 "romule.tests.test_maj",
                 "romule.tests.test_covers",
                 "romule.tests.test_console",

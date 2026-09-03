@@ -27,16 +27,16 @@ import math
 import re
 import unicodedata
 
-_MOTS = re.compile(r"[a-z0-9]+")
+_WORDS = re.compile(r"[a-z0-9]+")
 
 # Words that do not help tell two games apart: they are ignored in the COUNT,
 # but not stripped from the candidate — "The Last of Us" must not become
 # "Last Us" along the way.
-_VIDES = {"the", "a", "an", "of", "and", "le", "la", "les", "de", "des", "du",
-          "et", "version", "edition", "deluxe", "hd", "remastered"}
+_STOPWORDS = {"the", "a", "an", "of", "and", "le", "la", "les", "de", "des",
+              "du", "et", "version", "edition", "deluxe", "hd", "remastered"}
 
 
-def mots(texte):
+def words(text):
     """The words of a title, with accents removed.
 
     Without this normalisation, "Pokémon" was split into "pok" and "mon" — the
@@ -44,44 +44,44 @@ def mots(texte):
     written in a file name. Exactly the kind of detail that would have rejected
     perfectly good entries.
     """
-    plat = unicodedata.normalize("NFKD", texte or "")
-    plat = "".join(c for c in plat if not unicodedata.combining(c))
-    return set(_MOTS.findall(plat.lower()))
+    flat = unicodedata.normalize("NFKD", text or "")
+    flat = "".join(c for c in flat if not unicodedata.combining(c))
+    return set(_WORDS.findall(flat.lower()))
 
 
-def distinctifs(vise):
+def distinctive(target):
     """The words that carry identity. If none survive, keep them all: a title
     made entirely of common words exists ("The Witness")."""
-    utiles = vise - _VIDES
-    return utiles or vise
+    useful = target - _STOPWORDS
+    return useful or target
 
 
-def couverture(candidat, cherche):
-    """Share of the distinctive words of `cherche` that `candidat` repeats, 0 to 1."""
-    vise = distinctifs(mots(cherche))
-    if not vise:
+def coverage(candidate, wanted):
+    """Share of the distinctive words of `wanted` that `candidate` repeats, 0 to 1."""
+    target = distinctive(words(wanted))
+    if not target:
         return 0.0
-    return len(vise & mots(candidat)) / len(vise)
+    return len(target & words(candidate)) / len(target)
 
 
-def assez_proche(candidat, cherche, seuil=2 / 3):
+def close_enough(candidate, wanted, threshold=2 / 3):
     """Does the candidate cover enough of what was being searched for?"""
-    vise = distinctifs(mots(cherche))
-    if not vise:
+    target = distinctive(words(wanted))
+    if not target:
         return False
-    requis = max(1, math.ceil(len(vise) * seuil))
-    return len(vise & mots(candidat)) >= requis
+    required = max(1, math.ceil(len(target) * threshold))
+    return len(target & words(candidate)) >= required
 
 
-def meilleur(candidats, cherche, nom=lambda x: x):
+def best(candidates, wanted, name=lambda x: x):
     """The closest candidate, or None if none is close enough.
 
     At equal coverage the SHORTEST title wins: it adds fewer words nobody asked
     for, so it strays less — which is what separates "Mario Kart 8" from
     "Mario Kart 8 Deluxe Booster Course Pass".
     """
-    retenus = [c for c in (candidats or []) if assez_proche(nom(c), cherche)]
-    if not retenus:
+    kept = [c for c in (candidates or []) if close_enough(name(c), wanted)]
+    if not kept:
         return None
-    return max(retenus, key=lambda c: (couverture(nom(c), cherche),
-                                       -len(mots(nom(c)))))
+    return max(kept, key=lambda c: (coverage(name(c), wanted),
+                                    -len(words(name(c)))))

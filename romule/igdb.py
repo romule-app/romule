@@ -23,7 +23,7 @@ import urllib.parse
 import urllib.request
 
 from . import config, reseau
-from . import rapprochement
+from . import matching
 
 TOKEN_URL = "https://id.twitch.tv/oauth2/token"
 API_URL = "https://api.igdb.com/v4"
@@ -210,7 +210,7 @@ def jaquette(nom, cfg=None):
     # A known game that simply has no image does NOT join `_ECHECS`: it exists,
     # and `chercher()` must still be able to get a summary out of it.
     avec = [j for j in jeux if (j.get("cover") or {}).get("image_id")]
-    j = rapprochement.meilleur(avec, nom, nom=lambda x: x.get("name") or "")
+    j = matching.best(avec, nom, name=lambda x: x.get("name") or "")
     return IMAGE % j["cover"]["image_id"] if j else None
 
 
@@ -291,7 +291,7 @@ def _meilleur(jeux, cherche):
     # "At least one word in common" was far too permissive: "Crazy" passed for
     # "Crazy Construction". A candidate must cover the MAJORITY of distinctive
     # words — same rule as for SteamGridDB, same reason.
-    return retenu if rapprochement.assez_proche(retenu.get("name"), cherche) else None
+    return retenu if matching.close_enough(retenu.get("name"), cherche) else None
 
 
 def tester(cfg=None):
