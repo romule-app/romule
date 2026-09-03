@@ -1,22 +1,22 @@
 #!/usr/bin/env python3
-"""Lance toute la batterie de tests de la ludotheque.
+"""Runs the library's whole test battery.
 
-    python3 lancer_tests.py                 # tout ce qui ne demande pas de navigateur
-    python3 lancer_tests.py --navigateur    # ajoute les tests dans un vrai Chrome
+    python3 lancer_tests.py                 # everything that needs no browser
+    python3 lancer_tests.py --navigateur    # adds the tests in a real Chrome
     python3 lancer_tests.py --tout
 
-Trois familles :
+Three families:
 
-  * **unitaires** — title IDs, couche adb : rapides, sans reseau ;
-  * **serveur**   — authentification interne et SSO, joues de bout en bout
-    contre un serveur reel demarre sur une racine JETABLE. La ludotheque de
-    l'utilisateur n'est jamais touchee ;
-  * **navigateur** — Chrome sans tete pilote en CDP. C'est la seule famille
-    capable de voir qu'un bouton ne repond plus : une politique de securite
-    trop stricte a deja rendu toute l'interface inerte sans qu'aucun test
-    hors navigateur ne s'en apercoive.
+  * **unitaires** — title IDs, the adb layer: fast, no network;
+  * **serveur**   — internal and SSO authentication, played end to end against a
+    real server started on a THROWAWAY root. The user's own library is never
+    touched;
+  * **navigateur** — headless Chrome driven over CDP. It is the only family able
+    to see that a button has stopped answering: a security policy that was too
+    strict once made the whole interface inert without any non-browser test
+    noticing.
 
-Aucune dependance : ni pytest, ni selenium, ni playwright.
+No dependency: no pytest, no selenium, no playwright.
 """
 
 import os
@@ -32,15 +32,15 @@ from pathlib import Path
 RACINE = Path(__file__).resolve().parent
 TESTS = RACINE / "romule" / "tests"
 def _port_libre():
-    """Un port que personne n'occupe, demande au systeme.
+    """A port nobody occupies, asked of the system.
 
-    Le port etait fige a 8798. Un serveur laisse par une execution
-    precedente — ou n'importe quoi d'autre sur la machine — s'y installait, et
-    la suite testait CE service-la : les resultats devenaient ceux d'une autre
-    version, rouges ou verts sans rapport avec le code qu'on venait d'ecrire.
-    C'est arrive, et le diagnostic a coute une heure.
+    The port used to be fixed at 8798. A server left over from an earlier run —
+    or anything else on the machine — settled there, and the suite tested THAT
+    service: the results became another version's, red or green with no relation
+    to the code just written. It happened, and the diagnosis cost an hour.
 
-    `LUDO_PORT_TESTS` reste accepte pour qui veut fixer le port a la main.
+    `LUDO_PORT_TESTS` is still accepted for whoever wants to fix the port by
+    hand.
     """
     fixe = os.environ.get("LUDO_PORT_TESTS")
     if fixe:
@@ -56,17 +56,18 @@ VERT, ROUGE, GRIS, RAZ = "\033[32m", "\033[31m", "\033[90m", "\033[0m"
 
 
 def titre(t):
-    # Les sous-processus ecrivent directement sur la sortie : sans vidage, les
-    # titres arrivent apres leur propre contenu et le rapport devient illisible.
+    # The sub-processes write straight to the output: without a flush, the
+    # headings arrive after their own content and the report becomes
+    # unreadable.
     print("\n%s== %s %s%s" % (GRIS, t, "=" * max(0, 58 - len(t)), RAZ), flush=True)
 
 
 def unitaires():
-    """Tests unitaires deja presents dans romule/tests/.
+    """The unit tests already present in romule/tests/.
 
-    Ce sont de simples fonctions `test_*` executees par le module lui-meme,
-    pas des `unittest.TestCase` : la decouverte automatique de `unittest` ne
-    les voit pas. On les lance donc comme ils sont concus pour l'etre.
+    These are plain `test_*` functions run by the module itself, not
+    `unittest.TestCase`s: `unittest`'s automatic discovery does not see them. So
+    we run them the way they are designed to be run.
     """
     titre("unitaires")
     ok = True
@@ -90,7 +91,7 @@ def unitaires():
 
 
 def script(chemin, args=()):
-    """Un test autonome : son code de sortie fait foi."""
+    """A standalone test: its exit code is the authority."""
     r = subprocess.run([sys.executable, str(chemin), *args], cwd=str(RACINE))
     return r.returncode == 0
 
@@ -140,21 +141,20 @@ def audit_securite():
     titre("audit de securite")
     r = subprocess.run([sys.executable, "-m", "romule.audit", "--hors-ligne"],
                        cwd=str(RACINE), capture_output=True, text=True)
-    print(r.stdout.strip().splitlines()[-1] if r.stdout.strip() else "(vide)")
-    # 2 = probleme grave. On ne fait pas echouer la batterie sur un choix
-    # d'installation (reseau ouvert), mais on l'affiche.
+    print(r.stdout.strip().splitlines()[-1] if r.stdout.strip() else "(empty)")
+    # 2 = a serious problem. We do not fail the battery over an installation
+    # choice (an open network), but we do display it.
     return r.returncode != 2 or "ouverte au reseau" in r.stdout
 
 
-# Les tests navigateur tournaient sur la ludotheque REELLE du poste et sur
-# l'adb REEL de la machine. Leur resultat dependait donc de ce qui etait branche
-# et de ce que l'auteur possedait — trois verdicts differents pour le meme code.
-# C'est ce qui a cache cinq chaines francaises sur l'ecran d'accueil.
+# The browser tests used to run on the workstation's REAL library and on the
+# machine's REAL adb. Their result therefore depended on what was plugged in and
+# on what the author owned — three different verdicts for the same code. That is
+# what hid five French strings on the home screen.
 #
-# On leur donne desormais un decor fixe : une racine jetable, quelques jeux
-# fabriques, une configuration deja ecrite (sinon l'assistant de premier
-# demarrage recouvre tout l'ecran et rien n'est cliquable), et un faux adb dans
-# l'etat choisi.
+# They are now given a fixed fixture: a throwaway root, a few fabricated games, a
+# configuration already written (otherwise the first-run wizard covers the whole
+# screen and nothing is clickable), and a fake adb in the chosen state.
 FAUX_ADB = TESTS / "navigateur" / ".." / "faux_adb.py"
 
 TITRES_TEST = [
@@ -165,7 +165,7 @@ TITRES_TEST = [
 
 
 def _semer(racine):
-    """Une petite ludotheque previsible : sans jeu, la moitie des ecrans est vide."""
+    """A small predictable library: with no game, half the screens are empty."""
     import json
     jeux = Path(racine) / "GAMES"
     jeux.mkdir(parents=True, exist_ok=True)
@@ -176,27 +176,27 @@ def _semer(racine):
         (covers / ("%s.en.json" % tid)).write_text(json.dumps({
             "name": nom, "publisher": "Romule", "releaseDate": "20240101",
             "intro": "A test entry, not a real game."}), encoding="utf-8")
-    # Une SECONDE plateforme, peuplee. Sans elle, tout le decor est en Switch
-    # et la bascule d'une plateforme a l'autre n'a rien a montrer : un test qui
-    # mesure le passage d'une liste a une autre restait vert meme sur du code
-    # qui vidait la grille, faute de seconde liste. Cinq fichiers suffisent.
+    # A SECOND platform, populated. Without it the whole fixture is Switch and
+    # switching from one platform to another has nothing to show: a test that
+    # measures the move from one list to another stayed green even on code that
+    # emptied the grid, for want of a second list. Five files are enough.
     gba = Path(racine) / "GBA"
     gba.mkdir(parents=True, exist_ok=True)
     for i in range(5):
         (gba / ("Un jeu portable %02d.gba" % i)).write_bytes(b"\0" * 2048)
 
-    # Une configuration presente = `first_run` faux = pas d'assistant par-dessus.
+    # A configuration present = `first_run` false = no wizard on top.
     (Path(racine) / "_romule-config.json").write_text(
         json.dumps({"ui_lang": "fr", "auth_mode": "aucun"}), encoding="utf-8")
 
 
 def _demarrer_serveur(etat=None):
-    """Serveur de test sur un decor fixe. `etat` est celui du faux adb.
+    """A test server on a fixed fixture. `etat` is the fake adb's state.
 
-    Par defaut : celui de l'environnement, donc « aucune » — l'etat de tout
-    nouvel utilisateur, et celui dont la branche d'affichage n'etait jamais
-    exercee. Le laisser lire l'environnement permet de rejouer la suite
-    entiere dans les trois etats et de verifier qu'elle rend le meme verdict.
+    By default: the environment's, so "none" — every new user's state, and the
+    one whose display branch was never exercised. Letting it read the environment
+    makes it possible to replay the whole suite in all three states and check it
+    returns the same verdict.
     """
     etat = etat or os.environ.get("ROMULE_FAUX_ADB", "aucune")
     racine = tempfile.mkdtemp(prefix="ludo-navigateur-")
@@ -221,21 +221,20 @@ def _demarrer_serveur(etat=None):
 
 
 def navigateur():
-    """Suites qui pilotent un vrai Chrome.
+    """The suites that drive a real Chrome.
 
-    La garde cherchait `/Applications/Google Chrome.app` — un chemin macOS.
-    Sur un runner Linux il n'existe pas, la famille se sautait donc, et le job
-    rendait 0. Resultat : les six suites navigateur n'ont JAMAIS tourne en
-    integration continue, y compris l'invariant anti-injection. Un test qui ne
-    s'execute nulle part est pire qu'absent : il donne une assurance.
+    The guard looked for `/Applications/Google Chrome.app` — a macOS path. On a
+    Linux runner it does not exist, so the family skipped itself and the job
+    returned 0. The result: the six browser suites NEVER ran in continuous
+    integration, the anti-injection invariant included. A test that runs nowhere
+    is worse than absent: it gives an assurance.
 
-    `cdp.trouver_chrome()` sait deja chercher sur les trois systemes et
-    respecte ROMULE_CHROME. On lui demande, plutot que de deviner.
+    `cdp.trouver_chrome()` already knows how to look on all three systems and
+    honours ROMULE_CHROME. We ask it, rather than guess.
 
-    Et surtout : quand ROMULE_CHROME est pose — donc quand quelqu'un a installe
-    Chrome EXPRES pour ces tests — ne pas trouver Chrome est un ECHEC, pas une
-    permission de passer son chemin. C'est ce qui empeche le silence de
-    revenir.
+    And above all: when ROMULE_CHROME is set — so when someone installed Chrome
+    ON PURPOSE for these tests — not finding Chrome is a FAILURE, not permission
+    to walk on by. That is what stops the silence from coming back.
     """
     titre("navigateur (Chrome sans tete)")
     sys.path.insert(0, str(TESTS / "navigateur"))
@@ -267,15 +266,15 @@ def navigateur():
 
 
 def coherence_doc():
-    """Les controles qui relient la documentation au code.
+    """The checks that tie the documentation to the code.
 
-    Ils vivaient en YAML dans les workflows, donc nulle part sur une machine de
-    developpement : on les decouvrait apres avoir pousse. Un controle qu'on ne
-    peut pas lancer avant de pousser est un controle qu'on subit.
+    They lived as YAML inside the workflows, so nowhere on a development machine:
+    you found out about them after pushing. A check you cannot run before pushing
+    is a check you merely endure.
 
-    `verifier-rendu.py` n'est PAS ici : il lit le site construit, ce qui demande
-    MkDocs — une dependance que ce depot n'a pas. Il reste dans le workflow de
-    documentation, qui l'installe deja.
+    `verifier-rendu.py` is NOT here: it reads the built site, which requires
+    MkDocs — a dependency this repository does not have. It stays in the
+    documentation workflow, which already installs it.
     """
     titre("coherence de la documentation")
     ok = True
@@ -292,11 +291,11 @@ def coherence_doc():
 
 
 def main(argv):
-    # L'adb de la machine est neutralise pour TOUTE la suite, pas seulement pour
-    # les tests navigateur : chaque test lance un serveur qui herite de
-    # l'environnement, et un appareil branche changeait donc silencieusement le
-    # decor. `setdefault` laisse la main : poser ROMULE_ADB soi-meme permet de
-    # rejouer contre un vrai appareil quand c'est ce qu'on veut.
+    # The machine's adb is neutralised for the WHOLE suite, not only for the
+    # browser tests: every test starts a server that inherits the environment,
+    # so a plugged-in device silently changed the fixture. `setdefault` leaves
+    # the choice open: setting ROMULE_ADB yourself makes it possible to replay
+    # against a real device when that is what you want.
     os.environ.setdefault("ROMULE_ADB", str(FAUX_ADB.resolve()))
     os.environ.setdefault("ROMULE_FAUX_ADB", "aucune")
 
