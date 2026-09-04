@@ -356,11 +356,11 @@ def is_oidc_admin(cfg, identity):
 def _check_authorised(cfg, identity):
     """Authenticated is not authorised: the provider usually knows far more
     accounts than those meant to reach THIS tool."""
-    def liste(cle):
-        v = cfg.get(cle) or ""
+    def csv_list(key):
+        v = cfg.get(key) or ""
         return [x.strip().lower() for x in str(v).replace(";", ",").split(",") if x.strip()]
 
-    emails, groupes = liste("oidc_emails"), liste("oidc_groupes")
+    emails, groupes = csv_list("oidc_emails"), csv_list("oidc_groupes")
     if not emails and not groupes:
         return                                   # aucune restriction demandee
     if emails and identity["email"] in emails:
