@@ -28,7 +28,7 @@ RACINE = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(RACINE))
 os.environ.setdefault("ROMULE_ROOT", tempfile.mkdtemp(prefix="cles-"))
 
-from romule import apikeys, comptes, config, vues                 # noqa: E402
+from romule import apikeys, comptes, config, views                # noqa: E402
 
 ok = ko = 0
 
@@ -140,9 +140,9 @@ def test_les_cles_api():
 
 
 def test_les_vues():
-    vues.creer("essai", {"systeme": "switch", "recherche": "mario",
+    views.create("essai", {"systeme": "switch", "recherche": "mario",
                          "etat": "all", "avances": []})
-    ecrites = _cles_du_disque(vues.FICHIER)
+    ecrites = _cles_du_disque(views.FILE)
     manquantes = sorted(ecrites - VUES)
     t("aucun champ de vue inconnu n'est ecrit", not manquantes,
       "champs ecrits mais non declares : %s" % manquantes)
