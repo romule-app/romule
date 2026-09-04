@@ -866,7 +866,7 @@ class Handler(BaseHTTPRequestHandler):
                         "roms_root": systems.roms_root(CFG),
                         # the drop folder uses this to filter, and so does the
                         # file-picker dialog
-                        "extensions": sorted(systems.extensions_acceptees(CFG))})
+                        "extensions": sorted(systems.accepted_exts(CFG))})
         elif p == "/api/saves-list":
             self._json({"items": saves.listing(), "dirs": saves.find_dirs(CFG)})
         elif p == "/api/device":
@@ -917,7 +917,7 @@ class Handler(BaseHTTPRequestHandler):
         # Every platform, not just the Switch: the tool knows how to file a GBA
         # ROM or a PS2 image, there is no reason to refuse one. A hand-added
         # platform brings its own extensions.
-        permises = systems.extensions_acceptees(CFG)
+        permises = systems.accepted_exts(CFG)
         if not name or Path(name).suffix.lower() not in permises:
             return self._json(
                 {"error": "Type non géré : %s. Formats acceptés : %s."
@@ -1445,7 +1445,7 @@ class Handler(BaseHTTPRequestHandler):
                             "retour": self._base_retour()})
 
         elif p == "/api/library-all":
-            self._json({"systemes": systems.tout(CFG)})
+            self._json({"systemes": systems.all_platforms(CFG)})
 
         elif p == "/api/console-analyse":
             self._job(actions.analyser_console, LIB, CFG, JOB)
@@ -1664,7 +1664,7 @@ class Handler(BaseHTTPRequestHandler):
             if dossier and device.state() == "device":
                 distants = [
                     {"nom": g["name"], "chemin": g["path"], "taille": g["size"],
-                     **systems._fiche_legere(meta.fiche_nom(g["name"], CFG, reseau=False))}
+                     **systems._light_entry(meta.fiche_nom(g["name"], CFG, reseau=False))}
                     for g in device.find_games(dossier, systems.get_cfg(key, CFG)["exts"])]
             self._json({"system": key, "games": systems.scan_local(key, CFG),
                         "console": distants, "device_dir": dossier})
@@ -1851,12 +1851,12 @@ class Handler(BaseHTTPRequestHandler):
                 if k in d:
                     CFG[k] = d[k]
             # Hand-added platforms are sanitised ON WRITE, not only on read.
-            # `systems.liste()` already puts the folder through `dossier_sur`,
+            # `systems.list_all()` already puts the folder through `dossier_sur`,
             # so nothing escapes today — but keeping a `../../..` in the
             # configuration file arms the trap for the next person who reads
             # that field directly.
             if "systemes_perso" in d:
-                CFG["systemes_perso"] = systems.assainir_perso(CFG["systemes_perso"])
+                CFG["systemes_perso"] = systems.clean_custom(CFG["systemes_perso"])
             config.save_config(CFG)
             sauvegarde.auto("reglages")
             JOB.notify_end = bool(CFG.get("notify", True))

@@ -98,44 +98,44 @@ ALIAS = {
 }
 
 
-def _normaliser(nom):
-    return re.sub(r"[^a-z0-9]", "", (nom or "").lower())
+def _normalise(name):
+    return re.sub(r"[^a-z0-9]", "", (name or "").lower())
 
 
 # {forme normalisee -> cle de plateforme}, dossiers officiels compris.
-_INDEX_ALIAS = {}
+_ALIAS_INDEX = {}
 for _s in SYSTEMS:
-    _INDEX_ALIAS[_normaliser(_s["folder"])] = _s["key"]
-    _INDEX_ALIAS[_normaliser(_s["key"])] = _s["key"]
-for _cle, _formes in ALIAS.items():
-    for _f in _formes:
-        _INDEX_ALIAS.setdefault(_normaliser(_f), _cle)
+    _ALIAS_INDEX[_normalise(_s["folder"])] = _s["key"]
+    _ALIAS_INDEX[_normalise(_s["key"])] = _s["key"]
+for _key, _forms in ALIAS.items():
+    for _f in _forms:
+        _ALIAS_INDEX.setdefault(_normalise(_f), _key)
 
 
-def plateforme_du_dossier(nom, cfg=None):
+def platform_for_folder(name, cfg=None):
     """Cle de plateforme correspondant a un nom de dossier, alias compris.
 
     Returns None if the name evokes nothing known: better to ask than to file
     a folder at random.
     """
-    n = _normaliser(nom)
+    n = _normalise(name)
     if not n:
         return None
     if cfg:
         # a folder the user explicitly mapped wins over everything
-        for cle, chemin in (cfg.get("system_dirs") or {}).items():
-            if _normaliser(Path(str(chemin)).name) == n:
-                return cle
+        for key, path in (cfg.get("system_dirs") or {}).items():
+            if _normalise(Path(str(path)).name) == n:
+                return key
         for s in (cfg.get("systemes_perso") or []):
-            if _normaliser(s.get("folder", "")) == n or _normaliser(s.get("key", "")) == n:
+            if _normalise(s.get("folder", "")) == n or _normalise(s.get("key", "")) == n:
                 return s.get("key")
-    return _INDEX_ALIAS.get(n)
+    return _ALIAS_INDEX.get(n)
 
 BY_KEY = {s["key"]: s for s in SYSTEMS}
 SWITCH = BY_KEY["switch"]
 
 
-def liste(cfg=None):
+def list_all(cfg=None):
     """Known platforms: the shipped ones, plus those the user added.
 
     Not every console is in the shipped table, and some store their games in a
@@ -145,15 +145,15 @@ def liste(cfg=None):
     cfg = cfg or config.load_config()
     out = list(SYSTEMS)
     for p in (cfg.get("systemes_perso") or []):
-        cle = cle_sure(p.get("key"))
-        if not cle or cle in BY_KEY:
+        key = safe_key(p.get("key"))
+        if not key or key in BY_KEY:
             continue
         # The extensions end up in a `find` run on the console: an apostrophe
         # there would break the quoting. We only keep extensions that look like
         # extensions.
-        exts = [x for x in (extension_sure(e) for e in (p.get("exts") or [])) if x]
-        out.append({"key": cle, "name": p.get("name") or cle,
-                    "folder": dossier_sur(p.get("folder"), cle),
+        exts = [x for x in (safe_ext(e) for e in (p.get("exts") or [])) if x]
+        out.append({"key": key, "name": p.get("name") or key,
+                    "folder": safe_folder(p.get("folder"), key),
                     "engine": "generic",
                     "exts": exts, "perso": True})
     return out
@@ -162,23 +162,23 @@ def liste(cfg=None):
 # A folder name coming from the configuration ends up as `config.LUDO / folder`
 # and the tool MOVES files into it. "../.." was therefore enough to file ROMs
 # anywhere on the host. Only a plain name is accepted.
-_NOM_DOSSIER = re.compile(r"^[^/\\:\x00]{1,64}$")
+_FOLDER_NAME = re.compile(r"^[^/\\:\x00]{1,64}$")
 
 
-def dossier_sur(nom, defaut):
+def safe_folder(name, default):
     """A usable folder name, or `defaut` when the proposed one is not."""
-    nom = str(nom or "").strip()
-    if not nom or nom in (".", "..") or not _NOM_DOSSIER.match(nom):
-        return defaut
-    return nom
+    name = str(name or "").strip()
+    if not name or name in (".", "..") or not _FOLDER_NAME.match(name):
+        return default
+    return name
 
 
 # The underscore is kept: harmless in a path as in a JavaScript string, and
 # removing it would rename keys already in place.
-_CLE_INTERDITE = re.compile(r"[^a-z0-9_]+")
+_FORBIDDEN_IN_KEY = re.compile(r"[^a-z0-9_]+")
 
 
-def cle_sure(k):
+def safe_key(k):
     """A usable platform key, or "" if nothing usable is left of it.
 
     The name and the folder went through a filter, the key did not — it made do
@@ -190,11 +190,11 @@ def cle_sure(k):
     someone had already declared disappear, and a lost platform is a library
     you cannot find again.
     """
-    k = _CLE_INTERDITE.sub("-", str(k or "").strip().lower()).strip("-_")
+    k = _FORBIDDEN_IN_KEY.sub("-", str(k or "").strip().lower()).strip("-_")
     return k[:32]
 
 
-def extension_sure(e):
+def safe_ext(e):
     """A usable extension: it ends up inside remote commands."""
     e = str(e or "").strip().lower()
     if not e:
@@ -203,31 +203,31 @@ def extension_sure(e):
     return e if re.match(r"^\.[a-z0-9]{1,8}$", e) else ""
 
 
-def assainir_perso(entrees):
+def clean_custom(entries):
     """Clean hand-added platforms before storing them.
 
     The same work `liste()` does on read, applied here on write. Two checks
     beat one when the field comes from an HTTP request and ends up in a file
     path or a remote command.
     """
-    propres = []
-    for p in (entrees or []):
+    clean = []
+    for p in (entries or []):
         if not isinstance(p, dict):
             continue
-        cle = cle_sure(p.get("key"))
-        if not cle or cle in BY_KEY:
+        key = safe_key(p.get("key"))
+        if not key or key in BY_KEY:
             continue
-        exts = [x for x in (extension_sure(e) for e in (p.get("exts") or [])) if x]
-        propres.append({"key": cle,
-                        "name": str(p.get("name") or cle)[:80],
-                        "folder": dossier_sur(p.get("folder"), cle),
+        exts = [x for x in (safe_ext(e) for e in (p.get("exts") or [])) if x]
+        clean.append({"key": key,
+                        "name": str(p.get("name") or key)[:80],
+                        "folder": safe_folder(p.get("folder"), key),
                         "exts": exts})
-    return propres
+    return clean
 
 
 def get_cfg(key, cfg=None):
     """Like get(), but also knows the hand-added platforms."""
-    for s in liste(cfg):
+    for s in list_all(cfg):
         if s["key"] == (key or "switch"):
             return s
     return SWITCH
@@ -254,12 +254,12 @@ def local_dir(sys_key, cfg=None):
     s = get_cfg(sys_key, cfg) if cfg else get(sys_key)
     if s["engine"] == "switch":
         return config.LUDO
-    chemin = (config.LUDO / s["folder"]).resolve()
+    path = (config.LUDO / s["folder"]).resolve()
     # Belt AND braces: even if a name slipped through the filter, the path we
     # build must never leave the library.
-    if not str(chemin).startswith(str(config.LUDO.resolve())):
+    if not str(path).startswith(str(config.LUDO.resolve())):
         raise ValueError("Dossier hors de la ludotheque : %s" % s["folder"])
-    return chemin
+    return path
 
 
 def device_dir(sys_key, cfg):
@@ -284,31 +284,31 @@ def device_dir(sys_key, cfg):
         return perso.rstrip("/")
     if perso:
         return root + "/" + perso.strip("/")
-    return root + "/" + _dossier_reel(sys_key, s["folder"])
+    return root + "/" + _real_folder(sys_key, s["folder"])
 
 
 # Folder names actually seen under the ROMs root, remembered from the last read
 # of the console. `device_dir` uses them to find a folder that does not carry
 # the expected name — "PS1" for PSX, "Sega" for the Mega Drive. Without this the
 # games exist, but the tool looks elsewhere.
-_DOSSIERS_REELS = []
+_REAL_FOLDERS = []
 
 
-def memoriser_dossiers(noms):
-    global _DOSSIERS_REELS
-    _DOSSIERS_REELS = sorted({n for n in noms if n})
+def remember_folders(names):
+    global _REAL_FOLDERS
+    _REAL_FOLDERS = sorted({n for n in names if n})
 
 
-def _dossier_reel(sys_key, defaut):
-    if not _DOSSIERS_REELS:
-        return defaut
-    reels = {_normaliser(n): n for n in _DOSSIERS_REELS}
-    if _normaliser(defaut) in reels:
-        return reels[_normaliser(defaut)]     # the expected name exists: nothing to do
-    for norme, nom in sorted(reels.items()):
-        if _INDEX_ALIAS.get(norme) == sys_key:
-            return nom                        # a known alias points at us
-    return defaut
+def _real_folder(sys_key, default):
+    if not _REAL_FOLDERS:
+        return default
+    real = {_normalise(n): n for n in _REAL_FOLDERS}
+    if _normalise(default) in real:
+        return real[_normalise(default)]     # the expected name exists: nothing to do
+    for norm, name in sorted(real.items()):
+        if _ALIAS_INDEX.get(norm) == sys_key:
+            return name                        # a known alias points at us
+    return default
 
 
 def roms_root(cfg):
@@ -324,7 +324,7 @@ def roms_root(cfg):
     return parent if d.rsplit("/", 1)[-1].lower() == SWITCH["folder"].lower() else d
 
 
-def extensions_acceptees(cfg=None):
+def accepted_exts(cfg=None):
     """Every droppable extension: those of ALL platforms, plus archives.
 
     The drop folder only accepted Switch formats. A GBA ROM or a PS2 image was
@@ -333,7 +333,7 @@ def extensions_acceptees(cfg=None):
     advance.
     """
     exts = set(config.ARCHIVES)
-    for s in liste(cfg):
+    for s in list_all(cfg):
         for e in (s.get("exts") or []):
             e = str(e).strip().lower()
             if e:
@@ -380,7 +380,7 @@ def scan_local(sys_key, cfg=None):
             "path": str(p),
             "rel": str(p.relative_to(config.LUDO)),
             "name": pretty_name(p.name),
-            **_fiche_legere(fiche),
+            **_light_entry(fiche),
             "file": p.name,
             "ext": p.suffix.lower().lstrip("."),
             "size": p.stat().st_size,
@@ -397,69 +397,69 @@ def detect_on_device(cfg):
     command, not one per platform.
     """
     from . import device
-    racine = roms_root(cfg)
-    if not racine or device.state() != "device":
-        return {"racine": racine, "connectee": False, "plateformes": []}
+    root = roms_root(cfg)
+    if not root or device.state() != "device":
+        return {"racine": root, "connectee": False, "plateformes": []}
 
     # a single `find` for the whole tree: the rest is local sorting
-    fichiers = _lire_arbre(racine, _COMMANDE_FIND % (device._q(racine), device._q(racine)))
-    _memoriser_depuis(racine, fichiers)
+    files = _read_tree(root, _FIND_COMMAND % (device._q(root), device._q(root)))
+    _remember_from(root, files)
 
     out = []
-    for s in liste(cfg):
-        dossier = device_dir(s["key"], cfg)
-        if not dossier:
+    for s in list_all(cfg):
+        folder = device_dir(s["key"], cfg)
+        if not folder:
             continue
-        prefixe = dossier.rstrip("/") + "/"
-        siens = [f for f in fichiers
-                 if f["path"].startswith(prefixe)
+        prefix = folder.rstrip("/") + "/"
+        owned = [f for f in files
+                 if f["path"].startswith(prefix)
                  and any(f["path"].lower().endswith(e) for e in s["exts"])]
-        if not siens and not _dossier_existe(fichiers, prefixe):
+        if not owned and not _folder_exists(files, prefix):
             continue                      # neither folder nor file: we invent nothing
         out.append({"key": s["key"], "name": s["name"], "folder": s["folder"],
-                    "dir": dossier, "count": len(siens),
-                    "bytes": sum(f["size"] for f in siens)})
-    return {"racine": racine, "connectee": True, "plateformes": out}
+                    "dir": folder, "count": len(owned),
+                    "bytes": sum(f["size"] for f in owned)})
+    return {"racine": root, "connectee": True, "plateformes": out}
 
 
-def tout(cfg):
+def all_platforms(cfg):
     """Every generic platform at once: local games and console files.
 
     One read of the console for all of them, instead of one per platform:
     essential to show the whole library without making the user wait.
     """
     from . import device, meta
-    racine = roms_root(cfg)
-    distants = []
-    if racine and device.state() == "device":
-        distants = _lire_arbre(racine, _COMMANDE_FIND % (device._q(racine), device._q(racine)))
-        _memoriser_depuis(racine, distants)
+    root = roms_root(cfg)
+    remote = []
+    if root and device.state() == "device":
+        remote = _read_tree(root, _FIND_COMMAND % (device._q(root), device._q(root)))
+        _remember_from(root, remote)
 
     out = []
-    for s in liste(cfg):
+    for s in list_all(cfg):
         if s["engine"] == "switch":
             continue                       # gere par scan.Library
-        dossier = device_dir(s["key"], cfg)
-        prefixe = (dossier.rstrip("/") + "/") if dossier else None
-        siens = []
-        if prefixe:
+        folder = device_dir(s["key"], cfg)
+        prefix = (folder.rstrip("/") + "/") if folder else None
+        owned = []
+        if prefix:
             # The same official title as in the per-platform view: without it,
             # the "all platforms" view fell back to the file name.
-            siens = [{"nom": f["name"], "chemin": f["path"], "taille": f["size"],
-                      **_fiche_legere(meta.fiche_nom(f["name"], cfg, reseau=False))}
-                     for f in distants
-                     if f["path"].startswith(prefixe)
+            owned = [{"nom": f["name"], "chemin": f["path"], "taille": f["size"],
+                      **_light_entry(meta.fiche_nom(f["name"], cfg, reseau=False))}
+                     for f in remote
+                     if f["path"].startswith(prefix)
                      and any(f["path"].lower().endswith(e) for e in s["exts"])
                      and not any(f["path"].lower().endswith(a) for a in config.ARCHIVES)]
-        locaux = scan_local(s["key"], cfg)
-        if not locaux and not siens:
+        local_games = scan_local(s["key"], cfg)
+        if not local_games and not owned:
             continue                       # platform absent on both sides
         out.append({"key": s["key"], "name": s["name"], "folder": s["folder"],
-                    "games": locaux, "console": siens})
+                    "games": local_games, "console": owned})
     return out
 
 
-_COMMANDE_FIND = (
+_FIND_COMMAND = (
     "find %s -maxdepth 3 -type f -printf '%%s|%%p\\n' 2>/dev/null "
     "|| find %s -maxdepth 3 -type f -exec stat -c '%%s|%%n' {} \\; 2>/dev/null")
 
@@ -467,28 +467,28 @@ _COMMANDE_FIND = (
 # rerun on every page load. We keep the result for a short while: long enough
 # that one render queries the console once, short enough not to hide a file you
 # just pushed.
-_CACHE_ARBRE = {"racine": None, "expire": 0.0, "fichiers": []}
-DUREE_CACHE_ARBRE = 20.0
+_TREE_CACHE = {"racine": None, "expire": 0.0, "fichiers": []}
+TREE_CACHE_TTL = 20.0
 
 
-def vider_cache_arbre():
+def clear_tree_cache():
     """Call this as soon as we WRITE to the console: the cache must never
     survive a push or a deletion."""
-    _CACHE_ARBRE["expire"] = 0.0
+    _TREE_CACHE["expire"] = 0.0
 
 
-def _lire_arbre(racine, commande):
+def _read_tree(root, command):
     import time as _t
     from . import device
-    if _CACHE_ARBRE["racine"] == racine and _CACHE_ARBRE["expire"] > _t.monotonic():
-        return _CACHE_ARBRE["fichiers"]
-    fichiers = device.parse_find(device._shell(commande, timeout=180))
-    _CACHE_ARBRE.update({"racine": racine, "fichiers": fichiers,
-                         "expire": _t.monotonic() + DUREE_CACHE_ARBRE})
-    return fichiers
+    if _TREE_CACHE["racine"] == root and _TREE_CACHE["expire"] > _t.monotonic():
+        return _TREE_CACHE["fichiers"]
+    files = device.parse_find(device._shell(command, timeout=180))
+    _TREE_CACHE.update({"racine": root, "fichiers": files,
+                         "expire": _t.monotonic() + TREE_CACHE_TTL})
+    return files
 
 
-def _fiche_legere(f):
+def _light_entry(f):
     """What a game's card needs to know: title, summary, year.
 
     The rest of the record (identifiers, urls) has no business in a response
@@ -503,22 +503,22 @@ def _fiche_legere(f):
             "url_resume": f.get("url_resume", "")}
 
 
-def _memoriser_depuis(racine, fichiers):
+def _remember_from(root, files):
     """Top-level folder names seen in the tree we read."""
-    base = racine.rstrip("/") + "/"
-    noms = {p[len(base):].split("/", 1)[0]
-            for p in (f.get("path") or "" for f in fichiers) if p.startswith(base)}
-    memoriser_dossiers(noms)
+    base = root.rstrip("/") + "/"
+    names = {p[len(base):].split("/", 1)[0]
+            for p in (f.get("path") or "" for f in files) if p.startswith(base)}
+    remember_folders(names)
 
 
-def _dossier_existe(fichiers, prefixe):
-    return any(f["path"].startswith(prefixe) for f in fichiers)
+def _folder_exists(files, prefix):
+    return any(f["path"].startswith(prefix) for f in files)
 
 
 def summary(cfg):
     """The systems with their local game counts (for the selector)."""
     out = []
-    for s in liste(cfg):
+    for s in list_all(cfg):
         if s["engine"] == "switch":
             n = None          # compte fourni par scan.Library
         else:

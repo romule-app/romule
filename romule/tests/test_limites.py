@@ -36,11 +36,11 @@ from romule import systems, edenconf
 
 for mauvais in ("../../evasion", "/etc", "a/b", "..", ""):
     t("dossier refuse : %r" % mauvais,
-      systems.dossier_sur(mauvais, "repli") == "repli")
-t("dossier normal accepte", systems.dossier_sur("Mega Drive", "x") == "Mega Drive")
-t("extension normale acceptee", systems.extension_sure("gba") == ".gba")
+      systems.safe_folder(mauvais, "repli") == "repli")
+t("dossier normal accepte", systems.safe_folder("Mega Drive", "x") == "Mega Drive")
+t("extension normale acceptee", systems.safe_ext("gba") == ".gba")
 t("extension avec apostrophe refusee",
-  systems.extension_sure(".gba' -o -name '*") == "")
+  systems.safe_ext(".gba' -o -name '*") == "")
 
 for mauvais in ("../../../data/x", "0100", "", "01006F8002326000/../x"):
     try:
