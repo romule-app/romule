@@ -220,7 +220,7 @@ function tidHtml(t) {   // the title ID, split up (detail view only)
   // not translated. But when there is none, it carried a LABEL, which must be
   // — and so stayed French. The same defect as `cnom`, for the fourth time: a
   // class cannot be both a style and a marker. The label gets its own class.
-  if (!t) return '<span class="tid-vide">' + esc(t18n('pas de title ID')) + '</span>';
+  if (!t) return '<span class="tid-empty">' + esc(t18n('pas de title ID')) + '</span>';
   return '<span class="tid">' + t.slice(0, 12) + '<b>' + t[12] + '</b>' +
     t.slice(13) + '</span>';
 }
@@ -303,7 +303,7 @@ const NON_TRADUIT = new Set(['CODE', 'PRE', 'SCRIPT', 'STYLE', 'TEXTAREA']);
 //
 // The data now carries `data-i18n-skip`, the attribute `traduisible()` already
 // reads: it marks the exact node, not its neighbourhood.
-const CLASSES_DONNEES = ['gname', 'compte-mail', 'pfchemin', 'tid',
+const CLASSES_DONNEES = ['gname', 'account-mail', 'pfchemin', 'tid',
                          'hostchip', 'cnom'];
 
 // The HTML's sentences are spread over several lines: the text node holds
@@ -558,13 +558,13 @@ function closeOverlay(el) {
     el.innerHTML = '';
     return;
   }
-  el.classList.add('ferme');
+  el.classList.add('closing');
   setTimeout(() => {
     // A dialog may have been reopened meanwhile — a dialog button that closes
     // then asks the next question, for instance. Opening removes `ferme`;
     // without this check we would empty the new dialog.
-    if (!el.classList.contains('ferme')) return;
-    el.classList.remove('open', 'ferme', 'sansentree');
+    if (!el.classList.contains('closing')) return;
+    el.classList.remove('open', 'closing', 'sansentree');
     el.innerHTML = '';
   }, FERMETURE_MS);
 }
@@ -741,7 +741,7 @@ function dialogue({titre, niveau = 'info', message = '', detail = '', options = 
     '<button class="ghost" data-di="close">' + esc(fermer) + '</button></div></div>';
   // Reopening cancels a closing in progress: without this, `closeOverlay`'s
   // deferred cleanup would empty the dialog we just opened.
-  el.classList.remove('ferme');
+  el.classList.remove('closing');
   el.classList.add('open');
   const premier = el.querySelector('[data-champ]');
   if (premier) premier.focus();
@@ -923,13 +923,13 @@ function majFab() {
   const btn = $('fab');
   if (!btn) return;
   const a = activite();
-  R.classe(btn, 'travaille', !!a);
+  R.classe(btn, 'working', !!a);
   R.texte($('fabtitre'), a ? a.titre : '');
   R.texte($('fabreste'), a ? (a.reste || '') : '');
 
   // With no known total, the gauge spins instead of lying about progress.
   const indetermine = !a || a.pct == null;
-  R.classe(btn, 'cherche', !!a && indetermine);
+  R.classe(btn, 'seeking', !!a && indetermine);
   const jauge = $('fabjauge');
   if (jauge) {
     jauge.style.strokeDasharray = indetermine
@@ -999,7 +999,7 @@ function renderTask(j) {
     if (typeof renderLib === 'function') renderLib();
   }
   R.classe(el, 'on', !!j.running);
-  R.classe($('journalbtn'), 'occupe', !!j.running);
+  R.classe($('journalbtn'), 'busy', !!j.running);
   if (!j.running) {
     $('bar').style.width = '0';
     R.texte($('tacheavance'), '');
@@ -1551,7 +1551,7 @@ function updateAlphabet() {
   }
   [...nav.children].forEach(b => {
     const dispo = ALPHA_POS.has(b.textContent);
-    R.classe(b, 'vide', !dispo);
+    R.classe(b, 'empty', !dispo);
     b.disabled = !dispo;
     R.classe(b, 'on', dispo && b.textContent === courante);
   });
@@ -1659,7 +1659,7 @@ function cardLabel({e}) {
     '</span>' +
     // `e.txt` is a status label taken from `ETATS`: it must go through the
     // catalogue like the visible text right beside it.
-    '<span class="etatmot ' + STATES[e.etat][0] + '" title="' + esc(t(e.txt)) + '">' +
+    '<span class="stateword ' + STATES[e.etat][0] + '" title="' + esc(t(e.txt)) + '">' +
       esc(SHORT_STATE[e.etat] || e.txt) + '</span>';
 }
 const TITRE_PRESENCE = {
@@ -1783,13 +1783,13 @@ function cardOverlay({g, e}) {
   // versions under the same title, it is the only thing telling them apart.
   const lg = languageLabels(g);
   if (lg) {
-    bouts.push('<span class="ov ovlangue" title="' + esc(lg.long) +
+    bouts.push('<span class="ov ovlang" title="' + esc(lg.long) +
       '" aria-label="' + esc(lg.long) + '">' + esc(lg.court) + '</span>');
   }
   if (g.updCount) bouts.push('<span class="ov">'
     + (g.updCount > 1 ? g.updCount + '&nbsp;' + t('MAJ') : t('MAJ')) + '</span>');
   if (g.dlcCount) bouts.push('<span class="ov">' + g.dlcCount + '&nbsp;DLC</span>');
-  return '<span class="ovtaille">' + esc(fmt(g.size)) + '</span>' +
+  return '<span class="ovsize">' + esc(fmt(g.size)) + '</span>' +
          (bouts.length ? '<span class="ovdroite">' + bouts.join('') + '</span>' : '');
 }
 
@@ -1856,7 +1856,7 @@ function cardHtml(x) {
     '<span class="pcheck' + (coche ? ' on' : '') + '">' + (coche ? '✓' : '') + '</span>' +
     (attente ? '<span class="enattente">Recherche des infos…</span>' : '') + '</div>' +
     '<div class="cap"><div class="gname">' + esc(gameName(g)) + '</div>' +
-    '<div class="ligne ' + cls + '">' + esc(txt) + '</div>' +
+    '<div class="line ' + cls + '">' + esc(txt) + '</div>' +
     // The group key comes from a file name: it travels through a `data-`
     // attribute, never inside the `onclick`'s JavaScript string — an apostrophe
     // in a title would break the handler there.
@@ -1875,7 +1875,7 @@ function updateCard(el, x) {
   // As soon as the details arrive, the waiting veil disappears without
   // redrawing the card — hence without making the cover flicker.
   const attente = SEARCHING_ENTRIES && withoutEntry(g);
-  R.classe(el, 'sansfiche', attente);
+  R.classe(el, 'noentry', attente);
   const art = el.querySelector('.art');
   const overlay = el.querySelector('.enattente');
   if (attente && !overlay && art) {
@@ -1891,8 +1891,8 @@ function updateCard(el, x) {
   if (c) { R.classe(c, 'on', coche); R.texte(c, coche ? '✓' : ''); }
   R.html(el.querySelector('.ovslot'), cardOverlay(x));
   const [cls, txt] = cardLine(x);
-  const l = el.querySelector('.ligne');
-  if (l) { l.className = 'ligne ' + cls; R.texte(l, txt); }
+  const l = el.querySelector('.line');
+  if (l) { l.className = 'line ' + cls; R.texte(l, txt); }
 }
 
 function updateChips() {
@@ -2053,7 +2053,7 @@ function majSection(g, e) {
 
   return '<div class="ssect">Mises à jour</div>' +
     '<div class="majbloc">' + l.join('') + '</div>' +
-    '<p class="erdit petit">Ces informations viennent de <a href="' + SOURCE_MAJ +
+    '<p class="erdit small">Ces informations viennent de <a href="' + SOURCE_MAJ +
     '" target="_blank" rel="noopener">titledb</a>, la base communautaire des versions ' +
     'Switch. L\'outil n\'y télécharge rien : il compare seulement ce que tu possèdes ' +
     'à ce qui existe.</p>';
@@ -2113,13 +2113,13 @@ function openGameHtml(g) {
     '<div><h3>' + esc(gameName(g)) + '</h3>' +
     // The medium, spelled out and drawn: the piece of information most missing
     // from a library that mixes twenty-three consoles.
-    '<div class="supportligne">' + silhouetteHtml(g, 'support gros') +
+    '<div class="mediumrow">' + silhouetteHtml(g, 'support gros') +
       '<span>' + esc(platformName(g)) + '</span>' +
       // Here there is room: we name the languages instead of reducing them to
       // "MULTI" as on the cover.
       (function () {
         const l = languageLabels(g);
-        return l ? '<span class="sep">·</span><span class="langues">' +
+        return l ? '<span class="sep">·</span><span class="languages">' +
                    esc(l.long) + '</span>' : '';
       })() +
     '</div>' +
@@ -2134,7 +2134,7 @@ function openGameHtml(g) {
     // Wikipedia's text is CC BY-SA: that licence requires citing the source.
     // The line stays empty when the summary comes from elsewhere.
     '<p class="gcredit" id="gm-credit">' + creditResume(g) + '</p>' +
-    '<div class="chiffres">' +
+    '<div class="figures">' +
       '<div><b>' + fmt(g.size) + '</b><span>total</span></div>' +
       '<div class="pres"><b class="' + (e.presence.mac ? 'p-oui' : 'p-non') + '">' +
         (e.presence.mac ? 'oui' : 'non') + '</b><span>sur le serveur</span></div>' +
@@ -2253,25 +2253,25 @@ function renderDuplicates(r) {
     ['Place récupérable', fmt(r.recuperable)],
   ]);
   if (r.identiques.length) {
-    h += '<h4 class="entretien-t">Fichiers rigoureusement identiques</h4>'
+    h += '<h4 class="upkeep-t">Fichiers rigoureusement identiques</h4>'
       + '<p class="mono">Même empreinte : en supprimer un ne perd rien.</p>'
-      + '<ul class="entretien-l">' + r.identiques.map(x =>
+      + '<ul class="upkeep-l">' + r.identiques.map(x =>
         '<li>' + fmt(x.taille) + ' × ' + x.fichiers.length + '<br>'
         + x.fichiers.map(f => '<code>' + esc(f) + '</code>').join('<br>') + '</li>').join('')
       + '</ul>';
   }
   if (r.regions.length) {
-    h += '<h4 class="entretien-t">Mêmes titres, régions ou révisions</h4>'
+    h += '<h4 class="upkeep-t">Mêmes titres, régions ou révisions</h4>'
       + '<p class="mono">Souvent involontaire — mais parfois voulu. À toi de voir.</p>'
-      + '<ul class="entretien-l">' + r.regions.map(x =>
+      + '<ul class="upkeep-l">' + r.regions.map(x =>
         '<li><b>' + esc(x.titre) + '</b> — ' + x.entrees.length + ' exemplaires, '
         + fmt(x.octets) + ' en trop<br>'
         + x.entrees.map(e => '<code>' + esc(e.nom) + '</code>').join('<br>')
         + '</li>').join('') + '</ul>';
   }
   if (r.multi_plateformes.length) {
-    h += '<h4 class="entretien-t">Mêmes jeux sur plusieurs plateformes</h4>'
-      + '<ul class="entretien-l">' + r.multi_plateformes.map(x =>
+    h += '<h4 class="upkeep-t">Mêmes jeux sur plusieurs plateformes</h4>'
+      + '<ul class="upkeep-l">' + r.multi_plateformes.map(x =>
         '<li><b>' + esc(x.titre) + '</b> — ' + x.plateformes.map(esc).join(', ')
         + '</li>').join('') + '</ul>';
   }
@@ -2301,7 +2301,7 @@ function renderBackups(r) {
     + 'une par heure.</p>'
     + '<div class="bar" style="margin:10px 0">'
     + '<button class="go" data-act="saveAllSettings">Sauvegarder maintenant</button></div>'
-    + (lots.length ? '<ul class="entretien-l">' + lots.map(l =>
+    + (lots.length ? '<ul class="upkeep-l">' + lots.map(l =>
         '<li><b>' + esc(l.date || l.lot) + '</b> <span class="mono">' + esc(l.motif || '')
         + ' · ' + countPhrase((l.fichiers || []).length, '{fichier|fichiers}') + '</span>'
         + ' <button class="ghost mini" data-act="restoreBackup" data-arg="' + esc(l.lot) + '">Restaurer</button></li>').join('') + '</ul>'
@@ -2318,7 +2318,7 @@ function renderAccess(r) {
     ['Tentatives refusées', s.refus || 0],
     ['Dernière connexion', esc((s.derniere_connexion || {}).t || '—')],
   ])
-  + (ev.length ? '<ul class="entretien-l entretien-acces">' + ev.slice(0, 40).map(e =>
+  + (ev.length ? '<ul class="upkeep-l upkeep-access">' + ev.slice(0, 40).map(e =>
       '<li class="ac-' + esc(e.e) + '"><span class="mono">' + esc(e.t) + '</span> '
       + esc(nom[e.e] || e.e) + (e.email ? ' — ' + esc(e.email) : '')
       + (e.ip ? ' <span class="mono">' + esc(e.ip) + '</span>' : '')
@@ -2639,12 +2639,12 @@ function renderPlatforms(r) {
   }
   PLATFORMS = p;
   el.innerHTML = '<div class="pfgrille">' + p.map(s =>
-    '<button class="pfcarte' + (s.key === PF_OUVERTE ? ' on' : '') +
+    '<button class="pfcard' + (s.key === PF_OUVERTE ? ' on' : '') +
     '" data-act="openPlatform" data-arg="' + esc(s.key) + '" ' +
     'title="' + esc(tpl('Détail de %s', s.name)) + '">' +
-      '<span class="pfnom">' + esc(s.name) + '</span>' +
+      '<span class="pfname">' + esc(s.name) + '</span>' +
       '<span class="pfn">' + s.count + '</span>' +
-      '<span class="pftaille">' + fmt(s.bytes) + '</span>' +
+      '<span class="pfsize">' + fmt(s.bytes) + '</span>' +
       '<span class="pfdir">' + esc(s.folder) + '/</span>' +
     '</button>').join('') + '</div>' +
     '<div class="mono" style="margin-top:8px">' +
@@ -2744,7 +2744,7 @@ function renderPfCommun(sys) {
           '<button class="ghost" data-act="organize">Ranger par type</button>' : '') +
     '</div>' +
     (sys.engine === 'switch'
-      ? '<p class="erdit petit">La Switch est la seule plateforme à séparer jeux, mises à '
+      ? '<p class="erdit small">La Switch est la seule plateforme à séparer jeux, mises à '
         + 'jour et DLC : Eden en a besoin. Les autres rangent tout à plat.</p>' : '');
 }
 
@@ -2917,7 +2917,7 @@ function erSection(g) {
     '<p class="erdit">' + intro + '</p>' +
     miens.map(r => ligne(r, true)).join('') +
     autres.map(r => ligne(r, false)).join('') +
-    '<p class="erdit petit">« Voir » montre les réglages avant de les poser. ' +
+    '<p class="erdit small">« Voir » montre les réglages avant de les poser. ' +
     'Ta configuration actuelle est sauvegardée : le retour en arrière est toujours possible.</p>' +
     '<div id="er-backups"></div>';
 }
@@ -3582,9 +3582,9 @@ function renderKeys() {
     return;
   }
   boite.innerHTML = vivantes.map(k =>
-    '<div class="compte-ligne">'
-    + '<span class="compte-nom" data-i18n-skip>' + esc(k.nom) + '</span>'
-    + '<span class="compte-mail tid" data-i18n-skip>' + esc(k.prefixe) + '…</span>'
+    '<div class="account-row">'
+    + '<span class="account-name" data-i18n-skip>' + esc(k.nom) + '</span>'
+    + '<span class="account-mail tid" data-i18n-skip>' + esc(k.prefixe) + '…</span>'
     + '<span class="mono" data-i18n-skip>' + esc(dateKey(k.dernier_usage)) + '</span>'
     + '<button class="ghost mini" data-act="revokeKey" data-arg="'
     + esc(k.id) + '">' + esc(t('Révoquer')) + '</button>'
@@ -3674,9 +3674,9 @@ function renderNotifications() {
     return;
   }
   boite.innerHTML = NOTIFS.map(d =>
-    '<div class="compte-ligne">'
-    + '<span class="compte-nom" data-i18n-skip>' + esc(d.nom || d.service) + '</span>'
-    + '<span class="compte-mail tid" data-i18n-skip>' + esc(d.service) + '</span>'
+    '<div class="account-row">'
+    + '<span class="account-name" data-i18n-skip>' + esc(d.nom || d.service) + '</span>'
+    + '<span class="account-mail tid" data-i18n-skip>' + esc(d.service) + '</span>'
     + '<span class="mono" data-i18n-skip>' + esc(d.apercu) + '</span>'
     + '<button class="ghost mini" data-act="testNotification" data-arg="'
     + esc(d.id) + '">' + esc(t('Tester')) + '</button>'
@@ -3746,8 +3746,8 @@ function renderAccounts() {
   const boite = $('listecomptes');
   if (boite) {
     const remplir = (el, c) => {
-      R.texte(el.querySelector('.compte-nom'), c.nom);
-      R.texte(el.querySelector('.compte-mail'),
+      R.texte(el.querySelector('.account-name'), c.nom);
+      R.texte(el.querySelector('.account-mail'),
               c.email + (c.id === MOI ? ' — toi' : ''));
       const b = el.querySelector('button');
       // We do not offer to remove the last account: nobody could get in any
@@ -3759,26 +3759,26 @@ function renderAccounts() {
       cle: c => c.id,
       creer: c => {
         const el = document.createElement('div');
-        el.className = 'compte-ligne';
-        el.innerHTML = '<span class="compte-nom"></span>'
-          + '<span class="compte-mail tid"></span>'
+        el.className = 'account-row';
+        el.innerHTML = '<span class="account-name"></span>'
+          + '<span class="account-mail tid"></span>'
           + '<button class="ghost mini">Retirer</button>';
         remplir(el, c);
         return el;
       },
       majEl: remplir,
     });
-    R.classe(boite, 'vide', !ACCOUNTS.length);
+    R.classe(boite, 'empty', !ACCOUNTS.length);
   }
   const carte = $('moncompte');
   if (!carte) return;
   const moi = ACCOUNTS.find(c => c.id === MOI);
   if (!moi) { carte.innerHTML = ''; return; }
-  carte.innerHTML = '<div class="moncompte">'
+  carte.innerHTML = '<div class="myaccount">'
     + '<div class="avatar"></div>'
-    + '<div class="moncompte-txt"><b class="compte-nom"></b>'
-    + '<span class="compte-mail tid"></span></div>'
-    + '<div class="moncompte-act">'
+    + '<div class="myaccount-txt"><b class="account-name"></b>'
+    + '<span class="account-mail tid"></span></div>'
+    + '<div class="myaccount-act">'
     + '<button class="ghost mini" data-a="photo">Changer la photo</button>'
     + '<button class="ghost mini" data-a="nom">Renommer</button>'
     + '<button class="ghost mini" data-a="mdp">Mot de passe</button>'
@@ -3794,8 +3794,8 @@ function renderAccounts() {
   } else {
     av.textContent = (moi.nom || moi.email).slice(0, 1).toUpperCase();
   }
-  R.texte(carte.querySelector('.compte-nom'), moi.nom);
-  R.texte(carte.querySelector('.compte-mail'), moi.email);
+  R.texte(carte.querySelector('.account-name'), moi.nom);
+  R.texte(carte.querySelector('.account-mail'), moi.email);
   const actions = {photo: choosePhoto, nom: renameAccount,
                    mdp: changerMotDePasse,
                    totp: () => moi.double_facteur ? retirerDoubleFacteur()
@@ -3921,8 +3921,8 @@ function openPlatformChoice(items) {
       : tpl('Aucune information : %s plateformes utilisent ',
                  it.candidats.length)
         + esc(it.extension) + '.';
-    return '<div class="classer-l">'
-      + '<div class="classer-n"><b>' + esc(it.nom) + '</b>'
+    return '<div class="assign-l">'
+      + '<div class="assign-n"><b>' + esc(it.nom) + '</b>'
       + '<span class="mono">' + fmt(it.taille) + '  ·  ' + esc(pourquoi) + '</span></div>'
       + '<select data-chemin="' + esc(it.chemin) + '">'
       + '<option value="">— laisser dans le dépôt —</option>' + opts + '</select></div>';
@@ -3933,12 +3933,12 @@ function openPlatformChoice(items) {
     + '<p class="dmsg">' + tpl('%d {fichier|fichiers} portent une extension que ', items.length)
     + 'plusieurs plateformes utilisent. Choisis, ou laisse-les dans le dépôt.</p>'
     + '</div></div>'
-    + '<div class="classer">' + items.map(ligne).join('') + '</div>'
+    + '<div class="assign">' + items.map(ligne).join('') + '</div>'
     + '<div class="acts"><button class="go" data-di="ok">Ranger</button>'
     + '<button class="ghost" data-di="close">Plus tard</button></div></div>';
   // Reopening cancels a closing already under way: without this, the deferred
   // cleanup in `closeOverlay` would empty the dialog we have just opened.
-  el.classList.remove('ferme');
+  el.classList.remove('closing');
   el.classList.add('open');
   el.querySelectorAll('[data-di]').forEach(b => b.addEventListener('click', async () => {
     const valider = b.dataset.di === 'ok';
@@ -4154,7 +4154,7 @@ const app = {
       $('modal').innerHTML = openGameHtml(g);
       // Reopening cancels a closing already under way: without this, the
       // deferred cleanup in `closeOverlay` would empty the dialog we just opened.
-      $('modal').classList.remove('ferme');
+      $('modal').classList.remove('closing');
       $('modal').classList.add('open');
       auPremierPlan($('modal'));
     });
@@ -4315,7 +4315,7 @@ const app = {
 
     // Nothing cached: we announce the loading WITHOUT emptying, so the grid's
     // height does not move — that is what made the page jump.
-    R.classe($('lib'), 'charge', true);
+    R.classe($('lib'), 'loading', true);
     const jeton = ++CHARGE_SYS;
     try {
       const donnees = vueTotale()
@@ -4330,7 +4330,7 @@ const app = {
       applySystem(donnees);
       renderLib();
     } finally {
-      if (jeton === CHARGE_SYS) R.classe($('lib'), 'charge', false);
+      if (jeton === CHARGE_SYS) R.classe($('lib'), 'loading', false);
     }
   },
   // One main action off the Switch too: it sends the console what is missing,
@@ -4921,7 +4921,7 @@ const app = {
     // so during the 2.5 s of the retry, the card displayed a broken rectangle.
     // We hide it at once: `.cover`'s background already acts as an empty
     // sleeve, as it does in the grid.
-    img.classList.add('vide');
+    img.classList.add('empty');
     if (img.dataset.retry) { img.remove(); return; }
     img.dataset.retry = '1';
     const base = img.src.split('&r=')[0];
@@ -4942,7 +4942,7 @@ const app = {
   },
 
   coverForView(img) {
-    img.classList.remove('vide');
+    img.classList.remove('empty');
     const hote = img.closest('.gcard') || img.closest('.sheet');
     if (!hote) return;
     const cle = (hote.dataset.couleur || '').toLowerCase();
@@ -5266,7 +5266,7 @@ const app = {
         '<div class="acts"><button class="ghost" data-act="closeDialog">' +
           'Fermer</button></div>' +
       '</div>';
-    el.classList.remove('ferme');
+    el.classList.remove('closing');
     el.classList.add('open');
     auPremierPlan(el);
     translateDOM(el);
@@ -5373,7 +5373,7 @@ const app = {
   // source, not an extra class to keep in step.
   toggleFilters() {
     const b = $('replier');
-    const ouvert = document.body.classList.toggle('filtres-ouverts');
+    const ouvert = document.body.classList.toggle('filters-open');
     if (b) b.setAttribute('aria-expanded', ouvert ? 'true' : 'false');
   },
   toggleFavPop(e) {
@@ -5571,7 +5571,7 @@ const app = {
   openPlatform(key) {
     if (!key) return;
     PF_OUVERTE = key;
-    document.querySelectorAll('.pfcarte').forEach(b =>
+    document.querySelectorAll('.pfcard').forEach(b =>
       R.classe(b, 'on', b.getAttribute('onclick').includes("'" + key + "'")));
     this.choosePlatformSettings(key);
     const sel = $('s-plateforme');
@@ -5692,7 +5692,7 @@ const app = {
   // Seeing is not deciding.
   async showMaintenance(quoi) {
     const b = $('entretien');
-    document.querySelectorAll('.entretien button').forEach(x =>
+    document.querySelectorAll('.upkeep button').forEach(x =>
       R.classe(x, 'on', x.getAttribute('onclick').includes("'" + quoi + "'")));
     R.texte(b, 'Lecture…');
     const rendus = {
@@ -5805,8 +5805,8 @@ const app = {
       cible.scrollIntoView({behavior: 'smooth', block: 'start'});
       // A brief visual marker: without it, you cannot tell which of the ten
       // visible cards is the one you aimed at.
-      R.classe(cible, 'visee', true);
-      setTimeout(() => R.classe(cible, 'visee', false), 1400);
+      R.classe(cible, 'targeted', true);
+      setTimeout(() => R.classe(cible, 'targeted', false), 1400);
       setTimeout(updateAlphabet, 420);
     };
     // The clicked letter acknowledges the hit: without that feedback, a click
@@ -5815,10 +5815,10 @@ const app = {
     const bouton = [...document.querySelectorAll('#alphabet .alpha')]
       .find(b => b.textContent === lettre);
     if (bouton) {
-      bouton.classList.remove('atteinte');
+      bouton.classList.remove('reached');
       void bouton.offsetWidth;          // forces the animation to restart
-      bouton.classList.add('atteinte');
-      setTimeout(() => bouton.classList.remove('atteinte'), 600);
+      bouton.classList.add('reached');
+      setTimeout(() => bouton.classList.remove('reached'), 600);
     }
     ALPHA_VISEE = lettre;
     ALPHA_JUSQUA = Date.now() + 1400;   // long enough for the scroll to settle
@@ -5852,7 +5852,7 @@ const app = {
     if (!r.ok) {
       el.innerHTML = '<p class="erdit alerte">' +
         tpl('Échec : %s', esc(r.message || t('inconnu'))) + '</p>' +
-        '<p class="erdit petit">Adresse de retour à déclarer chez le fournisseur : <code>' +
+        '<p class="erdit small">Adresse de retour à déclarer chez le fournisseur : <code>' +
         esc(r.retour || '') + '</code></p>';
       return;
     }
@@ -5865,7 +5865,7 @@ const app = {
        ['Adresse de retour', '<code>' + esc(r.retour) + '</code>']]
       .map(([k, v]) => '<div class="majrow"><span>' + k + '</span><b>' + v + '</b></div>').join('') +
       '</div>' +
-      '<p class="erdit petit">Déclare cette adresse de retour chez ton fournisseur, ' +
+      '<p class="erdit small">Déclare cette adresse de retour chez ton fournisseur, ' +
       'puis passe le mode sur « SSO ». Une adresse qui ne correspond pas au caractère ' +
       'près sera refusée.</p>';
   },
@@ -6200,7 +6200,7 @@ function onbEtapes(h) {
 
 function renderScanOnboard(r) {
   if (!r.total) {
-    return '<div class="onbresultat vide"><b>Aucun jeu trouvé.</b>' +
+    return '<div class="onbresultat empty"><b>Aucun jeu trouvé.</b>' +
       '<p class="onbnote">Dépose tes fichiers dans ce dossier, puis relance ' +
       'l\'analyse.</p><p class="onbnote">' +
       t('Romule reconnaît %d extensions de fichier.')
@@ -6216,7 +6216,7 @@ function renderScanOnboard(r) {
 
 function renderConsoleScan(r) {
   if (!r.total) {
-    return '<div class="onbresultat vide"><b>Aucun jeu sur la console.</b></div>';
+    return '<div class="onbresultat empty"><b>Aucun jeu sur la console.</b></div>';
   }
   return '<div class="onbresultat"><b>' +
     t('%d jeux sur la console').replace('%d', r.total) + '</b>' +
@@ -6242,7 +6242,7 @@ function renderOnboard() {
   const dernier = ONB.i === etapes.length - 1;
   const bloque = e.requis && e.valide && !e.valide();
 
-  el.innerHTML = '<div class="obox onbcarte">' +
+  el.innerHTML = '<div class="obox onbcard">' +
     '<div class="onbtete">' +
       '<span class="onbrang">' + t('Étape %d sur %d')
         .replace('%d', ONB.i + 1).replace('%d', etapes.length) + '</span>' +
@@ -6993,7 +6993,7 @@ function buildCardChoices() {
     // the setting only concerns that one game. A plain number, on the other
     // hand, did not show what the effect does to a card.
     const vue = document.createElement('span');
-    vue.className = 'apercu';
+    vue.className = 'preview';
     const img = document.createElement('img');
     img.className = 'apimg';
     img.alt = '';
@@ -7327,7 +7327,7 @@ function fillPalette(q) {
 function renderPalette() {
   const liste = $('palliste');
   if (!PALETTE_CHOIX.length) {
-    liste.innerHTML = '<div class="palvide">Rien ne correspond.</div>';
+    liste.innerHTML = '<div class="palempty">Rien ne correspond.</div>';
     translateDOM(liste);
     return;
   }
@@ -7335,7 +7335,7 @@ function renderPalette() {
     '<div class="palitem' + (i === PALETTE_INDEX ? ' on' : '') + '" role="option" data-i="' + i + '">' +
       '<span class="paltype">' + (c.type === 'jeu' ? 'JEU' : 'ACTION') + '</span>' +
       '<span class="paltitre">' + esc(c.titre) + '</span>' +
-      (c.etat ? '<span class="paletat ' + c.etat[0] + '">' + esc(c.etat[1]) + '</span>' : '') +
+      (c.etat ? '<span class="palstate ' + c.etat[0] + '">' + esc(c.etat[1]) + '</span>' : '') +
       (c.detail ? '<span class="paldetail">' + esc(c.detail) + '</span>' : '') +
     '</div>').join('');
   liste.querySelectorAll('.palitem').forEach(el =>
@@ -7539,7 +7539,7 @@ function previewEl() {
   if (!el) {
     el = document.createElement('div');
     el.id = 'apercujeu';
-    el.className = 'apercujeu';
+    el.className = 'gamepreview';
     el.setAttribute('role', 'tooltip');
     document.body.appendChild(el);
   }
@@ -7638,7 +7638,7 @@ updateAppearance();
 // displaying wrong information, even for a second, is worse than saying
 // nothing.
 (async () => {
-  document.body.classList.add('chargement');
+  document.body.classList.add('loadingstate');
   renderHost();
   renderA2HS();
   app.langLoad();
@@ -7651,7 +7651,7 @@ updateAppearance();
     // Running them IN PARALLEL was tried: the first paint gained 0.7 s, but the
     // two reads fought over the disk and adb, and the console's state took 10 s
     // instead of 2.5 s to arrive. A bad trade.
-    document.body.classList.remove('chargement');
+    document.body.classList.remove('loadingstate');
     document.body.classList.add('pret');
     // The "all platforms" view ALREADY shows the Switch games at this point:
     // `jeuxTous()` starts from `GAMES`, which `scan()` has just filled. The
@@ -7671,7 +7671,7 @@ updateAppearance();
     // the files present only on the console would never appear there.
     if (vueTotale() && CONN.kind) { forgetSystemCache(); app.setSystem('all'); }
   } finally {
-    document.body.classList.remove('chargement');
+    document.body.classList.remove('loadingstate');
     document.body.classList.add('pret');
     DEMARRAGE = false;               // from here on, the user is acting
   }
@@ -7737,18 +7737,18 @@ updateAppearance();
     const delta = e.clientY - depart;
     if (!bouge && Math.abs(delta) < SEUIL) return;
     bouge = true;
-    btn.classList.add('glisse');
+    btn.classList.add('dragging');
     poser(origine + delta, false);
   });
   btn.addEventListener('pointerup', e => {
     if (!actif) return;
     actif = false;
-    btn.classList.remove('glisse');
+    btn.classList.remove('dragging');
     try { btn.releasePointerCapture(e.pointerId); } catch (_) { /* already released */ }
     if (bouge) { poser(btn.getBoundingClientRect().top, true); finGlisse = performance.now(); }
   });
   btn.addEventListener('pointercancel', () => {
-    actif = false; bouge = false; btn.classList.remove('glisse');
+    actif = false; bouge = false; btn.classList.remove('dragging');
   });
   // Capture: the button's own handler is in the bubbling phase, so it comes
   // after this one. That is what makes cancelling the click possible.

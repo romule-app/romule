@@ -123,7 +123,7 @@ const t = (n, c, d) => c ? (ok++, console.log('      OK   ' + n))
   t('/api/comptes is called', appels.includes('/api/comptes'));
 
   const carte = ids.get('moncompte');
-  t('the "my account" card is filled', /moncompte/.test(carte.innerHTML), carte.innerHTML.slice(0, 60));
+  t('the "my account" card is filled', /myaccount/.test(carte.innerHTML), carte.innerHTML.slice(0, 60));
   const av = carte.querySelector('avatar');
   t('the photo is set on the avatar', /\/photo\/aaa\?v=/.test(av.style.backgroundImage || ''),
     av.style.backgroundImage);

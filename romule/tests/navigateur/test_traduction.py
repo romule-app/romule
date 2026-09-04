@@ -80,8 +80,8 @@ RESTE_FR = r"""
   // n'y sont plus : elles enveloppent un melange, et leurs parties de donnee
   // portent maintenant `data-i18n-skip`. `erdit`, `sub2` et `gdesc` non plus :
   // c'est de la prose, et les exclure revenait a ne pas la tester.
-  const DONNEES = ['gname','compte-mail','pfchemin','tid','hostchip','cnom',
-                   'pfdir','pfnom'];
+  const DONNEES = ['gname','account-mail','pfchemin','tid','hostchip','cnom',
+                   'pfdir','pfname'];
   const ACCENTS = /[àâçéèêëîïôûùüÿœÀÂÇÉÈÊËÎÏÔÛÙÜŸŒ]/;
   // Le francais ne se trahit pas que par ses accents. Deux mots-outils
   // suffisent, comme dans l'extracteur statique.

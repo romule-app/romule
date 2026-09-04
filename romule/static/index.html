@@ -40,7 +40,7 @@
       <div id="conn" class="conn"></div>
       <!-- Ouvrir l'interface sur l'ecran de la console : un geste qu'on fait
            depuis n'importe quel ecran, pas un reglage. -->
-      <button class="ghost surconsole" id="installwrap" style="display:none"
+      <button class="ghost onconsole" id="installwrap" style="display:none"
               data-act="openOnConsole" title="" aria-label="Ouvrir sur la console">
         <span class="hicon">📱</span>
       </button>
@@ -55,9 +55,9 @@
 
 <!-- Voile de demarrage : masque l'interface tant que l'inventaire n'est pas
      revenu, pour ne jamais afficher de compteurs a zero ni de console absente. -->
-<div class="chargeur" id="chargeur">
-  <div class="chargeur-in">
-    <div class="chargeur-anneau"></div>
+<div class="spinner" id="chargeur">
+  <div class="spinner-in">
+    <div class="spinner-ring"></div>
     <b>Lecture de ta ludothèque…</b>
     <span class="mono" id="chargeurtxt">inventaire des fichiers</span>
   </div>
@@ -207,20 +207,20 @@
     <!-- Ce qui tourne, attache au bouton « + ». Une bulle flottante separee
          disait la meme chose que le bouton, a un autre endroit de l'ecran. Le
          journal garde son role : l'historique de ce qui S'EST passe. -->
-    <div class="tachewrap" id="tachewrap" role="status" aria-live="polite">
+    <div class="taskwrap" id="tachewrap" role="status" aria-live="polite">
       <div class="drophead"><b>En cours</b>
         <button class="ghost" data-act="toggleTasks" data-val="false">Fermer</button></div>
-      <div class="tache" id="tache">
-        <div class="tache-tete">
-          <span class="tache-nom" id="tachelbl">Tâche en cours</span>
+      <div class="task" id="tache">
+        <div class="task-head">
+          <span class="task-name" id="tachelbl">Tâche en cours</span>
         </div>
-        <div class="tache-barre"><i id="bar"></i></div>
-        <div class="tache-pied">
+        <div class="task-bar"><i id="bar"></i></div>
+        <div class="task-foot">
           <span id="tacheavance">—</span>
           <span style="flex:1"></span>
           <span id="tachereste"></span>
         </div>
-        <div class="tache-detail" id="tachedetail"></div>
+        <div class="task-detail" id="tachedetail"></div>
         <div class="bar" style="margin-top:12px">
           <button class="ghost" id="pausebtn" data-act="togglePause">Pause</button>
           <button class="ghost" id="cancelbtn" data-act="cancelJob">Arrêter</button>
@@ -228,7 +228,7 @@
           <button class="ghost" data-act="toggleJournal">Voir le journal</button>
         </div>
       </div>
-      <div class="tache-vide" id="tachevide">
+      <div class="task-empty" id="tachevide">
         <p class="lead" style="margin:0">Rien en cours.</p>
       </div>
       <div class="bar" style="margin-top:12px">
@@ -268,7 +268,7 @@
       <!-- La page fait plus de 4 000 px : sans sommaire, on cherche. Les
            cinq entrees repondent a « qu'est-ce que je suis en train de
            regler ? », pas a la structure interne du code. -->
-      <nav class="setnav" id="setnav" aria-label="Sections des réglages"><a href="#sec-console">Ta console</a><a href="#sec-biblio">Ta bibliothèque</a><a href="#sec-entretien">Entretien</a><a href="#sec-acces">Accès</a><a href="#sec-interface">Interface</a><span class="setnav-etat" id="savehint" role="status" aria-live="polite"></span></nav>
+      <nav class="setnav" id="setnav" aria-label="Sections des réglages"><a href="#sec-console">Ta console</a><a href="#sec-biblio">Ta bibliothèque</a><a href="#sec-entretien">Entretien</a><a href="#sec-acces">Accès</a><a href="#sec-interface">Interface</a><span class="setnav-state" id="savehint" role="status" aria-live="polite"></span></nav>
 
       <section class="setsection" id="sec-console">
         <h3 class="sectitre">Ta console</h3>
@@ -382,7 +382,7 @@
           <button class="go" data-act="fullAnalysis">Analyser la console</button>
           <button class="ghost" data-act="addPlatform">Ajouter une plateforme…</button>
         </div>
-        <div class="plateformes" id="plateformes"></div>
+        <div class="platforms" id="plateformes"></div>
         <div id="tree" class="tree" hidden></div>
       <div id="organizewrap" hidden></div>
       <div id="browserwrap" style="display:none">
@@ -413,8 +413,8 @@
       </div>
 
       <div id="pf-specifique">
-      <div class="setgroup groupe-plateforme" data-plateforme="switch">
-        <div class="setgt">Nintendo Switch <span class="portee">spécifique</span></div>
+      <div class="setgroup platform-group" data-plateforme="switch">
+        <div class="setgt">Nintendo Switch <span class="scope">spécifique</span></div>
 
         <!-- Le dossier se regle une seule fois, dans « Dossier sur la console »
              juste au-dessus : il valait pour toutes les plateformes, la Switch
@@ -450,8 +450,8 @@
 
         
       </div>
-      <div class="setgroup groupe-plateforme" data-plateforme="switch">
-        <div class="setgt">Réglages communautaires <span class="portee">Switch</span><span class="beta">bêta</span></div>
+      <div class="setgroup platform-group" data-plateforme="switch">
+        <div class="setgt">Réglages communautaires <span class="scope">Switch</span><span class="beta">bêta</span></div>
 
         <div class="setrow">
           <div class="setlab"><b>Utiliser EmuReady</b>
@@ -478,8 +478,8 @@
           <div class="setctl"><button data-act="erSync">Actualiser</button></div>
         </div>
       </div>
-      <div class="setgroup groupe-plateforme" data-plateforme="switch">
-        <div class="setgt">Sauvegardes de jeu <span class="portee">Switch</span></div>
+      <div class="setgroup platform-group" data-plateforme="switch">
+        <div class="setgt">Sauvegardes de jeu <span class="scope">Switch</span></div>
         <p class="lead" style="margin:0 0 10px">Tes progressions sont irremplaçables :
           un jeu se réinstalle, pas 200 h de partie. Chaque sauvegarde est datée,
           rien n'est jamais écrasé.</p>
@@ -489,8 +489,8 @@
         </div>
         <div id="saves"></div>
       </div>
-      <details class="setgroup groupe-plateforme" data-plateforme="switch" id="edengroup">
-        <summary class="setgt">Émulateur <span class="portee">Switch</span><span class="beta">bêta</span></summary>
+      <details class="setgroup platform-group" data-plateforme="switch" id="edengroup">
+        <summary class="setgt">Émulateur <span class="scope">Switch</span><span class="beta">bêta</span></summary>
         <p class="lead" style="margin:10px 0">Réglages de l'émulateur pour <b>tous</b> les jeux.
           Pour un jeu précis, ouvre sa fiche depuis la liste : c'est là que vivent
           ses réglages et ceux recommandés par la communauté.</p>
@@ -698,7 +698,7 @@
           temps&nbsp;: ce qui fait doublon, ce qui pourrait s'être abîmé, et
           qui s'est connecté.</p>
 
-        <div class="entretien">
+        <div class="upkeep">
           <button class="ghost" data-act="showMaintenance" data-arg="doublons">Doublons</button>
           <button class="ghost" data-act="showMaintenance" data-arg="integrite">Intégrité</button>
           <button class="ghost" data-act="showMaintenance" data-arg="sauvegardes">Sauvegardes</button>
