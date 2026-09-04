@@ -11,7 +11,7 @@ from datetime import datetime
 
 from . import config, device
 
-def candidats():
+def candidates():
     """Where to look for saves, from the most specific to the most general.
 
     This list used to be hard-coded, and it named Eden under a package
@@ -57,7 +57,7 @@ def find_dirs(cfg=None):
         return []
     found = []
     manual = ((cfg or {}).get("saves_dir") or "").strip().rstrip("/")
-    for c in ([manual] if manual else []) + candidats():
+    for c in ([manual] if manual else []) + candidates():
         if c and _exists(c) and c not in found:
             found.append(c)
     if found:

@@ -19,22 +19,22 @@ from . import config
 FICHIER = config.ROOT / "_transfert-en-cours.json"
 
 
-def demarrer(chemins, destination, genre="switch"):
-    _ecrire({"debut": time.time(), "genre": genre, "destination": destination,
-             "restants": [str(c) for c in chemins], "faits": []})
+def start(paths, destination, kind="switch"):
+    _write({"debut": time.time(), "genre": kind, "destination": destination,
+             "restants": [str(c) for c in paths], "faits": []})
 
 
-def marquer_fait(chemin):
-    d = etat()
+def mark_done(path):
+    d = state()
     if not d:
         return
-    c = str(chemin)
+    c = str(path)
     d["restants"] = [x for x in d["restants"] if x != c]
     d["faits"].append(c)
-    _ecrire(d)
+    _write(d)
 
 
-def terminer():
+def finish():
     """The transfer went all the way: nothing left to resume."""
     try:
         FICHIER.unlink()
@@ -42,7 +42,7 @@ def terminer():
         pass
 
 
-def etat():
+def state():
     try:
         d = json.loads(FICHIER.read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -50,14 +50,14 @@ def etat():
     return d if isinstance(d, dict) and d.get("restants") else None
 
 
-def resume():
+def summary():
     """What to show the user, or None when there is nothing."""
-    d = etat()
+    d = state()
     if not d:
         return None
     restants = [c for c in d["restants"] if Path(c).is_file()]
     if not restants:
-        terminer()
+        finish()
         return None
     return {
         "genre": d.get("genre", "switch"),
@@ -70,7 +70,7 @@ def resume():
     }
 
 
-def _ecrire(d):
+def _write(d):
     try:
         FICHIER.write_text(json.dumps(d, ensure_ascii=False), encoding="utf-8")
     except OSError:
