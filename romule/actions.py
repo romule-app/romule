@@ -51,7 +51,7 @@ def scan_import():
                 # A shared extension (.iso: PS2, PSP, Wii, Xbox…) or an
                 # unknown one. NOT listing it amounted to making it vanish: it
                 # showed nowhere and the filing ignored it silently.
-                cands = [x["name"] for x in systems.liste()
+                cands = [x["name"] for x in systems.list_all()
                          if p.suffix.lower() in x["exts"]]
                 out.append({
                     "path": str(p), "name": p.name, "size": p.stat().st_size,
@@ -181,7 +181,7 @@ def suggestions_import(cfg=None):
         if item["type"] != "AMBIGU":
             continue
         ext = Path(item["name"]).suffix.lower()
-        candidats = [x for x in systems.liste(cfg) if ext in x["exts"]]
+        candidats = [x for x in systems.list_all(cfg) if ext in x["exts"]]
         cles = [x["key"] for x in candidats]
         propose = []
         if len(cles) > 1 and igdb.configure(cfg):
@@ -320,7 +320,7 @@ def import_files(lib, cfg, job, convert_after=True):
             job.log("Impossible de ranger %s : %s" % (src.name, exc))
 
     # ROMs from other consoles sitting in _import: each goes to its folder
-    for s in systems.liste(cfg):          # hand-added platforms included
+    for s in systems.list_all(cfg):          # hand-added platforms included
         if s["engine"] == "switch":
             continue
         hits = [p for p in config.IMPORT.rglob("*")
@@ -490,7 +490,7 @@ def sync_meta(lib, cfg, job):
     # The other platforms' games often live ONLY on the console: looking at
     # the server alone left their titles unfindable.
     noms = []
-    for sys in systems.tout(cfg):
+    for sys in systems.all_platforms(cfg):
         noms += [f["file"] for f in sys["games"]]
         noms += [x["nom"] for x in sys["console"]]
     # A cached entry WITHOUT a summary is not a finished entry: the first ones
@@ -560,7 +560,7 @@ def analyser_console(lib, cfg, job):
         job.log("Console non connectee.", "error")
         return
 
-    plateformes = systems.liste(cfg)
+    plateformes = systems.list_all(cfg)
     job.set_total(len(plateformes))
     job.log("Analyse de %s (%d plateforme(s) connues)." % (racine, len(plateformes)))
     trouvees, total, vides = 0, 0, []

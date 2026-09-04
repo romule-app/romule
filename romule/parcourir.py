@@ -49,11 +49,11 @@ def _extensions(cfg=None):
     """Every recognised extension, Switch and retro platforms alike.
 
     `cfg` is passed by the caller when it already has it: without it,
-    `systems.liste()` re-reads the configuration file on every click in the
+    `systems.list_all()` re-reads the configuration file on every click in the
     browsing dialog.
     """
     exts = set(config.EXTS)
-    for s in systems.liste(cfg):
+    for s in systems.list_all(cfg):
         exts.update(e.lower() for e in s.get("exts", []))
     return exts
 

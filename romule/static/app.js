@@ -7666,7 +7666,7 @@ majApparence();
     // fichiers sur la console" — which nobody asked for and which are already
     // in the log.
     await app.reveilConsole();     // the console's state, then its files
-    // The console is now known: `systems.tout()` can read its tree, which it
+    // The console is now known: `systems.all_platforms()` can read its tree, which it
     // could not do on the first call. So we redo the overview ONCE, otherwise
     // the files present only on the console would never appear there.
     if (vueTotale() && CONN.kind) { oublierCacheSysteme(); app.setSystem('all'); }
