@@ -306,7 +306,7 @@ def _trusted_networks(entries):
 
 RESEAUX_CONFIANCE = _trusted_networks(_DECLARES)
 # CIDR entries are REMOVED from the set of exact addresses. Without that, the
-# string "172.16.0.0/12" would sit in it verbatim — and `_client_reel()`
+# string "172.16.0.0/12" would sit in it verbatim — and `_real_client()`
 # compares the links of `X-Forwarded-For`, which come from the client. Writing
 # that string into the header would have been enough to pass for a declared
 # relay, hence to choose which link Romule keeps.

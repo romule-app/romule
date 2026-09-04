@@ -1285,7 +1285,7 @@ let ROLE = {authentification: false, connecte: false, admin: true, nom: ''};
 
 // The interface does not show what you cannot do.
 //
-// This is NOT a security measure: `RESERVE_ADMIN`, server-side, is what
+// This is NOT a security measure: `ADMIN_ONLY`, server-side, is what
 // refuses, and a test checks it across all the reserved routes. Hiding is a
 // courtesy — without it, a non-administrator opens Settings, clicks, and
 // collects 403s without understanding what is happening.
