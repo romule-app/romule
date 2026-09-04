@@ -218,9 +218,33 @@ def epreuve():
     return True
 
 
+def prose_html(source):
+    """The (line number, text) pairs of `<!-- -->` comments.
+
+    `index.html` carries a hundred lines of them, and they were invisible to
+    this check for as long as it only read .py, .js and .css — which is exactly
+    how a blind spot survives: not by being argued for, but by never being
+    looked at.
+    """
+    out, inside = [], False
+    for i, line in enumerate(source.splitlines(), 1):
+        rest = line
+        if not inside:
+            if "<!--" not in rest:
+                continue
+            rest = rest.split("<!--", 1)[1]
+            inside = True
+        if "-->" in rest:
+            out.append((i, rest.split("-->", 1)[0]))
+            inside = False
+        else:
+            out.append((i, rest))
+    return out
+
+
 def fichiers():
     for motif, extracteur in (("*.py", prose_python), ("*.js", prose_js),
-                              ("*.css", prose_js)):
+                              ("*.css", prose_js), ("*.html", prose_html)):
         for p in sorted(RACINE.rglob(motif)):
             if any(part in MUETTES for part in p.parts):
                 continue
