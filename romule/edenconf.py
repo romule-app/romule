@@ -19,7 +19,7 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-from . import config, device, profils
+from . import config, device, profiles
 
 # The configuration paths come from the profile: every emulator files its
 # settings its own way, and some — Ryujinx — use a format this tool cannot
@@ -27,16 +27,16 @@ from . import config, device, profils
 
 
 def _conf():
-    return (profils.actif().get("config") or {})
+    return (profiles.active().get("config") or {})
 
 
 def pilotable():
     """Does the active emulator expose settings we know how to change?"""
-    return profils.config_pilotable()
+    return profiles.config_editable()
 
 
 def config_dir():
-    return profils.sous(_conf().get("dossier", "config"))
+    return profiles.under(_conf().get("dossier", "config"))
 
 
 def global_ini():

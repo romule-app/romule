@@ -88,7 +88,7 @@ def valeurs():
     profils = profils[:profils.index("\n]")]
     return {
         "reglages": len(config.DEFAULTS),
-        "routes_v1": len(apiv1.routes_decrites()),
+        "routes_v1": len(apiv1.documented_routes()),
         "plateformes": len(systems.SYSTEMS),
         "routes_admin": len(re.findall(r'"/api/[^"]+"', bloc)),
         "profils_ecran": len(re.findall(r'^\s*\("', profils, re.M)),

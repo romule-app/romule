@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
-from romule import profils
+from romule import profiles
 
 ok = fail = 0
 
@@ -23,9 +23,9 @@ def t(n, c, d=""):
 def _run():
     global ok, fail
     ok = fail = 0
-    liste = profils.tous()
-    t("des profils sont livres", len(liste) >= 5, len(liste))
-    t("le profil par defaut existe", profils.get(profils.DEFAUT)["cle"] == profils.DEFAUT)
+    liste = profiles.all_profiles()
+    t("des profiles sont livres", len(liste) >= 5, len(liste))
+    t("le profil par defaut existe", profiles.get(profiles.DEFAULT)["cle"] == profiles.DEFAULT)
 
     cles = [p["cle"] for p in liste]
     t("aucune cle en double", len(cles) == len(set(cles)), cles)
@@ -39,7 +39,7 @@ def _run():
         if gabarit:
             t("%s : au moins un paquet candidat" % cle, bool(p.get("paquets")),
               p.get("paquets"))
-            chemin = profils.dossier_donnees(cfg)
+            chemin = profiles.data_dir(cfg)
             t("%s : le dossier se resout" % cle,
               chemin.startswith("/") and "{paquet}" not in chemin, chemin)
         conf = p.get("config")
@@ -47,12 +47,12 @@ def _run():
           conf is None or conf.get("format") == "ini-qt", conf)
         if conf:
             t("%s : les chemins de reglages se resolvent" % cle,
-              profils.sous(conf["dossier"], cfg).startswith("/"))
+              profiles.under(conf["dossier"], cfg).startswith("/"))
 
     t("un profil inconnu retombe sur le defaut",
-      profils.get("nexistepas")["cle"] == profils.DEFAUT)
+      profiles.get("nexistepas")["cle"] == profiles.DEFAULT)
     t("le profil generique n'annonce aucun reglage",
-      not profils.config_pilotable({"emulateur": "generique"}))
+      not profiles.config_editable({"emulateur": "generique"}))
     t("Eden est le seul profil verifie sur materiel",
       [p["cle"] for p in liste if p.get("verifie")] == ["eden"],
       [p["cle"] for p in liste if p.get("verifie")])

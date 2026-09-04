@@ -29,7 +29,7 @@ import urllib.parse
 
 from . import __version__
 
-PREFIXE = "/api/v1/"
+PREFIX = "/api/v1/"
 
 # Pagination bounds. 200 is not a round number picked at random: a library of
 # 5 000 titles fits in 25 pages, and a page of 200 entries weighs a few hundred
@@ -38,7 +38,7 @@ LIMITE_DEFAUT = 50
 LIMITE_MAX = 200
 
 
-def dans_la_portee(chemin):
+def in_scope(path):
     """True if an API key is allowed to reach this path.
 
     The comparison is strict and literal. `/api/v1` alone is not enough:
@@ -47,16 +47,16 @@ def dans_la_portee(chemin):
     are resolved — but we do not rely on that: a path still containing either
     is refused.
     """
-    if not isinstance(chemin, str) or not chemin.startswith(PREFIXE):
+    if not isinstance(path, str) or not path.startswith(PREFIX):
         return False
-    if ".." in chemin or "//" in chemin:
+    if ".." in path or "//" in path:
         return False
     return True
 
 
 # --------------------------------------------------------------- helpers
 
-def _entier(valeurs, cle, defaut, mini, maxi):
+def _int(values, key, default, lowest, highest):
     """Two distinct behaviours, and that is deliberate.
 
     An UNREADABLE value (`page=zero`) falls back to the default: the client got
@@ -67,13 +67,13 @@ def _entier(valeurs, cle, defaut, mini, maxi):
     specification.
     """
     try:
-        n = int((valeurs.get(cle) or [str(defaut)])[0])
+        n = int((values.get(key) or [str(default)])[0])
     except (TypeError, ValueError):
-        return defaut
-    return max(mini, min(maxi, n))
+        return default
+    return max(lowest, min(highest, n))
 
 
-def _fiche(f):
+def _entry(f):
     """What we publish about a library file.
 
     The ABSOLUTE path is not part of it. It teaches a client nothing, and it
@@ -97,8 +97,8 @@ def _fiche(f):
 
 
 def _page(items, params):
-    page = _entier(params, "page", 1, 1, 10 ** 6)
-    limite = _entier(params, "limit", LIMITE_DEFAUT, 1, LIMITE_MAX)
+    page = _int(params, "page", 1, 1, 10 ** 6)
+    limite = _int(params, "limit", LIMITE_DEFAUT, 1, LIMITE_MAX)
     total = len(items)
     debut = (page - 1) * limite
     return {
@@ -112,16 +112,16 @@ def _page(items, params):
 
 # ------------------------------------------------------------------ routage
 
-def router(chemin, params, methode, ctx):
+def router(path, params, method, ctx):
     """Return (code, object), or None when the route is unknown.
 
     `ctx` carries what the server knows how to do, injected rather than
     imported: this module must not depend on `server`, which already depends on
     everything else.
     """
-    nom = chemin[len(PREFIXE):]
+    nom = path[len(PREFIX):]
 
-    if methode == "GET":
+    if method == "GET":
         if nom == "health":
             return 200, ctx["health"]()
         if nom == "openapi.json":
@@ -142,7 +142,7 @@ def router(chemin, params, methode, ctx):
             return 200, lib["stats"]
         if nom == "library":
             lib = ctx["inventaire"]()
-            fiches = [_fiche(f) for f in lib["files"]]
+            fiches = [_entry(f) for f in lib["files"]]
             genre = (params.get("type") or [""])[0].upper()
             if genre:
                 fiches = [f for f in fiches if f["type"] == genre]
@@ -154,11 +154,11 @@ def router(chemin, params, methode, ctx):
             # and comparing it as-is never finds anything. Only the key is
             # decoded, not the whole path: decoding before routing would let a
             # `%2F` forge a segment.
-            cle = urllib.parse.unquote(nom[len("library/"):])
+            key = urllib.parse.unquote(nom[len("library/"):])
             lib = ctx["inventaire"]()
             for f in lib["files"]:
-                if f.get("rel") == cle:
-                    return 200, _fiche(f)
+                if f.get("rel") == key:
+                    return 200, _entry(f)
             return 404, {"error": "not_found",
                          "message": "No game with that key."}
         if nom == "search":
@@ -167,7 +167,7 @@ def router(chemin, params, methode, ctx):
                 return 400, {"error": "missing_parameter",
                              "message": "q is required."}
             lib = ctx["inventaire"]()
-            trouves = [_fiche(f) for f in lib["files"]
+            trouves = [_entry(f) for f in lib["files"]
                        if q in (f.get("name") or "").lower()
                        or q in (f.get("tid") or "").lower()]
             return 200, _page(trouves, params)
@@ -180,7 +180,7 @@ def router(chemin, params, methode, ctx):
         if nom == "trash":
             return 200, {"items": ctx["corbeille"]()}
 
-    if methode == "POST":
+    if method == "POST":
         taches = {"scan": "scan", "convert": "convert", "push": "push"}
         if nom in taches:
             lance, motif = ctx["lancer"](taches[nom])
@@ -195,10 +195,10 @@ def router(chemin, params, methode, ctx):
 
 # ------------------------------------------------------------- specification
 
-def _reponse(desc, exemple=None):
+def _response(desc, example=None):
     contenu = {"application/json": {}}
-    if exemple is not None:
-        contenu["application/json"]["example"] = exemple
+    if example is not None:
+        contenu["application/json"]["example"] = example
     return {"description": desc, "content": contenu}
 
 
@@ -239,13 +239,13 @@ SPEC = {
     "paths": {
         "/api/v1/health": {"get": {
             "summary": "Liveness. The only route also used by the container probe.",
-            "responses": {"200": _reponse("The service is up.")}}},
+            "responses": {"200": _response("The service is up.")}}},
         "/api/v1/openapi.json": {"get": {
             "summary": "This document.",
-            "responses": {"200": _reponse("The OpenAPI specification.")}}},
+            "responses": {"200": _response("The OpenAPI specification.")}}},
         "/api/v1/system": {"get": {
             "summary": "Version, licence, source, uptime.",
-            "responses": {"200": _reponse(
+            "responses": {"200": _response(
                 "Service identity.",
                 # `__version__` rather than a literal: a specification example
                 # announcing a version from two releases ago reads as a stale
@@ -254,7 +254,7 @@ SPEC = {
                  "licence": "AGPL-3.0-or-later", "library_ready": True})}}},
         "/api/v1/stats": {"get": {
             "summary": "Counts and total size for the whole library.",
-            "responses": {"200": _reponse(
+            "responses": {"200": _response(
                 "Library statistics.",
                 {"total": 412, "base": 180, "update": 150, "dlc": 82,
                  "bytes": 174929203200, "to_convert": 3})}}},
@@ -267,7 +267,7 @@ SPEC = {
                 {"name": "type", "in": "query", "required": False,
                  "schema": {"type": "string",
                             "enum": ["BASE", "UPDATE", "DLC", "INCONNU"]}}],
-            "responses": {"200": _reponse(
+            "responses": {"200": _response(
                 "One page of games.",
                 {"page": 1, "limit": 50, "total": 412, "pages": 9,
                  "items": [{"key": "GAMES/Some Game [0100ABC].nsp",
@@ -277,52 +277,52 @@ SPEC = {
             "summary": "One game, by its key — the path relative to the library.",
             "parameters": [{"name": "key", "in": "path", "required": True,
                             "schema": {"type": "string"}}],
-            "responses": {"200": _reponse("The game."),
-                          "404": _reponse("No game with that key.")}}},
+            "responses": {"200": _response("The game."),
+                          "404": _response("No game with that key.")}}},
         "/api/v1/search": {"get": {
             "summary": "Search by name or title ID.",
             "parameters": [{"name": "q", "in": "query", "required": True,
                             "schema": {"type": "string"}}] + _PAGINATION,
-            "responses": {"200": _reponse("One page of matches."),
-                          "400": _reponse("q is missing.")}}},
+            "responses": {"200": _response("One page of matches."),
+                          "400": _response("q is missing.")}}},
         "/api/v1/platforms": {"get": {
             "summary": "Configured platforms and their local counts.",
-            "responses": {"200": _reponse("Platforms.")}}},
+            "responses": {"200": _response("Platforms.")}}},
         "/api/v1/device": {"get": {
             "summary": "State of the connected handheld.",
-            "responses": {"200": _reponse("Device state.")}}},
+            "responses": {"200": _response("Device state.")}}},
         "/api/v1/job": {"get": {
             "summary": ("The running task, if any. Romule runs one task at a "
                         "time, so there is no task list."),
-            "responses": {"200": _reponse(
+            "responses": {"200": _response(
                 "Current task.",
                 {"running": True, "label": "Conversion", "done": 2,
                  "total": 5, "detail": "Some Game.nsz"})}}},
         "/api/v1/trash": {"get": {
             "summary": "What is in the trash and can still be restored.",
-            "responses": {"200": _reponse("Trash contents.")}}},
+            "responses": {"200": _response("Trash contents.")}}},
         "/api/v1/scan": {"post": {
             "summary": "Rescan the library.",
-            "responses": {"202": _reponse("Task started."),
-                          "409": _reponse("Another task is running.")}}},
+            "responses": {"202": _response("Task started."),
+                          "409": _response("Another task is running.")}}},
         "/api/v1/convert": {"post": {
             "summary": "Convert the remaining .nsz/.xcz files.",
-            "responses": {"202": _reponse("Task started."),
-                          "409": _reponse("Another task is running.")}}},
+            "responses": {"202": _response("Task started."),
+                          "409": _response("Another task is running.")}}},
         "/api/v1/push": {"post": {
             "summary": "Send pending games to the handheld.",
-            "responses": {"202": _reponse("Task started."),
-                          "409": _reponse("Another task is running.")}}},
+            "responses": {"202": _response("Task started."),
+                          "409": _response("Another task is running.")}}},
     },
 }
 
 
-def routes_decrites():
+def documented_routes():
     """The (method, path) pairs the specification announces."""
     out = set()
-    for chemin, ops in SPEC["paths"].items():
-        for methode in ops:
-            out.add((methode.upper(), chemin))
+    for path, ops in SPEC["paths"].items():
+        for method in ops:
+            out.add((method.upper(), path))
     return out
 
 

@@ -20,15 +20,15 @@ def candidates():
     start from the active profile, then all the others — someone switching
     emulator wants their old saves back.
     """
-    from . import profils
+    from . import profiles
     out = []
-    base = profils.dossier_donnees()
+    base = profiles.data_dir()
     if base:
-        for rel in (profils.actif().get("sauvegardes") or []):
+        for rel in (profiles.active().get("sauvegardes") or []):
             out.append(base + "/" + rel.lstrip("/"))
         out.append(base)
     gabarit = "/storage/emulated/0/Android/data/%s/files"
-    for prof in profils.tous():
+    for prof in profiles.all_profiles():
         for paquet in (prof.get("paquets") or []):
             racine = gabarit % paquet
             for rel in (prof.get("sauvegardes") or ["nand/user/save"]):
