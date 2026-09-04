@@ -69,7 +69,7 @@ def test_a_fresh_install_still_has_one():
 
 
 def test_each_console_keeps_its_own_settings():
-    write_config({"device_dir": "/A", "wifi_addr": "10.0.0.1:5555"})
+    write_config({"device_dir": "/A", "wifi_addr": "192.0.2.1:5555"})
     cfg = config.load_config()
     first = consoles.active(cfg)["id"]
     second = consoles.add(cfg, "Retroid")
@@ -79,7 +79,7 @@ def test_each_console_keeps_its_own_settings():
     # the flat key, save.
     consoles.select(cfg, second["id"])
     cfg["device_dir"] = "/B"
-    cfg["wifi_addr"] = "10.0.0.2:5555"
+    cfg["wifi_addr"] = "192.0.2.2:5555"
     config.save_config(cfg)
 
     back = config.load_config()
@@ -91,7 +91,7 @@ def test_each_console_keeps_its_own_settings():
     consoles.select(back, first)
     t("switching back brings the FIRST console's folder", back["device_dir"] == "/A",
       back["device_dir"])
-    t("and its own pairing", back["wifi_addr"] == "10.0.0.1:5555",
+    t("and its own pairing", back["wifi_addr"] == "192.0.2.1:5555",
       back["wifi_addr"])
     # The defect this whole file exists for: one console's setting read on the
     # other.
