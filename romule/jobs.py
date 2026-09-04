@@ -51,8 +51,15 @@ def _guess_level(text):
     return "info"
 
 
-def notify(message, title="Romule"):
-    """Notification macOS de fin de tache (ignoree ailleurs)."""
+def desktop_notify(message, title="Romule"):
+    """The macOS end-of-task notification (ignored elsewhere).
+
+    Named apart from the `notify` MODULE on purpose. While they shared a name,
+    the `from . import notify` twenty lines below made `notify` a local for the
+    whole of `wrap()`, and this call — which comes before it — raised
+    `UnboundLocalError` inside the thread that finishes every task. Nothing
+    caught it: the `except` sits after the line that failed.
+    """
     if not shutil.which("osascript"):
         return
     safe = message.replace('"', "'")[:200]
@@ -194,7 +201,7 @@ class JobRunner:
                     resume, evt, level = ("finished (%d/%d)" % (done, total),
                                            "tache_ok", "ok")
                 if self.notify_end:
-                    notify("%s : %s" % (label, resume))
+                    desktop_notify("%s : %s" % (label, resume))
                 # A thirty-file conversion takes half an hour: exactly the
                 # moment when you are NOT in front of the screen. The desktop
                 # notification only serves someone who already is.
