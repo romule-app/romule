@@ -240,7 +240,7 @@ def install(paths, job):
                     distant = device.remote_size(registered() + "/" + nom)
                     if rc == 0 and distant == taille:
                         poses += 1
-                        device.ouvrir_droits(registered() + "/" + nom)
+                        device.open_permissions(registered() + "/" + nom)
                         job.log("  installe %s (%.1f Mo)" % (nom[:20] + "…", taille / 1048576))
                     else:
                         # never leave partial content in the NAND: Eden would
@@ -293,6 +293,6 @@ def _merge_title_keys(nouvelles, job):
     local.write_text("\n".join([l for l in lignes if l.strip()]) + "\n", encoding="utf-8")
     device._shell("mkdir -p %s" % device._q(dossier() + "/keys"))
     device._run(["push", str(local), title_keys()], timeout=120)
-    device.ouvrir_droits(title_keys())
+    device.open_permissions(title_keys())
     local.unlink(missing_ok=True)
     job.log("Cles de titre : %d ajoutee(s) dans title.keys." % ajout)
