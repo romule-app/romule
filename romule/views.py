@@ -29,7 +29,7 @@ import time
 
 from . import config
 
-FILE = config.fichier_etat("_romule-vues.json", "_romule-vues.json")
+FILE = config.state_file("_romule-vues.json", "_romule-vues.json")
 
 # What we agree to store. A CLOSED list: the browser sends whatever it likes,
 # and without this barrier a future client version could grow the state file
