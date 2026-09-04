@@ -179,7 +179,7 @@ def cmd_serve(args):
     server.serve(open_browser="--no-browser" not in sys.argv)
 
 
-def _verifier_racine():
+def _check_root():
     """Refuse to work on a folder that is plainly not a game library.
 
     The tool moves files, creates them, trashes them. A mis-set root — the home
@@ -226,7 +226,7 @@ def _verifier_racine():
 
 # Installation advice, per system. The old message only knew Homebrew: on a
 # NAS or a Linux machine it sent the user nowhere.
-REMEDES = {
+REMEDIES = {
     "nsz": {
         "quoi": "conversion des .nsz/.xcz",
         "macos": "brew install pipx && pipx install nsz",
@@ -244,7 +244,7 @@ REMEDES = {
 }
 
 
-def _famille():
+def _family():
     if sys.platform == "darwin":
         return "macos"
     if sys.platform.startswith("linux"):
@@ -255,13 +255,13 @@ def _famille():
     return "autre"
 
 
-def remede(outil):
+def remedy(tool):
     """How to install a missing tool, on THIS machine."""
-    r = REMEDES.get(outil) or {}
-    return r.get(_famille()) or r.get("autre") or ""
+    r = REMEDIES.get(tool) or {}
+    return r.get(_family()) or r.get("autre") or ""
 
 
-def _avis(*lignes):
+def _notice(*lines):
     """Un avis preliminaire, sur STDERR.
 
     These messages precede every command, including the ones whose output is
@@ -272,11 +272,11 @@ def _avis(*lignes):
 
     stderr exists for this: visible in a terminal, out of the way of a pipe.
     """
-    for ligne in lignes:
+    for ligne in lines:
         print(ligne, file=sys.stderr)
 
 
-def _signaler_outils():
+def _report_tools():
     """Report missing tools without preventing startup.
 
     The program's entry point used to stop dead when `nsz` was missing, with a
@@ -284,16 +284,16 @@ def _signaler_outils():
     you can perfectly well browse your library, tidy it, transfer it. A missing
     tool disables ITS feature, it does not forbid the application.
     """
-    for outil in ("nsz", "adb"):
-        if shutil.which(outil):
+    for tool in ("nsz", "adb"):
+        if shutil.which(tool):
             continue
-        _avis("%-4s absent — %s desactivee." % (outil, REMEDES[outil]["quoi"]))
-        conseil = remede(outil)
+        _notice("%-4s absent — %s desactivee." % (tool, REMEDIES[tool]["quoi"]))
+        conseil = remedy(tool)
         if conseil:
-            _avis("     %s" % conseil)
+            _notice("     %s" % conseil)
 
 
-def _verifier_jeton():
+def _check_token():
     """An example token is not a token.
 
     The compose file used to offer a ready-made one. Whoever leaves it in place
@@ -302,18 +302,18 @@ def _verifier_jeton():
     it.
     """
     if config.TOKEN and config.TOKEN.strip().lower() in config.FORBIDDEN_TOKENS:
-        _avis("ROMULE_TOKEN vaut encore une valeur d'exemple : %r" % config.TOKEN,
+        _notice("ROMULE_TOKEN vaut encore une valeur d'exemple : %r" % config.TOKEN,
               "Genere le tien :",
               "    python3 -c \"import secrets; print(secrets.token_urlsafe(32))\"")
         sys.exit(1)
 
 
-def _signaler_anciennes_variables():
+def _report_legacy_vars():
     """The SWITCH_* names still work, but they are no longer the right ones."""
     if not config.LEGACY_FILES_USED:
         return
     noms = sorted(set(config.LEGACY_FILES_USED))
-    _avis("Variables d'environnement a renommer : %s" % ", ".join(noms),
+    _notice("Variables d'environnement a renommer : %s" % ", ".join(noms),
           "     %s" % ", ".join(n.replace("SWITCH_", "ROMULE_") for n in noms))
 
 
@@ -330,7 +330,7 @@ def _signaler_anciennes_variables():
 # what the filesystem already allowed.
 
 
-def _demander_mdp(invite="Nouveau mot de passe : "):
+def _ask_password(prompt="Nouveau mot de passe : "):
     """Ask for a password twice, with no echo.
 
     Reading it as a command argument would put it in the shell history and in
@@ -339,7 +339,7 @@ def _demander_mdp(invite="Nouveau mot de passe : "):
     default path.
     """
     import getpass
-    un = getpass.getpass(invite)
+    un = getpass.getpass(prompt)
     deux = getpass.getpass("Confirme               : ")
     if un != deux:
         print("Les deux saisies different.")
@@ -369,7 +369,7 @@ def cmd_user(args):
         return
 
     if action == "passwd":
-        mdp = args.mdp or _demander_mdp()
+        mdp = args.mdp or _ask_password()
         if mdp is None:
             return 1
         try:
@@ -542,8 +542,8 @@ def cmd_doctor(args):
         ligne("Port %d" % config.PORT, "indeterminable (%s)" % exc)
 
     bloc("outils externes")
-    for outil in ("adb", "nsz", "unar", "7z", "7zz"):
-        ligne(outil, shutil.which(outil) or "absent")
+    for tool in ("adb", "nsz", "unar", "7z", "7zz"):
+        ligne(tool, shutil.which(tool) or "absent")
 
     bloc("services distants")
     ligne("Jaquettes", cfg.get("cover_provider"))
@@ -577,10 +577,10 @@ def cmd_doctor(args):
 
 
 def main(argv):
-    _verifier_racine()
-    _verifier_jeton()
-    _signaler_anciennes_variables()
-    _signaler_outils()
+    _check_root()
+    _check_token()
+    _report_legacy_vars()
+    _report_tools()
     parser = argparse.ArgumentParser(
         prog="romule",
         description="Romule — ludotheque de jeux auto-hebergee")
