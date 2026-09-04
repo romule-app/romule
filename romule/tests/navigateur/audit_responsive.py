@@ -37,7 +37,7 @@ if not URL:
 # The viewports are the ones the browser really announces: the resolution divided
 # by the density. A 6-inch 1080p screen renders about 720 x 405 CSS points, not
 # 1920 x 1080.
-TAILLES = [
+SIZES = [
     ("iPhone SE       ", 375, 667, 2),
     ("iPhone 15 Pro   ", 393, 852, 3),
     ("iPhone 15 PM    ", 430, 932, 3),
@@ -203,7 +203,7 @@ def main():
     # The port derives from the INDEX, not from the width: two profiles can
     # share the same width (640 for the RG35XX and the Retroid Pocket 5) and
     # would then fight over the same port.
-    for i, (nom, l, h, dpr) in enumerate(TAILLES):
+    for i, (nom, l, h, dpr) in enumerate(SIZES):
         n = Navigateur(port=9400 + i, largeur=l, hauteur=h, dpr=dpr)
         try:
             n.aller(URL, attente=3)

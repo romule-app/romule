@@ -253,15 +253,15 @@ console.log('   -- 6. the task labels match on the client and the server --');
 // SOURCE INVARIANTS: no inline handler, `esc()` on interpolated values, no
 // shadowing of `t()`. Here is one more.
 //
-// `TACHES_FICHES` holds Python FUNCTION names: `JobRunner.start()` sets
+// `ENTRY_TASKS` holds Python FUNCTION names: `JobRunner.start()` sets
 // `fn.__name__` as the label, and the client compares that string to know
 // whether an entry search is running. Nothing links the two files. Renaming
 // `actions.sync_meta` would break the "Recherche des infos…" banner -- anglais:ok,
 // a quoted interface string -- in silence,
 // and in BOTH directions: either it would never show again, or it would never
 // clear.
-const blocTaches = (src.match(/const TACHES_FICHES = \[([^\]]*)\]/) || [])[1];
-t('app.js declares TACHES_FICHES', !!blocTaches, 'not found');
+const blocTaches = (src.match(/const ENTRY_TASKS = \[([^\]]*)\]/) || [])[1];
+t('app.js declares ENTRY_TASKS', !!blocTaches, 'not found');
 const attendus = blocTaches
   ? [...blocTaches.matchAll(/'([^']+)'/g)].map(m => m[1]) : [];
 
@@ -280,15 +280,15 @@ const actions = fs.readFileSync(path.join(RACINE, 'romule', 'actions.py'), 'utf8
 t('the function exists in actions.py',
   !!appele && new RegExp('^def ' + appele + '\\(', 'm').test(actions), appele);
 
-// The same coupling, for EVERY task rather than one. `NOMS_TACHE` turns a
+// The same coupling, for EVERY task rather than one. `TASK_NAMES` turns a
 // Python function name into the phrase the banner shows. A renamed action
 // leaves the interface displaying a raw identifier — no error, no trace, and
 // nobody looks at the banner while renaming a function. Both directions matter:
 // a key naming nothing is dead weight, and an action the server can start with
 // no entry is the defect itself.
-const blocNoms = (src.match(/const NOMS_TACHE = \{([\s\S]*?)\n\};/) || [])[1] || '';
+const blocNoms = (src.match(/const TASK_NAMES = \{([\s\S]*?)\n\};/) || [])[1] || '';
 const clesNoms = [...blocNoms.matchAll(/^\s*(\w+):/gm)].map(m => m[1]);
-t('app.js declares NOMS_TACHE', clesNoms.length > 5, clesNoms.length);
+t('app.js declares TASK_NAMES', clesNoms.length > 5, clesNoms.length);
 
 const defsActions = new Set(
   [...actions.matchAll(/^def (\w+)\(/gm)].map(m => m[1]));

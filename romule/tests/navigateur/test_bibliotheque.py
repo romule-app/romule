@@ -276,7 +276,7 @@ def annuler(n):
                " document.querySelector('#lib .gcard').dataset.key : ''")
     chemin = n.js("""
       (function () {
-        const g = jeuxUnifies().find(x => x.g.key === %s);
+        const g = unifiedGames().find(x => x.g.key === %s);
         return g && g.g.files && g.g.files[0] ? g.g.files[0].path : '';
       })()""" % ("'" + (cle or "").replace("'", "\\'") + "'"))
     if not chemin:
@@ -322,23 +322,23 @@ def liste_gardee(n):
     # titles, on every keystroke. A cache that never refreshes would show a stale
     # list: we check BOTH halves.
     t("two calls in a row return the same list",
-      n.js("jeuxUnifies() === jeuxUnifies()"))
+      n.js("unifiedGames() === unifiedGames()"))
     t("changing the sort rebuilds it", n.js("""
       (function () {
-        const avant = jeuxUnifies();
+        const avant = unifiedGames();
         const ancien = TRI;
         const autre = Object.keys(TRIS).find(k => k !== ancien);
         if (!autre) return true;
         app.setSort(autre);
-        const apres = jeuxUnifies();
+        const apres = unifiedGames();
         app.setSort(ancien);
         return apres !== avant;
       })()"""))
     t("a change of inventory rebuilds it", n.js("""
       (function () {
-        const avant = jeuxUnifies();
+        const avant = unifiedGames();
         inventaireChange();
-        return jeuxUnifies() !== avant;
+        return unifiedGames() !== avant;
       })()"""))
 
 
@@ -383,7 +383,7 @@ def vues(n):
     n.js("""
       (async () => {
         const r = await api('/api/vue-creer',
-          {nom: 'Essai', filtres: filtresCourants()});
+          {nom: 'Essai', filtres: currentFilters()});
         VUES = r.vues || []; renderViews();
       })()""")
     time.sleep(1.4)

@@ -126,7 +126,7 @@ INERTES = r"""
   const CLIQUABLE = 'button, [role=button], [onclick], [data-act], '
                   + '[data-act-change], [data-act-input], '
                   + 'a[href^="#"], a:not([href])';
-  const CLES = ['act', 'actChange', 'actInput', 'tab', 'f', 'jl', 'path',
+  const KEYS = ['act', 'actChange', 'actInput', 'tab', 'f', 'jl', 'path',
                 'lpath', 'di', 'i', 'a', 'grp'];
   const GESTES = ['onclick', 'onchange', 'oninput', 'onkeydown', 'onsubmit'];
   const out = [];
@@ -162,7 +162,7 @@ INERTES = r"""
     // 3. ecouteur en propre
     if (window.__ecoute(el)) continue;
     // 4. delegation : une cle connue sous un ancetre qui ecoute
-    if (CLES.some(k => el.dataset[k] !== undefined) && ecouteAuDessus(el)) continue;
+    if (KEYS.some(k => el.dataset[k] !== undefined) && ecouteAuDessus(el)) continue;
 
     // Identite lisible : c'est ce que l'humain lira dans le rapport d'echec.
     const id = el.id ? '#' + el.id
