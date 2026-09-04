@@ -25,7 +25,7 @@ let SYS = (() => {
 let SGAMES = [];                // games of the current generic system
 let SCONSOLE = [];              // that system's file names on the console
 let SCONSOLE_PATHS = [];        // their full paths, so they can be removed
-let SCONSOLE_TAILLES = {};      // size per path: the card used to show 0 bytes
+let SCONSOLE_SIZES = {};      // size per path: the card used to show 0 bytes
 let SCONSOLE_TITRES = {};       // official title per path, when it is known
 let SALL = [];                  // every platform, for the overview
 // What we have already received, per platform. A SESSION cache: it does not
@@ -37,21 +37,21 @@ const CACHE_SYS = {};
 // not overwrite the inventory of the platform finally chosen.
 let CHARGE_SYS = 0;
 
-function oublierCacheSysteme() {
+function forgetSystemCache() {
   for (const k of Object.keys(CACHE_SYS)) delete CACHE_SYS[k];
 }
 
-function appliquerSysteme(d) {
+function applySystem(d) {
   inventaireChange();
   SALL = d.tout || [];
   SGAMES = d.games || [];
   SCONSOLE = (d.console || []).map(x => x.nom || x);
   SCONSOLE_PATHS = (d.console || []).map(x => x.chemin || '').filter(Boolean);
-  SCONSOLE_TAILLES = {};
+  SCONSOLE_SIZES = {};
   SCONSOLE_TITRES = {};
   (d.console || []).forEach(x => {
     if (!x.chemin) return;
-    SCONSOLE_TAILLES[x.chemin] = x.taille || 0;
+    SCONSOLE_SIZES[x.chemin] = x.taille || 0;
     SCONSOLE_TITRES[x.chemin] = x.titre || '';
   });
 }
@@ -66,7 +66,7 @@ const UNITES = {
 };
 const fmt = b => {
   if (b == null) return '?';
-  const u = UNITES[LANGUE] || UNITES.en;
+  const u = UNITES[LANG] || UNITES.en;
   let i = 0;
   while (b >= 1024 && i < 4) { b /= 1024; i++; }
   return (i ? b.toFixed(1) : b) + ' ' + u[i];
@@ -115,7 +115,7 @@ const jsq = v => esc(JSON.stringify(String(v == null ? '' : v))
 // "Mario.Kart.8.Deluxe.(v3.0.3 & DLC).SuperXCI -MBC".
 const GROUPES_SCENE = /\b(superxci|xci|nsp|nsz|xcz|mbc|upd|repack|nsw|switch|multi\d*|fr|eu|us|jp|eur|usa|jpn)\b/gi;
 
-function nomLisible(fichier) {
+function readableName(fichier) {
   // any ROM extension, not only the Switch ones: ".gba", ".iso", ".chd"… The
   // 2-4 character bound avoids truncating a title.
   let s = String(fichier || '').replace(/\.[a-z0-9]{2,4}$/i, '');
@@ -139,7 +139,7 @@ function gameName(g) {
   // off-Switch: official title resolved by SteamGridDB, when it was fetched
   const t = g && (g.titre || (g.files && g.files[0] && g.files[0].titre));
   if (t) return t;
-  return nomLisible(pretty((g && g.name) || ''));
+  return readableName(pretty((g && g.name) || ''));
 }
 // Where the shown summary came from. Today only one source requires citing —
 // Wikipedia, under CC BY-SA — but the shape allows for others.
@@ -287,7 +287,7 @@ let I18N = {};
 // Display language. The translation KEY stays the French sentence — the
 // gettext principle this project adopted — but the default language is
 // English: `en.json` translates those keys on load.
-let LANGUE = 'en';
+let LANG = 'en';
 
 // What we NEVER translate: code, paths, and above all the user's data (game
 // names, email addresses, file paths).
@@ -366,7 +366,7 @@ const PLURIEL = {
 
 function accorder(texte, n) {
   if (typeof n !== 'number' || !isFinite(n)) return texte;
-  const i = (PLURIEL[LANGUE] || PLURIEL.en)(n);
+  const i = (PLURIEL[LANG] || PLURIEL.en)(n);
   return String(texte).replace(/\{([^{}|]*)\|([^{}|]*)\}/g,
                                (_, sing, plur) => (i ? plur : sing));
 }
@@ -407,15 +407,15 @@ function t(texte, defaut) {
 // The interpolated values go through `t()` again on recompute: they are labels
 // here, and `t()` returns its input unchanged when no key matches, so a path or
 // a file name risks nothing.
-function poserAttr(el, attribut, cle, ...valeurs) {
+function setAttr(el, attribut, cle, ...valeurs) {
   if (!el) return;
   const table = JSON.parse(el.dataset.i18nAttrs || '{}');
   table[attribut] = [cle, ...valeurs];
   el.dataset.i18nAttrs = JSON.stringify(table);
-  appliquerAttrs(el);
+  applyAttrs(el);
 }
 
-function appliquerAttrs(el) {
+function applyAttrs(el) {
   const table = JSON.parse(el.dataset.i18nAttrs || '{}');
   for (const [attribut, [cle, ...vals]] of Object.entries(table)) {
     el.setAttribute(attribut, vals.length
@@ -424,9 +424,9 @@ function appliquerAttrs(el) {
   }
 }
 
-function retraduireAttributs(racine) {
+function retranslateAttributes(racine) {
   (racine || document).querySelectorAll('[data-i18n-attrs]')
-    .forEach(appliquerAttrs);
+    .forEach(applyAttrs);
 }
 
 function traduisible(noeud) {
@@ -440,8 +440,8 @@ function traduisible(noeud) {
 
 let EN_TRADUCTION = false;
 
-function traduireDOM(racine) {
-  if (LANGUE === 'fr' || !Object.keys(I18N).length) return;
+function translateDOM(racine) {
+  if (LANG === 'fr' || !Object.keys(I18N).length) return;
   EN_TRADUCTION = true;
   try {
     const marcheur = document.createTreeWalker(racine || document.body,
@@ -475,11 +475,11 @@ function traduireDOM(racine) {
 // Everything added later (cards, detail views, dialogs) goes through the
 // translation too: without that, only the initial page would be translated.
 const OBSERVATEUR = new MutationObserver(mutations => {
-  if (EN_TRADUCTION || LANGUE === 'fr') return;
+  if (EN_TRADUCTION || LANG === 'fr') return;
   for (const m of mutations) {
     if (m.type === 'childList' && m.addedNodes.length) {
       m.addedNodes.forEach(n => {
-        if (n.nodeType === 1) { traduireDOM(n); return; }
+        if (n.nodeType === 1) { translateDOM(n); return; }
         if (n.nodeType !== 3 || !traduisible(n)) return;
         const net = (n.nodeValue || '').trim();
         const en = net && traduit(net);
@@ -493,23 +493,23 @@ const OBSERVATEUR = new MutationObserver(mutations => {
 });
 
 async function loadLanguage(code) {
-  LANGUE = code || 'en';
+  LANG = code || 'en';
   // The page's `lang` attribute was pinned to "fr" whatever the chosen
   // language: screen readers pronounced English with French phonetics, and the
   // spell-checking of input fields used the wrong dictionary.
-  document.documentElement.setAttribute('lang', LANGUE);
+  document.documentElement.setAttribute('lang', LANG);
   // French is the SOURCE language: its keys are already the displayed
   // sentences, there is nothing to translate.
-  if (LANGUE === 'fr') { I18N = {}; return; }
+  if (LANG === 'fr') { I18N = {}; return; }
   try {
-    const r = await fetch('/locales/' + LANGUE + '.json');
+    const r = await fetch('/locales/' + LANG + '.json');
     if (!r.ok) return;
     const d = await r.json();
     delete d._meta;
     I18N = d;
     _compilerGabarits();
-    traduireDOM(document.body);
-    retraduireAttributs();
+    translateDOM(document.body);
+    retranslateAttributes();
     OBSERVATEUR.observe(document.body, {childList: true, subtree: true});
   } catch (e) { /* keep the French labels */ }
 }
@@ -521,7 +521,7 @@ const DEFILEMENT = {};
 let TELEVERSEMENT_MAX = 0;
 
 let JLOG = [];              // events received from the server
-let JFILTRE = 'all';        // all | error | warn | info
+let JFILTER = 'all';        // all | error | warn | info
 // What was shown on the previous render, so only genuinely new lines are
 // animated. `sig` records the filter and the search: changing filter rebuilds
 // the list without any line having "arrived".
@@ -577,7 +577,7 @@ function closeOverlay(el) {
    The name must be unique in the page during the transition — two elements
    carrying it at once cancel the effect — hence the cleanup at the end,
    including when the transition is interrupted. */
-const NOM_TRANSITION = 'jaquette';
+const TRANSITION_NAME = 'jaquette';
 
 function openFromCover(cle, muter) {
   const source = document.querySelector(
@@ -592,7 +592,7 @@ function openFromCover(cle, muter) {
     if (c) c.style.viewTransitionName = '';
     document.documentElement.classList.remove('vt-fiche');
   };
-  source.style.viewTransitionName = NOM_TRANSITION;
+  source.style.viewTransitionName = TRANSITION_NAME;
   document.documentElement.classList.add('vt-fiche');
   // The dialog has already entered: the cover brought it. Without this mark,
   // removing `vt-fiche` at the end of the transition gave it back its entry
@@ -608,7 +608,7 @@ function openFromCover(cle, muter) {
       source.style.viewTransitionName = '';
       muter();
       const c = cible();
-      if (c) c.style.viewTransitionName = NOM_TRANSITION;
+      if (c) c.style.viewTransitionName = TRANSITION_NAME;
     });
     t.finished.then(nettoyer, nettoyer);
   } catch (e) {
@@ -652,9 +652,9 @@ function renderJournal() {
   $('j-nerr').textContent = nerr;
   $('j-nwarn').textContent = nwarn;
   let vues = JLOG;
-  if (JFILTRE === 'error') vues = vues.filter(e => e.n === 'error');
-  else if (JFILTRE === 'warn') vues = vues.filter(e => e.n === 'warn' || e.n === 'error');
-  else if (JFILTRE === 'info') vues = vues.filter(e => e.n === 'info' || e.n === 'ok');
+  if (JFILTER === 'error') vues = vues.filter(e => e.n === 'error');
+  else if (JFILTER === 'warn') vues = vues.filter(e => e.n === 'warn' || e.n === 'error');
+  else if (JFILTER === 'info') vues = vues.filter(e => e.n === 'info' || e.n === 'ok');
   if (q) vues = vues.filter(e => e.m.toLowerCase().includes(q));
   const el = $('log');
   el.innerHTML = vues.length
@@ -675,7 +675,7 @@ function renderJournal() {
   // A separator impossible in a filter name. Written as an ESCAPE SEQUENCE: a
   // raw null byte in the file makes it look binary to git and grep, which then
   // stop showing its contents.
-  const signature = JFILTRE + '\u0000' + q;
+  const signature = JFILTER + '\u0000' + q;
   const neuves = signature === JVUES.sig ? vues.length - JVUES.n : 0;
   if (neuves > 0 && neuves <= 40) {
     const lignes = el.querySelectorAll('.jline');
@@ -698,7 +698,7 @@ function updateFollowButton() {
   if (!b) return;
   R.classe(b, 'on', JSUIVI);
   R.texte(b, JSUIVI ? 'Suivi auto' : 'Suivi arrêté');
-  poserAttr(b, 'title', JSUIVI ? 'Le journal descend avec les nouvelles lignes.'
+  setAttr(b, 'title', JSUIVI ? 'Le journal descend avec les nouvelles lignes.'
                                : 'Le journal reste où tu l\'as laissé.');
 }
 
@@ -832,12 +832,12 @@ function say(t) { R.texte($('tachedetail'), t || ''); }
 // computes it for transfers, while a conversion or a container read needs it
 // just as much. We smooth over a sliding window so that a hiccup does not make
 // the estimate jump.
-let TACHE = {debut: 0, points: []};
+let TASK = {debut: 0, points: []};
 
 function estimeReste(done, total) {
   const t = Date.now();
-  if (!total || done <= 0) { TACHE = {debut: t, points: []}; return null; }
-  const p = TACHE.points;
+  if (!total || done <= 0) { TASK = {debut: t, points: []}; return null; }
+  const p = TASK.points;
   if (!p.length || p[p.length - 1].done !== done) p.push({t, done});
   while (p.length > 12) p.shift();
   if (p.length < 3) return null;
@@ -868,7 +868,7 @@ function activite() { return ACT_ENVOI || ACT_SERVEUR; }
 // The ring follows the button's outline, which changes size with what it
 // shows. `pathLength=100` normalises the perimeter: the gauge is driven as a
 // percentage without ever recomputing a circumference.
-function majAnneau() {
+function updateRing() {
   const btn = $('fab'), svg = $('fabring');
   if (!btn || !svg) return;
   const l = btn.offsetWidth, h = btn.offsetHeight;
@@ -967,10 +967,10 @@ function majFab() {
 
   btn.title = a ? a.titre + (a.reste ? ' — ' + a.reste : '') : 'Ajouter des jeux';
   btn.setAttribute('aria-label', btn.title);
-  requestAnimationFrame(majAnneau);
+  requestAnimationFrame(updateRing);
 }
 
-window.addEventListener('resize', majAnneau);
+window.addEventListener('resize', updateRing);
 
 // True while a details lookup is REALLY running.
 //
@@ -983,17 +983,17 @@ window.addEventListener('resize', majAnneau);
 //
 // A card without details now says nothing: its missing summary is visible
 // enough, and "Missing details" is there to go and fetch them.
-let RECHERCHE_FICHES = false;
+let SEARCHING_ENTRIES = false;
 
 // The labels the server gives to the tasks that fill in the details. These are
 // Python FUNCTION names, not displayed text: they are not translated.
-const TACHES_FICHES = ['sync_meta', 'meta_sync'];   // i18n:ok
+const ENTRY_TASKS = ['sync_meta', 'meta_sync'];   // i18n:ok
 
 function renderTask(j) {
   const el = $('tache');
-  const cherche = !!j.running && TACHES_FICHES.includes(j.label);
-  if (cherche !== RECHERCHE_FICHES) {
-    RECHERCHE_FICHES = cherche;
+  const cherche = !!j.running && ENTRY_TASKS.includes(j.label);
+  if (cherche !== SEARCHING_ENTRIES) {
+    SEARCHING_ENTRIES = cherche;
     // The end of the lookup must clear the remaining banners: without this
     // render they would hold until the next pass over the grid.
     if (typeof renderLib === 'function') renderLib();
@@ -1004,7 +1004,7 @@ function renderTask(j) {
     $('bar').style.width = '0';
     R.texte($('tacheavance'), '');
     R.texte($('tachereste'), '');
-    TACHE = {debut: 0, points: []};
+    TASK = {debut: 0, points: []};
     ACT_SERVEUR = null;
     R.texte($('tachelbl'), 'Tâche en cours');
     R.texte($('tachedetail'), '');
@@ -1064,7 +1064,7 @@ function updateTaskPanel(j) {
 
 // `label` carries the name of the running Python function: it speaks to the
 // code alone. We turn it into a short phrase, recognisable at a glance.
-const NOMS_TACHE = {
+const TASK_NAMES = {
   analyse_device:      'Analyse de la console',
   apply_eden_config:   'Réglages Eden',
   apply_eden_profile:  'Profil Eden',
@@ -1089,7 +1089,7 @@ const NOMS_TACHE = {
 };
 
 function taskName(j) {
-  return NOMS_TACHE[j.label] || 'Tâche en cours';
+  return TASK_NAMES[j.label] || 'Tâche en cours';
 }
 
 // ---------------------------------------------------------------- regroupement
@@ -1161,7 +1161,7 @@ const COULEURS = (() => {
 })();
 let COULEURS_A_ECRIRE = 0;
 
-function cleCouleur(g) {
+function colourKey(g) {
   return String((g && (g.tid || g.key)) || '').toLowerCase();
 }
 
@@ -1215,7 +1215,7 @@ function couleurDominante(img) {
 // afterwards, and the colour itself when it is already known — that is what
 // avoids the flicker, since it applies BEFORE the image loads.
 function attrsTeinte(g) {
-  const cle = cleCouleur(g);
+  const cle = colourKey(g);
   const c = COULEURS[cle];
   return ' data-couleur="' + esc(cle) + '"' +
          (c ? ' style="--jaq:' + esc(c) + '"' : '');
@@ -1247,7 +1247,7 @@ function renderSysSelect() {
   // keep the larger of the two (local, detected console).
   const compte = s => {
     if (s.count === null) return GAMES.length;          // Switch : jeux regroupes
-    const d = PLATEFORMES.find(x => x.key === s.key);
+    const d = PLATFORMS.find(x => x.key === s.key);
     return Math.max(s.count || 0, d ? d.count : 0);
   };
   const signature = SYSTEMS.map(s => s.key + ':' + compte(s)).join();
@@ -1277,7 +1277,7 @@ function libelleSysteme(key) {
 // characters triggered eight full renders, seven of them thrown away at once.
 // We coalesce onto the next frame — that is the screen's rhythm, and the only
 // moment a render can be seen.
-let RENDU_PREVU = 0;
+let RENDER_SCHEDULED = 0;
 let VUES = [];                  // saved views, served by the server
 // Who is looking, and with what role. Without authentication everybody is an
 // administrator — Romule's most common mode.
@@ -1289,7 +1289,7 @@ let ROLE = {authentification: false, connecte: false, admin: true, nom: ''};
 // refuses, and a test checks it across all the reserved routes. Hiding is a
 // courtesy — without it, a non-administrator opens Settings, clicks, and
 // collects 403s without understanding what is happening.
-function appliquerRole() {
+function applyRole() {
   const onglet = document.querySelector('#tabs [data-tab="settings"]');
   if (onglet) onglet.hidden = !ROLE.admin;
   document.body.classList.toggle('sansadmin', !ROLE.admin);
@@ -1302,7 +1302,7 @@ function appliquerRole() {
 // What DEFINES the displayed subset. Not the sort order, not the tile size,
 // not the page: those are display preferences, they apply to everything you
 // look at.
-function filtresCourants() {
+function currentFilters() {
   return {systeme: SYS,
           recherche: (($('filter') || {}).value || '').trim(),
           etat: FILTER,
@@ -1310,7 +1310,7 @@ function filtresCourants() {
 }
 
 function activeFilterCount() {
-  const f = filtresCourants();
+  const f = currentFilters();
   return (f.recherche ? 1 : 0) + (f.etat !== 'all' ? 1 : 0) + f.avances.length;
 }
 
@@ -1354,7 +1354,7 @@ function updateFilterBar() {
 // newer version, and nothing is blocked while you ignore it.
 let MAJ = null;
 
-async function chargerMaj() {
+async function loadUpdate() {
   const r = await api('/api/maj', null, true);
   if (!r || r.error) return;
   MAJ = r;
@@ -1384,8 +1384,8 @@ async function loadViews() {
 }
 
 function renderLibBientot() {
-  if (RENDU_PREVU) return;
-  RENDU_PREVU = requestAnimationFrame(() => { RENDU_PREVU = 0; renderLib(); });
+  if (RENDER_SCHEDULED) return;
+  RENDER_SCHEDULED = requestAnimationFrame(() => { RENDER_SCHEDULED = 0; renderLib(); });
 }
 
 function renderLib() {
@@ -1400,7 +1400,7 @@ function renderLib() {
   });
   $('bulkconv').style.display = suisse ? '' : 'none';
 
-  const tous = jeuxUnifies();
+  const tous = unifiedGames();
   // Boilerplate summaries are spotted by comparing games with one another: the
   // full list must therefore be known before drawing a single card.
   majModelesResume(tous);
@@ -1414,9 +1414,9 @@ function renderLib() {
     if (!chip) return;
     const c = $('c-' + k);
     if (c) chiffreAnime(c, n[k]);
-    chip.style.display = (ETATS_CONSOLE.includes(k) && !consoleLue()) ? 'none' : '';
+    chip.style.display = (CONSOLE_STATES.includes(k) && !consoleLue()) ? 'none' : '';
   });
-  if (ETATS_CONSOLE.includes(FILTER) && !consoleLue()) { FILTER = 'all'; majChips(); }
+  if (CONSOLE_STATES.includes(FILTER) && !consoleLue()) { FILTER = 'all'; updateChips(); }
 
   const bulk = $('bulkconv');
   if (n.convert) { bulk.style.display = ''; bulk.textContent = tpl('Convertir les %s restants', n.convert); }
@@ -1440,7 +1440,7 @@ function renderLib() {
     lib.innerHTML = '<div class="empty">' + (FILTER === 'all'
       ? tpl('Aucun jeu ne correspond à « %s ».', esc($('filter').value))
       : tpl('Rien dans « %s » — tout est en ordre de ce côté.',
-              t(ETATS[FILTER][1]))) + '</div>';
+              t(STATES[FILTER][1]))) + '</div>';
     $('pager').innerHTML = ''; renderActionBar(); return;
   }
 
@@ -1450,7 +1450,7 @@ function renderLib() {
   if (PAGE >= pages) PAGE = 0;
   const vus = list.slice(PAGE * parPage, (PAGE + 1) * parPage);
 
-  lib.style.setProperty('--carte', TAILLES[TAILLE][1] + 'px');
+  lib.style.setProperty('--carte', SIZES[SIZE][1] + 'px');
   VUS_PAGE = vus.map(({g}) => g.key);
 
   // The grid is reconciled, no longer rewritten: an unchanged card is left
@@ -1462,14 +1462,14 @@ function renderLib() {
     grille = document.createElement('div');
     lib.appendChild(grille);
   }
-  grille.className = 'games taille-' + TAILLE  // i18n:ok - classe CSS;
+  grille.className = 'games taille-' + SIZE  // i18n:ok - classe CSS;
 
   R.liste(grille, vus, {
     // The expanded state is part of the card's identity: without it,
     // reconciliation would reuse the same tile and the chevron would stay
     // pointing the wrong way.
     cle: ({g}) => g.key,
-    creer: (x) => R.depuisHtml(carteHtml(x)),
+    creer: (x) => R.depuisHtml(cardHtml(x)),
     majEl: (el, x) => updateCard(el, x),
   });
 
@@ -1524,12 +1524,12 @@ function renderAlphabet(list) {
     },
     majEl: (el, l) => R.texte(el, l),
   });
-  majAlphabet();
+  updateAlphabet();
 }
 
 // The letter you are currently reading is highlighted: without that the index
 // says where you CAN go, never where you ARE.
-function majAlphabet() {
+function updateAlphabet() {
   const nav = $('alphabet');
   if (!nav || nav.hidden) return;
   const cartes = [...document.querySelectorAll('#lib .gcard')];
@@ -1637,13 +1637,13 @@ function resumeUtile(g) {
 // is whether they can play, and if not what is left to do. So every word is
 // either "playable" or an action verb — and the console pill, just above,
 // already says where the game is.
-const ETAT_COURT = {
+const SHORT_STATE = {
   probleme: 'Problème', importer: 'À rapatrier', envoyer: 'À transférer',
   activer: 'À activer', convert: 'À convertir', pret: 'Jouable',
   local: 'Sur le serveur',
 };
 
-function carteEtiquette({e}) {
+function cardLabel({e}) {
   const p = e.presence || {mac: true, console: 'inconnu'};
   const tMac = p.mac ? 'Présent sur le serveur' : 'Absent du serveur';
   const tCons = t(TITRE_PRESENCE[p.console] || '');
@@ -1659,8 +1659,8 @@ function carteEtiquette({e}) {
     '</span>' +
     // `e.txt` is a status label taken from `ETATS`: it must go through the
     // catalogue like the visible text right beside it.
-    '<span class="etatmot ' + ETATS[e.etat][0] + '" title="' + esc(t(e.txt)) + '">' +
-      esc(ETAT_COURT[e.etat] || e.txt) + '</span>';
+    '<span class="etatmot ' + STATES[e.etat][0] + '" title="' + esc(t(e.txt)) + '">' +
+      esc(SHORT_STATE[e.etat] || e.txt) + '</span>';
 }
 const TITRE_PRESENCE = {
   oui: 'Présent sur la console', partiel: 'En partie sur la console',
@@ -1680,7 +1680,7 @@ const TITRE_PRESENCE = {
    display a big letter in a grey rectangle. They also say, in the detail view,
    what the game really ran on.
    ========================================================================== */
-const MEDIA_PLATEFORME = {
+const PLATFORM_MEDIA = {
   switch: 'switch',
   gb: 'poche', gba: 'poche',
   nes: 'cartouche', snes: 'cartouche', megadrive: 'cartouche', n64: 'cartouche',
@@ -1729,17 +1729,17 @@ const SILHOUETTES = {
       'a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3zm2 5h18v13H15V9zm0 18h18v5H15v-5z"/>',
 };
 
-function plateformeDe(g) {
+function platformOf(g) {
   if (!g) return '';
   return g.tid ? 'switch' : (g.systeme || SYS || '');
 }
 
 function mediaDe(g) {
-  return MEDIA_PLATEFORME[plateformeDe(g)] || '';
+  return PLATFORM_MEDIA[platformOf(g)] || '';
 }
 
 function platformName(g) {
-  const cle = plateformeDe(g);
+  const cle = platformOf(g);
   const s = (SYSTEMS || []).find(x => x.key === cle);
   return (s && s.name) || g.sysNom || cle || '';
 }
@@ -1762,7 +1762,7 @@ const GLYPHE_CONSOLE =
       ' fill="currentColor"/>' +
   '</svg>';
 
-function carteOverlay({g, e}) {
+function cardOverlay({g, e}) {
   const bouts = [];
   // "Is it on the console?" is THE question you ask while scanning the grid.
   // So it lives on the cover, not in the bottom strip where it drowned between
@@ -1812,10 +1812,10 @@ function auPremierPlan(el) {
   el.classList.add('devant');
 }
 
-function ligneVersion(x) {
+function versionRow(x) {
   const {g, e} = x;
   const lg = languageLabels(g);
-  const etat = e && ETATS[e.etat] ? ETATS[e.etat] : null;
+  const etat = e && STATES[e.etat] ? STATES[e.etat] : null;
   return '<div class="vrow">' +
     '<span class="vcover">' + (coverImg(g) || '') + '</span>' +
     '<span class="vnom">' + esc(gameName(g)) +
@@ -1824,17 +1824,17 @@ function ligneVersion(x) {
           esc(lg.court) + '</span>' : '') +
     '<span class="vtaille">' + esc(fmt(g.size)) + '</span>' +
     (etat ? '<span class="vetat ' + etat[0] + '">' +
-            esc(ETAT_COURT[e.etat] || etat[1]) + '</span>' : '') +
+            esc(SHORT_STATE[e.etat] || etat[1]) + '</span>' : '') +
     '<button class="ghost" data-act="openGame" data-arg="' + esc(g.key) + '">' +
       'Détails</button>' +
   '</div>';
 }
 
-function carteHtml(x) {
+function cardHtml(x) {
   const {g, e} = x;
   const coche = dsel2.has(g.key);
   const [cls, txt] = cardLine(x);
-  const attente = RECHERCHE_FICHES && withoutEntry(g);
+  const attente = SEARCHING_ENTRIES && withoutEntry(g);
   return '<div class="gcard' + (coche ? ' sel' : '') + (attente ? ' sansfiche' : '') +
     (g.groupeN ? ' groupe' : '') +
     // The medium serves as an edging in the "all platforms" view: the only one
@@ -1851,8 +1851,8 @@ function carteHtml(x) {
     // in a sorted library.
     '<span class="ph">' + (silhouetteHtml(g) ||
        esc((gameName(g)[0] || '?').toUpperCase())) + '</span>' +
-    '<span class="ovslot">' + carteOverlay(x) + '</span>' +
-    '<span class="badge">' + carteEtiquette(x) + '</span>' +
+    '<span class="ovslot">' + cardOverlay(x) + '</span>' +
+    '<span class="badge">' + cardLabel(x) + '</span>' +
     '<span class="pcheck' + (coche ? ' on' : '') + '">' + (coche ? '✓' : '') + '</span>' +
     (attente ? '<span class="enattente">Recherche des infos…</span>' : '') + '</div>' +
     '<div class="cap"><div class="gname">' + esc(gameName(g)) + '</div>' +
@@ -1874,28 +1874,28 @@ function updateCard(el, x) {
   R.classe(el, 'sel', coche);
   // As soon as the details arrive, the waiting veil disappears without
   // redrawing the card — hence without making the cover flicker.
-  const attente = RECHERCHE_FICHES && withoutEntry(g);
+  const attente = SEARCHING_ENTRIES && withoutEntry(g);
   R.classe(el, 'sansfiche', attente);
   const art = el.querySelector('.art');
-  const voile = el.querySelector('.enattente');
-  if (attente && !voile && art) {
+  const overlay = el.querySelector('.enattente');
+  if (attente && !overlay && art) {
     const sp = document.createElement('span');
     sp.className = 'enattente';
     sp.textContent = 'Recherche des infos…';
     art.appendChild(sp);
-  } else if (!attente && voile) {
-    voile.remove();
+  } else if (!attente && overlay) {
+    overlay.remove();
   }
-  R.html(el.querySelector('.badge'), carteEtiquette(x));
+  R.html(el.querySelector('.badge'), cardLabel(x));
   const c = el.querySelector('.pcheck');
   if (c) { R.classe(c, 'on', coche); R.texte(c, coche ? '✓' : ''); }
-  R.html(el.querySelector('.ovslot'), carteOverlay(x));
+  R.html(el.querySelector('.ovslot'), cardOverlay(x));
   const [cls, txt] = cardLine(x);
   const l = el.querySelector('.ligne');
   if (l) { l.className = 'ligne ' + cls; R.texte(l, txt); }
 }
 
-function majChips() {
+function updateChips() {
   document.querySelectorAll('#filters .chip').forEach(c =>
     c.classList.toggle('on', c.dataset.f === FILTER));
 }
@@ -1924,7 +1924,7 @@ function renderToolbar(tous) {
   if (s) { s.textContent = SENS === 1 ? '↑' : '↓';
            s.title = SENS === 1 ? 'Ordre croissant' : 'Ordre inverse'; }
   document.querySelectorAll('#tailles .szbtn').forEach(b =>
-    b.classList.toggle('on', b.dataset.sz === TAILLE));
+    b.classList.toggle('on', b.dataset.sz === SIZE));
 
   // Each advanced filter shows how many games it would keep: you know before
   // clicking whether it is worth it.
@@ -1988,7 +1988,7 @@ function renderActionBar() {
 
   // "Select all" disappears once everything is ticked: a button that can do
   // nothing is a button that lies.
-  const visibles = filteredGames(jeuxUnifies()).length;
+  const visibles = filteredGames(unifiedGames()).length;
   const tout = $('touscocher');
   if (tout) {
     tout.style.display = dsel2.size >= visibles ? 'none' : '';
@@ -2061,7 +2061,7 @@ function majSection(g, e) {
 
 function openGameHtml(g) {
   const lines = [];
-  const e = etatDe(g);
+  const e = stateOf(g);
   // The status talks ONLY about availability: the update detail has its own
   // section below, with the button that goes with it.
   const libelles = {
@@ -2204,7 +2204,7 @@ function renderImport(items) {
       '<div class="drow' + (i.type === 'AMBIGU' ? ' aclasser' : '') + '"><span class="tag t-' +
       (i.type === 'ARCHIVE' ? 'INCONNU' : i.type === 'AMBIGU' ? 'AMBIGU' : i.type === 'ROM' ? 'BASE' : i.type) + '">' +
       esc(i.type === 'AMBIGU' ? 'À CLASSER' : i.type) + '</span>' +
-      '<span class="grow">' + esc(nomLisible(pretty(i.name))) + '</span>' +
+      '<span class="grow">' + esc(readableName(pretty(i.name))) + '</span>' +
       '<span class="size">' + fmt(i.size) + '</span>' +
       '<span class="ddest">&rarr; ' + esc(i.dest) + '</span></div>').join('') +
     '</div>').join('');
@@ -2237,16 +2237,16 @@ function duree(s) {
 // sentence. The fill follows the real level, the colour warns before a 12 GB
 // transfer stops halfway.
 // ---------------------------------------------------------- maintenance
-function _lignes(paires) {
+function _lines(paires) {
   return '<div class="majbloc">' + paires.map(([k, v]) =>
     '<div class="majrow"><span>' + esc(k) + '</span><b>' + v + '</b></div>').join('')
     + '</div>';
 }
 
-function renduDoublons(r) {
+function renderDuplicates(r) {
   const rien = !r.identiques.length && !r.regions.length && !r.multi_plateformes.length;
   if (rien) return '<p class="lead">Aucun doublon repéré.</p>';
-  let h = _lignes([
+  let h = _lines([
     ['Fichiers identiques', r.identiques.length],
     ['Mêmes titres, régions différentes', r.regions.length],
     ['Mêmes jeux sur plusieurs plateformes', r.multi_plateformes.length],
@@ -2278,10 +2278,10 @@ function renduDoublons(r) {
   return h;
 }
 
-function renduIntegrite(r) {
+function renderIntegrity(r) {
   const s = r.resume || {};
   const couvert = s.fichiers ? Math.round(100 * s.couverts / s.fichiers) : 0;
-  return _lignes([
+  return _lines([
     ['Fichiers de la bibliothèque', s.fichiers || 0],
     ['Avec une empreinte connue', (s.couverts || 0) + ' (' + couvert + ' %)'],
     ['Jamais vérifiés', s.sans_empreinte || 0],
@@ -2308,12 +2308,12 @@ function renderBackups(r) {
       : '<p class="lead">Aucune sauvegarde pour l\'instant.</p>');
 }
 
-function renduAcces(r) {
+function renderAccess(r) {
   const s = r.resume || {};
   const ev = r.evenements || [];
   const nom = {connexion: 'Connexion', refus: 'Refusée', deconnexion: 'Déconnexion',
                compte: 'Compte'};
-  return _lignes([
+  return _lines([
     ['Événements enregistrés', s.evenements || 0],
     ['Tentatives refusées', s.refus || 0],
     ['Dernière connexion', esc((s.derniere_connexion || {}).t || '—')],
@@ -2327,10 +2327,10 @@ function renduAcces(r) {
     : '<p class="lead">Aucun événement — l\'authentification n\'est pas active.</p>');
 }
 
-function renduTransfert(r) {
+function renderTransfer(r) {
   const t = r.reprise;
   if (!t) return '<p class="lead">Aucun transfert interrompu.</p>';
-  return _lignes([
+  return _lines([
     ['Fichiers déjà envoyés', t.faits],
     ['Restant à envoyer', t.restants + '  ·  ' + fmt(t.octets)],
     ['Destination', '<code>' + esc(t.destination) + '</code>'],
@@ -2519,7 +2519,7 @@ function renderLudo(r) {
 }
 
 // The same browser, as a string, for the "your library" step.
-function renduLudoOnboard() {
+function renderLibOnboard() {
   if (!LUDO.etat) return '';
   const h = htmlLudo(LUDO.etat);
   return '<div class="ludopick">' +
@@ -2637,7 +2637,7 @@ function renderPlatforms(r) {
       '<code>' + esc(r.racine || '') + '</code>') + '</div>';
     return;
   }
-  PLATEFORMES = p;
+  PLATFORMS = p;
   el.innerHTML = '<div class="pfgrille">' + p.map(s =>
     '<button class="pfcarte' + (s.key === PF_OUVERTE ? ' on' : '') +
     '" data-act="openPlatform" data-arg="' + esc(s.key) + '" ' +
@@ -2656,14 +2656,14 @@ function renderPlatforms(r) {
 }
 
 let BATTERIE = null;
-let PLATEFORMES = [], PF_OUVERTE = '';
+let PLATFORMS = [], PF_OUVERTE = '';
 
 // -------------------------------------------------- per-platform settings
 // One place decides which console we are talking about. The selector chooses,
 // `#pf-commun` shows what EVERY platform has (its folder on the console), and
 // `#pf-specifique` only leaves visible the blocks carrying the matching
 // `data-plateforme`.
-let PF_REGLAGES = localStorage.getItem('pf-reglages') || 'switch';
+let PF_SETTINGS = localStorage.getItem('pf-reglages') || 'switch';
 
 // "generic" and "switch" are words from the code: on screen they say nothing.
 // We name what the user recognises.
@@ -2681,20 +2681,20 @@ function fillPlatformSelector() {
     .map(e => e.dataset.plateforme));
   const ordre = [...SYSTEMS].sort((a, b) =>
     (propres.has(b.key) - propres.has(a.key)) || a.name.localeCompare(b.name));
-  if (!ordre.some(x => x.key === PF_REGLAGES)) PF_REGLAGES = ordre[0].key;
+  if (!ordre.some(x => x.key === PF_SETTINGS)) PF_SETTINGS = ordre[0].key;
   sel.innerHTML = ordre.map(x =>
-    '<option value="' + esc(x.key) + '"' + (x.key === PF_REGLAGES ? ' selected' : '') + '>' +
+    '<option value="' + esc(x.key) + '"' + (x.key === PF_SETTINGS ? ' selected' : '') + '>' +
     esc(x.name) + (propres.has(x.key) ? ' — ' + esc(moteurLisible(x.engine)) : '') +
     '</option>').join('');
-  sel.value = PF_REGLAGES;
+  sel.value = PF_SETTINGS;
 }
 
 function updatePlatformSettings() {
-  const sys = SYSTEMS.find(x => x.key === PF_REGLAGES);
+  const sys = SYSTEMS.find(x => x.key === PF_SETTINGS);
   const propre = [...document.querySelectorAll('#pf-specifique [data-plateforme]')];
   let visibles = 0;
   propre.forEach(el => {
-    const oui = el.dataset.plateforme === PF_REGLAGES;
+    const oui = el.dataset.plateforme === PF_SETTINGS;
     el.hidden = !oui;
     if (oui) visibles++;
   });
@@ -2719,7 +2719,7 @@ function renderPfCommun(sys) {
   if (!el) return;
   if (!sys) { el.innerHTML = ''; return; }
   const perso = ((DATA.config || {}).system_dirs || {})[sys.key] || '';
-  const vu = PLATEFORMES.find(x => x.key === sys.key);
+  const vu = PLATFORMS.find(x => x.key === sys.key);
   const lignes = [
     ['Moteur', esc(moteurLisible(sys.engine))],
     ['Dossier local', '<code>' + esc(sys.folder) + '/</code>'],
@@ -2783,7 +2783,7 @@ function renderTree() {
 // ---------------------------------------------------- Eden configuration
 // The most useful settings, with their technical name: we do not invent a label
 // that would hide the real key the emulator expects.
-const EC_CLES = [
+const EC_KEYS = [
   ['Renderer', 'resolution_setup', 'Résolution'],
   ['Renderer', 'scaling_filter', 'Filtre de mise à l\'échelle'],
   ['Renderer', 'anti_aliasing', 'Anticrénelage'],
@@ -2802,7 +2802,7 @@ let ECVALS = {}, ECTID = '';
 
 function renderEcTable(valeurs, existe) {
   ECVALS = valeurs || {};
-  const lignes = EC_CLES.map(([sec, cle, label]) => {
+  const lignes = EC_KEYS.map(([sec, cle, label]) => {
     const v = (ECVALS[sec] || {})[cle];
     const herite = v === undefined;
     return '<div class="setrow"><div class="setlab"><b>' + esc(label) + '</b>' +
@@ -2939,7 +2939,7 @@ function nandParChemin() {
 // Both directions of transfer must read effortlessly. "To import" was
 // understood backwards: we now say WHERE the game is missing, and the button
 // says what to do. The badge states, the action decides.
-const ETATS = {
+const STATES = {
   probleme: ['b-orph', 'Problème'],
   importer: ['b-conv', 'Pas sur le serveur'],
   envoyer:  ['b-conv', 'Pas sur la console'],
@@ -2951,7 +2951,7 @@ const ETATS = {
 // These states only make sense once the console has answered: without it we
 // cannot know what is missing there, and showing "0" would be an invented
 // answer.
-const ETATS_CONSOLE = ['envoyer', 'activer', 'importer'];
+const CONSOLE_STATES = ['envoyer', 'activer', 'importer'];
 
 // The console counts as "read" only once its files have really been listed.
 // Settling for NANDCONN (Eden answers) would suggest, while the list is on its
@@ -2961,7 +2961,7 @@ function consoleLue() { return CONSET.size > 0; }
 function gameState(g, nmap) {
   nmap = nmap || nandParChemin();
   if (g.console) {   // present sur la console, absent de la bibliotheque
-    return {etat: 'importer', txt: ETATS.importer[1], aEnvoyer: [], aActiver: [],
+    return {etat: 'importer', txt: STATES.importer[1], aEnvoyer: [], aActiver: [],
             casses: [], raison: '', note: '', taille: g.size,
             presence: {mac: false, console: 'oui'}};
   }
@@ -3018,7 +3018,7 @@ function gameState(g, nmap) {
            : !aEnvoyer.length ? 'oui'
            : aEnvoyer.length < jouables.length ? 'partiel' : 'non',
   };
-  return {etat, raison, note, presence, txt: ETATS[etat][1], aEnvoyer, aActiver, casses,
+  return {etat, raison, note, presence, txt: STATES[etat][1], aEnvoyer, aActiver, casses,
           taille: aEnvoyer.reduce((s, f) => s + f.size, 0)};
 }
 
@@ -3093,22 +3093,22 @@ const TRIS = {
                    || gameName(a.g).localeCompare(gameName(b.g))],
   taille:  ['Taille (gros → petit)', (a, b) => b.g.size - a.g.size],
   etat:    ['État (à traiter d\'abord)',
-            (a, b) => (ORDRE_ETAT[a.e.etat] - ORDRE_ETAT[b.e.etat])
+            (a, b) => (STATE_ORDER[a.e.etat] - STATE_ORDER[b.e.etat])
                    || gameName(a.g).localeCompare(gameName(b.g))],
   contenu: ['Nombre de MAJ / DLC',
             (a, b) => ((b.g.updCount || 0) + (b.g.dlcCount || 0))
                     - ((a.g.updCount || 0) + (a.g.dlcCount || 0))],
 };
-const ORDRE_ETAT = {probleme: 0, envoyer: 1, importer: 2, activer: 3,
+const STATE_ORDER = {probleme: 0, envoyer: 1, importer: 2, activer: 3,
                     convert: 4, local: 5, pret: 6};
-const TAILLES = {compact: ['Compact', 112], moyen: ['Moyen', 158], grand: ['Grand', 230]};
+const SIZES = {compact: ['Compact', 112], moyen: ['Moyen', 158], grand: ['Grand', 230]};
 // The page size used to be dictated by the tile size: it is now chosen,
 // including "show everything" for a large library.
 const PAR_PAGE = [24, 48, 96, 200, 0];   // 0 = everything
 
 let TRI = localStorage.getItem('tri') || 'etat';
 let SENS = localStorage.getItem('sens') === '-1' ? -1 : 1;   // 1 croissant, -1 inverse
-let TAILLE = localStorage.getItem('taille') || 'moyen';
+let SIZE = localStorage.getItem('taille') || 'moyen';
 let PARPAGE = parseInt(localStorage.getItem('parpage'), 10);
 if (!PAR_PAGE.includes(PARPAGE)) PARPAGE = 48;
 let PAGE = 0;
@@ -3143,7 +3143,7 @@ let FAV = new Set(JSON.parse(localStorage.getItem('fav') || '[]'));
 // A game from another console takes the SAME shape as a Switch game, so it goes
 // through the same render: same covers, same selection, same bulk actions.
 // Without that the other systems inherited a second-rate view.
-function jeuxSysteme() {
+function systemGames() {
   const surConsole = new Set(SCONSOLE.map(n => String(n).toLowerCase()));
   const locaux = SGAMES.map(f => ({
     key: f.path,
@@ -3168,32 +3168,32 @@ function jeuxSysteme() {
         key: 'console:' + p, name: fichier, tid: null, titre: SCONSOLE_TITRES[p] || '',
         files: [{path: p, file: fichier, name: fichier, type: 'BASE',
                  ext: (fichier.split('.').pop() || '').toLowerCase(),
-                 size: SCONSOLE_TAILLES[p] || 0}],
-        size: SCONSOLE_TAILLES[p] || 0, updCount: 0, dlcCount: 0, hasBase: true,
+                 size: SCONSOLE_SIZES[p] || 0}],
+        size: SCONSOLE_SIZES[p] || 0, updCount: 0, dlcCount: 0, hasBase: true,
         systeme: SYS, sysNom: libelleSysteme(SYS), console: true, paths: [p],
       };
     });
   return locaux.concat(distants);
 }
 
-function etatSysteme(g) {
+function systemState(g) {
   // No updates and no DLC off the Switch: the status comes down to "where is
   // the game?". Inventing other states would be lying.
   if (g.console)
-    return {etat: 'importer', raison: '', note: '', txt: ETATS.importer[1],
+    return {etat: 'importer', raison: '', note: '', txt: STATES.importer[1],
             aEnvoyer: [], aActiver: [], casses: [], taille: 0,
             presence: {mac: false, console: 'oui'}};
   const lue = consoleLuePour(g);
   const etat = !lue ? 'local' : (g._surConsole ? 'pret' : 'envoyer');
-  return {etat, raison: '', note: '', txt: ETATS[etat][1],
+  return {etat, raison: '', note: '', txt: STATES[etat][1],
           aEnvoyer: g._surConsole ? [] : g.files, aActiver: [], casses: [],
           taille: g._surConsole ? 0 : g.size,
           presence: {mac: true, console: !lue ? 'inconnu' : (g._surConsole ? 'oui' : 'non')}};
 }
 
 // A game's status, whatever its platform.
-function etatDe(g) {
-  return (g.systeme && g.systeme !== 'switch') ? etatSysteme(g) : gameState(g, nandParChemin());
+function stateOf(g) {
+  return (g.systeme && g.systeme !== 'switch') ? systemState(g) : gameState(g, nandParChemin());
 }
 
 // In the overview, SCONSOLE is empty: console membership is carried by the game
@@ -3204,7 +3204,7 @@ function consoleLuePour(g) {
 
 // Every platform together. Each game carries the name of its own, without which
 // a list of 200 mixed titles would be unreadable.
-function jeuxTous() {
+function allGames() {
   const out = [];
   GAMES.concat(consoleOnlyGames()).forEach(g => {
     if (g.console || g.files.length) out.push({g: Object.assign({}, g, {sysNom: 'Switch'}),
@@ -3222,7 +3222,7 @@ function jeuxTous() {
                  size: f.size, updCount: 0, dlcCount: 0, hasBase: true,
                  systeme: sys.key, sysNom: sys.folder,
                  _surConsole: surConsole.has(String(f.file || '').toLowerCase())};
-      out.push({g, e: etatSysteme(g)});
+      out.push({g, e: systemState(g)});
     });
     sys.console.forEach(x => {
       const fichier = String(x.chemin).split('/').pop();
@@ -3234,7 +3234,7 @@ function jeuxTous() {
                           size: x.taille || 0}],
                  size: x.taille || 0, updCount: 0, dlcCount: 0, hasBase: true,
                  systeme: sys.key, sysNom: sys.folder, console: true, paths: [x.chemin]};
-      out.push({g, e: etatSysteme(g)});
+      out.push({g, e: systemState(g)});
     });
   });
   return out;
@@ -3259,11 +3259,11 @@ let _unifiedKey = null, _uniListe = null;
 
 function inventaireChange() { DONNEES_V++; _unifiedKey = null; }
 
-function jeuxUnifiesBrut() {
+function unifiedGamesRaw() {
   const cmp = (TRIS[TRI] || TRIS.nom)[1];
-  if (vueTotale()) return jeuxTous().sort((a, b) => cmp(a, b) * SENS);
+  if (vueTotale()) return allGames().sort((a, b) => cmp(a, b) * SENS);
   if (!isSwitch())
-    return jeuxSysteme().map(g => ({g, e: etatSysteme(g)})).sort((a, b) => cmp(a, b) * SENS);
+    return systemGames().map(g => ({g, e: systemState(g)})).sort((a, b) => cmp(a, b) * SENS);
   const nmap = nandParChemin();
   return GAMES.concat(consoleOnlyGames())
     .filter(g => g.console || g.files.length)
@@ -3271,9 +3271,9 @@ function jeuxUnifiesBrut() {
     .sort((a, b) => cmp(a, b) * SENS);
 }
 
-function jeuxUnifies() {
+function unifiedGames() {
   const cle = SYS + '\u0000' + TRI + '\u0000' + SENS + '\u0000' + DONNEES_V;
-  if (cle !== _unifiedKey) { _unifiedKey = cle; _uniListe = jeuxUnifiesBrut(); }
+  if (cle !== _unifiedKey) { _unifiedKey = cle; _uniListe = unifiedGamesRaw(); }
   return _uniListe;
 }
 
@@ -3298,7 +3298,7 @@ function jeuxUnifies() {
    That condition is essential: without it, "Mario Party (2019)" and "Mario
    Party" would merge, which would be wrong.
    ========================================================================== */
-const LANGUES_REGIONS = new Set((
+const LANG_REGIONS = new Set((
   'german english spanish french italian japanese korean chinese dutch ' +
   'portuguese russian polish swedish danish norwegian finnish brazilian ' +
   'deutsch francais italiano espanol japonais nederlands portugues ' +
@@ -3309,7 +3309,7 @@ const MOTS_DECOR = new Set(['ver', 'version', 'edition', 'ed', 'v']);
 const MARQUEUR_FINAL = /\s*[([]([^)\]]{1,28})[)\]]\s*$/;
 
 // Renvoie [nom de base, un marqueur a-t-il ete retire ?].
-function baseSansMarqueur(nom) {
+function baseWithoutMarker(nom) {
   let base = String(nom || '').trim();
   let trouve = false;
   // A file may carry two: "Game (English Ver.) [EUR]".
@@ -3323,7 +3323,7 @@ function baseSansMarqueur(nom) {
       .filter(w => !MOTS_DECOR.has(w));
     // An empty marker ("(Ver.)") or one holding anything other than a language
     // stops the splitting: we do not guess.
-    if (!mots.length || !mots.every(w => LANGUES_REGIONS.has(w))) break;
+    if (!mots.length || !mots.every(w => LANG_REGIONS.has(w))) break;
     base = base.slice(0, m.index).trim();
     trouve = true;
   }
@@ -3340,7 +3340,7 @@ function baseSansMarqueur(nom) {
    So we only read what is written, and show nothing when nothing is: guessing
    "probably English" would invent a piece of information the user would take
    for verified. */
-const CODES_LANGUE = new Set(('en fr de es it ja nl pt sv no da fi ko zh ru pl ' +  // i18n:ok - language codes
+const LANG_CODES = new Set(('en fr de es it ja nl pt sv no da fi ko zh ru pl ' +  // i18n:ok - language codes
   'cs hu tr el ca').split(' '));
 const MOT_VERS_CODE = {
   french: 'fr', german: 'de', deutsch: 'de', english: 'en', spanish: 'es',
@@ -3348,23 +3348,23 @@ const MOT_VERS_CODE = {
   chinese: 'zh', dutch: 'nl', portuguese: 'pt', russian: 'ru',
   brazilian: 'pt', japonais: 'ja',
 };
-const NOM_CODE = {
+const CODE_FOR_NAME = {
   fr: 'Français', en: 'Anglais', de: 'Allemand', es: 'Espagnol',
   it: 'Italien', ja: 'Japonais', nl: 'Néerlandais', pt: 'Portugais',
   sv: 'Suédois', no: 'Norvégien', da: 'Danois', fi: 'Finnois',
   ko: 'Coréen', zh: 'Chinois', ru: 'Russe', pl: 'Polonais',
   cs: 'Tchèque', hu: 'Hongrois', tr: 'Turc', el: 'Grec', ca: 'Catalan',
 };
-const GROUPES_NOM = /[([][^)\]]{1,40}[)\]]/g;
+const GROUP_NAMES = /[([][^)\]]{1,40}[)\]]/g;
 
 function gameLanguages(g) {
   const vues = [];
-  for (const groupe of String((g && g.name) || '').match(GROUPES_NOM) || []) {
+  for (const groupe of String((g && g.name) || '').match(GROUP_NAMES) || []) {
     const dedans = groupe.slice(1, -1).trim();
     // "En,Fr,De,Es,It": the WHOLE group must be made of known codes, otherwise
     // "(US)" or "(v1.0.1)" would pass for languages.
     const bouts = dedans.split(',').map(x => x.trim().toLowerCase()).filter(Boolean);
-    if (bouts.length && bouts.every(x => CODES_LANGUE.has(x))) {
+    if (bouts.length && bouts.every(x => LANG_CODES.has(x))) {
       for (const b of bouts) if (!vues.includes(b)) vues.push(b);
       continue;
     }
@@ -3383,7 +3383,7 @@ function gameLanguages(g) {
 function languageLabels(g) {
   const codes = gameLanguages(g);
   if (!codes.length) return null;
-  const noms = codes.map(c => NOM_CODE[c] || c.toUpperCase()).join(', ');
+  const noms = codes.map(c => CODE_FOR_NAME[c] || c.toUpperCase()).join(', ');
   return codes.length === 1
     ? {court: codes[0].toUpperCase(), long: noms}
     : {court: 'MULTI', long: noms};
@@ -3393,10 +3393,10 @@ function languageLabels(g) {
 // Which version represents the group: the one in the interface's language when
 // it exists, else the English one, else the first to hand. Showing a game's
 // Japanese version to a French-reading user would be an arbitrary choice.
-const LANGUE_MARQUEUR = {fr: 'french', en: 'english'};
+const LANG_MARKER = {fr: 'french', en: 'english'};
 
 function representantGroupe(membres) {
-  const voulu = LANGUE_MARQUEUR[LANGUE] || 'english';
+  const voulu = LANG_MARKER[LANG] || 'english';
   const noteDe = x => {
     const n = String(x.g.name || '').toLowerCase();
     if (n.includes(voulu)) return 3;
@@ -3414,7 +3414,7 @@ let GROUPES = new Map();
 function regrouper(liste) {
   const paquets = new Map();
   for (const x of liste) {
-    const [base, marque] = baseSansMarqueur(x.g.name);
+    const [base, marque] = baseWithoutMarker(x.g.name);
     if (!base) continue;
     const p = paquets.get(base) || {membres: [], marque: false};
     p.membres.push(x);
@@ -3433,7 +3433,7 @@ function regrouper(liste) {
   // ended. They now have their own dialog.
   const sortie = [], vus = new Set();
   for (const x of liste) {
-    const [base] = baseSansMarqueur(x.g.name);
+    const [base] = baseWithoutMarker(x.g.name);
     const membres = GROUPES.get(base);
     if (!membres) { sortie.push(x); continue; }
     if (vus.has(base)) continue;
@@ -3470,7 +3470,7 @@ function deployCibles() {
     let poids = 0;
     const distants = {};
     SCONSOLE_PATHS.forEach(p => { distants[p.split('/').pop().toLowerCase()] = p; });
-    jeuxSysteme().forEach(g => {
+    systemGames().forEach(g => {
       if (!dsel2.has(g.key)) return;
       if (g.console) { (g.paths || []).forEach(p => { importer.push(p); supprConsole.push(p); }); return; }
       local.push(g.key);
@@ -3523,7 +3523,7 @@ const SET_DESC = {
 };
 // The SSO fields only make sense in SSO mode: we hide them otherwise, rather
 // than leaving a dozen inert fields on screen.
-function majBlocAuth() {
+function updateAuthBlock() {
   const sel = $('s-authmode'), bloc = $('blocoidc'), interne = $('blocinterne');
   if (!sel || !bloc) return;
   const mode = sel.value;
@@ -3534,7 +3534,7 @@ function majBlocAuth() {
   // letting someone believe the access is locked.
   const sansFournisseur = mode === 'oidc'
     && !((c.oidc_issuer || '').trim() && (c.oidc_client_id || '').trim());
-  const sansCompte = mode === 'interne' && !COMPTES.length;
+  const sansCompte = mode === 'interne' && !ACCOUNTS.length;
   const d = $('d-auth');
   if (d) {
     d.textContent =
@@ -3562,19 +3562,19 @@ function majBlocAuth() {
 // state file harmless — but forbids showing them again. This block's whole
 // ergonomics follow from that constraint: the key appears large at creation,
 // with a copy button, and the user is warned it will not come back.
-let CLES = [];
+let KEYS = [];
 
 async function loadKeys() {
   const r = await api('/api/cles', null, true);
   if (!r || r.error) return;
-  CLES = r.cles || [];
+  KEYS = r.cles || [];
   renderKeys();
 }
 
 function renderKeys() {
   const boite = $('listecles');
   if (!boite) return;
-  const vivantes = CLES.filter(k => !k.revoquee);
+  const vivantes = KEYS.filter(k => !k.revoquee);
   if (!vivantes.length) {
     boite.innerHTML = '<p class="lead" style="margin:0 0 8px">'
       + esc(t('Aucune clé. L\'API n\'est atteignable par personne.'))
@@ -3597,7 +3597,7 @@ function dateKey(t0) {
   if (!t0) return t('jamais utilisée');
   // Locale tags are not interface text: they are not translated, they are
   // chosen.
-  const etiquette = LANGUE === 'fr' ? 'fr-FR' : 'en-GB';   // i18n:ok
+  const etiquette = LANG === 'fr' ? 'fr-FR' : 'en-GB';   // i18n:ok
   return new Date(t0 * 1000).toLocaleDateString(etiquette);
 }
 
@@ -3633,7 +3633,7 @@ async function createKey() {
 }
 
 async function revokeKey(id) {
-  const k = CLES.find(x => x.id === id) || {};
+  const k = KEYS.find(x => x.id === id) || {};
   dialogue({
     titre: t('Révoquer cette clé ?'),
     niveau: 'avert',
@@ -3731,12 +3731,12 @@ async function testNotificationInput() {
 }
 
 // ------------------------------------------------------------ comptes internes
-let COMPTES = [], MOI = '', MDP_MIN = 12;
+let ACCOUNTS = [], MOI = '', MDP_MIN = 12;
 
 async function loadAccounts() {
   const r = await api('/api/comptes', {}, true);
   if (!r || r.error) return;
-  COMPTES = r.comptes || [];
+  ACCOUNTS = r.comptes || [];
   MOI = r.moi || '';
   MDP_MIN = r.mdp_min || 12;
   renderAccounts();
@@ -3752,10 +3752,10 @@ function renderAccounts() {
       const b = el.querySelector('button');
       // We do not offer to remove the last account: nobody could get in any
       // more.
-      b.hidden = COMPTES.length < 2;
+      b.hidden = ACCOUNTS.length < 2;
       b.onclick = () => deleteAccount(c);
     };
-    R.liste(boite, COMPTES, {
+    R.liste(boite, ACCOUNTS, {
       cle: c => c.id,
       creer: c => {
         const el = document.createElement('div');
@@ -3768,11 +3768,11 @@ function renderAccounts() {
       },
       majEl: remplir,
     });
-    R.classe(boite, 'vide', !COMPTES.length);
+    R.classe(boite, 'vide', !ACCOUNTS.length);
   }
   const carte = $('moncompte');
   if (!carte) return;
-  const moi = COMPTES.find(c => c.id === MOI);
+  const moi = ACCOUNTS.find(c => c.id === MOI);
   if (!moi) { carte.innerHTML = ''; return; }
   carte.innerHTML = '<div class="moncompte">'
     + '<div class="avatar"></div>'
@@ -3796,10 +3796,10 @@ function renderAccounts() {
   }
   R.texte(carte.querySelector('.compte-nom'), moi.nom);
   R.texte(carte.querySelector('.compte-mail'), moi.email);
-  const actions = {photo: choisirPhoto, nom: renameAccount,
+  const actions = {photo: choosePhoto, nom: renameAccount,
                    mdp: changerMotDePasse,
                    totp: () => moi.double_facteur ? retirerDoubleFacteur()
-                                                  : activerDoubleFacteur(),
+                                                  : enableTwoFactor(),
                    sortir: () => location.href = '/auth/logout'};
   carte.querySelectorAll('[data-a]').forEach(b => { b.onclick = actions[b.dataset.a]; });
 }
@@ -3811,7 +3811,7 @@ async function accountUpload(chemin, corps, apres) {
   const r = await api(chemin, corps, true);
   if (!r) return false;
   if (r.error) { toast(r.error, 'warn'); return false; }
-  if (r.comptes) COMPTES = r.comptes;
+  if (r.comptes) ACCOUNTS = r.comptes;
   if (apres) await apres(r);
   toast(r.message || 'Enregistré.', 'ok');
   return true;
@@ -3827,7 +3827,7 @@ function addAccount() {
               libelle: tpl('Mot de passe (%s caractères minimum)', MDP_MIN),
               type: 'password', auto: 'new-password'}],
     actions: [{libelle: 'Créer le compte', principal: true, faire: v =>
-      accountUpload('/api/compte-creer', v, () => { renderAccounts(); majBlocAuth(); })}],
+      accountUpload('/api/compte-creer', v, () => { renderAccounts(); updateAuthBlock(); })}],
     fermer: 'Annuler',
   });
 }
@@ -3844,7 +3844,7 @@ function deleteAccount(c) {
 }
 
 function renameAccount() {
-  const moi = COMPTES.find(c => c.id === MOI) || {};
+  const moi = ACCOUNTS.find(c => c.id === MOI) || {};
   dialogue({
     titre: 'Mon profil',
     champs: [{id: 'nom', libelle: 'Nom affiché', valeur: moi.nom},
@@ -3877,7 +3877,7 @@ function changerMotDePasse() {
 
 // Two deliberate steps: the factor is only declared active after a valid code
 // has been seen. Otherwise a mis-configured app locks the account.
-async function activerDoubleFacteur() {
+async function enableTwoFactor() {
   const p = await api('/api/compte-totp-preparer', {}, true);
   if (!p || p.error) return toast((p && p.error) || 'Préparation impossible.', 'warn');
   dialogue({
@@ -3956,7 +3956,7 @@ function openPlatformChoice(items) {
   }));
 }
 
-function choisirPhoto() {
+function choosePhoto() {
   const f = document.createElement('input');
   f.type = 'file';
   f.accept = 'image/png,image/jpeg,image/gif,image/webp';
@@ -4021,7 +4021,7 @@ function fillSettings() {
   // `aucun` is the setting's VALUE, not its label: the displayed option lives
   // in index.html and goes through the catalogue.
   if ($('s-authmode')) $('s-authmode').value = c.auth_mode || 'aucun';  // i18n:ok
-  majBlocAuth();
+  updateAuthBlock();
   set('s-jobs', c.jobs); set('s-cover', c.cover_url); set('s-sgkey', c.steamgriddb_key);
   set('s-igdbid', c.igdb_client_id); set('s-igdbsecret', c.igdb_client_secret);
   set('s-romsroot', c.roms_root); set('s-savesdir', c.saves_dir);
@@ -4043,7 +4043,7 @@ function fillSettings() {
 // ----------------------------------------------------------------- app
 // The profiles come from /api/health: the server alone knows which are shipped,
 // and which is active.
-function nomEmulateur(cle) {
+function emulatorName(cle) {
   const p = ((HEALTH && HEALTH.profils) || []).find(x => x.cle === cle);
   return p ? p.nom : (cle || '');
 }
@@ -4133,7 +4133,7 @@ const app = {
   },
   setFilter(f) {
     FILTER = f; PAGE = 0;   // changing filter always returns to the first page
-    majChips();
+    updateChips();
     renderLib();
   },
 
@@ -4145,7 +4145,7 @@ const app = {
   // platforms and those present only on the console do not appear there, so
   // their detail view stayed empty.
   gameByKey(k) {
-    const t = jeuxUnifies().find(x => x.g.key === k);
+    const t = unifiedGames().find(x => x.g.key === k);
     return t && t.g;
   },
   async openGame(k) {
@@ -4311,7 +4311,7 @@ const app = {
     localStorage.setItem('systeme', key);
 
     const garde = CACHE_SYS[key];
-    if (garde) { appliquerSysteme(garde); renderLib(); return; }
+    if (garde) { applySystem(garde); renderLib(); return; }
 
     // Nothing cached: we announce the loading WITHOUT emptying, so the grid's
     // height does not move — that is what made the page jump.
@@ -4327,7 +4327,7 @@ const app = {
       // under the second one's name.
       if (jeton !== CHARGE_SYS) return;
       CACHE_SYS[key] = donnees;
-      appliquerSysteme(donnees);
+      applySystem(donnees);
       renderLib();
     } finally {
       if (jeton === CHARGE_SYS) R.classe($('lib'), 'charge', false);
@@ -4400,7 +4400,7 @@ const app = {
 
   async scan() {
     DATA = await api('/api/scan');
-    if (DATA && DATA.moi) { ROLE = DATA.moi; appliquerRole(); }
+    if (DATA && DATA.moi) { ROLE = DATA.moi; applyRole(); }
     render();
     this.loadTrash();
     return this.loadSystems();     // attendue : la sequence de lancement en depend
@@ -4418,10 +4418,10 @@ const app = {
   // they describe a SCREEN, not a library. The same library is read in light on
   // a tablet and in dark on the console, and a device preference has no
   // business travelling.
-  setTheme(v) { poserApparence('theme', v, ['sombre', 'clair', 'auto']); },
-  setCardEffect(v) { poserApparence('carte', v, ['aucune', '0', '1', '2', '3', '4', '5']); },
+  setTheme(v) { setAppearance('theme', v, ['sombre', 'clair', 'auto']); },
+  setCardEffect(v) { setAppearance('carte', v, ['aucune', '0', '1', '2', '3', '4', '5']); },
   // The setting's three allowed values, not labels.
-  setMotion(v) { poserApparence('mvt', v, ['complet', 'reduit', 'aucun']); },  // i18n:ok
+  setMotion(v) { setAppearance('mvt', v, ['complet', 'reduit', 'aucun']); },  // i18n:ok
 
   // ---- interface language
   async langLoad() {
@@ -4435,7 +4435,7 @@ const app = {
     await loadLanguage(r.courante || 'fr');
   },
   async setLang(code) {
-    if (code === LANGUE) return;
+    if (code === LANG) return;
     await this.saveField('ui_lang', code);
     // Translation replaces the text IN the DOM: going back would require
     // remembering every original. Reloading the page starts from the right
@@ -4618,7 +4618,7 @@ const app = {
     if (!nom) return;
     const r = await api('/api/eden-profile-save',
       {nom, tid: ECTID, portee: ECTID ? 'jeu' : 'global',
-       sections: EC_CLES.map(c => c[0]).filter((v, i, a) => a.indexOf(v) === i)});
+       sections: EC_KEYS.map(c => c[0]).filter((v, i, a) => a.indexOf(v) === i)});
     toast(tpl('Profil « %s » enregistré.', r.nom), 'ok');
     renderEcProfiles(r.profils || []);
   },
@@ -4938,7 +4938,7 @@ const app = {
     if (!img || !img.src) return;
     const feuille = img.closest('.sheet');
     const titre = feuille ? (feuille.querySelector('h3') || {}).textContent : '';
-    ouvrirLoupe(img.src, titre || '');
+    openMagnifier(img.src, titre || '');
   },
 
   coverForView(img) {
@@ -5205,7 +5205,7 @@ const app = {
   },
   page(d) { PAGE = Math.max(0, PAGE + d); renderLib(); window.scrollTo({top: 0, behavior: 'smooth'}); },
   setSort(v) { TRI = v; localStorage.setItem('tri', v); PAGE = 0; renderLib(); },
-  setSize(v) { TAILLE = v; localStorage.setItem('taille', v); PAGE = 0; renderLib(); },
+  setSize(v) { SIZE = v; localStorage.setItem('taille', v); PAGE = 0; renderLib(); },
   setPerPage(v) {
     PARPAGE = parseInt(v, 10) || 0;
     localStorage.setItem('parpage', String(PARPAGE));
@@ -5261,7 +5261,7 @@ const app = {
       '<div class="sheet dlg d-info" data-interieur>' +
         '<div class="dlghead"><h3>' + esc(titre) + '</h3>' +
           '<span class="mono">' + membres.length + ' versions</span></div>' +
-        '<div class="versions">' + membres.map(x => ligneVersion(x)).join('') +
+        '<div class="versions">' + membres.map(x => versionRow(x)).join('') +
         '</div>' +
         '<div class="acts"><button class="ghost" data-act="closeDialog">' +
           'Fermer</button></div>' +
@@ -5269,13 +5269,13 @@ const app = {
     el.classList.remove('ferme');
     el.classList.add('open');
     auPremierPlan(el);
-    traduireDOM(el);
+    translateDOM(el);
   },
 
   deployPick(all) {
     dsel2.clear();
     DERNIER_CLIC = null;
-    if (all) filteredGames(jeuxUnifies()).forEach(({g}) => dsel2.add(g.key));
+    if (all) filteredGames(unifiedGames()).forEach(({g}) => dsel2.add(g.key));
     renderLib();
   },
   setOrder() { SENS = -SENS; localStorage.setItem('sens', String(SENS)); PAGE = 0; renderLib(); },
@@ -5320,7 +5320,7 @@ const app = {
   },
 
   async saveView() {
-    const f = filtresCourants();
+    const f = currentFilters();
     dialogue({
       titre: t('Enregistrer cette vue'),
       niveau: 'info',
@@ -5386,7 +5386,7 @@ const app = {
   // the "all platforms" view, the button looked like it did nothing. It now
   // re-reads what is REALLY on screen.
   async refreshAll() {
-    oublierCacheSysteme();                        // this is the gesture that says "read again"
+    forgetSystemCache();                        // this is the gesture that says "read again"
     await this.scan();                            // the server's files
     if (CONN.kind) {
       await this.explore();                       // what is already on the console
@@ -5696,8 +5696,8 @@ const app = {
       R.classe(x, 'on', x.getAttribute('onclick').includes("'" + quoi + "'")));
     R.texte(b, 'Lecture…');
     const rendus = {
-      doublons: renduDoublons, integrite: renduIntegrite,
-      sauvegardes: renderBackups, acces: renduAcces, transfert: renduTransfert,
+      doublons: renderDuplicates, integrite: renderIntegrity,
+      sauvegardes: renderBackups, acces: renderAccess, transfert: renderTransfer,
     };
     const routes = {
       doublons: '/api/doublons', integrite: '/api/integrite',
@@ -5807,7 +5807,7 @@ const app = {
       // visible cards is the one you aimed at.
       R.classe(cible, 'visee', true);
       setTimeout(() => R.classe(cible, 'visee', false), 1400);
-      setTimeout(majAlphabet, 420);
+      setTimeout(updateAlphabet, 420);
     };
     // The clicked letter acknowledges the hit: without that feedback, a click
     // on an already current letter produces no visible sign and reads as a dead
@@ -5822,7 +5822,7 @@ const app = {
     }
     ALPHA_VISEE = lettre;
     ALPHA_JUSQUA = Date.now() + 1400;   // long enough for the scroll to settle
-    majAlphabet();
+    updateAlphabet();
     if (page !== PAGE) { PAGE = page; renderLib(); requestAnimationFrame(bouger); }
     else bouger();
   },
@@ -5834,7 +5834,7 @@ const app = {
 
   // Picking the platform whose options are being set.
   choosePlatformSettings(key) {
-    PF_REGLAGES = key;
+    PF_SETTINGS = key;
     localStorage.setItem('pf-reglages', key);
     // The selector must always show the displayed platform: called from
     // elsewhere (a platform card), it stayed on the old one.
@@ -5961,7 +5961,7 @@ const app = {
     this.scan();
   },
   setJFilter(f) {
-    JFILTRE = f;
+    JFILTER = f;
     document.querySelectorAll('#jfilters .chip').forEach(c => c.classList.toggle('on', c.dataset.jl === f));
     renderJournal();
   },
@@ -5999,7 +5999,7 @@ const app = {
     else {
       // A task that finishes has almost always moved, converted or deleted
       // files: what we hold in cache is worth nothing any more.
-      oublierCacheSysteme();
+      forgetSystemCache();
       const soucis = (j.log || []).filter(e => e.n === 'error');
       const alertes = (j.log || []).filter(e => e.n === 'warn');
       if (soucis.length) {
@@ -6098,7 +6098,7 @@ function onbEtapes(h) {
         // Choosing the folder from here, rather than pointing at an
         // environment variable: on a NAS, that meant opening a terminal and
         // restarting a container in the middle of the wizard.
-        if (LUDO.cible === 'onb') return renduLudoOnboard();
+        if (LUDO.cible === 'onb') return renderLibOnboard();
         return '<p class="onbp">Romule analyse ce dossier :</p>' +
           '<div class="onbchemin">' + esc(h.ludotheque || h.root || '') + '</div>' +
           (h.ludotheque_imposee
@@ -6111,7 +6111,7 @@ function onbEtapes(h) {
           'tes comptes, eux, vivent ailleurs et ne suivent pas ce dossier.</p>' +
           '<button class="go" data-act="onbScan"' + (ONB.occupe ? ' disabled' : '') +
           '>' + (ONB.occupe ? 'Lecture…' : 'Analyser le dossier') + '</button>' +
-          (r ? renduScanOnboard(r) : '');
+          (r ? renderScanOnboard(r) : '');
       },
       valide: () => !!(ONB.resultatScan && ONB.resultatScan.total > 0),
       manque: 'Analyse le dossier pour vérifier que tes jeux sont bien vus.',
@@ -6189,7 +6189,7 @@ function onbEtapes(h) {
               'à fournir dans les réglages.') + '</span></li>' +
         '<li><b>Émulateur</b>' +
           '<span class="onbdesc">' + t('Romule vise %s par défaut. Réglages → Ta console.')
-            .replace('%s', esc(nomEmulateur(c.emulateur))) + '</span></li>' +
+            .replace('%s', esc(emulatorName(c.emulateur))) + '</span></li>' +
         '<li><b>Accès à distance</b>' +
           '<span class="onbdesc">Ouvrir la ludothèque depuis le téléphone ou ' +
           'l\'extérieur se règle dans Réglages → Accès.</span></li>' +
@@ -6198,7 +6198,7 @@ function onbEtapes(h) {
   ];
 }
 
-function renduScanOnboard(r) {
+function renderScanOnboard(r) {
   if (!r.total) {
     return '<div class="onbresultat vide"><b>Aucun jeu trouvé.</b>' +
       '<p class="onbnote">Dépose tes fichiers dans ce dossier, puis relance ' +
@@ -6273,7 +6273,7 @@ function renderOnboard() {
     '</div>' +
     '<button class="onbpasser" data-act="closeOnboard">Passer l\'assistant</button>' +
     '</div>';
-  traduireDOM(el);
+  translateDOM(el);
   el.classList.add('open');
 }
 
@@ -6366,7 +6366,7 @@ function extensionAcceptee(nom) {
 function uploadFiles(files) {
   // The drop adds files to the library: the cache is stale before the transfer
   // has even finished.
-  oublierCacheSysteme();
+  forgetSystemCache();
   let list = [...files].filter(f => extensionAcceptee(f.name));
   const rejetes = [...files].length - list.length;
   if (!list.length) {
@@ -6491,7 +6491,7 @@ $('panel-settings').addEventListener('change', e => {
   app.saveField(cle, v);
 });
 $('panel-settings').addEventListener('input', syncSetDesc);
-$('panel-settings').addEventListener('change', majBlocAuth);
+$('panel-settings').addEventListener('change', updateAuthBlock);
 $('s-erdevice').addEventListener('change', e => app.erPickDevice(e.target.value));
 $('s-uilang').addEventListener('change', e => app.setLang(e.target.value));
 $('s-plateforme').addEventListener('change', e => app.choosePlatformSettings(e.target.value));
@@ -6523,7 +6523,7 @@ addEventListener('resize', mesurerBarres);
       // A deliberate scroll hands control back to the position computation.
       // The jump itself triggers one: we let that one through.
       if (Date.now() > ALPHA_JUSQUA) ALPHA_VISEE = '';
-      majAlphabet();
+      updateAlphabet();
     });
   }, {passive: true});
 })();
@@ -6546,14 +6546,14 @@ if ('ResizeObserver' in window) {
 
    The open section is remembered: you almost always come back to the one you
    were setting. */
-const SECTIONS_REGLAGES = [];
+const SETTINGS_SECTIONS = [];
 let SECTION_ACTIVE = '';
 
 function showSettingsSection(id, memoriser) {
-  if (!SECTIONS_REGLAGES.length) return;
-  const cible = SECTIONS_REGLAGES.find(s => s.sec.id === id) || SECTIONS_REGLAGES[0];
+  if (!SETTINGS_SECTIONS.length) return;
+  const cible = SETTINGS_SECTIONS.find(s => s.sec.id === id) || SETTINGS_SECTIONS[0];
   SECTION_ACTIVE = cible.sec.id;
-  for (const s of SECTIONS_REGLAGES) {
+  for (const s of SETTINGS_SECTIONS) {
     const on = s === cible;
     s.sec.hidden = !on;
     R.classe(s.a, 'on', on);
@@ -6573,7 +6573,7 @@ function showSettingsSection(id, memoriser) {
     .map(a => ({a, sec: $(a.getAttribute('href').slice(1))}))
     .filter(x => x.sec);
   if (!liens.length) return;
-  SECTIONS_REGLAGES.push(...liens);
+  SETTINGS_SECTIONS.push(...liens);
 
   nav.setAttribute('role', 'tablist');
   for (const {a, sec} of liens) {
@@ -6624,7 +6624,7 @@ $('crumb').addEventListener('click', e => { const a = e.target.closest('a'); if 
 // the panel was open. Dropping anywhere is the expected gesture; the rectangle
 // stays, as a landmark when the panel is open.
 const drop = $('drop');
-const voile = $('dropzone');
+const overlay = $('dropzone');
 
 // `dragenter` and `dragleave` also fire when moving from one element to
 // another: without a counter, the overlay would flicker throughout the hover.
@@ -6636,9 +6636,9 @@ function carriesFiles(e) {
 }
 
 function showOverlay(oui) {
-  if (!voile) return;
-  R.classe(voile, 'on', oui);
-  voile.setAttribute('aria-hidden', oui ? 'false' : 'true');
+  if (!overlay) return;
+  R.classe(overlay, 'on', oui);
+  overlay.setAttribute('aria-hidden', oui ? 'false' : 'true');
 }
 
 window.addEventListener('dragenter', e => {
@@ -6697,7 +6697,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') { app.closeG
    depends on the width and on the chosen density. We therefore read it from the
    geometry — the cards of the first row share their top edge.
    ------------------------------------------------------------------------- */
-function cartesGrille() {
+function gridCards() {
   return [...document.querySelectorAll('#lib .gcard')];
 }
 
@@ -6716,7 +6716,7 @@ document.addEventListener('keydown', ev => {
   if (!DEPLACE[ev.key] || ev.metaKey || ev.ctrlKey || ev.altKey) return;
   const ici = document.activeElement;
   if (!ici || !ici.classList || !ici.classList.contains('gcard')) return;
-  const cartes = cartesGrille();
+  const cartes = gridCards();
   const i = cartes.indexOf(ici);
   if (i < 0) return;
   const col = colonnesGrille(cartes);
@@ -6941,7 +6941,7 @@ function themeEffectif() {
   return m && m.matches ? 'clair' : 'sombre';
 }
 
-function poserApparence(cle, valeur, permis) {
+function setAppearance(cle, valeur, permis) {
   if (!permis.includes(valeur)) return;
   const d = document.documentElement;
   if (d.dataset[cle] === valeur) return;
@@ -6953,10 +6953,10 @@ function poserApparence(cle, valeur, permis) {
   }
   d.dataset[cle] = valeur;
   try { localStorage.setItem(cle, valeur); } catch (e) { /* navigation privee */ }
-  majApparence();
+  updateAppearance();
 }
 
-function majApparence() {
+function updateAppearance() {
   const d = document.documentElement;
   const paire = [['s-theme', d.dataset.theme], ['s-mvt', d.dataset.mvt]];
   for (const [id, actif] of paire) {
@@ -6986,8 +6986,8 @@ function buildCardChoices() {
     // catalogue is read — and their value is assembled, so it is a key to
     // nothing. Two independent reasons to stay in French, which no check on
     // the source could have revealed.
-    poserAttr(b, 'title', aide);
-    poserAttr(b, 'aria-label', '%s — %s', nom, aide);
+    setAttr(b, 'title', aide);
+    setAttr(b, 'aria-label', '%s — %s', nom, aide);
     // The thumbnail mimics a game card — a cover rectangle topped by a status
     // strip — without carrying a real sleeve: a game image here would suggest
     // the setting only concerns that one game. A plain number, on the other
@@ -7008,7 +7008,7 @@ function buildCardChoices() {
     img.onerror = function () {
       if (this.dataset.repli) { this.remove(); return; }   // even the fallback failed
       this.dataset.repli = '1';
-      this.src = JAQUETTE_EXEMPLE;
+      this.src = SAMPLE_COVER;
     };
     vue.appendChild(img);
     const bandeau = document.createElement('span');
@@ -7024,9 +7024,9 @@ function buildCardChoices() {
     b.onclick = () => app.setCardEffect(cle);
     hote.appendChild(b);
   }
-  traduireDOM(hote);
+  translateDOM(hote);
   updateCoverPreview();
-  majApparence();
+  updateAppearance();
 }
 
 // A grey rectangle does not show much: a reflection or a tilt is judged on a
@@ -7039,7 +7039,7 @@ function buildCardChoices() {
 // sleeve. It represents no game, which is exactly what we want here — and it is
 // a `data:`, so served by the page itself, with no request and no CSP
 // exception.
-const JAQUETTE_EXEMPLE = 'data:image/svg+xml,' + encodeURIComponent(
+const SAMPLE_COVER = 'data:image/svg+xml,' + encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 450">' +
     '<defs><linearGradient id="f" x1="0" y1="0" x2="0.4" y2="1">' +
       '<stop offset="0" stop-color="#33344180"/>' +
@@ -7053,12 +7053,12 @@ const JAQUETTE_EXEMPLE = 'data:image/svg+xml,' + encodeURIComponent(
     '<rect x="132" y="240" width="36" height="13" rx="4" fill="#5a5d70"/>' +
   '</svg>');
 
-function jaquetteExemple() {
+function sampleCover() {
   let liste = [];
   // Even on failure we return the generic sleeve: an empty preview says
   // nothing, and the failure here has nothing to do with the setting on
   // screen.
-  try { liste = jeuxUnifies() || []; } catch (e) { return JAQUETTE_EXEMPLE; }
+  try { liste = unifiedGames() || []; } catch (e) { return SAMPLE_COVER; }
   const v = (DATA && DATA.covers_v) || 0;
   for (const x of liste) {
     const g = (x && x.g) || x;
@@ -7067,13 +7067,13 @@ function jaquetteExemple() {
     return '/cover/' + (g.tid || '') + '?v=' + v +
            '&name=' + encodeURIComponent(g.name || '');
   }
-  return JAQUETTE_EXEMPLE;
+  return SAMPLE_COVER;
 }
 
 function updateCoverPreview() {
   const hote = $('s-carte');
   if (!hote) return;
-  const src = jaquetteExemple();
+  const src = sampleCover();
   if (!src) return;
   hote.querySelectorAll('.apimg').forEach(img => {
     if (img.getAttribute('src') !== src) img.setAttribute('src', src);
@@ -7085,7 +7085,7 @@ function updateCoverPreview() {
 // by themselves through the media query.
 (function () {
   const suivi = media(CLAIR_SYSTEME);
-  if (suivi && suivi.addEventListener) suivi.addEventListener('change', majApparence);
+  if (suivi && suivi.addEventListener) suivi.addEventListener('change', updateAppearance);
 })();
 
 // The header only takes its shadow once the page has scrolled: at rest, a
@@ -7179,13 +7179,13 @@ function loupeEl() {
   });
   cadre.addEventListener('click', ev => {
     ev.stopPropagation();
-    fermerLoupe();
+    closeMagnifier();
   });
-  el.addEventListener('click', fermerLoupe);
+  el.addEventListener('click', closeMagnifier);
   return el;
 }
 
-function ouvrirLoupe(src, titre) {
+function openMagnifier(src, titre) {
   if (!src) return;
   const el = loupeEl();
   const img = $('loupeimg');
@@ -7197,7 +7197,7 @@ function ouvrirLoupe(src, titre) {
   el.classList.add('on');
 }
 
-function fermerLoupe() {
+function closeMagnifier() {
   const el = $('loupe');
   if (el) el.classList.remove('on');
 }
@@ -7288,13 +7288,13 @@ function paletteEl() {
         '<span><b>↵</b> ouvrir</span><span><b>Échap</b> fermer</span></div>' +
     '</div>';
   document.body.appendChild(el);
-  el.addEventListener('click', ev => { if (ev.target === el) fermerPalette(); });
-  $('palsaisie').addEventListener('input', () => remplirPalette($('palsaisie').value));
-  traduireDOM(el);
+  el.addEventListener('click', ev => { if (ev.target === el) closePalette(); });
+  $('palsaisie').addEventListener('input', () => fillPalette($('palsaisie').value));
+  translateDOM(el);
   return el;
 }
 
-function remplirPalette(q) {
+function fillPalette(q) {
   const cherche = String(q || '').trim().toLowerCase();
   const candidats = [];
 
@@ -7305,7 +7305,7 @@ function remplirPalette(q) {
     if (s >= 0) candidats.push({...cmd, score: s + 2});   // on a tie, actions come first
   }
   let jeux = [];
-  try { jeux = jeuxUnifies(); } catch (e) { jeux = []; }
+  try { jeux = unifiedGames(); } catch (e) { jeux = []; }
   for (const x of jeux) {
     const nom = gameName(x.g);
     const s = cherche ? scoreFlou(nom, cherche) : 0;
@@ -7313,7 +7313,7 @@ function remplirPalette(q) {
     candidats.push({
       titre: nom, type: 'jeu', score: s,
       detail: [x.g.sysNom, fmt(x.g.size)].filter(Boolean).join('  ·  '),
-      etat: x.e && ETATS[x.e.etat] ? [ETATS[x.e.etat][0], ETAT_COURT[x.e.etat]] : null,
+      etat: x.e && STATES[x.e.etat] ? [STATES[x.e.etat][0], SHORT_STATE[x.e.etat]] : null,
       faire: () => app.openGame(x.g.key),
     });
   }
@@ -7321,14 +7321,14 @@ function remplirPalette(q) {
   candidats.sort((a, b) => b.score - a.score);
   PALETTE_CHOIX = candidats.slice(0, PALETTE_MAX);
   PALETTE_INDEX = 0;
-  dessinerPalette();
+  renderPalette();
 }
 
-function dessinerPalette() {
+function renderPalette() {
   const liste = $('palliste');
   if (!PALETTE_CHOIX.length) {
     liste.innerHTML = '<div class="palvide">Rien ne correspond.</div>';
-    traduireDOM(liste);
+    translateDOM(liste);
     return;
   }
   liste.innerHTML = PALETTE_CHOIX.map((c, i) =>
@@ -7339,36 +7339,36 @@ function dessinerPalette() {
       (c.detail ? '<span class="paldetail">' + esc(c.detail) + '</span>' : '') +
     '</div>').join('');
   liste.querySelectorAll('.palitem').forEach(el =>
-    el.addEventListener('click', () => lancerPalette(+el.dataset.i)));
-  traduireDOM(liste);
+    el.addEventListener('click', () => runPaletteItem(+el.dataset.i)));
+  translateDOM(liste);
 }
 
 function bougerPalette(pas) {
   if (!PALETTE_CHOIX.length) return;
   PALETTE_INDEX = (PALETTE_INDEX + pas + PALETTE_CHOIX.length) % PALETTE_CHOIX.length;
-  dessinerPalette();
+  renderPalette();
   const on = $('palliste').querySelector('.palitem.on');
   if (on) on.scrollIntoView({block: 'nearest'});
 }
 
-function lancerPalette(i) {
+function runPaletteItem(i) {
   const c = PALETTE_CHOIX[i == null ? PALETTE_INDEX : i];
   if (!c) return;
   // We close BEFORE acting: several actions open a dialog, and the palette
   // would stay sitting on top of it.
-  fermerPalette();
+  closePalette();
   try { c.faire(); } catch (e) { toast('Action impossible.', 'warn'); }
 }
 
-function ouvrirPalette() {
+function openPalette() {
   const el = paletteEl();
   el.classList.add('on');
   $('palsaisie').value = '';
-  remplirPalette('');
+  fillPalette('');
   $('palsaisie').focus();
 }
 
-function fermerPalette() {
+function closePalette() {
   const el = $('palette');
   if (el) el.classList.remove('on');
 }
@@ -7398,14 +7398,14 @@ function dansUneSaisie(el) {
   return t === 'INPUT' || t === 'TEXTAREA' || t === 'SELECT' || el.isContentEditable;
 }
 
-function cartesVisibles() {
+function visibleCards() {
   return [...document.querySelectorAll('#lib .gcard')];
 }
 
 // The number of cards per row, measured rather than computed: the grid is an
 // `auto-fill`, so the count depends on the real width and on the chosen size.
 // Every card in a row shares its top edge.
-function cartesParRangee(cartes) {
+function cardsPerRow(cartes) {
   if (cartes.length < 2) return 1;
   const haut = cartes[0].getBoundingClientRect().top;
   let n = 0;
@@ -7417,7 +7417,7 @@ function cartesParRangee(cartes) {
 }
 
 function bougerDansGrille(pas) {
-  const cartes = cartesVisibles();
+  const cartes = visibleCards();
   if (!cartes.length) return false;
   const ici = cartes.indexOf(document.activeElement.closest
     ? document.activeElement.closest('.gcard') : null);
@@ -7435,16 +7435,16 @@ addEventListener('keydown', ev => {
   // from an input field.
   if ((ev.metaKey || ev.ctrlKey) && (ev.key === 'k' || ev.key === 'K')) {
     ev.preventDefault();
-    paletteOuverte() ? fermerPalette() : ouvrirPalette();
+    paletteOuverte() ? closePalette() : openPalette();
     return;
   }
   // While the palette is open, it takes the keyboard: the arrows walk its list,
   // they must not move the grid behind it.
   if (paletteOuverte()) {
-    if (ev.key === 'Escape') { ev.preventDefault(); fermerPalette(); }
+    if (ev.key === 'Escape') { ev.preventDefault(); closePalette(); }
     else if (ev.key === 'ArrowDown') { ev.preventDefault(); bougerPalette(1); }
     else if (ev.key === 'ArrowUp') { ev.preventDefault(); bougerPalette(-1); }
-    else if (ev.key === 'Enter') { ev.preventDefault(); lancerPalette(); }
+    else if (ev.key === 'Enter') { ev.preventDefault(); runPaletteItem(); }
     return;
   }
   if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
@@ -7452,7 +7452,7 @@ addEventListener('keydown', ev => {
 
   if (ev.key === 'Escape') {
     // The magnifier sits on top of the detail view: it closes first.
-    if (loupeOuverte()) return fermerLoupe();
+    if (loupeOuverte()) return closeMagnifier();
     if ($('modal').classList.contains('open')) return app.closeGame();
     if ($('dialog').classList.contains('open')) return app.closeDialog();
     hidePreview();
@@ -7469,8 +7469,8 @@ addEventListener('keydown', ev => {
 
   const carte = document.activeElement && document.activeElement.closest
     ? document.activeElement.closest('#lib .gcard') : null;
-  const cartes = cartesVisibles();
-  const colonnes = cartesParRangee(cartes);
+  const cartes = visibleCards();
+  const colonnes = cardsPerRow(cartes);
 
   switch (ev.key) {
     case '/':
@@ -7530,11 +7530,11 @@ function redonnerFocus(cle) {
    as soon as you cross the grid; too long and you have already given up. 600 ms
    corresponds to "I have stopped on this one".
    ========================================================================== */
-const APERCU_MS = 600;
-let APERCU_MINUTEUR = 0;
-let APERCU_CARTE = null;
+const PREVIEW_MS = 600;
+let PREVIEW_TIMER = 0;
+let PREVIEW_CARD = null;
 
-function apercuEl() {
+function previewEl() {
   let el = $('apercujeu');
   if (!el) {
     el = document.createElement('div');
@@ -7547,8 +7547,8 @@ function apercuEl() {
 }
 
 function hidePreview() {
-  clearTimeout(APERCU_MINUTEUR);
-  APERCU_CARTE = null;
+  clearTimeout(PREVIEW_TIMER);
+  PREVIEW_CARD = null;
   const el = $('apercujeu');
   if (el) el.classList.remove('on');
 }
@@ -7566,7 +7566,7 @@ function previewContent(g, e) {
   if (p.console) pousser('Console', TITRE_PRESENCE[p.console] || '—');
   const resume = resumeUtile(g);
   return '<div class="aptitre">' + esc(gameName(g)) + '</div>' +
-    (e ? '<div class="apetat ' + ETATS[e.etat][0] + '">' + esc(e.txt) + '</div>' : '') +
+    (e ? '<div class="apetat ' + STATES[e.etat][0] + '">' + esc(e.txt) + '</div>' : '') +
     '<div class="apgrille">' + bouts.join('') + '</div>' +
     (resume ? '<p class="apresume">' + esc(extrait(resume, 190)) + '</p>' : '');
 }
@@ -7575,10 +7575,10 @@ function placePreview(carte) {
   const g = app.gameByKey(carte.dataset.key);
   if (!g) return;
   let e = null;
-  try { e = etatDe(g); } catch (err) { e = null; }
-  const el = apercuEl();
+  try { e = stateOf(g); } catch (err) { e = null; }
+  const el = previewEl();
   el.innerHTML = previewContent(g, e);
-  traduireDOM(el);
+  translateDOM(el);
   el.classList.add('on');
 
   // Places the preview on whichever side it fits. Measured AFTER being made
@@ -7605,20 +7605,20 @@ document.addEventListener('mousemove', ev => {
   if (!matchMedia('(hover: hover)').matches) return;
   if (document.documentElement.dataset.mvt === 'aucun') return;
   const carte = ev.target.closest && ev.target.closest('#lib .gcard');
-  if (carte === APERCU_CARTE) return;
+  if (carte === PREVIEW_CARD) return;
   hidePreview();
   if (!carte) return;
   // No preview on top of an open dialog: it would cover it.
   if ($('modal').classList.contains('open')) return;
-  APERCU_CARTE = carte;
-  APERCU_MINUTEUR = setTimeout(() => placePreview(carte), APERCU_MS);
+  PREVIEW_CARD = carte;
+  PREVIEW_TIMER = setTimeout(() => placePreview(carte), PREVIEW_MS);
 });
 addEventListener('scroll', hidePreview, {passive: true});
 document.addEventListener('click', hidePreview);
 
 // Twelve silhouettes: enough to fill the first screen height without claiming
 // to announce the real number of games, which we do not know yet.
-function poserSquelettes(combien) {
+function placeSkeletons(combien) {
   const hote = $('libsquelette');
   if (!hote || hote.childElementCount) return;
   for (let i = 0; i < combien; i++) {
@@ -7630,9 +7630,9 @@ function poserSquelettes(combien) {
   }
 }
 
-poserSquelettes(12);
+placeSkeletons(12);
 buildCardChoices();
-majApparence();
+updateAppearance();
 
 // A loading state rather than zeroed counters and an "absent" console:
 // displaying wrong information, even for a second, is worse than saying
@@ -7669,7 +7669,7 @@ majApparence();
     // The console is now known: `systems.all_platforms()` can read its tree, which it
     // could not do on the first call. So we redo the overview ONCE, otherwise
     // the files present only on the console would never appear there.
-    if (vueTotale() && CONN.kind) { oublierCacheSysteme(); app.setSystem('all'); }
+    if (vueTotale() && CONN.kind) { forgetSystemCache(); app.setSystem('all'); }
   } finally {
     document.body.classList.remove('chargement');
     document.body.classList.add('pret');
@@ -7678,7 +7678,7 @@ majApparence();
   // the rest can come later: nothing depends on it for a first paint
   app.checkHealth();
   loadViews();                   // the saved views, served by the server
-  chargerMaj();                    // is there a newer version?
+  loadUpdate();                    // is there a newer version?
   app.erLoad();
   app.erDevices();
   // `scan()` has already read the platform list and awaits it: asking again
