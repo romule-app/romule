@@ -45,7 +45,7 @@ def t(nom, cond, detail=""):
 
 # --- `_romule-config.json` -------------------------------------------------
 #
-# The 41 settings, as they are written today at everyone's.
+# The 43 settings, as they are written today at everyone's.
 CONFIG = {
     "auth_mode", "auth_secret", "auto_nand", "cover_provider", "cover_url",
     "device_dir", "emulateur", "emulateur_paquet", "emuready",
@@ -54,9 +54,9 @@ CONFIG = {
     "local_layout", "maj_check", "meta_lang", "notif_destinations", "notify",
     "oidc_admin_groupes", "oidc_client_id", "oidc_client_secret", "oidc_emails",
     "oidc_groupes", "oidc_issuer", "oidc_redirect", "oidc_scopes",
-    "push_layout", "roms_root", "saves_dir", "steamgriddb_key",
-    "system_dirs", "systemes_perso", "trash_days", "ui_lang", "verify_mode",
-    "versions_urls", "wifi_addr",
+    "push_layout", "roms_root", "saves_dir", "schedule", "schedule_state",
+    "steamgriddb_key", "system_dirs", "systemes_perso", "trash_days",
+    "ui_lang", "verify_mode", "versions_urls", "wifi_addr",
 }
 
 # Written by the server, not declared in DEFAULTS: the token generated on the

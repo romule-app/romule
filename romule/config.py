@@ -393,6 +393,14 @@ DEFAULTS = {
     # to talk to nobody.
     "maj_check": True,
     "auth_secret": "",                            # cookie signing key, generated on its own
+    # What runs on its own, and when. `{task: preset}` — see scheduler.py for
+    # the five presets. Empty = nothing is scheduled, which stays the default:
+    # a tool that starts doing things unasked after an upgrade is a tool you
+    # stop trusting.
+    "schedule": {},
+    # When each scheduled task last ran. Written by the scheduler, never by
+    # hand: without it a restart makes every nightly task due again.
+    "schedule_state": {},
 }
 
 SAVES = ROOT / "_saves"
