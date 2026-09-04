@@ -26,13 +26,11 @@ from pathlib import Path
 from html import escape as html_escape
 from urllib.parse import parse_qs, unquote
 
-from . import (actions, apikeys, apiv1, audit, auth, comptes, config, console,
-               covers, net, notify, updates,
-               device, edenconf,
-               duplicates, emuready, igdb, integrity, journal_acces, meta, nand,
-               parcourir, sauvegarde, saves,
-               scan, systems, titleid, transferts, trash, versions, vues,
-               profils, nsztool)
+from . import (actions, apikeys, apiv1, audit, auth, backup, comptes, config,
+               console, covers, device, duplicates, edenconf, emuready, igdb,
+               integrity, journal_acces, meta, nand, net, notify, nsztool,
+               parcourir, profils, saves, scan, systems, titleid, transferts,
+               trash, updates, versions, views)
 from . import cli
 from . import LICENCE, SOURCE_URL, __version__
 from .jobs import JobRunner
@@ -827,7 +825,7 @@ class Handler(BaseHTTPRequestHandler):
             # never an error — a failed check must not show.
             self._json(updates.state(CFG))
         elif p == "/api/vues":
-            self._json({"vues": vues.liste()})
+            self._json({"vues": views.list_all()})
         elif p == "/api/notifs":
             # The ADDRESS is never returned in full. A Discord webhook is a
             # bearer secret: whoever gets it can post in the channel. Showing it
@@ -1144,15 +1142,15 @@ class Handler(BaseHTTPRequestHandler):
             self._json(_lib_response())
 
         elif p == "/api/vue-creer":
-            v = vues.creer(d.get("nom"), d.get("filtres"))
+            v = views.create(d.get("nom"), d.get("filtres"))
             if not v:
                 return self._json({"error": "Trop de vues enregistrees (%d)."
-                                   % vues.MAX_VUES}, 400)
-            self._json({"vue": v, "vues": vues.liste()})
+                                   % views.MAX_VIEWS}, 400)
+            self._json({"vue": v, "vues": views.list_all()})
 
         elif p == "/api/vue-supprimer":
-            vues.supprimer(str(d.get("id") or ""))
-            self._json({"vues": vues.liste()})
+            views.delete(str(d.get("id") or ""))
+            self._json({"vues": views.list_all()})
 
         elif p == "/api/notif-creer":
             url = str(d.get("url") or "").strip()
@@ -1268,7 +1266,7 @@ class Handler(BaseHTTPRequestHandler):
                 u = comptes.creer(d.get("email", ""), d.get("mdp", ""), d.get("nom", ""))
             except ValueError as exc:
                 return self._json({"error": str(exc)}, 400)
-            sauvegarde.auto("comptes")
+            backup.auto("comptes")
             JOB.log("Compte cree : %s" % u["email"])
             journal_acces.noter("compte", self.client_address[0], u["email"], "creation")
             self._json({"message": "Compte cree pour %s." % u["email"],
@@ -1410,16 +1408,16 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"resume": integrity.summary(LIB.files)})
 
         elif p == "/api/sauvegardes":
-            self._json({"lots": sauvegarde.listing()})
+            self._json({"lots": backup.listing()})
 
         elif p == "/api/sauvegarde-creer":
             self._json({"message": "Sauvegarde enregistree.",
-                        **sauvegarde.creer("manuelle"),
-                        "lots": sauvegarde.listing()})
+                        **backup.create("manuelle"),
+                        "lots": backup.listing()})
 
         elif p == "/api/sauvegarde-restaurer":
             try:
-                remis = sauvegarde.restaurer(d.get("lot", ""))
+                remis = backup.restore(d.get("lot", ""))
             except ValueError as exc:
                 return self._json({"error": str(exc)}, 400)
             CFG.clear()
@@ -1427,7 +1425,7 @@ class Handler(BaseHTTPRequestHandler):
             JOB.log("Configuration restauree : %s" % ", ".join(remis), "warn")
             self._json({"message": "Restauré : %s. L'état précédent a été "
                                    "sauvegardé avant." % ", ".join(remis),
-                        "lots": sauvegarde.listing()})
+                        "lots": backup.listing()})
 
         elif p == "/api/acces":
             self._json({"resume": journal_acces.resume(),
@@ -1858,7 +1856,7 @@ class Handler(BaseHTTPRequestHandler):
             if "systemes_perso" in d:
                 CFG["systemes_perso"] = systems.clean_custom(CFG["systemes_perso"])
             config.save_config(CFG)
-            sauvegarde.auto("reglages")
+            backup.auto("reglages")
             JOB.notify_end = bool(CFG.get("notify", True))
 
             # Switching authentication on from a browser that has no session
