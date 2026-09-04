@@ -119,4 +119,28 @@ def state(cfg=None, force=False):
                    for k in ("version", "titre", "notes", "url")})
     answer["verifie"] = int(cache.get("verifie") or 0)
     answer["disponible"] = newer_than(cache.get("version"))
+    if answer["disponible"]:
+        _announce_once(cache)
     return answer
+
+
+def _announce_once(cache):
+    """Tell the destinations, once per version.
+
+    This route is read on every page load, so notifying on "a version is
+    available" would be a message per load. What is remembered is the version
+    ALREADY ANNOUNCED, in the same cache file — a version number is a fact
+    about the outside world, and it belongs beside the rest of what we know
+    about it.
+    """
+    version = str(cache.get("version") or "")
+    if not version or cache.get("annoncee") == version:
+        return
+    try:
+        from . import notify
+        notify.send("maj", "Romule %s" % version,
+                    str(cache.get("titre") or "")[:200], "info")
+    except Exception:
+        return                # unannounced beats a version check that raises
+    cache["annoncee"] = version
+    _write_cache(cache)

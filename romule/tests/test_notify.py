@@ -157,7 +157,7 @@ def main():
         d = notify.destinations(cfg)
         t("les entrees vides ou malformees sont ecartees", len(d) == 1, d)
         t("un evenement inconnu est retire, et la liste retombe sur tous",
-          d[0]["evenements"] == list(notify.EVENEMENTS), d)
+          d[0]["evenements"] == list(notify.EVENTS), d)
 
         beaucoup = cfg_avec(*[{"id": str(i), "url": BASE + "/x"}
                               for i in range(notify.MAX_DESTINATIONS + 5)])

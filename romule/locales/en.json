@@ -1185,5 +1185,14 @@
   "Ni titre officiel, ni résumé, ni jaquette.": "No official title, no summary, no cover.",
   "En attente dans le dépôt": "Waiting in the drop folder",
   "Déposé mais pas encore rangé.": "Dropped but not yet filed.",
-  "%s en attente": "%s waiting"
+  "%s en attente": "%s waiting",
+  "Une tâche s'est terminée": "A task finished",
+  "Une tâche a échoué": "A task failed",
+  "Un envoi vers la console s'est terminé": "A transfer to the console finished",
+  "Une conversion s'est terminée": "A conversion finished",
+  "Le dépôt a été rangé": "The drop folder was filed",
+  "Les fiches ont été rafraîchies": "The game entries were refreshed",
+  "Une vérification d'intégrité s'est terminée": "An integrity check finished",
+  "La console s'est connectée ou déconnectée": "The console connected or disconnected",
+  "Une version plus récente existe": "A newer version exists"
 }

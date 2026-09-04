@@ -235,6 +235,32 @@ Each destination can be tested before or after saving, and the result says
 which side refused: a wrong address and a service that is down do not look the
 same.
 
+### Which events, per destination
+
+Every destination has its own boxes. A family channel can be told only when a
+transfer is over; an ops channel can be told about everything.
+
+| Event | Fires when |
+|---|---|
+| A task finished | any task at all ended well |
+| A task failed | any task at all failed or was interrupted |
+| A transfer to the console finished | a push, a deploy or a pull ended — **either way** |
+| A conversion finished | an NSZ conversion ended, either way |
+| The drop folder was filed | files from `_import` were sorted into place |
+| The game entries were refreshed | titles, summaries and covers were fetched |
+| An integrity check finished | a fingerprint pass ended |
+| The console connected or disconnected | the link changed, and only when it *changes* |
+| A newer version exists | once per released version, not once per page load |
+
+The first two are catch-alls: tick *a task finished* and you hear about every
+kind of task, without ticking six boxes. The specific ones fire whatever the
+outcome, because someone watching for the end of a 12 GB transfer wants to know
+either way — the message's colour says which.
+
+A destination that has ticked both a specific event and its catch-all is told
+**once**, not twice. A destination with nothing ticked receives everything,
+which is what pasting an address without touching the boxes should mean.
+
 !!! warning "A webhook address is a bearer secret"
     Whoever holds it can post in your channel. Romule therefore **never sends
     it back** — the interface shows only the host, which is enough to tell two

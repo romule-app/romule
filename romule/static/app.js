@@ -3806,16 +3806,48 @@ function renderNotifications() {
       + '</p>';
     return;
   }
-  boite.innerHTML = NOTIFS.map(d =>
-    '<div class="account-row">'
-    + '<span class="account-name" data-i18n-skip>' + esc(d.nom || d.service) + '</span>'
-    + '<span class="account-mail tid" data-i18n-skip>' + esc(d.service) + '</span>'
-    + '<span class="mono" data-i18n-skip>' + esc(d.apercu) + '</span>'
-    + '<button class="ghost mini" data-act="testNotification" data-arg="'
-    + esc(d.id) + '">' + esc(t('Tester')) + '</button>'
-    + '<button class="ghost mini" data-act="deleteNotification" data-arg="'
-    + esc(d.id) + '">' + esc(t('Retirer')) + '</button>'
-    + '</div>').join('');
+  // The event boxes live UNDER each destination, not in a dialog: which events
+  // a channel wants is the thing you come back to change, and a setting you
+  // change often should not be two clicks and a modal away.
+  //
+  // An empty list means EVERY event on the server side — that is what someone
+  // who pastes an address without ticking anything expects. So a destination
+  // with nothing ticked is drawn with everything ticked, which is what it will
+  // actually do.
+  boite.innerHTML = NOTIFS.map(d => {
+    const coches = (d.evenements && d.evenements.length)
+      ? d.evenements : Object.keys(NOTIF_EVTS);
+    const cases = Object.keys(NOTIF_EVTS).map(cle =>
+      '<label class="dopt"><input type="checkbox" data-act-change="setNotificationEvents"'
+      + ' data-arg="' + esc(d.id) + '" data-evt="' + esc(cle) + '"'
+      + (coches.includes(cle) ? ' checked' : '') + '>'
+      + '<span>' + esc(t(NOTIF_EVTS[cle])) + '</span></label>').join('');
+    return '<div class="account-row">'
+      + '<span class="account-name" data-i18n-skip>' + esc(d.nom || d.service) + '</span>'
+      + '<span class="account-mail tid" data-i18n-skip>' + esc(d.service) + '</span>'
+      + '<span class="mono" data-i18n-skip>' + esc(d.apercu) + '</span>'
+      + '<button class="ghost mini" data-act="testNotification" data-arg="'
+      + esc(d.id) + '">' + esc(t('Tester')) + '</button>'
+      + '<button class="ghost mini" data-act="deleteNotification" data-arg="'
+      + esc(d.id) + '">' + esc(t('Retirer')) + '</button>'
+      + '</div><div class="dopts notifevts">' + cases + '</div>';
+  }).join('');
+}
+
+// Ticking one box sends the WHOLE list for that destination: the route writes a
+// value, not a patch, and a half-list could not be told from "none" — which is
+// itself a legitimate answer, since a destination can be silenced without being
+// removed.
+async function setNotificationEvents(id) {
+  const boite = $('listenotifs');
+  if (!boite) return;
+  const voulus = [...boite.querySelectorAll(
+    '[data-act-change="setNotificationEvents"][data-arg="' + esc(id) + '"]')]
+    .filter(c => c.checked).map(c => c.dataset.evt);
+  const r = await api('/api/notif-evenements', {id, evenements: voulus});
+  if (!r || r.error) return;
+  NOTIFS = r.destinations || [];
+  renderNotifications();
 }
 
 async function addNotification() {
@@ -6070,6 +6102,7 @@ const app = {
   addAccount,
   createKey, revokeKey,
   addNotification, deleteNotification, testNotification, testNotificationInput,
+  setNotificationEvents,
   loadAccounts,
 
   // Picking the platform whose options are being set.
@@ -7052,6 +7085,7 @@ const ACTES = new Set([
   'setMotion', 'setPerPage', 'setOrder', 'setSystem', 'setSize',
   'setTheme', 'setSort', 'setSchedule', 'showOnboard', 'testAuth', 'testIgdb',
   'chooseConsole', 'addConsole', 'renameConsole', 'removeConsole',
+  'setNotificationEvents',
   'toggleDrop', 'toggleFav', 'toggleJournal', 'togglePairing', 'togglePause',
   'trashFile', 'useDir', 'verify', 'showMaintenance', 'showVersions',
   'wifiConnect', 'wifiDiscover', 'wifiForget', 'wifiPair', 'wifiSwitch',
