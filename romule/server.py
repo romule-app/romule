@@ -1356,7 +1356,7 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"message": "Photo retiree."})
 
         elif p == "/api/sgdb-test":
-            ok, msg = covers.tester_cle(CFG)
+            ok, msg = covers.test_key(CFG)
             self._json({"ok": ok, "message": msg})
 
         elif p == "/api/igdb-test":
