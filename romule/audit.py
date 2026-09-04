@@ -46,7 +46,7 @@ def _acces(cfg):
     from . import auth, accounts
     out = []
     mode = cfg.get("auth_mode", "aucun")
-    actif = auth.actif(cfg)
+    actif = auth.enabled(cfg)
     ouvert = bool(cfg.get("lan_access")) or config.ENV_LAN
 
     if mode in ("oidc", "interne") and not actif:

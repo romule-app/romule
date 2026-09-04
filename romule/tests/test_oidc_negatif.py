@@ -80,7 +80,7 @@ def claims_valides(**remplace):
 def refuse(nom, jeton, nonce="N0NCE"):
     """The token must be refused — and by a ValueError, not by a crash."""
     try:
-        auth.verifier_id_token(jeton, DOC, "ludotheque", nonce)
+        auth.verify_id_token(jeton, DOC, "ludotheque", nonce)
     except ValueError as exc:
         t(nom, True)
         return str(exc)
@@ -170,7 +170,7 @@ try:
     refuse("charge non-JSON refusee",
            "%s.%s.%s" % (e, b64u(b"pas du json"), s))
     try:
-        auth.verifier_id_token(signer(claims_valides()), {"issuer": BASE},
+        auth.verify_id_token(signer(claims_valides()), {"issuer": BASE},
                                "ludotheque", "N0NCE")
         t("fournisseur sans jwks_uri refuse", False, "ACCEPTE")
     except ValueError:
@@ -179,14 +179,14 @@ try:
     print("   -- 6. temoin : un jeton valide passe --")
     # Without this check, a suite that refuses everything would look perfect.
     try:
-        c = auth.verifier_id_token(signer(claims_valides()), DOC, "ludotheque", "N0NCE")
+        c = auth.verify_id_token(signer(claims_valides()), DOC, "ludotheque", "N0NCE")
         t("jeton valide accepte", c.get("email") == "dino@exemple.fr", c)
     except ValueError as exc:
         t("jeton valide accepte", False, str(exc))
 
     # The nonce is only checked if it was requested.
     try:
-        auth.verifier_id_token(signer(claims_valides(nonce=None)), DOC, "ludotheque", "")
+        auth.verify_id_token(signer(claims_valides(nonce=None)), DOC, "ludotheque", "")
         t("nonce non demande : non exige", True)
     except ValueError as exc:
         t("nonce non demande : non exige", False, str(exc))
