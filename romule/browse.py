@@ -58,7 +58,7 @@ def _extensions(cfg=None):
     return exts
 
 
-def compter_jeux(dossier, exts=None, cfg=None):
+def count_games(folder, exts=None, cfg=None):
     """How many recognised files live under this folder, bounded by depth.
 
     Bounded, not exact: this number answers "yes, that is my library", it does
@@ -68,7 +68,7 @@ def compter_jeux(dossier, exts=None, cfg=None):
     exts = exts if exts is not None else _extensions(cfg)
     vus = 0
     trouves = 0
-    piles = [(Path(dossier), 0)]
+    piles = [(Path(folder), 0)]
     while piles:
         d, prof = piles.pop()
         try:
@@ -90,9 +90,9 @@ def compter_jeux(dossier, exts=None, cfg=None):
     return trouves
 
 
-def lister(chemin="", cfg=None):
+def list_dir(path="", cfg=None):
     """A path's subfolders. Returns a dict, or {"error": ...}."""
-    brut = str(chemin or "").strip()
+    brut = str(path or "").strip()
     # Starting point: the current library. But it may sit OUTSIDE the declared
     # bases — that is even the normal case for a container that keeps its data
     # in a volume and confines browsing to the games mount. Without this
@@ -145,13 +145,13 @@ def lister(chemin="", cfg=None):
         "parent": str(parent) if parent != cible and autorise(parent) else "",
         "dossiers": dossiers,
         "ecrivable": os.access(cible, os.W_OK),
-        "jeux": compter_jeux(cible, cfg=cfg),
+        "jeux": count_games(cible, cfg=cfg),
         "douteux": config.racine_douteuse(cible),
-        "raccourcis": raccourcis(),
+        "raccourcis": shortcuts(),
     }
 
 
-def raccourcis():
+def shortcuts():
     """The starting points offered in the dialog."""
     vus = set()
     out = []
