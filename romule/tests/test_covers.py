@@ -47,8 +47,8 @@ def main():
         appels["igdb"].append(nom)
         return "https://images.igdb.com/x.jpg"
 
-    vrai_dl, vraie_jq = covers._download, igdb.jaquette
-    covers._download, igdb.jaquette = faux_download, fausse_jaquette
+    vrai_dl, vraie_jq = covers._download, igdb.cover_url
+    covers._download, igdb.cover_url = faux_download, fausse_jaquette
     cfg = {"cover_provider": "nlib"}
     try:
         # --- The main source returns an address, but no image ---------------
@@ -81,7 +81,7 @@ def main():
         appels["telecharge"].clear(); appels["igdb"].clear()
         covers._FAILED.clear()
         covers._download = faux_download
-        igdb.jaquette = lambda nom, cfg=None: (appels["igdb"].append(nom) or None)
+        igdb.cover_url = lambda nom, cfg=None: (appels["igdb"].append(nom) or None)
         p = covers.fetch("0100000000000000", "Introuvable Partout", cfg)
         t("sans image nulle part, on rend None", p is None, p)
         t("l'echec est memorise pour ne pas etre rejoue",
@@ -93,7 +93,7 @@ def main():
         covers.fetch("0100111111110000", None, cfg)
         t("aucun appel IGDB sans nom de jeu", appels["igdb"] == [], appels["igdb"])
     finally:
-        covers._download, igdb.jaquette = vrai_dl, vraie_jq
+        covers._download, igdb.cover_url = vrai_dl, vraie_jq
 
     print("   ------------------------------------------------")
     print("   %d controles OK, %d echec(s)" % (ok, fail))
