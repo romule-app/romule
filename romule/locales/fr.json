@@ -1185,5 +1185,14 @@
   "Ni titre officiel, ni résumé, ni jaquette.": "Ni titre officiel, ni résumé, ni jaquette.",
   "En attente dans le dépôt": "En attente dans le dépôt",
   "Déposé mais pas encore rangé.": "Déposé mais pas encore rangé.",
-  "%s en attente": "%s en attente"
+  "%s en attente": "%s en attente",
+  "Une tâche s'est terminée": "Une tâche s'est terminée",
+  "Une tâche a échoué": "Une tâche a échoué",
+  "Un envoi vers la console s'est terminé": "Un envoi vers la console s'est terminé",
+  "Une conversion s'est terminée": "Une conversion s'est terminée",
+  "Le dépôt a été rangé": "Le dépôt a été rangé",
+  "Les fiches ont été rafraîchies": "Les fiches ont été rafraîchies",
+  "Une vérification d'intégrité s'est terminée": "Une vérification d'intégrité s'est terminée",
+  "La console s'est connectée ou déconnectée": "La console s'est connectée ou déconnectée",
+  "Une version plus récente existe": "Une version plus récente existe"
 }

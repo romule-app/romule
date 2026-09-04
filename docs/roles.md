@@ -61,7 +61,7 @@ than assumed.
 
 ## What a non-administrator cannot do
 
-Thirty-two routes are reserved server-side. They fall into seven groups:
+Thirty-three routes are reserved server-side. They fall into seven groups:
 
 - **erase or restore data** — restoring a backup puts the accounts file back,
   which would hand administration back to whoever lost it;
@@ -82,7 +82,7 @@ Thirty-two routes are reserved server-side. They fall into seven groups:
 The interface hides what the role cannot use: a non-administrator does not see
 the Settings tab. That is a courtesy, **not** the security boundary. The server
 refuses regardless of what the interface shows, and the test suite checks all
-thirty-two routes against an ordinary account — for internal accounts and for
+thirty-three routes against an ordinary account — for internal accounts and for
 SSO sessions alike.
 
 ## API keys are a third thing

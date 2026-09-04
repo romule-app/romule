@@ -211,7 +211,13 @@ class JobRunner:
                 # would fail startup rather than one notification.
                 try:
                     from . import notify
-                    notify.send(evt, "Romule — %s" % label, resume, level)
+                    # The SPECIFIC event when we know what ran, the catch-all
+                    # otherwise. `notify.send` expands one into the other, so a
+                    # destination that only wants to hear about transfers is not
+                    # told about every cover refresh — and one that wants
+                    # everything still ticks a single box.
+                    notify.send(notify.TASK_EVENTS.get(label, evt),
+                                "Romule — %s" % label, resume, level)
                 except Exception as exc:      # never fatal: this is a convenience
                     console.event("Notification impossible : %s" % exc,
                                       "warn", "notifs")
