@@ -79,7 +79,8 @@ VUES = {"version", "vues", "id", "nom", "filtres", "cree",
 # --- What carries a name on the file system --------------------------------
 FICHIERS = {"_romule-config.json", "_romule-comptes.json", "_romule-cles.json",
             "_romule-vues.json", "_romule-lib.log", "_romule-acces.log",
-            "_romule-maj.json", "_covers", "_corbeille", "_import"}
+            "_romule-maj.json", "_romule-consoles.json",
+            "_covers", "_corbeille", "_import"}
 
 
 def _cles_du_disque(chemin):
