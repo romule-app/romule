@@ -29,6 +29,21 @@ La famille navigateur pilote un vrai Chrome sans affichage et attrape ce que la
 lecture du CSS ne peut pas voir : débordement, contrôles recouverts par
 d'autres, phrases non traduites. Si tu touches à l'interface, lance-la.
 
+`lancer_tests.py` joue déjà les contrôles de source — celui des fuites est à
+part, parce qu'il lit l'index git et non l'arbre de travail :
+
+| Contrôle | Ce qu'il refuse |
+|---|---|
+| `verifier-anglais.py` | de la prose française dans les commentaires, docstrings et commentaires HTML |
+| `verifier-imports.py` | un module ou un mot-clé qu'un renommage a laissé derrière lui |
+| `verifier-classes.py` | une classe CSS stylée dans un fichier et renommée dans un autre |
+| `verifier-traduction.py` | une phrase française du code absente du catalogue |
+| `verifier-chiffres.py` | un nombre de la documentation que le code ne soutient plus |
+| `verifier-reglages-doc.py` | un réglage sans ligne dans la référence |
+
+Chacun s'éprouve lui-même avant de juger : un contrôle qu'on n'a jamais vu
+échouer ne prouve rien.
+
 ## Ajouter une traduction
 
 Copie `romule/locales/fr.json` en `xx.json`, garde les clés françaises, traduis
@@ -37,13 +52,13 @@ Elle apparaît toute seule dans le sélecteur.
 
 !!! warning "N'assemble jamais une phrase à partir de morceaux"
     `'Trouvé ' + n + ' jeux'` produit trois clés qu'aucun catalogue ne peut
-    tenir. Utilise `phrase('%d {jeu|jeux} trouvé', n)`, ou `nb(n, '{jeu|jeux}')`
+    tenir. Utilise `tpl('%d {jeu|jeux} trouvé', n)`, ou `countPhrase(n, '{jeu|jeux}')`
     pour un simple décompte. Cette erreur a déjà caché 49 phrases au contrôle de
     traduction.
 
 !!! tip "Les pluriels s'écrivent `{singulier|pluriel}`"
     `1 fichier(s)` n'est pas un pluriel, c'est un aveu. Les deux formes vont
-    dans la chaîne — `nb(n, '{fichier|fichiers}')` — et le catalogue en choisit
+    dans la chaîne — `countPhrase(n, '{fichier|fichiers}')` — et le catalogue en choisit
     une **par langue**, car les règles diffèrent : le français écrit
     *0 fichier* au singulier, l'anglais écrit *0 files* au pluriel. Une règle
     unique remplacerait une faute par une autre.

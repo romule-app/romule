@@ -27,6 +27,21 @@ The browser suite drives a real headless Chrome and catches what reading CSS
 cannot: overflow, controls covered by other controls, untranslated strings. If
 you touch the interface, run it.
 
+`lancer_tests.py` already runs the source checks — the leak check is separate
+because it reads the git index, not the working tree:
+
+| Check | What it refuses |
+|---|---|
+| `verifier-anglais.py` | French prose in comments, docstrings and HTML comments |
+| `verifier-imports.py` | a module or a keyword a rename left behind |
+| `verifier-classes.py` | a CSS class styled in one file and renamed in another |
+| `verifier-traduction.py` | a French sentence in the code with no catalogue entry |
+| `verifier-chiffres.py` | a number in the documentation the code no longer backs |
+| `verifier-reglages-doc.py` | a setting with no line in the reference |
+
+Each one self-tests before it judges: a check nobody has seen fail proves
+nothing.
+
 ## Adding a translation
 
 Copy `romule/locales/fr.json` to `xx.json`, keep the French keys, translate the
@@ -35,12 +50,12 @@ selector on its own.
 
 !!! warning "Never assemble a sentence from fragments"
     `'Found ' + n + ' games'` produces three keys no catalogue can hold. Use
-    `phrase('%d games found', n)`, or `nb(n, '{game|games}')` for a bare count.
+    `tpl('%d games found', n)`, or `countPhrase(n, '{game|games}')` for a bare count.
     This mistake hid 49 phrases from the translation check once already.
 
 !!! tip "Plurals are written `{singular|plural}`"
     `1 file(s)` is not a plural, it is an admission. Both forms go in the
-    string — `nb(n, '{file|files}')` — and the catalogue picks one **per
+    string — `countPhrase(n, '{file|files}')` — and the catalogue picks one **per
     language**, because the rules differ: French writes *0 fichier* in the
     singular, English writes *0 files* in the plural. A single rule for both
     would trade one mistake for another.
