@@ -30,7 +30,7 @@ from . import (access_log, accounts, actions, apikeys, apiv1, audit, auth,
                backup, browse, config, console, covers, device, duplicates,
                edenconf, emuready, igdb, integrity, meta, nand, net, notify,
                nsztool, profiles, saves, scan, systems, titleid, transfers,
-               trash, updates, versions, views)
+               scheduler, trash, updates, versions, views)
 from . import cli
 from . import LICENCE, SOURCE_URL, __version__
 from .jobs import JobRunner
@@ -1845,9 +1845,15 @@ class Handler(BaseHTTPRequestHandler):
                       "oidc_issuer", "oidc_client_id", "oidc_client_secret",
                       "oidc_scopes", "oidc_redirect", "oidc_emails",
                       "oidc_groupes", "oidc_admin_groupes", "emulateur",
-                      "maj_check"):
+                      "maj_check", "schedule"):
                 if k in d:
                     CFG[k] = d[k]
+            # The schedule is sanitised ON WRITE: only known tasks and known
+            # presets reach the file. An unknown preset stored here would be
+            # read back as `never`, which is a setting that shows one thing and
+            # does another.
+            if "schedule" in d:
+                CFG["schedule"] = scheduler.clean(CFG["schedule"])
             # Hand-added platforms are sanitised ON WRITE, not only on read.
             # `systems.list_all()` already puts the folder through `dossier_sur`,
             # so nothing escapes today — but keeping a `../../..` in the
@@ -1945,6 +1951,42 @@ def _start_v1(what):
     if what == "push":
         return JOB.start("push", actions.push_files, LIB, CFG, JOB, []), ""
     return False, "Unknown task."
+
+
+# --------------------------------------------------------------- scheduler
+#
+# The scheduler knows nothing about the server: it is handed a way to read the
+# configuration, a way to persist what it has done, and a way to start a task.
+# That is what lets `test_scheduler.py` make a night pass in a microsecond.
+
+
+def _scheduled_task(name):
+    """Start one scheduled task. False when another is already running.
+
+    `JOB.start` already refuses while a task runs, and returning its answer is
+    what turns a due time into a SKIP rather than a queue.
+    """
+    if name == "scan":
+        return JOB.start("scan", _inventory_v1)
+    if name == "import":
+        return JOB.start("import_files", actions.import_files, LIB, CFG, JOB)
+    if name == "convert":
+        return JOB.start("convert_files", actions.convert_files, LIB, CFG, JOB, [])
+    if name == "push":
+        return JOB.start("push_files", actions.push_files, LIB, CFG, JOB, [])
+    if name == "meta":
+        return JOB.start("sync_meta", actions.sync_meta, LIB, CFG, JOB)
+    return False
+
+
+def _save_schedule_state(state):
+    CFG["schedule_state"] = state
+    config.save_config(CFG)
+
+
+SCHEDULER = scheduler.Scheduler(lambda: CFG, _save_schedule_state,
+                                _scheduled_task,
+                                lambda m: JOB.log(m, "info"))
 
 
 def _context_v1():
@@ -2249,6 +2291,12 @@ def serve(open_browser=True):
     if not adb_hint():
         console.say("adb absent — la console ne pourra pas etre pilotee",
                     "warn", "device")
+    # What the operator asked to happen on its own. The startup pass comes
+    # after the inventory: a `startup` scan that ran before `LIB.scan` would be
+    # reading a library the service has not looked at yet.
+    if scheduler.clean(CFG.get("schedule")):
+        SCHEDULER.run_startup()
+        SCHEDULER.start_thread()
     if open_browser and not service:
         threading.Timer(1.0, lambda: webbrowser.open(url)).start()
     srv = ThreadingHTTPServer((_listen_address(), config.PORT), Handler)

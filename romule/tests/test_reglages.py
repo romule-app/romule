@@ -47,6 +47,10 @@ HORS_INTERFACE = {
     # is allowed and that it exists. Going through the generic settings would
     # bypass that check.
     "library_path",
+    # Written by the scheduler, never by a client: it is a record of what has
+    # already happened. A client that could set it would be able to make a
+    # nightly task look as if it had just run, and so keep it from running.
+    "schedule_state",
     # Written by the tool itself as it is used, never typed in.
     "wifi_addr", "emuready_device", "emuready_device_nom",
     "systemes_perso", "emulateur_paquet",

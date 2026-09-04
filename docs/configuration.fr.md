@@ -152,6 +152,26 @@ Tous se modifient depuis l'interface. Les noms sont les clés rangées dans
 | `jobs` | `3` | Conversions en parallèle |
 | `versions_urls` | titledb | Miroirs de la base des versions Switch |
 
+### Tout seul
+
+Romule ne fait rien sans qu'on le lui demande, jusqu'à ce que tu lui dises le
+contraire. Ces deux clés sont ce qui change cela, et seule la première est à
+toi.
+
+| Clé | Défaut | Ce que ça fait |
+|---|---|---|
+| `schedule` | `{}` | Ce qui tourne tout seul : `{tâche: préréglage}`. Les tâches sont `scan`, `import`, `convert`, `push`, `meta` ; les préréglages `never`, `startup`, `hourly`, `6h` et `nightly:HH`. Se règle dans **Réglages → Entretien → Tout seul**. |
+| `schedule_state` | `{}` | La dernière exécution de chaque tâche planifiée. Écrit par Romule, jamais à la main : sans elle, un redémarrage rend chaque tâche nocturne à nouveau due. |
+
+Seules les tâches réversibles sont planifiables. Vider la corbeille, effacer le
+journal et révoquer une clé sont absents de la liste, et ce n'est pas un
+oubli : une action faite sans témoin doit être une action dont on peut encore
+regarder le résultat le lendemain.
+
+Si une tâche tourne déjà quand une autre arrive à échéance, l'échéance est
+**sautée** et journalisée — elle n'est pas mise en file. Romule fait une chose
+à la fois.
+
 ### Jaquettes et fiches
 
 | Clé | Défaut | Signification |
