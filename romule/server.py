@@ -1377,10 +1377,10 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"message": "Reprise abandonnée."})
 
         elif p == "/api/import-suggestions":
-            self._json({"items": actions.suggestions_import(CFG)})
+            self._json({"items": actions.import_suggestions(CFG)})
 
         elif p == "/api/import-classer":
-            n = actions.classer_import(CFG, JOB, d.get("assignations") or {})
+            n = actions.assign_imports(CFG, JOB, d.get("assignations") or {})
             LIB.scan(log=JOB.log)
             self._json({"message": "%d fichier(s) rangé(s)." % n,
                         "items": actions.scan_import()})
@@ -1446,7 +1446,7 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"systemes": systems.all_platforms(CFG)})
 
         elif p == "/api/console-analyse":
-            self._job(actions.analyser_console, LIB, CFG, JOB)
+            self._job(actions.analyse_device, LIB, CFG, JOB)
 
         elif p == "/api/systems-detect":
             self._json(systems.detect_on_device(CFG))
