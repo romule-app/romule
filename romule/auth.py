@@ -35,12 +35,12 @@ import urllib.request
 
 from . import config, net
 
-DUREE_SESSION = 12 * 3600      # past this, back through the provider
+SESSION_TTL = 12 * 3600      # past this, back through the provider
 # How long the "bridge" handed to whoever just switched authentication on
 # lasts: just enough to finish configuring themselves.
-DUREE_PONT = 30 * 60
-DUREE_TRANSIT = 10 * 60        # lifetime of a login request in flight
-_DECOUVERTE = {}               # cache {issuer: (expiry, document)}
+BRIDGE_TTL = 30 * 60
+TRANSIT_TTL = 10 * 60        # lifetime of a login request in flight
+_DISCOVERY = {}               # cache {issuer: (expiry, document)}
 _JWKS = {}                     # cache {uri: (expiration, cles)}
 
 
@@ -66,17 +66,17 @@ def _secret():
     return s.encode("utf-8")
 
 
-def _signer(charge):
+def _sign(payload):
     """Encode a dict as a signed `body.signature` token, with no server state."""
-    corps = _b64url(json.dumps(charge, separators=(",", ":")).encode("utf-8"))
+    corps = _b64url(json.dumps(payload, separators=(",", ":")).encode("utf-8"))
     sig = _b64url(hmac.new(_secret(), corps.encode("ascii"), hashlib.sha256).digest())
     return corps + "." + sig
 
 
-def _verifier(jeton):
+def _verify(token):
     """Return the payload if BOTH signature and expiry hold, otherwise None."""
     try:
-        corps, sig = str(jeton).split(".", 1)
+        corps, sig = str(token).split(".", 1)
     except ValueError:
         return None
     attendu = _b64url(hmac.new(_secret(), corps.encode("ascii"), hashlib.sha256).digest())
@@ -91,34 +91,34 @@ def _verifier(jeton):
     return d
 
 
-def _http_json(url, donnees=None, entetes=None, timeout=15):
+def _http_json(url, data=None, headers=None, timeout=15):
     req = urllib.request.Request(
         url,
-        data=urllib.parse.urlencode(donnees).encode() if donnees else None,
-        headers=entetes or {"Accept": "application/json"})
+        data=urllib.parse.urlencode(data).encode() if data else None,
+        headers=headers or {"Accept": "application/json"})
     with net.open_url(req, timeout=timeout) as r:
         return json.loads(r.read().decode("utf-8", "replace"))
 
 
 # --------------------------------------------------------------- decouverte
 
-def decouverte(issuer, force=False):
+def discovery(issuer, force=False):
     """The provider's configuration document, cached for an hour."""
     issuer = (issuer or "").rstrip("/")
     if not issuer:
         raise ValueError("Aucune adresse de fournisseur configuree.")
-    cache = _DECOUVERTE.get(issuer)
+    cache = _DISCOVERY.get(issuer)
     if cache and not force and cache[0] > time.time():
         return cache[1]
     doc = _http_json(issuer + "/.well-known/openid-configuration")
     for champ in ("authorization_endpoint", "token_endpoint", "issuer"):
         if not doc.get(champ):
             raise ValueError("Reponse du fournisseur incomplete : %s manquant." % champ)
-    _DECOUVERTE[issuer] = (time.time() + 3600, doc)
+    _DISCOVERY[issuer] = (time.time() + 3600, doc)
     return doc
 
 
-def _cles(uri, kid, force=False):
+def _keys(uri, kid, force=False):
     """The JWKS public key matching `kid`, with a single refresh if the key is
     unknown: providers rotate their keys."""
     cache = _JWKS.get(uri)
@@ -129,7 +129,7 @@ def _cles(uri, kid, force=False):
     for k in cache[1]:
         if k.get("kid") == kid or not kid:
             return k
-    return None if force else _cles(uri, kid, force=True)
+    return None if force else _keys(uri, kid, force=True)
 
 
 # --------------------------------------------------------------- verification JWT
@@ -138,7 +138,7 @@ def _cles(uri, kid, force=False):
 _DER_SHA256 = bytes.fromhex("3031300d060960864801650304020105000420")
 
 
-def _rs256_ok(signe, signature, jwk):
+def _rs256_ok(signed, signature, jwk):
     """Verify an RS256 signature using the standard library alone.
 
     RSA verification comes down to `sig^e mod n`, then comparing the result to
@@ -153,7 +153,7 @@ def _rs256_ok(signe, signature, jwk):
     if len(signature) != taille:
         return False
     clair = pow(int.from_bytes(signature, "big"), e, n).to_bytes(taille, "big")
-    empreinte = hashlib.sha256(signe).digest()
+    empreinte = hashlib.sha256(signed).digest()
     suffixe = _DER_SHA256 + empreinte
     bourrage = taille - len(suffixe) - 3
     if bourrage < 8:
@@ -162,10 +162,10 @@ def _rs256_ok(signe, signature, jwk):
     return hmac.compare_digest(clair, attendu)
 
 
-def verifier_id_token(jeton, doc, client_id, nonce):
+def verify_id_token(token, doc, client_id, nonce):
     """Controle complet de l'`id_token`. Renvoie ses claims, ou leve ValueError."""
     try:
-        e64, c64, s64 = jeton.split(".")
+        e64, c64, s64 = token.split(".")
         entete = json.loads(_b64url_decode(e64))
         claims = json.loads(_b64url_decode(c64))
         signature = _b64url_decode(s64)
@@ -180,7 +180,7 @@ def verifier_id_token(jeton, doc, client_id, nonce):
     jwks_uri = doc.get("jwks_uri")
     if not jwks_uri:
         raise ValueError("Le fournisseur ne publie pas ses cles (jwks_uri).")
-    jwk = _cles(jwks_uri, entete.get("kid"))
+    jwk = _keys(jwks_uri, entete.get("kid"))
     if not jwk or not _rs256_ok((e64 + "." + c64).encode("ascii"), signature, jwk):
         raise ValueError("Signature du jeton d'identite invalide.")
 
@@ -202,7 +202,7 @@ def verifier_id_token(jeton, doc, client_id, nonce):
 
 # --------------------------------------------------------------- flux
 
-def actif(cfg=None):
+def enabled(cfg=None):
     """Authentication is only active when it is USABLE.
 
     An "oidc" mode with no provider filled in — or an "interne" mode with no
@@ -225,16 +225,16 @@ def actif(cfg=None):
 def mode(cfg=None):
     """Mode reellement en vigueur : "aucun", "interne" ou "oidc"."""
     cfg = cfg or config.load_config()
-    return cfg.get("auth_mode", "aucun") if actif(cfg) else "aucun"
+    return cfg.get("auth_mode", "aucun") if enabled(cfg) else "aucun"
 
 
-def incomplet(cfg=None):
+def incomplete(cfg=None):
     """Mode requested, but the configuration is insufficient: worth flagging."""
     cfg = cfg or config.load_config()
-    return cfg.get("auth_mode") in ("oidc", "interne") and not actif(cfg)
+    return cfg.get("auth_mode") in ("oidc", "interne") and not enabled(cfg)
 
 
-def _reglages(cfg):
+def _settings(cfg):
     manque = [c for c in ("oidc_issuer", "oidc_client_id") if not (cfg.get(c) or "").strip()]
     if manque:
         raise ValueError("Configuration incomplete : %s." % ", ".join(manque))
@@ -242,10 +242,10 @@ def _reglages(cfg):
             (cfg.get("oidc_client_secret") or "").strip())
 
 
-def demarrer(cfg, redirect_uri):
+def start(cfg, redirect_uri):
     """Prepare a login. Returns (provider_url, transit_cookie)."""
-    issuer, client_id, _ = _reglages(cfg)
-    doc = decouverte(issuer)
+    issuer, client_id, _ = _settings(cfg)
+    doc = discovery(issuer)
     etat = secrets.token_urlsafe(24)
     nonce = secrets.token_urlsafe(24)
     verifier = secrets.token_urlsafe(48)
@@ -260,12 +260,12 @@ def demarrer(cfg, redirect_uri):
         "code_challenge": defi,
         "code_challenge_method": "S256",
     }
-    transit = _signer({"etat": etat, "nonce": nonce, "verif": verifier,
-                       "uri": redirect_uri, "exp": time.time() + DUREE_TRANSIT})
+    transit = _sign({"etat": etat, "nonce": nonce, "verif": verifier,
+                       "uri": redirect_uri, "exp": time.time() + TRANSIT_TTL})
     return doc["authorization_endpoint"] + "?" + urllib.parse.urlencode(params), transit
 
 
-def terminer(cfg, params, cookie_transit, redirect_uri):
+def finish(cfg, params, transit_cookie, redirect_uri):
     """Handle the provider's callback. Returns (session_cookie, identity).
 
     Raises ValueError with a displayable message on refusal.
@@ -273,7 +273,7 @@ def terminer(cfg, params, cookie_transit, redirect_uri):
     if params.get("error"):
         raise ValueError("Le fournisseur a refuse la connexion : %s."
                          % params.get("error_description") or params["error"])
-    attendu = _verifier(cookie_transit)
+    attendu = _verify(transit_cookie)
     if not attendu:
         raise ValueError("Demande de connexion expiree ou inconnue. Recommence.")
     if not hmac.compare_digest(str(params.get("state") or ""), attendu["etat"]):
@@ -284,56 +284,56 @@ def terminer(cfg, params, cookie_transit, redirect_uri):
     if not code:
         raise ValueError("Aucun code d'autorisation dans la reponse.")
 
-    issuer, client_id, secret = _reglages(cfg)
-    doc = decouverte(issuer)
-    donnees = {"grant_type": "authorization_code", "code": code,
+    issuer, client_id, secret = _settings(cfg)
+    doc = discovery(issuer)
+    data = {"grant_type": "authorization_code", "code": code,
                "redirect_uri": redirect_uri, "client_id": client_id,
                "code_verifier": attendu["verif"]}
-    entetes = {"Accept": "application/json",
+    headers = {"Accept": "application/json",
                "Content-Type": "application/x-www-form-urlencoded"}
     if secret:
         # `client_secret_basic` is the standard's default method; we switch
         # to `client_secret_post` when the provider demands it.
         methodes = doc.get("token_endpoint_auth_methods_supported") or ["client_secret_basic"]
         if "client_secret_basic" in methodes:
-            jeton = base64.b64encode(
+            token = base64.b64encode(
                 ("%s:%s" % (urllib.parse.quote(client_id), urllib.parse.quote(secret)))
                 .encode()).decode()
-            entetes["Authorization"] = "Basic " + jeton
+            headers["Authorization"] = "Basic " + token
         else:
-            donnees["client_secret"] = secret
+            data["client_secret"] = secret
     try:
-        rep = _http_json(doc["token_endpoint"], donnees, entetes)
+        rep = _http_json(doc["token_endpoint"], data, headers)
     except Exception as exc:                      # reseau, 4xx, JSON invalide
         raise ValueError("Echange du code impossible : %s" % exc) from exc
 
     id_token = rep.get("id_token")
     if not id_token:
         raise ValueError("Le fournisseur n'a pas renvoye de jeton d'identite.")
-    claims = verifier_id_token(id_token, doc, client_id, attendu["nonce"])
+    claims = verify_id_token(id_token, doc, client_id, attendu["nonce"])
 
-    identite = {
+    identity = {
         "sub": claims.get("sub", ""),
         "nom": claims.get("name") or claims.get("preferred_username") or claims.get("email") or "",
         "email": (claims.get("email") or "").lower(),
         "groupes": claims.get("groups") if isinstance(claims.get("groups"), list) else [],
     }
-    _verifier_autorisation(cfg, identite)
-    identite["admin"] = est_admin_oidc(cfg, identite)
+    _check_authorised(cfg, identity)
+    identity["admin"] = is_oidc_admin(cfg, identity)
     # The role is frozen INSIDE the token, hence for the session's lifetime
     # (12 h). Re-reading it on every request would mean calling the provider
     # again; here we write down what it said at login time. Removing someone
     # from a group demotes them at their next session, not in the middle of
     # this one — the behaviour of most SSO integrations, and stated in the
     # documentation rather than assumed.
-    session = _signer({"sub": identite["sub"], "nom": identite["nom"],
-                       "email": identite["email"], "src": "oidc",
-                       "admin": bool(identite["admin"]),
-                       "exp": time.time() + DUREE_SESSION})
-    return session, identite
+    session = _sign({"sub": identity["sub"], "nom": identity["nom"],
+                       "email": identity["email"], "src": "oidc",
+                       "admin": bool(identity["admin"]),
+                       "exp": time.time() + SESSION_TTL})
+    return session, identity
 
 
-def est_admin_oidc(cfg, identite):
+def is_oidc_admin(cfg, identity):
     """Does this SSO account hold the administrator role?
 
     `oidc_groupes` says WHO MAY ENTER; `oidc_admin_groupes` says WHO
@@ -349,11 +349,11 @@ def est_admin_oidc(cfg, identite):
               .replace(";", ",").split(",") if x.strip()]
     if not voulus:
         return False
-    siens = {str(g).lower() for g in (identite.get("groupes") or [])}
+    siens = {str(g).lower() for g in (identity.get("groupes") or [])}
     return bool(siens & set(voulus))
 
 
-def _verifier_autorisation(cfg, identite):
+def _check_authorised(cfg, identity):
     """Authenticated is not authorised: the provider usually knows far more
     accounts than those meant to reach THIS tool."""
     def liste(cle):
@@ -363,33 +363,33 @@ def _verifier_autorisation(cfg, identite):
     emails, groupes = liste("oidc_emails"), liste("oidc_groupes")
     if not emails and not groupes:
         return                                   # aucune restriction demandee
-    if emails and identite["email"] in emails:
+    if emails and identity["email"] in emails:
         return
-    if groupes and {g.lower() for g in identite["groupes"]} & set(groupes):
+    if groupes and {g.lower() for g in identity["groupes"]} & set(groupes):
         return
     raise ValueError("Ce compte n'est pas autorise a acceder a cette ludotheque.")
 
 
-def session_interne(u):
+def internal_session(u):
     """Session cookie for an internal account.
 
     `mdp` carries the moment of the last password change. Any session signed
     before that instant is refused: changing the password therefore logs out
     the other devices, an intruder's included.
     """
-    return _signer({"sub": u["id"], "nom": u.get("nom") or u["email"],
+    return _sign({"sub": u["id"], "nom": u.get("nom") or u["email"],
                     "email": u["email"], "src": "interne",
                     "mdp": u.get("maj_mdp", 0),
-                    "exp": time.time() + DUREE_SESSION})
+                    "exp": time.time() + SESSION_TTL})
 
 
 def session(cookie_header):
     """Identite de la session en cours, ou None."""
     for morceau in (cookie_header or "").split(";"):
-        nom, _, valeur = morceau.strip().partition("=")
+        nom, _, value = morceau.strip().partition("=")
         if nom != "switch_session":
             continue
-        d = _verifier(valeur)
+        d = _verify(value)
         if d and d.get("src") == "interne":
             from . import accounts
             u = accounts.by_id(d.get("sub"))
@@ -404,17 +404,17 @@ def session(cookie_header):
     return None
 
 
-def entete_cookie(valeur, secure, duree=None):
-    parts = ["switch_session=" + (valeur or ""), "Path=/", "HttpOnly", "SameSite=Lax",
-             "Max-Age=%d" % (0 if valeur == "" else (duree or DUREE_SESSION))]
+def cookie_header_for(value, secure, ttl=None):
+    parts = ["switch_session=" + (value or ""), "Path=/", "HttpOnly", "SameSite=Lax",
+             "Max-Age=%d" % (0 if value == "" else (ttl or SESSION_TTL))]
     if secure:
         parts.append("Secure")
     return "; ".join(parts)
 
 
-def entete_transit(valeur, secure):
-    parts = ["switch_oidc=" + (valeur or ""), "Path=/auth", "HttpOnly", "SameSite=Lax",
-             "Max-Age=%d" % (0 if valeur == "" else DUREE_TRANSIT)]
+def transit_header(value, secure):
+    parts = ["switch_oidc=" + (value or ""), "Path=/auth", "HttpOnly", "SameSite=Lax",
+             "Max-Age=%d" % (0 if value == "" else TRANSIT_TTL)]
     if secure:
         parts.append("Secure")
     return "; ".join(parts)
@@ -422,16 +422,16 @@ def entete_transit(valeur, secure):
 
 def transit(cookie_header):
     for morceau in (cookie_header or "").split(";"):
-        nom, _, valeur = morceau.strip().partition("=")
+        nom, _, value = morceau.strip().partition("=")
         if nom == "switch_oidc":
-            return valeur
+            return value
     return ""
 
 
-def tester(cfg):
+def probe(cfg):
     """Check that the provider answers and publishes what it must."""
-    issuer, client_id, secret = _reglages(cfg)
-    doc = decouverte(issuer, force=True)
+    issuer, client_id, secret = _settings(cfg)
+    doc = discovery(issuer, force=True)
     cles = []
     if doc.get("jwks_uri"):
         try:
