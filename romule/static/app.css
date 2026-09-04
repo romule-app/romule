@@ -361,6 +361,13 @@ img.empty{visibility:hidden}
 .dlg .dmsg{margin:0;font-size:13px;color:var(--mute);line-height:1.6}
 /* tick-box options: everything is decided in one dialog */
 .dopts{display:flex;flex-direction:column;gap:8px;padding:14px 20px 0}
+/* The event boxes under a notification destination. Reuses `.dopt`'s look —
+   they are the same kind of choice — but laid out in a wrapping grid: nine
+   events stacked in a column would push the destinations below off the screen,
+   and they are read together, not one after the other. */
+.notifevts{flex-direction:row;flex-wrap:wrap;gap:6px;padding:8px 0 14px}
+.notifevts .dopt{flex:0 1 auto;padding:6px 10px;font-size:12px;gap:7px;
+  align-items:center}
 .dopt{display:flex;gap:11px;align-items:flex-start;padding:11px 13px;cursor:pointer;
   border:1px solid var(--rule);border-radius:9px;background:var(--panel2);
   transition:border-color .15s,background .15s}

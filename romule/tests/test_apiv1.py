@@ -184,7 +184,7 @@ def test_la_specification_correspond_au_code():
         "platforms", "device", "job", "trash")}
     servies.add(("GET", "/api/v1/library/{key}"))
     servies |= {("POST", "/api/v1/" + n) for n in ("scan", "convert", "push")}
-    decrites = apiv1.routes_decrites()
+    decrites = apiv1.documented_routes()
     t("toute route servie est decrite", not (servies - decrites),
       sorted(servies - decrites))
     t("toute route decrite est servie", not (decrites - servies),

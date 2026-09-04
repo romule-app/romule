@@ -63,7 +63,7 @@ est dit ici plutôt que supposé.
 
 ## Ce qu'un non-administrateur ne peut pas faire
 
-Trente-deux routes lui sont réservées côté serveur. Elles se rangent en sept
+Trente-trois routes lui sont réservées côté serveur. Elles se rangent en sept
 familles :
 
 - **effacer ou remettre en place des données** — restaurer une sauvegarde
@@ -89,7 +89,7 @@ familles :
 L'interface masque ce que le rôle ne peut pas utiliser : un non-administrateur
 ne voit pas l'onglet Réglages. C'est une politesse, **pas** la frontière de
 sécurité. Le serveur refuse quoi qu'affiche l'interface, et la suite de tests
-vérifie les trente-deux routes face à un compte ordinaire — pour les comptes
+vérifie les trente-trois routes face à un compte ordinaire — pour les comptes
 internes comme pour les sessions SSO.
 
 ## Les clés d'API sont une troisième chose

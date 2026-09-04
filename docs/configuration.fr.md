@@ -245,6 +245,33 @@ Chaque destination se teste avant ou après enregistrement, et le résultat dit
 quel côté a refusé : une adresse fausse et un service en panne ne se ressemblent
 pas.
 
+### Quels événements, destination par destination
+
+Chaque destination a ses propres cases. Un salon familial peut n'être prévenu
+que quand un envoi est fini ; un salon d'exploitation peut tout recevoir.
+
+| Événement | Se déclenche quand |
+|---|---|
+| Une tâche s'est terminée | n'importe quelle tâche a fini correctement |
+| Une tâche a échoué | n'importe quelle tâche a échoué ou a été interrompue |
+| Un envoi vers la console s'est terminé | un envoi, un déploiement ou un rapatriement a fini — **dans les deux cas** |
+| Une conversion s'est terminée | une conversion NSZ a fini, dans les deux cas |
+| Le dépôt a été rangé | des fichiers d'`_import` ont été classés |
+| Les fiches ont été rafraîchies | titres, résumés et jaquettes ont été récupérés |
+| Une vérification d'intégrité s'est terminée | une passe d'empreintes a fini |
+| La console s'est connectée ou déconnectée | la liaison a changé, et seulement quand elle *change* |
+| Une version plus récente existe | une fois par version publiée, pas une fois par chargement de page |
+
+Les deux premiers sont des attrape-tout : coche *une tâche s'est terminée* et tu
+entends parler de toutes, sans cocher six cases. Les événements spécifiques se
+déclenchent quel que soit le résultat, parce que qui guette la fin d'un transfert
+de 12 Go veut le savoir dans les deux cas — c'est la couleur du message qui dit
+lequel.
+
+Une destination qui a coché à la fois un événement spécifique et son attrape-tout
+est prévenue **une fois**, pas deux. Une destination sans aucune case cochée
+reçoit tout, ce qui est le sens de coller une adresse sans toucher aux cases.
+
 !!! warning "Une adresse de webhook est un secret porteur"
     Qui l'a peut écrire dans ton salon. Romule ne la **renvoie donc jamais** :
     l'interface n'en montre que l'hôte, ce qui suffit à distinguer deux

@@ -26,6 +26,13 @@ half had just missed two of them: `apikeys.liste(avec_revoquees=…)` became
 `apikeys.list_all(with_revoked=…)`, and two call sites kept the old name. It
 then immediately found two more, in `comptes.py`.
 
+The third shape is an ATTRIBUTE the rename moved — `notify.EVENEMENTS`,
+`apiv1.routes_decrites`. Same failure, later still: the name resolves at import
+time and dies at the first read, and the two above lived in test files this
+machine cannot run. Only modules of this package are judged, and only where
+they are actually imported: a local variable that happens to share a module's
+name is nobody's mistake.
+
     python3 outils/verifier-imports.py            # the shipped package
     python3 outils/verifier-imports.py --tout     # tools and tests too
     python3 outils/verifier-imports.py --autotest # checks the tool bites
@@ -145,6 +152,14 @@ def f(payload):
 SIGS = {"totp": {"verify": ({"secret", "entered", "when", "used"}, False)},
         "loose": {"anything": (set(), True)}}
 
+# One package module's top-level names, for the dangling-attribute check.
+ATTRS = {"notify": {"EVENTS", "send"}}
+
+GOOD_ATTR = "from . import notify\nnotify.send(1)"
+STALE_ATTR = "from . import notify\nnotify.EVENEMENTS"
+ALIASED_ATTR = "from . import notify as n\nn.send(1)"
+LOCAL_SHADOW = "notify = open('x').read()\nnotify.index('y')"
+
 GOOD_KEYWORD = "totp.verify(s, e, used=set())"
 STALE_KEYWORD = "totp.verify(s, e, utilises=set())"
 KWARGS_KEYWORD = "loose.anything(whatever=1)"
@@ -178,6 +193,22 @@ def autotest():
     ]
     for name, src, want in kw_cases:
         found = len(_bad_keywords(ast.parse(src), SIGS))
+        if found == want:
+            print("  OK    %s" % name)
+        else:
+            ok = False
+            print("  FAIL  %s: found %d, wanted %d" % (name, found, want))
+
+    # The third half: an attribute a rename moved. `apikeys.creer`,
+    # `notify.EVENEMENTS` and `apiv1.routes_decrites` were all of this shape.
+    attr_cases = [
+        ("an attribute that exists passes", GOOD_ATTR, 0),
+        ("an attribute a rename moved is caught", STALE_ATTR, 1),
+        ("an aliased import is resolved, not reported", ALIASED_ATTR, 0),
+        ("a local variable sharing a module name is not judged", LOCAL_SHADOW, 0),
+    ]
+    for name, src, want in attr_cases:
+        found = len(_dangling(ast.parse(src), ATTRS))
         if found == want:
             print("  OK    %s" % name)
         else:
@@ -217,6 +248,78 @@ def _signatures(paths):
     return out
 
 
+def _module_attrs(paths):
+    """{module: every name it defines at the top level}."""
+    out = {}
+    for p in paths:
+        try:
+            tree = ast.parse(p.read_text(encoding="utf-8"), filename=p.name)
+        except (OSError, SyntaxError):
+            continue
+        names = set()
+        for n in tree.body:
+            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                names.add(n.name)
+            elif isinstance(n, ast.Assign):
+                for tgt in n.targets:
+                    # `A, B = 1, 2` is one statement and two names.
+                    for sub in (tgt.elts if isinstance(tgt, ast.Tuple) else [tgt]):
+                        if isinstance(sub, ast.Name):
+                            names.add(sub.id)
+            elif isinstance(n, ast.AnnAssign) and isinstance(n.target, ast.Name):
+                names.add(n.target.id)
+            elif isinstance(n, (ast.Import, ast.ImportFrom)):
+                for alias in n.names:
+                    names.add((alias.asname or alias.name).split(".")[0])
+        out[p.stem] = names
+    return out
+
+
+def _imported_modules(tree, known):
+    """{name used here: the module it really is}, for package modules only.
+
+    Two reasons for the mapping rather than a set. A file may import a module
+    under another name — `from romule import titleid as t` — and judging `t.x`
+    against a module called `t` finds nothing at all, which reads as forty
+    dangling attributes. And only imported modules are judged: a local variable
+    that happens to share a module's name, `audit = path.read_text()`, would
+    otherwise make every method call on it look like a mistake.
+    """
+    out = {}
+    for n in ast.walk(tree):
+        if isinstance(n, ast.ImportFrom):
+            for a in n.names:
+                if a.name in known:
+                    out[a.asname or a.name] = a.name
+        elif isinstance(n, ast.Import):
+            for a in n.names:
+                base = a.name.split(".")[-1]
+                if base in known:
+                    out[a.asname or base] = base
+    return out
+
+
+def _dangling(tree, attrs):
+    """`module.name` where the module defines no such name.
+
+    This is the third shape of the rename mistake, after the module and the
+    keyword: `apikeys.creer`, `notify.EVENEMENTS`, `apiv1.routes_decrites` all
+    survived a rename and all failed at the first call — in test files the
+    machine could not run, so they failed nowhere until CI.
+    """
+    modules = _imported_modules(tree, attrs)
+    bad = []
+    for n in ast.walk(tree):
+        if not (isinstance(n, ast.Attribute) and isinstance(n.value, ast.Name)):
+            continue
+        mod = n.value.id
+        if mod not in modules or n.attr.startswith("__"):
+            continue
+        if n.attr not in attrs.get(modules[mod], set()):
+            bad.append((n.lineno, "%s.%s" % (mod, n.attr)))
+    return sorted(set(bad))
+
+
 def _bad_keywords(tree, sigs):
     """Calls of the shape `module.function(keyword=…)` the signature refuses."""
     bad = []
@@ -251,12 +354,16 @@ def main(argv):
         print("-- self-test of the detector --")
         return autotest()
     faults = 0
-    sigs = _signatures(sorted((RACINE / "romule").glob("*.py")))
+    package = sorted((RACINE / "romule").glob("*.py"))
+    sigs = _signatures(package)
+    attrs = _module_attrs(package)
     for p in files_to_read("--tout" in argv):
         try:
             source = p.read_text(encoding="utf-8")
             missing, stale = inspect_source(source, p.name)
-            keywords = _bad_keywords(ast.parse(source, filename=p.name), sigs)
+            tree = ast.parse(source, filename=p.name)
+            keywords = _bad_keywords(tree, sigs)
+            dangling = _dangling(tree, attrs)
         except (OSError, SyntaxError) as exc:
             print("  SKIP    %-30s %s" % (p.name, exc))
             continue
@@ -270,6 +377,10 @@ def main(argv):
         for line, call in keywords:
             print("  KEYWORD %-30s %s:%d does not accept that name"
                   % (rel, call, line))
+            faults += 1
+        for line, ref in dangling:
+            print("  MISSING %-30s %s:%d names nothing in that module"
+                  % (rel, ref, line))
             faults += 1
     print("   %d import problem(s)." % faults)
     return 1 if faults else 0

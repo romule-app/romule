@@ -60,12 +60,28 @@ change it. Breaking changes are always listed under **Changed** with the reason.
   its current settings. The flat keys are still written, mirroring the active
   console, so a version that predates this reads the pairing where it left it.
 
+- **Per-event notification subscriptions.** The event list went from five to
+  nine: beside the two catch-alls — any task, by outcome — there are now
+  specific ones for a transfer to the console, a conversion, the drop folder
+  being filed, the entries being refreshed and an integrity check. Each
+  destination has its own boxes in the settings, so a family channel can be
+  told only when a transfer is over while an ops channel hears everything.
+
+  A specific event also satisfies its catch-all, and a destination subscribed
+  to both is told **once**. The specific ones fire whatever the outcome:
+  someone watching for the end of a 12 GB transfer wants to know either way.
+
 - **A library health screen** (`romule/report.py`, `/api/library-report`).
   Broken files, orphaned DLC, superseded versions, duplicates, games with no
   entry, what waits in the drop folder — each family with the button that
   deals with it. It assembles what already existed and computes nothing of its
   own. Coverage is shown beside it, because *no problem found* means something
   different at 4 % than at 100 %.
+
+- **A dangling-attribute check** in `outils/verifier-imports.py`, after the
+  module and the keyword: `notify.EVENEMENTS` and `apiv1.routes_decrites` both
+  survived a rename and both lived in test files this machine cannot run. Only
+  this package's modules are judged, and only where they are actually imported.
 
 - **Three source checks**, each self-testing before it judges:
   `outils/verifier-anglais.py` (French prose in comments, docstrings and HTML
@@ -74,6 +90,18 @@ change it. Breaking changes are always listed under **Changed** with the reason.
   renamed in another). All three run in `lancer_tests.py` and in CI.
 
 ### Fixed
+
+- **Three of the five notifiable events were never sent.** The settings offered
+  *the console connected*, *a version is available* and *the drop folder was
+  filed*; only `tache_ok` and `tache_echec` had an emitter. You could tick the
+  other three and Romule would never say a word — no error, no log line,
+  nothing to notice. A subscription to something nobody publishes is worse than
+  a missing feature: it looks answered.
+
+  The three are now emitted, and `test_events.py` compares the declared list
+  against the emitters in both directions. `test_notify.py` could not catch it:
+  it checks the shape of what leaves and the silence when nothing is
+  configured, and both were true of an event nobody sent.
 
 - **Two maintenance panels had been dead since 0.2.0.** `showMaintenance` and
   `openPlatform` read `getAttribute('onclick')` — an attribute phase 4 had

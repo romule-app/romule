@@ -1137,6 +1137,7 @@ class Handler(BaseHTTPRequestHandler):
         # --- send outward in the service's name
         "/api/notifs",              # the addresses are bearer secrets
         "/api/notif-creer",
+        "/api/notif-evenements",
         "/api/notif-supprimer",
         "/api/notif-tester",        # otherwise: a port scanner by proxy
         # --- report on who connects, and on the security posture
@@ -1235,6 +1236,24 @@ class Handler(BaseHTTPRequestHandler):
             config.save_config(CFG)
             JOB.log("Destination de notification ajoutee : %s"
                     % (d.get("nom") or notify.guess(url)))
+            self._json({"destinations": [_notif_public(x)
+                                         for x in notify.destinations(CFG)]})
+
+        elif p == "/api/notif-evenements":
+            # Which events one destination wants. The whole list is sent, not a
+            # patch: a half-list would be indistinguishable from "none", and
+            # "none" is a legitimate answer — a destination can be silenced
+            # without being removed.
+            nid = str(d.get("id") or "")
+            voulus = [e for e in (d.get("evenements") or []) if e in notify.EVENTS]
+            liste = list(CFG.get("notif_destinations") or [])
+            if not any(str(x.get("id")) == nid for x in liste):
+                return self._json({"error": "Unknown destination."}, 404)
+            for x in liste:
+                if str(x.get("id")) == nid:
+                    x["evenements"] = voulus
+            CFG["notif_destinations"] = liste
+            config.save_config(CFG)
             self._json({"destinations": [_notif_public(x)
                                          for x in notify.destinations(CFG)]})
 

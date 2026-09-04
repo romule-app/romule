@@ -122,17 +122,49 @@ def _pick(devs, prefer=None):
     return ready[0]
 
 
+# The last state we saw, so that a CHANGE can be told from a reading. `state()`
+# is called several times a second by the interface's polling: notifying on the
+# state rather than on the transition would be a message per poll.
+#
+# `_UNSEEN` and not `None`: `None` is a real state — no console at all — and
+# using it as "not yet looked" would announce a disconnection at startup to
+# everyone who has no console plugged in.
+_UNSEEN = object()
+_LAST_STATE = [_UNSEEN]
+
+
+def _announce(new):
+    """Say it once, when it changes. Never raises: a notification is a
+    convenience, and a console reading must not fail because Discord is down."""
+    was = _LAST_STATE[0]
+    _LAST_STATE[0] = new
+    if was is _UNSEEN or was == new:
+        return                       # first reading, or nothing moved
+    try:
+        from . import notify
+        if new == "device":
+            notify.send("console_liee", "Romule", "Console connectee.", "ok")
+        elif was == "device":
+            notify.send("console_liee", "Romule", "Console deconnectee.", "warn")
+    except Exception:
+        pass
+
+
 def state(prefer=None):
     """'device', 'unauthorized', 'offline'... ou None. Gere plusieurs appareils."""
     devs = devices()
     if not devs:
+        _announce(None)
         return None
     d = _pick(devs, prefer)
     if d:
         set_target(d["serial"])
+        _announce("device")
         return "device"
     set_target(None)
-    return devs[0].get("state")
+    etat = devs[0].get("state")
+    _announce(etat)
+    return etat
 
 
 def connection():
