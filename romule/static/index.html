@@ -14,23 +14,23 @@
 </head><body>
 <header>
   <div class="head-in">
-    <!-- Le nom du produit ne se traduit pas : `data-i18n-skip` l'exclut du
-         balayage, sans quoi le controle de traduction et le test navigateur
-         le traiteraient comme une phrase oubliee.
-         La coupure « ROM | ULE » n'est pas arbitraire : les trois premieres
-         lettres sont le domaine de l'outil, et la CSS existante colore deja
-         la seconde moitie. -->
+    <!-- The product's name is not translated: `data-i18n-skip` keeps it out of
+         the sweep, without which the translation check and the browser test
+         would treat it as a forgotten sentence.
+         The "ROM | ULE" split is not arbitrary: the first three letters are the
+         tool's subject, and the existing CSS already colours the second
+         half. -->
     <div class="brand" data-i18n-skip>Rom<span>ule</span></div>
     <nav class="tabs" id="tabs">
       <button data-tab="jeux" class="active" data-i18n="tab.jeux">Jeux</button>
       <button data-tab="settings" data-i18n="tab.settings">Réglages</button>
     </nav>
-    <!-- Etat de la console : une seule fois, dans l'en-tete. Le bandeau separe
-         repetait le meme fait deux lignes plus bas. -->
+    <!-- The console's state: once, in the header. The separate banner repeated
+         the same fact two lines below. -->
     <div class="status">
-      <!-- Une version plus recente existe. Discret tant qu'il n'y a rien a
-           dire — il reste cache — et jamais bloquant : c'est une invitation,
-           pas une alerte. -->
+      <!-- A newer version exists. Quiet as long as there is nothing to say —
+           it stays hidden — and never blocking: this is an invitation, not an
+           alert. -->
       <button class="majpuce" id="majpuce" data-act="showUpdate" hidden
               aria-label="Une mise à jour est disponible">
         <span class="majpoint" aria-hidden="true"></span>
@@ -38,8 +38,8 @@
       </button>
       <span id="hostchip" class="hostchip" style="display:none"></span>
       <div id="conn" class="conn"></div>
-      <!-- Ouvrir l'interface sur l'ecran de la console : un geste qu'on fait
-           depuis n'importe quel ecran, pas un reglage. -->
+      <!-- Open the interface on the console's screen: a gesture made from any
+           screen, not a setting. -->
       <button class="ghost onconsole" id="installwrap" style="display:none"
               data-act="openOnConsole" title="" aria-label="Ouvrir sur la console">
         <span class="hicon">📱</span>
@@ -53,8 +53,8 @@
 
 <div class="onboard" id="onboard"></div>
 
-<!-- Voile de demarrage : masque l'interface tant que l'inventaire n'est pas
-     revenu, pour ne jamais afficher de compteurs a zero ni de console absente. -->
+<!-- The startup veil: hides the interface until the inventory has come back,
+     so as never to show zeroed counters or an absent console. -->
 <div class="spinner" id="chargeur">
   <div class="spinner-in">
     <div class="spinner-ring"></div>
@@ -71,10 +71,10 @@
 
     <div class="libbar">
       <select id="sysel" data-act-change="setSystem" title="Console / système"></select>
-      <!-- La recherche porte sur ce qui est AFFICHE : dans « toutes les
-           plateformes » elle cherche partout, ailleurs dans la plateforme
-           courante. Elle se combine avec les pastilles et les filtres
-           avances — `filteredGames()` applique les trois ensemble. -->
+      <!-- The search applies to what is DISPLAYED: in "all platforms" it looks
+           everywhere, elsewhere within the current platform. It combines with
+           the pills and the advanced filters — `filteredGames()` applies all
+           three together. -->
       <div class="champ-recherche">
         <svg class="loupe" viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
           <circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.7"/>
@@ -89,11 +89,11 @@
               title="Relire le serveur et la console">Actualiser</button>
       <button class="ghost repliable" data-act="refreshEntries"
               title="Chercher les titres, résumés et jaquettes manquants, toutes plateformes">Fiches manquantes</button>
-      <!-- Sur telephone, les rangees de filtre et de tri se replient derriere
-           ce seul bouton : sinon on fait defiler un panneau de configuration
-           avant d'atteindre le premier jeu. Il vit dans CETTE barre, qui reste
-           visible — le mettre dans celle qu'il ouvre revenait a cacher la
-           poignee a l'interieur du tiroir. Invisible au-dessus de 700 px. -->
+      <!-- On a phone, the filter and sort rows fold behind this single button:
+           otherwise you scroll through a configuration panel before reaching
+           the first game. It lives in THIS bar, which stays visible — putting
+           it in the one it opens amounted to hiding the handle inside the
+           drawer. Invisible above 700 px. -->
       <button class="ghost replier" id="replier" data-act="toggleFilters"
               aria-expanded="false" aria-controls="filters toolbar">Filtrer et trier</button>
     </div>
@@ -111,10 +111,9 @@
       <label class="tlbl">Trier par <select id="tri" data-act-change="setSort"></select></label>
       <button class="szbtn sensbtn" id="sens" data-act="setOrder" title="Inverser l'ordre">↑</button>
 
-      <!-- « Tout effacer » remet les TROIS filtres a zero : la recherche, la
-           pastille d'etat et les filtres avances. Il n'apparait que lorsqu'il
-           y a quelque chose a effacer — un bouton toujours la, souvent inerte,
-           finit par ne plus etre lu. -->
+      <!-- "Clear all" resets all THREE filters: the search, the status pill
+           and the advanced filters. It only appears when there is something to
+           clear — a button always present and often inert ends up unread. -->
       <button class="ghost effacer" id="effacefiltres" data-act="clearFilters"
               hidden>Tout effacer</button>
 
@@ -127,16 +126,16 @@
         </div>
       </div>
 
-      <!-- Les vues enregistrees : une combinaison de filtres qu'on retrouve
-           d'un clic. Elles vivent sur le serveur, donc les memes sur le
-           telephone et sur le poste. -->
+      <!-- Saved views: a combination of filters found again in one click. They
+           live on the server, so they are the same on the phone and on the
+           workstation. -->
       <div class="vues" id="vues"></div>
       <button class="ghost" id="enregistrervue" data-act="saveView"
               hidden>Enregistrer cette vue</button>
 
       <span style="flex:1"></span>
-      <!-- Densite d'affichage : icones de grille, convention partagee par les
-           gestionnaires de fichiers et les bibliothèques de jeux. -->
+      <!-- Display density: grid icons, a convention shared by file managers
+           and game libraries. -->
       <label class="tlbl">Afficher <select id="parpage" data-act-change="setPerPage"></select></label>
       <div class="sizes" id="tailles" role="group" aria-label="Taille des vignettes">
         <button class="szbtn" data-sz="compact" data-act="setSize" data-arg="compact"
@@ -155,28 +154,26 @@
             <rect x="1" y="1" width="14" height="14" rx="1.6" fill="currentColor"/>
           </svg></button>
       </div>
-      <!-- « Tout cocher / Tout décocher » ont rejoint la barre d'actions :
-           ils n'ont de sens qu'une fois une selection commencee, et occupaient
-           ici la place en permanence. Un clic sur n'importe quelle carte
-           ouvre la barre. -->
+      <!-- "Tick all / Untick all" moved to the action bar: they only mean
+           something once a selection has started, and here they took up room
+           permanently. A click on any card opens the bar. -->
     </div>
 
-    <!-- L'index alphabetique borde la grille, comme dans une mediatheque : il
-         n'apparait que lorsque le tri par nom lui donne un sens. -->
+    <!-- The alphabetical index runs alongside the grid, as in a media library:
+         it only appears when the sort by name gives it a meaning. -->
     <section class="libzone">
       <nav class="alphabet" id="alphabet" hidden aria-label="Aller à une lettre"></nav>
       <div id="lib"></div>
-<!-- Pendant la lecture de la ludotheque, la silhouette de ce qui arrive vaut
-     mieux qu'un ecran vide : on voit que ca travaille, et la page ne saute
-     pas quand les vraies cartes se posent. Conteneur separe de #lib, qui est
-     reconcilie par cle : y melanger des cartes factices brouillerait le
-     rapprochement. -->
+<!-- While the library is being read, the shape of what is coming beats an
+     empty screen: you see that it is working, and the page does not jump when
+     the real cards settle. A container separate from #lib, which is reconciled
+     by key: mixing fake cards into it would confuse the matching. -->
 <div id="libsquelette" class="games" aria-hidden="true"></div>
     </section>
     <div class="pager" id="pager"></div>
     <div id="manifest"></div>
 
-    <!-- barre d'actions : n'apparait qu'avec une selection -->
+    <!-- the action bar: appears only with a selection -->
     <div class="actionbar" id="actionbar">
       <span class="grow" id="deploysum"></span>
       <span class="acts" id="actions"></span>
@@ -184,9 +181,9 @@
       <button class="ghost" data-act="deployPick" data-val="0">Tout décocher</button>
     </div>
 
-    <!-- Ajout de jeux : toujours a portee, jamais dans le chemin. Le bouton
-         sert aussi de temoin d'activite — anneau de progression tout autour,
-         et il s'allonge pour dire ce qui tourne et pour combien de temps. -->
+    <!-- Adding games: always within reach, never in the way. The button also
+         serves as the activity indicator — a progress ring all around it, and
+         it stretches to say what is running and for how long. -->
     <button class="fab" id="fab" data-act="actionFab"
             title="Ajouter des jeux" aria-label="Ajouter des jeux">
       <svg class="fabring" id="fabring" aria-hidden="true" focusable="false">
@@ -194,19 +191,19 @@
         <rect class="fabjauge" id="fabjauge" pathLength="100"></rect>
       </svg>
       <span class="fabmark">+</span>
-      <!-- Temps restant, au centre du bouton. -->
+      <!-- The time left, in the centre of the button. -->
       <span class="fabeta" id="fabeta" aria-hidden="true"></span>
-      <!-- Le libellé complet ne tient pas dans 54 px, mais il doit rester
-           annoncé : cette zone n'est pas affichée et sert de compte rendu
-           vocal. Elle porte aussi le détail lu par les tests. -->
+      <!-- The full label does not fit in 54 px, but it must still be
+           announced: this area is not displayed and serves as the spoken
+           report. It also carries the detail the tests read. -->
       <span class="fabinfo" id="fabinfo" role="status" aria-live="polite">
         <b id="fabtitre"></b>
         <span class="fabreste" id="fabreste"></span>
       </span>
     </button>
-    <!-- Ce qui tourne, attache au bouton « + ». Une bulle flottante separee
-         disait la meme chose que le bouton, a un autre endroit de l'ecran. Le
-         journal garde son role : l'historique de ce qui S'EST passe. -->
+    <!-- What is running, attached to the "+" button. A separate floating
+         bubble said the same thing as the button, somewhere else on the screen.
+         The log keeps its role: the history of what HAS happened. -->
     <div class="taskwrap" id="tachewrap" role="status" aria-live="polite">
       <div class="drophead"><b>En cours</b>
         <button class="ghost" data-act="toggleTasks" data-val="false">Fermer</button></div>
@@ -239,11 +236,11 @@
     <div class="dropwrap" id="dropwrap">
       <div class="drophead"><b>Dépôt</b>
         <button class="ghost" data-act="toggleDrop" data-val="false">Fermer</button></div>
-      <!-- Le rectangle en pointilles faisait doublon : toute la fenetre accepte
-           deja les fichiers. Il ne reste que ce qu'il apportait vraiment — un
-           bouton pour ceux qui preferent choisir dans le Finder. -->
-      <!-- Sans balisage a l'interieur : une emphase <b> decoupe la phrase en
-           trois noeuds de texte, et la traduction ne peut plus la reconnaitre. -->
+      <!-- The dotted rectangle was a duplicate: the whole window already
+           accepts files. All that remains is what it really brought — a button
+           for those who prefer to choose in the file chooser. -->
+      <!-- No markup inside: a <b> emphasis cuts the sentence into three text
+           nodes, and the translation can no longer recognise it. -->
       <p class="lead" style="margin:0 0 10px">Dépose tes fichiers n'importe où sur la page, ou choisis-les :</p>
       <div class="bar" style="margin-bottom:10px">
         <button class="ghost" data-act="chooseFiles">Choisir des fichiers…</button>
@@ -265,17 +262,17 @@
       <h2 data-i18n="settings.title">Réglages</h2>
       <p class="lead">Tout est enregistré au fur et à mesure : aucun bouton « valider ».</p>
 
-      <!-- La page fait plus de 4 000 px : sans sommaire, on cherche. Les
-           cinq entrees repondent a « qu'est-ce que je suis en train de
-           regler ? », pas a la structure interne du code. -->
+      <!-- The page is over 4 000 px long: without a table of contents, you
+           hunt. The five entries answer "what am I setting right now?", not the
+           code's internal structure. -->
       <nav class="setnav" id="setnav" aria-label="Sections des réglages"><a href="#sec-console">Ta console</a><a href="#sec-biblio">Ta bibliothèque</a><a href="#sec-entretien">Entretien</a><a href="#sec-acces">Accès</a><a href="#sec-interface">Interface</a><span class="setnav-state" id="savehint" role="status" aria-live="polite"></span></nav>
 
       <section class="setsection" id="sec-console">
         <h3 class="sectitre">Ta console</h3>
         <p class="sectxt">Comment l'outil la rejoint, et où elle range ses jeux.</p>
 
-      <!-- Le profil d'emulateur decide de TOUS les chemins sur la console :
-           il vient donc avant le reste de la section, et non enfoui plus bas. -->
+      <!-- The emulator profile decides EVERY path on the console: so it comes
+           before the rest of the section, rather than buried further down. -->
       <div class="setgroup">
         <div class="setgt">Émulateur</div>
         <p class="lead" style="margin:0 0 10px">Il détermine où l'outil dépose les
@@ -320,7 +317,7 @@
             </div>
           </div>
 
-          <!-- etape 2 : sur la console, la fenetre d'appairage -->
+          <!-- step 2: on the console, the pairing dialog -->
           <div class="wstep" id="wstep2">
             <div class="wnum">2</div>
             <div class="wbody">
@@ -339,7 +336,7 @@
             </div>
           </div>
 
-          <!-- etape 3 : sur le mac -->
+          <!-- step 3: on the computer -->
           <div class="wstep" id="wstep3">
             <div class="wnum">3</div>
             <div class="wbody">
@@ -376,8 +373,8 @@
                  placeholder="/storage/…/emulation/ROMs"></div>
         </div>
 
-        <!-- Ce que l'outil trouve REELLEMENT sur la console : l'utilisateur n'a
-             plus a deviner quels dossiers existent ni lesquels sont vides. -->
+        <!-- What the tool REALLY finds on the console: the user no longer has
+             to guess which folders exist or which ones are empty. -->
         <div class="bar" style="margin-top:10px">
           <button class="go" data-act="fullAnalysis">Analyser la console</button>
           <button class="ghost" data-act="addPlatform">Ajouter une plateforme…</button>
@@ -408,7 +405,7 @@
           <div class="setctl"><select id="s-plateforme"></select></div>
         </div>
 
-        <!-- Ce que TOUTE plateforme possede : ou elle range ses jeux. -->
+        <!-- What EVERY platform has: where it files its games. -->
         <div id="pf-commun"></div>
       </div>
 
@@ -416,10 +413,9 @@
       <div class="setgroup platform-group" data-plateforme="switch">
         <div class="setgt">Nintendo Switch <span class="scope">spécifique</span></div>
 
-        <!-- Le dossier se regle une seule fois, dans « Dossier sur la console »
-             juste au-dessus : il valait pour toutes les plateformes, la Switch
-             comprise. Le garder ici en doublon, c'etait deux champs pour une
-             seule valeur. -->
+        <!-- The folder is set once, in "Folder on the console" just above: it
+             held for every platform, the Switch included. Keeping a duplicate
+             here meant two fields for one value. -->
         <div class="setrow">
           <div class="setlab"><b>Organisation du transfert</b>
             <span id="d-layout">Comment ranger les fichiers envoyés.</span></div>
@@ -514,11 +510,11 @@
         <h3 class="sectitre">Ta bibliothèque</h3>
         <p class="sectxt">Où sont les jeux, ce qui part vers la console, comment c'est rangé, et d'où viennent les jaquettes.</p>
 
-      <!-- Le dossier des jeux se choisissait par variable d'environnement : sur
-           un NAS, cela voulait dire ouvrir un terminal et redemarrer un
-           conteneur pour une information dont l'interface est le seul endroit
-           naturel. Il est distinct du dossier de DONNEES du service, qui lui
-           reste fixe par le deploiement. -->
+      <!-- The games folder used to be chosen through an environment variable:
+           on a NAS, that meant opening a terminal and restarting a container
+           for a piece of information whose only natural home is the interface.
+           It is distinct from the service's DATA folder, which stays fixed by
+           the deployment. -->
       <div class="setgroup">
         <div class="setgt">Emplacement <span class="mono">sur le serveur</span></div>
         <div class="setrow">
@@ -531,10 +527,9 @@
             <button class="ghost" id="b-ludo" data-act="libOpen">Changer…</button>
           </div>
         </div>
-        <!-- L'ordre de lecture est celui de la decision : on va quelque part,
-             on regarde ce qu'on y trouve, PUIS on valide. Les boutons places
-             au-dessus de la liste demandaient de valider avant d'avoir vu ou
-             l'on etait. -->
+        <!-- The reading order is the order of the decision: you go somewhere,
+             you look at what is there, THEN you confirm. Buttons placed above
+             the list asked you to confirm before seeing where you were. -->
         <div id="ludowrap" hidden>
           <p class="lead">Navigue jusqu'au dossier qui contient tes jeux, puis valide.</p>
           <div id="ludoraccourcis" class="bar"></div>
@@ -790,9 +785,9 @@
           </div>
 
           <div class="setrow">
-            <!-- Les phrases restent entieres : une balise au MILIEU d'une
-                 phrase la coupe en deux morceaux, et on ne traduit pas une
-                 demi-phrase. -->
+            <!-- Sentences stay whole: a tag in the MIDDLE of a sentence cuts
+                 it into two pieces, and one does not translate half a
+                 sentence. -->
             <div class="setlab"><b>Groupes administrateurs</b>
               <span>Qui peut ouvrir les Réglages et gérer l'outil.</span>
               <span>C'est une question différente de « qui peut entrer » ci-dessus.</span>
@@ -840,7 +835,7 @@
             </div></div>
         </div>
 
-        <!-- ------------------------------------------ cles d'API -->
+        <!-- ------------------------------------------ API keys -->
         <div class="setrow" style="align-items:flex-start">
           <div class="setlab"><b>Clés d'API</b>
             <span>Pour interroger Romule depuis un tableau de bord ou un script.</span>
@@ -936,15 +931,15 @@
 
       <!-- ---------------------------------------------------- branchement -->
 
-      <!-- ------------------------------------------ console / emulateur -->
-      <!-- Une seule porte d'entree pour tout ce qui depend de la plateforme :
-           on la choisit ici, et seuls SES reglages restent a l'ecran. Avant,
-           les blocs Switch etaient disperses entre des reglages generaux et
-           repousses par une regle de CSS — on ne savait plus ce qui
-           s'appliquait a quoi. -->
+      <!-- ------------------------------------------ console / emulator -->
+      <!-- One single way in for everything that depends on the platform: you
+           choose it here, and only ITS settings stay on screen. Before, the
+           Switch blocks were scattered among the general settings and pushed
+           around by a CSS rule — you could no longer tell what applied to
+           what. -->
 
-      <!-- Reglages propres a la plateforme choisie. Chaque bloc porte son
-           `data-plateforme` ; le reste est masque. -->
+      <!-- The chosen platform's own settings. Each block carries its
+           `data-plateforme`; the rest is hidden. -->
 
       <!-- ---------------------------------------------------- transferts -->
 
@@ -968,8 +963,8 @@
       <!-- ---------------------------------------------------- acces -->
 
       <!-- ------------------------------------------------ maintenance -->
-      <!-- Cinq verifications qui repondent chacune a une question precise.
-           Regroupees : ce sont les memes gestes, faits de temps en temps. -->
+      <!-- Five checks, each answering one precise question. Grouped together:
+           they are the same gestures, made from time to time. -->
 
       <!-- ----------------------------------------------------- audit -->
 
@@ -981,9 +976,9 @@
   </div>
 </main>
 
-<!-- L'AGPL demande qu'un utilisateur qui atteint le service PAR LE RESEAU
-     puisse en obtenir le code. Ce pied de page est cette offre : il n'est pas
-     decoratif, il est une obligation de la licence choisie. -->
+<!-- The AGPL requires that a user who reaches the service OVER THE NETWORK be
+     able to obtain its source. This footer is that offer: it is not decorative,
+     it is an obligation of the licence chosen. -->
 <footer id="pied">
   <span id="pied-version" data-i18n-skip>Romule</span>
   <span class="pied-sep">·</span>
@@ -995,14 +990,14 @@
   <span class="pied-beta">Bêta</span>
 </footer>
 
-<!-- Tache en cours : carte compacte en haut a droite. Elle n'occupe aucune
-     bande d'ecran, reste lisible en paysage sur la console, et renvoie au
-     journal d'un clic pour le detail complet. -->
+<!-- The running task: a compact card at the top right. It takes up no strip of
+     screen, stays readable in landscape on the console, and leads to the log in
+     one click for the full detail. -->
 
-<!-- Journal : bouton flottant a droite, panneau lateral. Il ne recouvre plus
-     ni le bouton d'ajout ni la barre d'actions. -->
-<!-- Depot : la fenetre entiere accepte les fichiers. Le voile n'apparait que
-     lorsqu'un glisser transporte reellement des fichiers. -->
+<!-- The log: a floating button on the right, a side panel. It no longer covers
+     the add button or the action bar. -->
+<!-- Dropping: the whole window accepts files. The overlay only appears when a
+     drag really carries files. -->
 <div class="dropzone" id="dropzone" aria-hidden="true">
   <div class="dropzone-in">
     <span class="dropzone-ic">↓</span>
