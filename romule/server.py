@@ -1432,7 +1432,7 @@ class Handler(BaseHTTPRequestHandler):
                         "evenements": access_log.latest(120)})
 
         elif p == "/api/audit":
-            self._json(audit.lancer(CFG, hors_ligne=bool(d.get("hors_ligne"))))
+            self._json(audit.run(CFG, offline=bool(d.get("hors_ligne"))))
 
         elif p == "/api/auth-test":
             try:
@@ -2078,7 +2078,7 @@ def _audit_demarrage():
     Python version check happens on demand instead.
     """
     try:
-        r = audit.lancer(CFG, hors_ligne=True)
+        r = audit.run(CFG, offline=True)
     except Exception as exc:                  # a broken audit does not break the tool
         JOB.log("Audit de securite indisponible : %s" % exc, "warn")
         return
