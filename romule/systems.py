@@ -403,7 +403,7 @@ def detect_on_device(cfg):
 
     # a single `find` for the whole tree: the rest is local sorting
     files = _read_tree(root, _FIND_COMMAND % (device._q(root), device._q(root)))
-    _remember_from(root, files)
+    _remember_from(root, files, cfg)
 
     out = []
     for s in list_all(cfg):
@@ -433,7 +433,7 @@ def all_platforms(cfg):
     remote = []
     if root and device.state() == "device":
         remote = _read_tree(root, _FIND_COMMAND % (device._q(root), device._q(root)))
-        _remember_from(root, remote)
+        _remember_from(root, remote, cfg)
 
     out = []
     for s in list_all(cfg):
@@ -503,12 +503,20 @@ def _light_entry(f):
             "url_resume": f.get("url_resume", "")}
 
 
-def _remember_from(root, files):
-    """Top-level folder names seen in the tree we read."""
+def _remember_from(root, files, cfg=None):
+    """Top-level folder names seen in the tree we read.
+
+    And, since we are holding a full reading of the console, what it HOLDS. The
+    question "this game, which console is it on?" is asked about the console
+    that is not plugged in, so the answer has to be written down while one is.
+    """
     base = root.rstrip("/") + "/"
     names = {p[len(base):].split("/", 1)[0]
             for p in (f.get("path") or "" for f in files) if p.startswith(base)}
     remember_folders(names)
+    if cfg is not None:
+        from . import consoles
+        consoles.remember(cfg, [f.get("path") for f in files])
 
 
 def _folder_exists(files, prefix):

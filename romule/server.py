@@ -133,7 +133,11 @@ def _lib_response():
         # Which consoles are declared, and which one is being driven. It travels
         # with the inventory rather than on a route of its own: the selector is
         # drawn on the same pass as everything else it sits next to.
-        "consoles": consoles.public(CFG),
+        "consoles": dict(consoles.public(CFG),
+                         # What each declared console was last seen holding, and
+                         # how old that reading is. It answers "which console is
+                         # this game on?" for a console that is not plugged in.
+                         tenu=consoles.held_summary(CFG)),
         "device": device.state(),
         "covers_v": covers.version(),
         # translated titles and summaries already cached: disk reads only, so
@@ -1181,6 +1185,10 @@ class Handler(BaseHTTPRequestHandler):
                                        "removed."}, 400)
                 if not consoles.remove(CFG, cid):
                     return self._json({"error": "Unknown console."}, 404)
+                # Its inventory goes with it. Left behind, it would be handed to
+                # the next console that happened to take the same identifier —
+                # which is why identifiers are time-based and not counted.
+                consoles.forget_inventory(cid)
             elif geste == "choisir":
                 if not consoles.select(CFG, cid):
                     return self._json({"error": "Unknown console."}, 404)
