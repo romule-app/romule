@@ -1144,5 +1144,16 @@
   "Destination ajoutée.": "Destination ajoutée.",
   "Destination retirée.": "Destination retirée.",
   "Envoyé. Regarde ton salon.": "Envoyé. Regarde ton salon.",
-  "Nom (« salon famille »)": "Nom (« salon famille »)"
+  "Nom (« salon famille »)": "Nom (« salon famille »)",
+  "Relire la bibliothèque": "Relire la bibliothèque",
+  "Ranger le dépôt": "Ranger le dépôt",
+  "Convertir en NSZ": "Convertir en NSZ",
+  "Rafraîchir les fiches": "Rafraîchir les fiches",
+  "Jamais": "Jamais",
+  "Au démarrage": "Au démarrage",
+  "Toutes les heures": "Toutes les heures",
+  "Toutes les 6 heures": "Toutes les 6 heures",
+  "Chaque nuit": "Chaque nuit",
+  "Tout seul": "Tout seul",
+  "Romule ne fait rien sans qu'on le lui demande. Ces réglages changent cela, tâche par tâche. Si une tâche tourne déjà à l'échéance, l'échéance est sautée : Romule fait une chose à la fois.": "Romule ne fait rien sans qu'on le lui demande. Ces réglages changent cela, tâche par tâche. Si une tâche tourne déjà à l'échéance, l'échéance est sautée : Romule fait une chose à la fois."
 }

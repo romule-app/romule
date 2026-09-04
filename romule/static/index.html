@@ -662,6 +662,19 @@
         <h3 class="sectitre">Entretien</h3>
         <p class="sectxt">Ce qu'on regarde de temps en temps.</p>
 
+      <!-- What runs on its own. Five presets and no cron field: a syntax where
+           a misplaced star means "every minute" has no place in a settings
+           screen. Only reversible tasks appear here — emptying the trash is
+           deliberately absent. -->
+      <div class="setgroup">
+        <div class="setgt">Tout seul</div>
+        <p class="lead" style="margin:0 0 10px">Romule ne fait rien sans qu'on
+          le lui demande. Ces réglages changent cela, tâche par tâche. Si une
+          tâche tourne déjà à l'échéance, l'échéance est sautée : Romule fait
+          une chose à la fois.</p>
+        <div id="sched"></div>
+      </div>
+
       <div class="setgroup">
         <div class="setgt">Corbeille</div>
         <p class="lead" style="margin:0 0 10px">Rien n'est jamais supprimé par l'outil :
