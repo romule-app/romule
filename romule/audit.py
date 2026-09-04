@@ -393,7 +393,7 @@ def _cles_api():
     """
     from . import apikeys
     try:
-        cles = apikeys.liste()
+        cles = apikeys.list_all()
     except Exception:
         return []
     if not cles:

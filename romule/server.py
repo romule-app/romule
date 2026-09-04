@@ -583,7 +583,7 @@ class Handler(BaseHTTPRequestHandler):
         if cle:
             if not apiv1.dans_la_portee(self.path.partition("?")[0]):
                 return False
-            qui = apikeys.verifier(cle)
+            qui = apikeys.verify(cle)
             if qui:
                 self.cle_api = qui
                 return True
@@ -841,7 +841,7 @@ class Handler(BaseHTTPRequestHandler):
             # /api/v1, which requires a key in the first place. These three
             # internal routes manage the keys; they are not public and are
             # therefore not frozen.
-            self._json({"cles": apikeys.liste(avec_revoquees=True)})
+            self._json({"cles": apikeys.list_all(with_revoked=True)})
         elif p == "/api/trash-list":
             # Automatic purging only acts when the user set a delay: by
             # default (0) the trash is never emptied on its own.
@@ -1205,7 +1205,7 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"ok": reussi, "detail": raison})
 
         elif p == "/api/cle-creer":
-            fiche, cle = apikeys.creer(d.get("nom") or "")
+            fiche, cle = apikeys.create(d.get("nom") or "")
             JOB.log("Cle d'API creee : %s" % fiche["nom"])
             # The plaintext key goes out HERE and only once: it is stored as a
             # digest and nothing else.
@@ -1213,7 +1213,7 @@ class Handler(BaseHTTPRequestHandler):
 
         elif p == "/api/cle-revoquer":
             cid = str(d.get("id") or "")
-            fait = apikeys.revoquer(cid)
+            fait = apikeys.revoke(cid)
             if fait:
                 JOB.log("Cle d'API revoquee : %s" % cid)
             self._json({"ok": fait})
