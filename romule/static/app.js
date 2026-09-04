@@ -5761,8 +5761,12 @@ const app = {
   openPlatform(key) {
     if (!key) return;
     PF_OUVERTE = key;
+    // `dataset.arg`, not `getAttribute('onclick')`. Phase 4 removed every
+    // inline handler, so that attribute has been null since — and `null.includes`
+    // threw before this line could mark anything. No request, no error on
+    // screen, no trace: the panel simply never opened.
     document.querySelectorAll('.pfcard').forEach(b =>
-      R.classe(b, 'on', b.getAttribute('onclick').includes("'" + key + "'")));
+      R.classe(b, 'on', b.dataset.arg === key));
     this.choosePlatformSettings(key);
     const sel = $('s-plateforme');
     if (sel) sel.value = key;
@@ -5882,8 +5886,11 @@ const app = {
   // Seeing is not deciding.
   async showMaintenance(quoi) {
     const b = $('entretien');
+    // Same defect as in `openPlatform`, and the same fix: the handler attribute
+    // this read has not existed since phase 4, so the whole method threw on its
+    // first line and the five maintenance panels never opened.
     document.querySelectorAll('.upkeep button').forEach(x =>
-      R.classe(x, 'on', x.getAttribute('onclick').includes("'" + quoi + "'")));
+      R.classe(x, 'on', x.dataset.arg === quoi));
     R.texte(b, 'Lecture…');
     const rendus = {
       doublons: renderDuplicates, integrite: renderIntegrity,

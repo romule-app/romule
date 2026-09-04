@@ -174,6 +174,35 @@ t('app.js generates no inline handler',
 t('index.html carries none either',
   enLigne(html).length === 0, enLigne(html).join(' | '));
 
+// Reading an attribute phase 4 removed is dead code, and it does not read as
+// dead: `getAttribute('onclick')` returns null, `.includes` on null throws, and
+// the method dies on its first line. Two of them survived the phase — the
+// platform cards and the five maintenance panels — and neither the browser
+// tests nor the audit could see it: there is no request, no error on screen,
+// and nothing in the log. The panel simply never opens.
+//
+// The invariant is exact and cheap: no `on*` attribute exists, so nothing may
+// read one.
+function lecturesMortes(texte) {
+  const out = [];
+  texte.split('\n').forEach((l, i) => {
+    if (l.trim().startsWith('//')) return;
+    if (/getAttribute\(\s*['"]on\w+['"]\s*\)/.test(l)) out.push(i + 1);
+  });
+  return out;
+}
+
+[['a read of onclick -> detected', "  x.getAttribute('onclick').includes('a');", true],
+ ['a read of onchange -> detected', '  y.getAttribute("onchange");', true],
+ ['the same in a comment -> ignored', "  // x.getAttribute('onclick')", false],
+ ['a read of data-act -> ignored', "  x.getAttribute('data-act');", false],
+].forEach(([nom, extrait, attendu]) =>
+  t(nom, (lecturesMortes(extrait).length > 0) === attendu));
+
+const mortes = lecturesMortes(src);
+t('nothing reads a handler attribute that no longer exists',
+  mortes.length === 0, 'lignes : ' + mortes.join(', '));
+
 console.log('   -- 4ter. the values entering a data-* are escaped --');
 // The value has left the JavaScript string for an attribute value: ONE parser
 // now reads it, and `esc()` is enough — provided it is there. Without it, a file
