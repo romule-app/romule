@@ -138,11 +138,11 @@ def _lib_response():
     }
 
 
-def _taille(n):
+def _human_size(n):
     """A readable size: raw bytes say nothing inside a message."""
-    for unite in ("o", "Kio", "Mio", "Gio", "Tio"):
-        if n < 1024 or unite == "Tio":
-            return "%.1f %s" % (n, unite) if unite != "o" else "%d o" % n
+    for unit in ("o", "Kio", "Mio", "Gio", "Tio"):
+        if n < 1024 or unit == "Tio":
+            return "%.1f %s" % (n, unit) if unit != "o" else "%d o" % n
         n /= 1024.0
 
 
@@ -930,7 +930,7 @@ class Handler(BaseHTTPRequestHandler):
         if left > config.TELEVERSEMENT_MAX:
             return self._json(
                 {"error": "Fichier trop volumineux : %s pour un maximum de %s."
-                          % (_taille(left), _taille(config.TELEVERSEMENT_MAX))}, 413)
+                          % (_human_size(left), _human_size(config.TELEVERSEMENT_MAX))}, 413)
         try:
             libre = shutil.disk_usage(config.IMPORT).free
         except OSError:
@@ -939,8 +939,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(
                 {"error": "Espace insuffisant : %s disponibles, %s demandes "
                           "(marge de securite de %s)."
-                          % (_taille(libre), _taille(left),
-                             _taille(config.DISK_MARGIN))}, 507)
+                          % (_human_size(libre), _human_size(left),
+                             _human_size(config.DISK_MARGIN))}, 507)
         try:
             with dest.open("wb") as fh:
                 while left > 0:
