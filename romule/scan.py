@@ -31,7 +31,7 @@ class Library:
 
     # ------------------------------------------------------------ inventaire
 
-    def _parcourir(self):
+    def _walk(self):
         """The files we keep, as sorted ABSOLUTE paths — without `pathlib`.
 
         This loop is the cost of every render: the inventory is not stored
@@ -39,8 +39,8 @@ class Library:
         titles (39 525 files) gave 1 887 ms, of which:
 
             relative_to       744 ms   39 %
-            sorted(Path)      362 ms   19 %   — 504 724 comparaisons
-            stat              138 ms          — appele DEUX fois par fichier
+            sorted(Path)      362 ms   19 %   — 504 724 comparisons
+            stat              138 ms          — called TWICE per file
 
         JSON serialisation did not even show up. Which is why a database would
         have changed nothing here: the time does not go into reading data, it
@@ -54,37 +54,37 @@ class Library:
         and nothing else.
         """
         base = str(config.LUDO)
-        coupe = len(base) + 1
-        trouves = []
-        for dossier, sous, fichiers in os.walk(base):
-            if dossier == base:
-                sous[:] = [d for d in sous if d not in config.IGNORE_DIRS]
-            for nom in fichiers:
-                ext = os.path.splitext(nom)[1].lower()
+        cut = len(base) + 1
+        found = []
+        for folder, subdirs, filenames in os.walk(base):
+            if folder == base:
+                subdirs[:] = [d for d in subdirs if d not in config.IGNORE_DIRS]
+            for name in filenames:
+                ext = os.path.splitext(name)[1].lower()
                 if ext not in config.EXTS:
                     continue
                 # The extension travels with the path: recomputing it below
                 # would mean a second `splitext` per file, for a result we
                 # already have.
-                trouves.append((os.path.join(dossier, nom), ext))
+                found.append((os.path.join(folder, name), ext))
         # `normcase` reproduces the order of `sorted(rglob("*"))` exactly:
         # `PurePath.__lt__` compares `_str_normcase`, that is, the whole string,
         # lowercased on Windows and unchanged elsewhere.
-        trouves.sort(key=lambda c: os.path.normcase(c[0]))
-        return trouves, coupe
+        found.sort(key=lambda c: os.path.normcase(c[0]))
+        return found, cut
 
     def scan(self, deep=True, log=lambda m, n=None: None):
         files = []
         deep = deep and nsztool.available()
-        trouves, coupe = self._parcourir()
-        for chemin, ext in trouves:
-            nom = os.path.basename(chemin)
-            rel = chemin[coupe:]
-            tid = titleid.from_name(nom)
-            ver = titleid.version_from_name(nom)
+        found, cut = self._walk()
+        for path, ext in found:
+            name = os.path.basename(path)
+            rel = path[cut:]
+            tid = titleid.from_name(name)
+            ver = titleid.version_from_name(name)
             if not tid and deep:
-                log("Lecture du conteneur : %s" % nom)
-                tid = nsztool.container_tid(chemin)
+                log("Lecture du conteneur : %s" % name)
+                tid = nsztool.container_tid(path)
             elif deep and tid and titleid.tid_type(tid) == "BASE" and (
                     ver or (self.versions
                             and titleid.tid_patch(tid) not in self.versions)):
@@ -96,32 +96,32 @@ class Library:
                 #     not exist, and the file then forms a phantom game of its
                 #     own.
                 # In both cases we decide on the contents.
-                reel = nsztool.container_tid(chemin)
-                if reel and reel != tid:
+                real = nsztool.container_tid(path)
+                if real and real != tid:
                     log("Nom trompeur : %s annonce %s, contient %s"
-                        % (nom, tid, reel), "warn")
-                    tid = reel
+                        % (name, tid, real), "warn")
+                    tid = real
             # `os.path.dirname(rel)` returns "" at the root where
             # `Path.parent.relative_to` returned ".". The difference is visible
             # in the interface: it is the folder shown under each card.
-            dossier_rel = os.path.dirname(rel) or "."
+            rel_dir = os.path.dirname(rel) or "."
             try:
-                taille = os.stat(chemin).st_size
+                size = os.stat(path).st_size
             except OSError:
                 # A file that vanishes between the walk and the read is not a
                 # fault: a transfer may finish during the inventory. We skip it
                 # rather than failing the whole thing.
                 continue
             files.append({
-                "path": chemin,
+                "path": path,
                 "rel": rel,
-                "dir": dossier_rel,
-                "name": titleid.pretty_name(nom),
+                "dir": rel_dir,
+                "name": titleid.pretty_name(name),
                 "ext": ext.lstrip("."),
                 "tid": tid,
                 "type": titleid.tid_type(tid) if tid else "INCONNU",
                 "version": ver,
-                "size": taille,
+                "size": size,
             })
         self.files = files
         self.scanned_at = time.time()
