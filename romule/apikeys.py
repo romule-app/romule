@@ -41,23 +41,23 @@ import time
 
 from . import config
 
-FICHIER = config.fichier_etat("_romule-cles.json", "_romule-cles.json")
+FILE = config.fichier_etat("_romule-cles.json", "_romule-cles.json")
 
 # `rml_` + 43 base64url characters (32 bytes). The displayed prefix covers the
 # marker and the first eight characters of the secret: enough to recognise a
 # key in a list, far too little to rebuild it.
-MARQUEUR = "rml_"
-_TAILLE = 32
-_PREFIXE = 12
+PREFIX_MARK = "rml_"
+_SIZE = 32
+_PREFIX_LEN = 12
 
 _LOCK = threading.RLock()
 
 
 # ------------------------------------------------------------------ stockage
 
-def _lire():
+def _read():
     try:
-        d = json.loads(FICHIER.read_text(encoding="utf-8"))
+        d = json.loads(FILE.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return {"version": 1, "cles": []}
     if not isinstance(d, dict) or not isinstance(d.get("cles"), list):
@@ -65,19 +65,19 @@ def _lire():
     return d
 
 
-def _ecrire(d):
+def _write(d):
     """Atomic write in 0600, like the accounts file: a digest must only be
     readable by the system account running Romule."""
-    FICHIER.parent.mkdir(parents=True, exist_ok=True)
-    tmp = FICHIER.with_suffix(".tmp")
+    FILE.parent.mkdir(parents=True, exist_ok=True)
+    tmp = FILE.with_suffix(".tmp")
     tmp.write_text(json.dumps(d, indent=2, ensure_ascii=False) + "\n",
                    encoding="utf-8")
     os.chmod(tmp, 0o600)
-    os.replace(tmp, FICHIER)
+    os.replace(tmp, FILE)
 
 
-def _empreinte(cle):
-    return hashlib.sha256(cle.encode("utf-8")).hexdigest()
+def _digest(key):
+    return hashlib.sha256(key.encode("utf-8")).hexdigest()
 
 
 # -------------------------------------------------------------------- lecture
@@ -91,87 +91,87 @@ def _public(k):
             "revoquee": bool(k.get("revoquee"))}
 
 
-def liste(avec_revoquees=False):
-    cles = _lire()["cles"]
+def list_all(with_revoked=False):
+    cles = _read()["cles"]
     return [_public(k) for k in cles
-            if avec_revoquees or not k.get("revoquee")]
+            if with_revoked or not k.get("revoquee")]
 
 
-def nombre():
-    return len([k for k in _lire()["cles"] if not k.get("revoquee")])
+def count():
+    return len([k for k in _read()["cles"] if not k.get("revoquee")])
 
 
 # -------------------------------------------------------------------- ecriture
 
-def creer(nom):
+def create(name):
     """Rend (fiche_publique, cle_en_clair).
 
     The plaintext key is returned HERE and nowhere else: it is stored nowhere,
     and the caller is the only one able to show it. That is what makes a leak
     of the state file harmless for the keys themselves.
     """
-    nom = (nom or "").strip()[:60] or "sans nom"
-    cle = MARQUEUR + secrets.token_urlsafe(_TAILLE)
+    name = (name or "").strip()[:60] or "sans nom"
+    key = PREFIX_MARK + secrets.token_urlsafe(_SIZE)
     with _LOCK:
-        d = _lire()
+        d = _read()
         fiche = {"id": secrets.token_hex(8),
-                 "nom": nom,
-                 "prefixe": cle[:_PREFIXE],
-                 "empreinte": _empreinte(cle),
+                 "nom": name,
+                 "prefixe": key[:_PREFIX_LEN],
+                 "empreinte": _digest(key),
                  "cree": int(time.time()),
                  "dernier_usage": None,
                  "revoquee": False}
         d["cles"].append(fiche)
-        _ecrire(d)
-    return _public(fiche), cle
+        _write(d)
+    return _public(fiche), key
 
 
-def revoquer(cid):
+def revoke(cid):
     """Revoke rather than delete: the name and the last-used date stay
     readable. "Did this key get used after I withdrew it?" is a question you
     ask afterwards, not before."""
     with _LOCK:
-        d = _lire()
+        d = _read()
         for k in d["cles"]:
             if k["id"] == cid and not k.get("revoquee"):
                 k["revoquee"] = True
                 k["revoquee_le"] = int(time.time())
-                _ecrire(d)
+                _write(d)
                 return True
     return False
 
 
-def renommer(cid, nom):
-    nom = (nom or "").strip()[:60]
-    if not nom:
+def rename(cid, name):
+    name = (name or "").strip()[:60]
+    if not name:
         return False
     with _LOCK:
-        d = _lire()
+        d = _read()
         for k in d["cles"]:
             if k["id"] == cid:
-                k["nom"] = nom
-                _ecrire(d)
+                k["nom"] = name
+                _write(d)
                 return True
     return False
 
 
 # ---------------------------------------------------------------- verification
 
-def verifier(presentee):
+def verify(presented):
     """Return the public record if the key is valid, otherwise None.
 
     The last-used date is written at most once a minute: without that, a
     dashboard poll would rewrite the file on every call.
     """
-    if not presentee or not isinstance(presentee, str):
+    if not presented or not isinstance(presented, str):
         return None
-    presentee = presentee.strip()
-    if not presentee.startswith(MARQUEUR):
+    presented = presented.strip()
+    if not presented.startswith(PREFIX_MARK):
         return None
-    prefixe = presentee[:_PREFIXE]
-    emp = _empreinte(presentee)
+    prefixe = presented[:_PREFIX_LEN]
+    emp = _digest(presented)
     with _LOCK:
-        d = _lire()
+        d = _read()
         for k in d["cles"]:
             if k.get("revoquee") or k.get("prefixe") != prefixe:
                 continue
@@ -184,7 +184,7 @@ def verifier(presentee):
             if maintenant - (k.get("dernier_usage") or 0) >= 60:
                 k["dernier_usage"] = maintenant
                 try:
-                    _ecrire(d)
+                    _write(d)
                 except OSError:
                     pass          # a full disk must not close the API
             return _public(k)

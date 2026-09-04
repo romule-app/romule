@@ -128,8 +128,8 @@ def test_les_comptes():
 
 
 def test_les_cles_api():
-    apikeys.creer("essai")
-    ecrites = _cles_du_disque(apikeys.FICHIER)
+    apikeys.create("essai")
+    ecrites = _cles_du_disque(apikeys.FILE)
     manquantes = sorted(ecrites - CLES_API)
     t("aucun champ de cle d'API inconnu n'est ecrit", not manquantes,
       "champs ecrits mais non declares : %s" % manquantes)

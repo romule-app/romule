@@ -65,10 +65,10 @@ for _ in range(120):
 # The key is created in the server's store: same root, so same file.
 os.environ["ROMULE_ROOT"] = RACINE
 from romule import apikeys, apiv1                  # noqa: E402
-apikeys.FICHIER = Path(RACINE) / "_romule-cles.json"
-_, CLE = apikeys.creer("essai")
-_, CLE_MORTE = apikeys.creer("revoquee")
-apikeys.revoquer([k for k in apikeys.liste(True)
+apikeys.FILE = Path(RACINE) / "_romule-cles.json"
+_, CLE = apikeys.create("essai")
+_, CLE_MORTE = apikeys.create("revoquee")
+apikeys.revoke([k for k in apikeys.list_all(True)
                   if k["nom"] == "revoquee"][0]["id"])
 
 ok = fail = 0
