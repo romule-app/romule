@@ -3664,6 +3664,36 @@ async function loadNotifications() {
   renderNotifications();
 }
 
+// The declared consoles. A select rather than a list of cards: the point is to
+// say WHICH one the section below is about, and a select is the control that
+// answers that question without taking a screen to do it.
+let CONSOLES = {devices: [], active_device: ''};
+
+function renderConsoles() {
+  const boite = $('consoles');
+  if (!boite) return;
+  const liste = CONSOLES.devices || [];
+  const options = liste.map(d =>
+    '<option value="' + esc(d.id) + '"'
+    + (d.id === CONSOLES.active_device ? ' selected' : '') + '>'
+    + esc(d.nom) + '</option>').join('');
+  boite.innerHTML =
+    '<div class="setrow">'
+    + '<div class="setlab"><b>' + esc(t('Console pilotée')) + '</b>'
+    + '<span>' + esc(t('Les réglages ci-dessous appartiennent à celle-ci.'))
+    + '</span></div>'
+    + '<div class="setctl">'
+    + '<select data-act-change="chooseConsole">' + options + '</select>'
+    + '</div></div>'
+    + '<div class="bar">'
+    + '<button class="ghost" data-act="addConsole">' + esc(t('Ajouter une console')) + '</button>'
+    + '<button class="ghost" data-act="renameConsole">' + esc(t('Renommer')) + '</button>'
+    + (liste.length > 1
+        ? '<button class="ghost" data-act="removeConsole">' + esc(t('Retirer')) + '</button>'
+        : '')
+    + '</div>';
+}
+
 // The schedule: one row per task, one select per row. The presets are phrases
 // rather than a syntax — five answers cover what a library needs, and each one
 // says what it does out loud.
@@ -4058,9 +4088,11 @@ function syncSetDesc() {
 }
 function fillSettings() {
   const c = DATA.config || {};
-  // The schedule is drawn rather than filled in: its rows do not exist in the
-  // page, they are built from the five tasks.
+  // The schedule and the console selector are DRAWN rather than filled in:
+  // their rows do not exist in the page, they are built from what the server
+  // sent.
   renderSchedule();
+  renderConsoles();
   // a field may have been removed from the page: we never assume it is there
   const set = (id, v) => {
     const el = $(id);
@@ -4451,6 +4483,7 @@ const app = {
 
   async scan() {
     DATA = await api('/api/scan');
+    if (DATA && DATA.consoles) CONSOLES = DATA.consoles;
     if (DATA && DATA.moi) { ROLE = DATA.moi; applyRole(); }
     render();
     this.loadTrash();
@@ -5533,6 +5566,76 @@ const app = {
   },
 
   clearManifest() { const m = $('manifest'); if (m) m.innerHTML = ''; },
+
+  // ---- consoles
+  // Every gesture goes through the same route and redraws from what it answers:
+  // choosing a console changes eight settings at once, and patching them here
+  // would be writing the overlay a second time, in a second place.
+  async _consoles(geste, extra) {
+    const r = await api('/api/consoles', Object.assign({geste}, extra || {}));
+    if (!r || r.error) return null;
+    CONSOLES = {devices: r.devices || [], active_device: r.active_device || ''};
+    if (r.config) DATA.config = r.config;
+    renderConsoles();
+    fillSettings();
+    updatePlatformSettings();
+    return r;
+  },
+
+  async chooseConsole() {
+    const sel = $('consoles').querySelector('[data-act-change="chooseConsole"]');
+    if (!sel) return;
+    const r = await this._consoles('choisir', {id: sel.value});
+    if (!r) return;
+    // What was read from the PREVIOUS console says nothing about this one.
+    // Leaving it on screen would show one console's games under the other's
+    // name — the exact defect this whole feature exists to remove.
+    forgetSystemCache();
+    SCONSOLE = []; SCONSOLE_PATHS = [];
+    toast(t('Console changée.'), 'ok');
+    await this.reveilConsole();
+    renderLib();
+  },
+
+  async addConsole() {
+    dialogue({
+      titre: t('Ajouter une console'),
+      champs: [{id: 'nom', libelle: t('Nom'), valeur: ''}],
+      actions: [{libelle: t('Ajouter'), principal: true, faire: async (v) => {
+        await this._consoles('ajouter', {nom: (v.nom || '').trim()});
+      }}],
+    });
+  },
+
+  async renameConsole() {
+    const actuelle = (CONSOLES.devices || [])
+      .find(d => d.id === CONSOLES.active_device);
+    if (!actuelle) return;
+    dialogue({
+      titre: t('Renommer'),
+      champs: [{id: 'nom', libelle: t('Nom'), valeur: actuelle.nom}],
+      actions: [{libelle: t('Renommer'), principal: true, faire: async (v) => {
+        await this._consoles('renommer',
+                             {id: actuelle.id, nom: (v.nom || '').trim()});
+      }}],
+    });
+  },
+
+  async removeConsole() {
+    const actuelle = (CONSOLES.devices || [])
+      .find(d => d.id === CONSOLES.active_device);
+    if (!actuelle) return;
+    // Nothing is deleted from the console itself: this forgets its settings
+    // here. Saying so is what keeps the confirmation from reading as a threat.
+    dialogue({
+      titre: t('Retirer cette console ?'),
+      message: t('Romule oublie ses réglages. Rien n\'est supprimé sur la console.'),
+      niveau: 'warn',
+      actions: [{libelle: t('Retirer'), principal: true, faire: async () => {
+        await this._consoles('retirer', {id: actuelle.id});
+      }}],
+    });
+  },
 
   // ---- settings
   // One task's schedule. The whole `schedule` object is sent, not the one row:
@@ -6884,6 +6987,7 @@ const ACTES = new Set([
   'restoreBackup', 'restore', 'saveAllSettings', 'sendGame', 'setDpath',
   'setMotion', 'setPerPage', 'setOrder', 'setSystem', 'setSize',
   'setTheme', 'setSort', 'setSchedule', 'showOnboard', 'testAuth', 'testIgdb',
+  'chooseConsole', 'addConsole', 'renameConsole', 'removeConsole',
   'toggleDrop', 'toggleFav', 'toggleJournal', 'togglePairing', 'togglePause',
   'trashFile', 'useDir', 'verify', 'showMaintenance', 'showVersions',
   'wifiConnect', 'wifiDiscover', 'wifiForget', 'wifiPair', 'wifiSwitch',

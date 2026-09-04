@@ -1155,5 +1155,13 @@
   "Toutes les 6 heures": "Toutes les 6 heures",
   "Chaque nuit": "Chaque nuit",
   "Tout seul": "Tout seul",
-  "Romule ne fait rien sans qu'on le lui demande. Ces réglages changent cela, tâche par tâche. Si une tâche tourne déjà à l'échéance, l'échéance est sautée : Romule fait une chose à la fois.": "Romule ne fait rien sans qu'on le lui demande. Ces réglages changent cela, tâche par tâche. Si une tâche tourne déjà à l'échéance, l'échéance est sautée : Romule fait une chose à la fois."
+  "Romule ne fait rien sans qu'on le lui demande. Ces réglages changent cela, tâche par tâche. Si une tâche tourne déjà à l'échéance, l'échéance est sautée : Romule fait une chose à la fois.": "Romule ne fait rien sans qu'on le lui demande. Ces réglages changent cela, tâche par tâche. Si une tâche tourne déjà à l'échéance, l'échéance est sautée : Romule fait une chose à la fois.",
+  "Console pilotée": "Console pilotée",
+  "Les réglages ci-dessous appartiennent à celle-ci.": "Les réglages ci-dessous appartiennent à celle-ci.",
+  "Ajouter une console": "Ajouter une console",
+  "Console changée.": "Console changée.",
+  "Retirer cette console ?": "Retirer cette console ?",
+  "Romule oublie ses réglages. Rien n'est supprimé sur la console.": "Romule oublie ses réglages. Rien n'est supprimé sur la console.",
+  "Mes consoles": "Mes consoles",
+  "Une Odin et un Retroid sont deux consoles, pas un réglage écrasé deux fois. Tout ce qui suit dans cette section appartient à celle qui est choisie ici.": "Une Odin et un Retroid sont deux consoles, pas un réglage écrasé deux fois. Tout ce qui suit dans cette section appartient à celle qui est choisie ici."
 }
