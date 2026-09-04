@@ -69,7 +69,7 @@ def search_name(name):
     return s
 
 
-def cle_cache(tid, name=None):
+def cache_key(tid, name=None):
     """The identifier a cover is filed under.
 
     Some files carry no usable title ID — XCI packs that merge game, updates
@@ -90,14 +90,14 @@ def cle_cache(tid, name=None):
 
 
 def fetch(tid, name=None, cfg=None):
-    cle = cle_cache(tid, name)
-    if not cle:
+    key = cache_key(tid, name)
+    if not key:
         return None
     tid = (tid or "").lower()
-    hit = cached(cle)
+    hit = cached(key)
     if hit:
         return hit
-    if _echec_recent(cle):
+    if _recent_failure(key):
         return None
     cfg = cfg or config.load_config()
 
@@ -115,7 +115,7 @@ def fetch(tid, name=None, cfg=None):
         if secours:
             urls.append(secours)
 
-    def essayer(url):
+    def try_url(url):
         """Store the image and return its path, or None if it is worthless."""
         try:
             data = _download(url)
@@ -124,11 +124,11 @@ def fetch(tid, name=None, cfg=None):
         if len(data) < MINI:
             return None
         config.COVERS.mkdir(exist_ok=True)
-        path_for(cle).write_bytes(data)
-        return path_for(cle)
+        path_for(key).write_bytes(data)
+        return path_for(key)
 
     for url in urls:
-        p = essayer(url)
+        p = try_url(url)
         if p:
             return p
 
@@ -149,16 +149,16 @@ def fetch(tid, name=None, cfg=None):
         # cleans internally; IGDB expects an already-clean title, as for
         # `chercher()`.
         from . import igdb
-        depuis_igdb = igdb.jaquette(search_name(name), cfg)
-        if depuis_igdb:
-            p = essayer(depuis_igdb)
+        from_igdb = igdb.jaquette(search_name(name), cfg)
+        if from_igdb:
+            p = try_url(from_igdb)
             if p:
                 return p
-    _fail(cle)
+    _fail(key)
     return None
 
 
-ECHEC_TTL = 600          # retry after 10 min rather than never
+FAILURE_TTL = 600          # retry after 10 min rather than never
 
 
 def _fail(tid):
@@ -166,13 +166,13 @@ def _fail(tid):
         _FAILED[tid] = time.time()
 
 
-def _echec_recent(tid):
+def _recent_failure(tid):
     """A passing failure must not deny the game its cover forever."""
     with _LOCK:
         t = _FAILED.get(tid)
         if t is None:
             return False
-        if time.time() - t > ECHEC_TTL:
+        if time.time() - t > FAILURE_TTL:
             del _FAILED[tid]
             return False
         return True
@@ -232,7 +232,7 @@ def sgdb_infos(name, key):
         return None
 
 
-def tester_cle(cfg):
+def test_key(cfg):
     """Check a SteamGridDB key and return (ok, message).
 
     `sgdb_infos` swallows every error: the right behaviour when fetching one
@@ -241,7 +241,7 @@ def tester_cle(cfg):
     """
     key = (cfg.get("steamgriddb_key") or "").strip()
     if not key:
-        return (False, "Aucune cle renseignee.")
+        return (False, "Aucune key renseignee.")
     url = ("https://www.steamgriddb.com/api/v2/search/autocomplete/"
            + urllib.parse.quote("zelda"))
     try:

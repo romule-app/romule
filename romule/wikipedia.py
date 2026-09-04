@@ -41,7 +41,7 @@ WIKIDATA = "https://www.wikidata.org/w/api.php"
 # Wikidata: "video game" and its common subclasses. Without this filter, a
 # search brings back a film or a character bearing the same name just as
 # readily.
-JEU_VIDEO = {
+VIDEO_GAME = {
     "Q7889",      # video game
     "Q865493",    # role-playing video game
     "Q4393107",   # video game series (accepted: often the only article)
@@ -50,23 +50,23 @@ JEU_VIDEO = {
     "Q28058561",  # racing video game
 }
 
-INTERVALLE = 0.7          # the Wikimedia APIs answer 429 if you push
-_RYTHME = threading.Lock()
-_DERNIERE = [0.0]
-_ECHECS = set()
+INTERVAL = 0.7          # the Wikimedia APIs answer 429 if you push
+_PACE = threading.Lock()
+_LAST = [0.0]
+_FAILURES = set()
 
 
-def _attendre():
-    with _RYTHME:
-        creux = INTERVALLE - (time.monotonic() - _DERNIERE[0])
+def _wait():
+    with _PACE:
+        creux = INTERVAL - (time.monotonic() - _LAST[0])
         if creux > 0:
             time.sleep(creux)
-        _DERNIERE[0] = time.monotonic()
+        _LAST[0] = time.monotonic()
 
 
-def _lire(url, essais=3):
-    for essai in range(essais):
-        _attendre()
+def _read(url, attempts=3):
+    for essai in range(attempts):
+        _wait()
         try:
             req = urllib.request.Request(url, headers={"User-Agent": AGENT})
             with net.open_url(req, timeout=20) as r:
@@ -81,25 +81,25 @@ def _lire(url, essais=3):
     return None
 
 
-def _article(titre_anglais, langue):
+def _article(english_title, lang):
     """(Wikidata identifier, article title) in the language we want."""
     q = urllib.parse.urlencode({
         "action": "wbsearchentities", "format": "json", "language": "en",
-        "uselang": "en", "type": "item", "limit": 6, "search": titre_anglais})
-    d = _lire(WIKIDATA + "?" + q)
+        "uselang": "en", "type": "item", "limit": 6, "search": english_title})
+    d = _read(WIKIDATA + "?" + q)
     ids = [x["id"] for x in (d or {}).get("search", [])]
     if not ids:
         return None, None
-    site = langue + "wiki"
+    site = lang + "wiki"
     q2 = urllib.parse.urlencode({
         "action": "wbgetentities", "format": "json", "ids": "|".join(ids),
         "props": "claims|sitelinks", "sitefilter": site})
-    e = _lire(WIKIDATA + "?" + q2)
+    e = _read(WIKIDATA + "?" + q2)
     for i in ids:                       # the search order is authoritative
         ent = ((e or {}).get("entities") or {}).get(i) or {}
         types = {(c.get("mainsnak", {}).get("datavalue", {}).get("value") or {}).get("id")
                  for c in (ent.get("claims") or {}).get("P31", [])}
-        if not (types & JEU_VIDEO):
+        if not (types & VIDEO_GAME):
             continue
         lien = (ent.get("sitelinks") or {}).get(site)
         if lien:
@@ -107,28 +107,28 @@ def _article(titre_anglais, langue):
     return None, None
 
 
-def _intro(article, langue, phrases=3):
+def _intro(article, lang, sentences=3):
     """The article's introduction, as plain text."""
     q = urllib.parse.urlencode({
         "action": "query", "format": "json", "titles": article,
         "prop": "extracts", "exintro": 1, "explaintext": 1, "redirects": 1})
-    d = _lire("https://%s.wikipedia.org/w/api.php?%s" % (langue, q))
+    d = _read("https://%s.wikipedia.org/w/api.php?%s" % (lang, q))
     for p in (((d or {}).get("query") or {}).get("pages") or {}).values():
-        texte = " ".join((p.get("extract") or "").split())
-        if not texte:
+        text = " ".join((p.get("extract") or "").split())
+        if not text:
             return ""
         # Three sentences are enough on a game card; the whole article would
         # overflow it by a mile.
-        bouts, out = texte.split(". "), []
+        bouts, out = text.split(". "), []
         for b in bouts:
             out.append(b)
-            if len(out) >= phrases or len(" ".join(out)) > 420:
+            if len(out) >= sentences or len(" ".join(out)) > 420:
                 break
         return ". ".join(out).rstrip(".") + "."
     return ""
 
 
-def resume(titre_anglais, langue="fr"):
+def summary(english_title, lang="fr"):
     """(text, url) in the requested language, or ("", "") if nothing is found.
 
     English is never returned through this path: the caller then keeps IGDB's
@@ -139,23 +139,23 @@ def resume(titre_anglais, langue="fr"):
     requires citing the source. Returning it here is the only way the interface
     can do so.
     """
-    titre_anglais = (titre_anglais or "").strip()
-    if not titre_anglais or langue in ("", "en"):
+    english_title = (english_title or "").strip()
+    if not english_title or lang in ("", "en"):
         return "", ""
-    cle = (titre_anglais.lower(), langue)
-    with _RYTHME:
-        if cle in _ECHECS:
+    cle = (english_title.lower(), lang)
+    with _PACE:
+        if cle in _FAILURES:
             return "", ""
-    _, article = _article(titre_anglais, langue)
+    _, article = _article(english_title, lang)
     if not article:
-        with _RYTHME:
-            _ECHECS.add(cle)
+        with _PACE:
+            _FAILURES.add(cle)
         return "", ""
-    texte = _intro(article, langue)
-    if not texte:
-        with _RYTHME:
-            _ECHECS.add(cle)
+    text = _intro(article, lang)
+    if not text:
+        with _PACE:
+            _FAILURES.add(cle)
         return "", ""
     url = "https://%s.wikipedia.org/wiki/%s" % (
-        langue, urllib.parse.quote(article.replace(" ", "_")))
-    return texte, url
+        lang, urllib.parse.quote(article.replace(" ", "_")))
+    return text, url
