@@ -17,6 +17,7 @@ import time
 ETAPES = [
     "app.tab('jeux')",
     "app.tab('settings')",
+    "app.showMaintenance('sante')",
     "app.showMaintenance('doublons')",
     "app.showMaintenance('integrite')",
     "app.showMaintenance('acces')",
