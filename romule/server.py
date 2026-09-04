@@ -30,7 +30,8 @@ from . import (access_log, accounts, actions, apikeys, apiv1, audit, auth,
                backup, browse, config, console, covers, device, duplicates,
                edenconf, emuready, igdb, integrity, meta, nand, net, notify,
                nsztool, profiles, saves, scan, systems, titleid, transfers,
-               consoles, scheduler, trash, updates, versions, views)
+               consoles, report, scheduler, trash, updates, versions,
+               views)
 from . import cli
 from . import LICENCE, SOURCE_URL, __version__
 from .jobs import JobRunner
@@ -1441,6 +1442,16 @@ class Handler(BaseHTTPRequestHandler):
             LIB.scan(log=JOB.log)
             self._json({"message": "%d fichier(s) rangé(s)." % n,
                         "items": actions.scan_import()})
+
+        elif p == "/api/library-report":
+            # Assembled from what already knew: `report.py` computes nothing of
+            # its own. The inventory is the one in memory — this is a screen you
+            # open to look, not a reason to walk the disk again.
+            self._json(report.build(LIB, CFG,
+                                    meta_cache=meta.bulk(
+                                        [titleid.tid_base(f["tid"])
+                                         for f in LIB.files if f["tid"]], CFG),
+                                    pending=actions.scan_import()))
 
         elif p == "/api/doublons":
             r = duplicates.report(LIB, CFG)
