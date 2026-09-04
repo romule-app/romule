@@ -203,8 +203,8 @@ class JobRunner:
                 # which reads the disk at import time. A cycle between the two
                 # would fail startup rather than one notification.
                 try:
-                    from . import notifs
-                    notifs.envoyer(evt, "Romule — %s" % label, resume, niveau)
+                    from . import notify
+                    notify.send(evt, "Romule — %s" % label, resume, niveau)
                 except Exception as exc:      # never fatal: this is a convenience
                     console.event("Notification impossible : %s" % exc,
                                       "warn", "notifs")

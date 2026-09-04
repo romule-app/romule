@@ -27,7 +27,7 @@ from html import escape as html_escape
 from urllib.parse import parse_qs, unquote
 
 from . import (actions, apikeys, apiv1, audit, auth, comptes, config, console,
-               covers, net, notifs, updates,
+               covers, net, notify, updates,
                device, edenconf,
                doublons, emuready, igdb, integrity, journal_acces, meta, nand,
                parcourir, sauvegarde, saves,
@@ -834,9 +834,9 @@ class Handler(BaseHTTPRequestHandler):
             # in an HTTP response would put it in the browser history, in the
             # proxy's logs, and on any screenshot of the settings page.
             self._json({"destinations": [_notif_public(x)
-                                         for x in notifs.destinations(CFG)],
-                        "evenements": notifs.EVENEMENTS,
-                        "services": list(notifs.SERVICES)})
+                                         for x in notify.destinations(CFG)],
+                        "evenements": notify.EVENTS,
+                        "services": list(notify.SERVICES)})
 
         elif p == "/api/cles":
             # The interface is a browser with a session: it cannot go through
@@ -1166,9 +1166,9 @@ class Handler(BaseHTTPRequestHandler):
                 # local file.
                 return self._json({"error": str(exc)}, 400)
             liste = list(CFG.get("notif_destinations") or [])
-            if len(liste) >= notifs.MAX_DESTINATIONS:
+            if len(liste) >= notify.MAX_DESTINATIONS:
                 return self._json({"error": "Too many destinations (%d)."
-                                   % notifs.MAX_DESTINATIONS}, 400)
+                                   % notify.MAX_DESTINATIONS}, 400)
             liste.append({"id": secrets.token_hex(8),
                           "nom": str(d.get("nom") or "")[:60],
                           "url": url,
@@ -1178,9 +1178,9 @@ class Handler(BaseHTTPRequestHandler):
             CFG["notif_destinations"] = liste
             config.save_config(CFG)
             JOB.log("Destination de notification ajoutee : %s"
-                    % (d.get("nom") or notifs.deviner(url)))
+                    % (d.get("nom") or notify.guess(url)))
             self._json({"destinations": [_notif_public(x)
-                                         for x in notifs.destinations(CFG)]})
+                                         for x in notify.destinations(CFG)]})
 
         elif p == "/api/notif-supprimer":
             nid = str(d.get("id") or "")
@@ -1188,7 +1188,7 @@ class Handler(BaseHTTPRequestHandler):
                                          if str(x.get("id")) != nid]
             config.save_config(CFG)
             self._json({"destinations": [_notif_public(x)
-                                         for x in notifs.destinations(CFG)]})
+                                         for x in notify.destinations(CFG)]})
 
         elif p == "/api/notif-tester":
             # Two cases: an address typed but not yet saved, or an existing
@@ -1196,14 +1196,14 @@ class Handler(BaseHTTPRequestHandler):
             # therefore be found by its identifier.
             url = str(d.get("url") or "").strip()
             if not url:
-                cible = next((x for x in notifs.destinations(CFG)
+                cible = next((x for x in notify.destinations(CFG)
                               if x["id"] == str(d.get("id") or "")), None)
                 if not cible:
                     return self._json({"error": "Unknown destination."}, 404)
                 url, service = cible["url"], cible["service"]
             else:
                 service = d.get("service")
-            reussi, raison = notifs.tester(url, service)
+            reussi, raison = notify.probe(url, service)
             self._json({"ok": reussi, "detail": raison})
 
         elif p == "/api/cle-creer":
