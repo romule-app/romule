@@ -84,7 +84,7 @@ def valeurs():
     bloc = bloc[:bloc.index("})")]
     audit = (RACINE / "romule" / "tests" / "navigateur"
              / "audit_responsive.py").read_text(encoding="utf-8")
-    profils = audit[audit.index("TAILLES = ["):]
+    profils = audit[audit.index("SIZES = ["):]
     profils = profils[:profils.index("\n]")]
     return {
         "reglages": len(config.DEFAULTS),

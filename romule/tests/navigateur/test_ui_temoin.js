@@ -121,81 +121,81 @@ vm.createContext(ctx);
 vm.runInContext(fs.readFileSync('romule/static/reactive.js', 'utf8'), ctx);
 ctx.R = ctx.window.R;
 // `const app = ...` stays within the script's scope: we expose it for the test.
-const SUFFIXE = "\n;globalThis.__t = {app, majBlocAuth, renderTask, uploadFiles, majFab, config: c => { DATA.config = c; }};";
+const SUFFIXE = "\n;globalThis.__t = {app, updateAuthBlock, renderTask, uploadFiles, majFab, config: c => { DATA.config = c; }};";
 vm.runInContext(fs.readFileSync('romule/static/app.js', 'utf8') + SUFFIXE, ctx);
 
 
 let ok = 0, ko = 0;
 const t = (n, c, d) => c ? (ok++, console.log('      OK   ' + n))
-                         : (ko++, console.log('      ECHEC ' + n + '  ' + (d ?? '')));
+                         : (ko++, console.log('      FAIL  ' + n + '  ' + (d ?? '')));
 const fab = ids.get('fab'), jauge = ids.get('fabjauge');
 
 (async () => {
-  console.log('   -- 1. au repos --');
+  console.log('   -- 1. at rest --');
   ctx.__t.renderTask({running: false, log: []});
-  t('bouton non marque « travaille »', !fab.classList.contains('travaille'));
-  t('aucun titre affiche', ids.get('fabtitre').textContent === '');
+  t('button not marked as working', !fab.classList.contains('travaille'));
+  t('no title displayed', ids.get('fabtitre').textContent === '');
 
-  console.log('   -- 2. tache avec total connu --');
+  console.log('   -- 2. a task with a known total --');
   ctx.__t.renderTask({running: true, label: 'convert_files', done: 3, total: 12,
                        detail: 'jeu.nsz', log: []});
-  t('bouton marque « travaille »', fab.classList.contains('travaille'));
-  t('nom de tache traduit', ids.get('fabtitre').textContent === 'Conversion',
+  t('button marked as working', fab.classList.contains('travaille'));
+  t('the task name is translated', ids.get('fabtitre').textContent === 'Conversion',
     ids.get('fabtitre').textContent);
-  t('compteur sur le bouton', /3\/12/.test(ids.get('fabreste').textContent),
+  t('counter on the button', /3\/12/.test(ids.get('fabreste').textContent),
     ids.get('fabreste').textContent);
-  t('jauge a 25 %', jauge.style.strokeDasharray === '25 100', jauge.style.strokeDasharray);
-  t('pas en mode indetermine', !fab.classList.contains('cherche'));
-  t('anneau mesure sur le contour', ids.get('fabring').getAttribute('viewBox') === '0 0 54 54',
+  t('gauge at 25 %', jauge.style.strokeDasharray === '25 100', jauge.style.strokeDasharray);
+  t('not in indeterminate mode', !fab.classList.contains('cherche'));
+  t('the ring is measured on the outline', ids.get('fabring').getAttribute('viewBox') === '0 0 54 54',
     ids.get('fabring').getAttribute('viewBox'));
 
-  console.log('   -- 3. total inconnu --');
+  console.log('   -- 3. unknown total --');
   ctx.__t.renderTask({running: true, label: 'verify_library', done: 5, total: 0, log: []});
-  t('mode indetermine', fab.classList.contains('cherche'));
-  t('segment court qui tourne', jauge.style.strokeDasharray === '18 82', jauge.style.strokeDasharray);
-  t('nom traduit', ids.get('fabtitre').textContent === 'Vérification');
+  t('indeterminate mode', fab.classList.contains('cherche'));
+  t('a short segment turning', jauge.style.strokeDasharray === '18 82', jauge.style.strokeDasharray);
+  t('the name is translated', ids.get('fabtitre').textContent === 'Vérification');
 
-  console.log('   -- 4. tache inconnue du tableau --');
+  console.log('   -- 4. a task the table does not know --');
   ctx.__t.renderTask({running: true, label: 'tache_jamais_vue', done: 1, total: 2, log: []});
-  t('repli lisible', ids.get('fabtitre').textContent === 'Tâche en cours',
+  t('a readable fallback', ids.get('fabtitre').textContent === 'Tâche en cours',
     ids.get('fabtitre').textContent);
 
-  console.log('   -- 5. fin de tache --');
+  console.log('   -- 5. end of task --');
   ctx.__t.renderTask({running: false, log: []});
-  t('temoin efface', !fab.classList.contains('travaille')
+  t('the indicator is cleared', !fab.classList.contains('travaille')
     && ids.get('fabtitre').textContent === '');
 
-  console.log('   -- 6. envoi de fichiers --');
+  console.log('   -- 6. uploading files --');
   ctx.__t.uploadFiles([{name: 'gros.nsp', size: 9000}, {name: 'petit.nsp', size: 1000},
                        {name: 'notice.txt', size: 10}]);
-  t('seuls les types geres sont envoyes', ENVOIS.length === 1, ENVOIS.length);
-  t('temoin actif pendant l\'envoi', fab.classList.contains('travaille'));
-  t('titre indique la progression', /Envoi 1\/2/.test(ids.get('fabtitre').textContent),
+  t('only the handled types are sent', ENVOIS.length === 1, ENVOIS.length);
+  t('the indicator is active during the upload', fab.classList.contains('travaille'));
+  t('the title shows the progress', /Envoi 1\/2/.test(ids.get('fabtitre').textContent),
     ids.get('fabtitre').textContent);
   // 50 % of the FIRST file = 4500 / 10000 bytes in total, so 45 %
   ENVOIS[0].upload.onprogress({lengthComputable: true, loaded: 4500, total: 9000});
-  t('avancement calcule sur le volume', jauge.style.strokeDasharray === '45 100',
+  t('progress computed on the volume', jauge.style.strokeDasharray === '45 100',
     jauge.style.strokeDasharray);
 
-  console.log('   -- 7. l\'envoi passe devant la tache serveur --');
+  console.log('   -- 7. the upload comes before the server task --');
   ctx.__t.renderTask({running: true, label: 'sync_meta', done: 1, total: 4, log: []});
-  t('c\'est l\'envoi qui reste affiche', /Envoi/.test(ids.get('fabtitre').textContent),
+  t('the upload is what stays displayed', /Envoi/.test(ids.get('fabtitre').textContent),
     ids.get('fabtitre').textContent);
 
-  console.log('   -- 8. voile de depot --');
-  const voile = ids.get('dropzone');
+  console.log('   -- 8. the drop overlay --');
+  const overlay = ids.get('dropzone');
   const evt = (types) => ({dataTransfer: {types, files: []}, preventDefault() {}});
   ctx.window.declencher('dragenter', evt(['Files']));
-  t('voile affiche quand on traine des fichiers', voile.classList.contains('on'));
+  t('overlay shown while dragging files', overlay.classList.contains('on'));
   ctx.window.declencher('dragenter', evt(['Files']));   // hovering a child
   ctx.window.declencher('dragleave', evt(['Files']));
-  t('pas de clignotement en passant d\'un element a l\'autre', voile.classList.contains('on'));
+  t('no flicker when moving from one element to another', overlay.classList.contains('on'));
   ctx.window.declencher('dragleave', evt(['Files']));
-  t('voile retire en sortant', !voile.classList.contains('on'));
+  t('overlay removed on leaving', !overlay.classList.contains('on'));
   ctx.window.declencher('dragenter', evt(['text/plain']));
-  t('un glisser de texte n\'ouvre rien', !voile.classList.contains('on'));
+  t('dragging text opens nothing', !overlay.classList.contains('on'));
 
   console.log('   ------------------------------------------------');
-  console.log('   ' + ok + ' controles OK, ' + ko + ' echec(s)');
+  console.log('   ' + ok + ' checks OK, ' + ko + ' failure(s)');
   process.exit(ko ? 1 : 0);
 })();

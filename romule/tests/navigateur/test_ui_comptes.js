@@ -108,46 +108,46 @@ vm.createContext(ctx);
 vm.runInContext(fs.readFileSync('romule/static/reactive.js', 'utf8'), ctx);
 ctx.R = ctx.window.R;
 // `const app = ...` stays within the script's scope: we expose it for the test.
-const SUFFIXE = "\n;globalThis.__t = {app, majBlocAuth, config: c => { DATA.config = c; }};";
+const SUFFIXE = "\n;globalThis.__t = {app, updateAuthBlock, config: c => { DATA.config = c; }};";
 vm.runInContext(fs.readFileSync('romule/static/app.js', 'utf8') + SUFFIXE, ctx);
 
 let ok = 0, ko = 0;
 const t = (n, c, d) => c ? (ok++, console.log('      OK   ' + n))
-                         : (ko++, console.log('      ECHEC ' + n + '  ' + (d ?? '')));
+                         : (ko++, console.log('      FAIL  ' + n + '  ' + (d ?? '')));
 
 (async () => {
   t('app.addAccount is exposed', typeof ctx.__t.app.addAccount === 'function');
-  t('app.loadAccounts exposee', typeof ctx.__t.app.loadAccounts === 'function');
+  t('app.loadAccounts is exposed', typeof ctx.__t.app.loadAccounts === 'function');
 
   await ctx.__t.app.loadAccounts();
-  t('/api/comptes appelee', appels.includes('/api/comptes'));
+  t('/api/comptes is called', appels.includes('/api/comptes'));
 
   const carte = ids.get('moncompte');
-  t('carte « mon compte » remplie', /moncompte/.test(carte.innerHTML), carte.innerHTML.slice(0, 60));
+  t('the "my account" card is filled', /moncompte/.test(carte.innerHTML), carte.innerHTML.slice(0, 60));
   const av = carte.querySelector('avatar');
-  t('photo posee sur l\'avatar', /\/photo\/aaa\?v=/.test(av.style.backgroundImage || ''),
+  t('the photo is set on the avatar', /\/photo\/aaa\?v=/.test(av.style.backgroundImage || ''),
     av.style.backgroundImage);
   // photo, nom, mot de passe, double authentification, deconnexion
-  t('5 actions proposees', (carte.innerHTML.match(/data-a=/g) || []).length === 5,
+  t('5 actions offered', (carte.innerHTML.match(/data-a=/g) || []).length === 5,
     (carte.innerHTML.match(/data-a=/g) || []).length);
-  t('la double authentification est proposee', /data-a="totp"/.test(carte.innerHTML));
+  t('two-factor authentication is offered', /data-a="totp"/.test(carte.innerHTML));
 
   const boite = ids.get('listecomptes');
-  t('2 personnes listees', boite.children.length === 2, boite.children.length);
+  t('2 people listed', boite.children.length === 2, boite.children.length);
 
   // switching the mode selector
   const sel = ids.get('s-authmode');
   sel.value = 'interne';
   ctx.__t.config({auth_mode: 'interne'});
-  ctx.__t.majBlocAuth();
-  t('bloc interne affiche', ids.get('blocinterne').hidden === false);
-  t('bloc SSO masque', ids.get('blocoidc').style.display === 'none');
+  ctx.__t.updateAuthBlock();
+  t('the internal block is shown', ids.get('blocinterne').hidden === false);
+  t('the SSO block is hidden', ids.get('blocoidc').style.display === 'none');
   sel.value = 'oidc';
-  ctx.__t.majBlocAuth();
-  t('retour au SSO', ids.get('blocinterne').hidden === true
+  ctx.__t.updateAuthBlock();
+  t('back to SSO', ids.get('blocinterne').hidden === true
     && ids.get('blocoidc').style.display === '');
 
   console.log('   ------------------------------------------------');
-  console.log('   ' + ok + ' controles OK, ' + ko + ' echec(s)');
+  console.log('   ' + ok + ' checks OK, ' + ko + ' failure(s)');
   process.exit(ko ? 1 : 0);
 })();
