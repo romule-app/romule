@@ -126,7 +126,7 @@ def _ecrire(chemin, texte, job):
     if rc != 0:
         job.log("Ecriture impossible : %s" % ((err or out).strip().splitlines() or [""])[-1])
         return False
-    device.ouvrir_droits(chemin)
+    device.open_permissions(chemin)
     return True
 
 

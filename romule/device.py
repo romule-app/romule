@@ -22,7 +22,7 @@ _GAME_FIND = (r"\( -iname '*.nsp' -o -iname '*.xci' "
 
 # ------------------------------------------------------------- appels adb bruts
 
-def _binaire_adb():
+def _adb_binary():
     """Path of the adb binary to run, or None when there is none.
 
     `ROMULE_ADB` comes first. It is what lets the test suite point at a fake
@@ -42,7 +42,7 @@ def _binaire_adb():
 
 
 def adb_available():
-    return _binaire_adb() is not None
+    return _adb_binary() is not None
 
 
 # Serial of the targeted device. Useful when USB and Wi-Fi are connected at the
@@ -57,7 +57,7 @@ def set_target(serial):
 
 def _run(args, timeout=60, targeted=True):
     """Return (returncode, stdout, stderr). `targeted` aims at the chosen device."""
-    binaire = _binaire_adb()
+    binaire = _adb_binary()
     if not binaire:
         return 1, "", "adb introuvable"
     cmd = [binaire]
@@ -145,26 +145,26 @@ def connection():
     set_target(d["serial"])
     return {"kind": "wifi" if is_wireless(d["serial"]) else "usb",
             "serial": d["serial"], "state": "device",
-            "depuis": _depuis(d["serial"])}
+            "depuis": _since(d["serial"])}
 
 
 # How long this link has held. Measured from the first time we see this serial:
 # adb does not provide the information, and it says far more than "connected" —
 # a wireless link that just came back is not as trustworthy as one established
 # two hours ago.
-_VUS = {}
+_SEEN = {}
 
 
-def _depuis(serial):
+def _since(serial):
     import time as _t
-    if serial not in _VUS:
-        _VUS[serial] = _t.time()
+    if serial not in _SEEN:
+        _SEEN[serial] = _t.time()
     # forget vanished links, otherwise the duration would be wrong on return
     vivants = {d["serial"] for d in devices()}
-    for s in list(_VUS):
+    for s in list(_SEEN):
         if s not in vivants:
-            del _VUS[s]
-    return int(_t.time() - _VUS.get(serial, _t.time()))
+            del _SEEN[s]
+    return int(_t.time() - _SEEN.get(serial, _t.time()))
 
 
 def parse_devices(out):
@@ -240,7 +240,7 @@ def pair(addr, code):
     # This function bypassed `_run`: it ran a hard-coded "adb", with no
     # existence guard. It was therefore the one call `ROMULE_ADB` would have
     # missed, and the one to raise when adb is absent.
-    binaire = _binaire_adb()
+    binaire = _adb_binary()
     if not binaire:
         return (False, "adb introuvable")
     try:
@@ -495,7 +495,7 @@ def make_tree(device_dir):
     if state() == "device" and base:
         for name in _tree_folders():
             _shell("mkdir -p %s" % _q(base + "/" + name))
-    _invalider_cache()
+    _invalidate_cache()
     return tree_status(device_dir)
 
 
@@ -536,7 +536,7 @@ def organize(device_dir, job, types=None):
     job.log("%d fichier(s) range(s) en GAMES / UPDATE / DLC sur la console." % moved)
 
 
-    _invalider_cache()
+    _invalidate_cache()
 
 def analyze(games):
     """Flag the console's games: orphans and stale versions (dflags)."""
@@ -557,7 +557,7 @@ def analyze(games):
     return games
 
 
-def _invalider_cache():
+def _invalidate_cache():
     """Any write to the console expires the cached view of its tree.
 
     Without this, a file you just pushed would stay invisible until the cache
@@ -585,7 +585,7 @@ def remove(paths, job):
     job.log("%d fichier(s) supprime(s) de la console." % n)
 
 
-    _invalider_cache()
+    _invalidate_cache()
 
 def reconcile(device_games, lib_files):
     """Flag each of the device's games: already in the library or not."""
@@ -749,9 +749,9 @@ def push_generic(paths, target_dir, job, verify=True, incremental=True):
     job.log("Transfert termine (%d/%d) vers %s." % (okc, len(todo), base))
 
 
-    _invalider_cache()
+    _invalidate_cache()
 
-def _target_folder(path, layout, type_connu=None):
+def _target_folder(path, layout, known_type=None):
     """A file's target subfolder for the chosen layout.
 
     `type_connu` comes from the library, which read the container: it always
@@ -761,8 +761,8 @@ def _target_folder(path, layout, type_connu=None):
         return ""
     if layout == "game":  # mirror: the source per-game folder (parent)
         return str(path.parent.relative_to(config.LUDO))
-    if type_connu in config.LAYOUT_FOLDER:
-        return config.LAYOUT_FOLDER[type_connu]
+    if known_type in config.LAYOUT_FOLDER:
+        return config.LAYOUT_FOLDER[known_type]
     tid = titleid.from_name(path.name)  # last resort: the name
     return config.LAYOUT_FOLDER[titleid.tid_type(tid) if tid else "INCONNU"]
 
@@ -778,7 +778,7 @@ def _console_index(device_dir):
     return keys
 
 
-def ouvrir_droits(*chemins):
+def open_permissions(*paths):
     """Make the files adb just wrote reachable by Eden.
 
     A file pushed by adb belongs to the `shell` user, mode 644. Eden, running
@@ -787,10 +787,10 @@ def ouvrir_droits(*chemins):
     makes it give up silently, with no visible error. So we widen the
     permissions after every write.
     """
-    for chemin in chemins:
-        if not chemin:
+    for path in paths:
+        if not path:
             continue
-        q = _q(chemin)
+        q = _q(path)
         # A folder keeps its execute bit, without which it can no longer be
         # traversed: 777 for folders, 666 for files.
         _shell("if [ -d %s ]; then "
@@ -799,17 +799,17 @@ def ouvrir_droits(*chemins):
                "else chmod 666 %s 2>/dev/null; fi" % (q, q, q, q))
 
 
-    _invalider_cache()
+    _invalidate_cache()
 
 # Android codes from `dumpsys battery`. The raw numbers say nothing on screen:
 # we translate them here, once, rather than on every render.
-_ETAT_BATTERIE = {1: "inconnu", 2: "charge", 3: "decharge",
+_BATTERY_STATE = {1: "inconnu", 2: "charge", 3: "decharge",
                   4: "pause", 5: "pleine"}
-_SANTE_BATTERIE = {1: "inconnue", 2: "bonne", 3: "surchauffe", 4: "hors service",
+_BATTERY_HEALTH = {1: "inconnue", 2: "bonne", 3: "surchauffe", 4: "hors service",
                    5: "surtension", 6: "defaillante", 7: "froide"}
 
 
-def batterie():
+def battery():
     """The console's battery state, or None when it does not answer.
 
     A console that dies in the middle of a 12 GB transfer means a file to send
@@ -835,7 +835,7 @@ def batterie():
     if niveau is None:
         return None
     pourcent = max(0, min(100, round(100 * niveau / echelle)))
-    etat = _ETAT_BATTERIE.get(entier("status") or 1, "inconnu")
+    etat = _BATTERY_STATE.get(entier("status") or 1, "inconnu")
     # `status` reads "discharging" even when plugged in on some devices: the
     # presence of a power source is a more reliable way to say "charging".
     branchee = any(champs.get(c, "").lower() == "true"
@@ -847,7 +847,7 @@ def batterie():
         "pourcent": pourcent,
         "etat": etat,
         "branchee": branchee,
-        "sante": _SANTE_BATTERIE.get(entier("health") or 1, "inconnue"),
+        "sante": _BATTERY_HEALTH.get(entier("health") or 1, "inconnue"),
         # `temperature` is in tenths of a degree
         "temperature": round(temp / 10.0, 1) if temp is not None else None,
         "volts": round((entier("voltage") or 0) / 1000.0, 2) or None,
@@ -977,4 +977,4 @@ def push(paths, device_dir, job, verify_mode="size", layout="type", incremental=
     job.log("Transfert termine (%d/%d) vers %s." % (okc, len(todo), device_dir))
     if okc == len(todo):
         transferts.terminer()          # nothing to resume
-    _invalider_cache()
+    _invalidate_cache()

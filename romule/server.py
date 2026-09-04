@@ -871,7 +871,7 @@ class Handler(BaseHTTPRequestHandler):
             conn = device.connection()
             self._json({"state": device.state(), "connection": conn,
                         "info": device.info(), "volumes": device.volumes(),
-                        "batterie": device.batterie(),
+                        "batterie": device.battery(),
                         "wifi_addr": CFG.get("wifi_addr", "")})
         elif p.startswith("/photo/"):
             octets, mime = accounts.photo_read(p[len("/photo/"):])
