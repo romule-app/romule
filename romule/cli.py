@@ -135,7 +135,7 @@ def cmd_apikey(args):
     action = getattr(args, "action", None) or "list"
 
     if action == "create":
-        fiche, cle = apikeys.creer(args.nom)
+        fiche, cle = apikeys.create(args.nom)
         print("Cle creee : %s" % fiche["nom"])
         print()
         print("  %s" % cle)
@@ -148,14 +148,14 @@ def cmd_apikey(args):
         return
 
     if action == "revoke":
-        if apikeys.revoquer(args.id):
+        if apikeys.revoke(args.id):
             print("Cle %s revoquee." % args.id)
         else:
             print("Aucune cle active avec cet identifiant : %s" % args.id)
             sys.exit(1)
         return
 
-    cles = apikeys.liste(avec_revoquees=bool(getattr(args, "all", False)))
+    cles = apikeys.list_all(with_revoked=bool(getattr(args, "all", False)))
     if not cles:
         print("Aucune cle. `romule apikey create <nom>` en cree une.")
         return

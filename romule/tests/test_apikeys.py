@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 # and it has no business inside the user's state file.
 _TMP = Path(tempfile.mkdtemp(prefix="romule-cles-"))
 from romule import apikeys                                      # noqa: E402
-apikeys.FICHIER = _TMP / "_romule-cles.json"
+apikeys.FILE = _TMP / "_romule-cles.json"
 
 ok = ko = 0
 
@@ -34,7 +34,7 @@ def t(nom, cond, detail=""):
 
 
 def test_creation():
-    fiche, cle = apikeys.creer("tableau de bord")
+    fiche, cle = apikeys.create("tableau de bord")
     t("la cle porte le marqueur", cle.startswith("rml_"), cle[:8])
     t("la cle est longue", len(cle) >= 40, len(cle))
     t("le nom est conserve", fiche["nom"] == "tableau de bord")
@@ -43,51 +43,51 @@ def test_creation():
       cle not in repr(fiche), repr(fiche)[:80])
     # The state file must hold no key in the clear: that is what makes its leak
     # harmless for the keys themselves.
-    brut = apikeys.FICHIER.read_text(encoding="utf-8")
+    brut = apikeys.FILE.read_text(encoding="utf-8")
     t("le fichier ne contient pas la cle en clair", cle not in brut)
     t("le fichier contient une empreinte", "empreinte" in brut)
 
 
 def test_deux_cles_different():
-    _, a = apikeys.creer("a")
-    _, b = apikeys.creer("b")
+    _, a = apikeys.create("a")
+    _, b = apikeys.create("b")
     t("deux cles creees a la suite different", a != b)
 
 
 def test_verification():
-    fiche, cle = apikeys.creer("script")
+    fiche, cle = apikeys.create("script")
     t("une cle valide est reconnue",
-      (apikeys.verifier(cle) or {}).get("id") == fiche["id"])
-    t("une cle inconnue est refusee", apikeys.verifier("rml_inexistante") is None)
-    t("une chaine vide est refusee", apikeys.verifier("") is None)
-    t("None est refuse", apikeys.verifier(None) is None)
+      (apikeys.verify(cle) or {}).get("id") == fiche["id"])
+    t("une cle inconnue est refusee", apikeys.verify("rml_inexistante") is None)
+    t("une chaine vide est refusee", apikeys.verify("") is None)
+    t("None est refuse", apikeys.verify(None) is None)
     t("un secret sans marqueur est refuse",
-      apikeys.verifier(cle[4:]) is None)
+      apikeys.verify(cle[4:]) is None)
     # The same secret to within one character: the comparison is on the whole
     # fingerprint, not on the prefix that serves to find the record.
     faux = cle[:-1] + ("a" if cle[-1] != "a" else "b")
-    t("un caractere different suffit a refuser", apikeys.verifier(faux) is None)
+    t("un caractere different suffit a refuser", apikeys.verify(faux) is None)
 
 
 def test_revocation():
-    fiche, cle = apikeys.creer("a jeter")
-    t("valide avant revocation", apikeys.verifier(cle) is not None)
-    t("la revocation reussit", apikeys.revoquer(fiche["id"]))
-    t("refusee apres revocation", apikeys.verifier(cle) is None)
-    t("revoquer deux fois ne reussit pas", not apikeys.revoquer(fiche["id"]))
+    fiche, cle = apikeys.create("a jeter")
+    t("valide avant revocation", apikeys.verify(cle) is not None)
+    t("la revocation reussit", apikeys.revoke(fiche["id"]))
+    t("refusee apres revocation", apikeys.verify(cle) is None)
+    t("revoquer deux fois ne reussit pas", not apikeys.revoke(fiche["id"]))
     # Revoked, not deleted: "was this key used after I withdrew it?" is a
     # question one asks after the fact.
-    ids = [k["id"] for k in apikeys.liste(avec_revoquees=True)]
+    ids = [k["id"] for k in apikeys.list_all(with_revoked=True)]
     t("la cle revoquee reste consultable", fiche["id"] in ids)
     t("elle ne figure plus dans la liste courante",
-      fiche["id"] not in [k["id"] for k in apikeys.liste()])
+      fiche["id"] not in [k["id"] for k in apikeys.list_all()])
 
 
 def test_dernier_usage():
-    fiche, cle = apikeys.creer("sonde")
+    fiche, cle = apikeys.create("sonde")
     t("aucun usage a la creation", fiche["dernier_usage"] is None)
-    apikeys.verifier(cle)
-    vu = [k for k in apikeys.liste() if k["id"] == fiche["id"]][0]
+    apikeys.verify(cle)
+    vu = [k for k in apikeys.list_all() if k["id"] == fiche["id"]][0]
     t("l'usage est note", vu["dernier_usage"] is not None)
 
 
@@ -107,8 +107,8 @@ def test_portee():
 
 
 def test_le_fichier_est_prive():
-    apikeys.creer("droits")
-    mode = apikeys.FICHIER.stat().st_mode & 0o777
+    apikeys.create("droits")
+    mode = apikeys.FILE.stat().st_mode & 0o777
     t("le fichier des cles est en 0600", mode == 0o600, oct(mode))
 
 

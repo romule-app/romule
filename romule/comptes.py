@@ -344,7 +344,7 @@ def totp_activer(uid, saisie):
             if not conf.get("secret"):
                 raise ValueError("Commence par générer un secret.")
             bon, compteur = totp.verify(conf["secret"], saisie,
-                                          utilises=set(conf.get("utilises") or []))
+                                        used=set(conf.get("utilises") or []))
             if not bon:
                 raise ValueError("Code incorrect. Vérifie l'heure de ton téléphone.")
             conf.update({"actif": True, "utilises": [compteur]})
@@ -429,7 +429,7 @@ def connecter(email, mdp, ip="", code=""):
     if totp_actif(u):
         from . import totp
         bon, compteur = totp.verify(u["totp"]["secret"], code,
-                                      utilises=set(u["totp"].get("utilises") or []))
+                                    used=set(u["totp"].get("utilises") or []))
         if not bon:
             _echec_ip(ip)
             raise BesoinCode("Code à usage unique requis." if not code
