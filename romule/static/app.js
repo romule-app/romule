@@ -1065,7 +1065,7 @@ function majPanneauTaches(j) {
 // `label` carries the name of the running Python function: it speaks to the
 // code alone. We turn it into a short phrase, recognisable at a glance.
 const NOMS_TACHE = {
-  analyser_console:    'Analyse de la console',
+  analyse_device:      'Analyse de la console',
   apply_eden_config:   'Réglages Eden',
   apply_eden_profile:  'Profil Eden',
   backup_saves:        'Sauvegardes',
