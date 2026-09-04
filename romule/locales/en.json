@@ -1144,5 +1144,16 @@
   "Destination ajoutée.": "Destination added.",
   "Destination retirée.": "Destination removed.",
   "Envoyé. Regarde ton salon.": "Sent. Go look at your channel.",
-  "Nom (« salon famille »)": "Name (“family channel”)"
+  "Nom (« salon famille »)": "Name (“family channel”)",
+  "Relire la bibliothèque": "Read the library again",
+  "Ranger le dépôt": "File the drop folder",
+  "Convertir en NSZ": "Convert to NSZ",
+  "Rafraîchir les fiches": "Refresh the game entries",
+  "Jamais": "Never",
+  "Au démarrage": "At startup",
+  "Toutes les heures": "Hourly",
+  "Toutes les 6 heures": "Every 6 hours",
+  "Chaque nuit": "Nightly",
+  "Tout seul": "On its own",
+  "Romule ne fait rien sans qu'on le lui demande. Ces réglages changent cela, tâche par tâche. Si une tâche tourne déjà à l'échéance, l'échéance est sautée : Romule fait une chose à la fois.": "Romule does nothing unless you ask it to. These settings change that, task by task. If a task is already running when another falls due, the due one is skipped: Romule does one thing at a time."
 }

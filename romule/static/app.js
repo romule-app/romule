@@ -3664,6 +3664,54 @@ async function loadNotifications() {
   renderNotifications();
 }
 
+// The schedule: one row per task, one select per row. The presets are phrases
+// rather than a syntax — five answers cover what a library needs, and each one
+// says what it does out loud.
+//
+// The hour only appears for `nightly`: a field that is inert nine times out of
+// ten is a field the reader has to work out, and this is the settings screen
+// that just spent a whole section removing those.
+const SCHED_TASKS = [
+  ['scan', 'Relire la bibliothèque'],
+  ['import', 'Ranger le dépôt'],
+  ['convert', 'Convertir en NSZ'],
+  ['push', 'Envoyer vers la console'],
+  ['meta', 'Rafraîchir les fiches'],
+];
+
+const SCHED_PRESETS = [
+  ['never', 'Jamais'],
+  ['startup', 'Au démarrage'],
+  ['hourly', 'Toutes les heures'],
+  ['6h', 'Toutes les 6 heures'],
+  ['nightly', 'Chaque nuit'],
+];
+
+function renderSchedule() {
+  const boite = $('sched');
+  if (!boite) return;
+  const plan = (DATA.config || {}).schedule || {};
+  boite.innerHTML = SCHED_TASKS.map(([cle, libelle]) => {
+    const val = String(plan[cle] || 'never');
+    const nuit = val.startsWith('nightly');
+    const heure = nuit ? parseInt(val.split(':')[1] || '3', 10) : 3;
+    const options = SCHED_PRESETS.map(([p, l]) =>
+      '<option value="' + p + '"' + (p === (nuit ? 'nightly' : val) ? ' selected' : '')
+      + '>' + esc(t(l)) + '</option>').join('');
+    const heures = Array.from({length: 24}, (_, h) =>
+      '<option value="' + h + '"' + (h === heure ? ' selected' : '') + '>'
+      + String(h).padStart(2, '0') + ':00</option>').join('');
+    return '<div class="setrow">'
+      + '<div class="setlab"><b>' + esc(t(libelle)) + '</b></div>'
+      + '<div class="setctl">'
+      + '<select data-act-change="setSchedule" data-arg="' + esc(cle) + '">'
+      + options + '</select>'
+      + '<select data-act-change="setSchedule" data-arg="' + esc(cle) + '"'
+      + ' data-hour="1"' + (nuit ? '' : ' hidden') + '>' + heures + '</select>'
+      + '</div></div>';
+  }).join('');
+}
+
 function renderNotifications() {
   const boite = $('listenotifs');
   if (!boite) return;
@@ -4010,6 +4058,9 @@ function syncSetDesc() {
 }
 function fillSettings() {
   const c = DATA.config || {};
+  // The schedule is drawn rather than filled in: its rows do not exist in the
+  // page, they are built from the five tasks.
+  renderSchedule();
   // a field may have been removed from the page: we never assume it is there
   const set = (id, v) => {
     const el = $(id);
@@ -5484,6 +5535,28 @@ const app = {
   clearManifest() { const m = $('manifest'); if (m) m.innerHTML = ''; },
 
   // ---- settings
+  // One task's schedule. The whole `schedule` object is sent, not the one row:
+  // `/api/config` writes a value, not a patch, and a partial object would erase
+  // the other four tasks.
+  async setSchedule(cle) {
+    // `esc()` even here: the value is one of five literals today, and the
+    // invariant that EVERY interpolation is escaped is worth more than the
+    // exception. `test_ui_injection.js` refuses the exception, and it is right.
+    const ligne = $('sched').querySelector(
+      '[data-act-change="setSchedule"][data-arg="' + esc(cle) + '"]');
+    const heure = $('sched').querySelector(
+      '[data-act-change="setSchedule"][data-arg="' + esc(cle) + '"][data-hour]');
+    if (!ligne) return;
+    const choix = ligne.value;
+    const plan = Object.assign({}, (DATA.config || {}).schedule || {});
+    if (choix === 'never') delete plan[cle];
+    else if (choix === 'nightly') {
+      plan[cle] = 'nightly:' + String(heure ? heure.value : 3).padStart(2, '0');
+    } else plan[cle] = choix;
+    await this.saveField('schedule', plan);
+    renderSchedule();
+  },
+
   // Saves a single setting: impossible to wipe the others by mistake.
   async saveField(cle, valeur) {
     const avant = (DATA.config || {})[cle];
@@ -6810,7 +6883,7 @@ const ACTES = new Set([
   'renderJournal', 'renderLib', 'reorganizeLocal', 'resumeTransfer',
   'restoreBackup', 'restore', 'saveAllSettings', 'sendGame', 'setDpath',
   'setMotion', 'setPerPage', 'setOrder', 'setSystem', 'setSize',
-  'setTheme', 'setSort', 'showOnboard', 'testAuth', 'testIgdb',
+  'setTheme', 'setSort', 'setSchedule', 'showOnboard', 'testAuth', 'testIgdb',
   'toggleDrop', 'toggleFav', 'toggleJournal', 'togglePairing', 'togglePause',
   'trashFile', 'useDir', 'verify', 'showMaintenance', 'showVersions',
   'wifiConnect', 'wifiDiscover', 'wifiForget', 'wifiPair', 'wifiSwitch',
