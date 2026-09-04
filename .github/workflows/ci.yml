@@ -156,6 +156,16 @@ jobs:
       - name: Reste-t-il du francais dans les commentaires ?
         run: python3 outils/verifier-anglais.py --tout
 
+      # Un module renomme laisse derriere lui un `from . import ancien` que le
+      # fichier n'utilise plus et un `nouveau.` que personne n'importe. Le
+      # fichier s'analyse toujours, le service demarre toujours, et la panne
+      # attend la premiere requete sur la route concernee. C'est arrive pendant
+      # le renommage de `reseau.py`.
+      - name: Les imports suivent-ils les renommages ?
+        run: |
+          python3 outils/verifier-imports.py --autotest
+          python3 outils/verifier-imports.py --tout
+
       - name: La specification OpenAPI est-elle a jour ?
         run: |
           python -m romule.apiv1 > /tmp/openapi-attendu.json

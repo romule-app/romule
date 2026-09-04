@@ -283,7 +283,8 @@ def coherence_doc():
     titre("coherence de la documentation")
     ok = True
     for outil in ("verifier-reglages-doc.py", "verifier-chiffres.py",
-                  "verifier-traduction.py", "verifier-anglais.py"):
+                  "verifier-traduction.py", "verifier-anglais.py",
+                  "verifier-imports.py"):
         r = subprocess.run([sys.executable, str(RACINE / "outils" / outil)],
                            cwd=str(RACINE), capture_output=True, text=True)
         etat = "OK" if r.returncode == 0 else "ECHEC"
