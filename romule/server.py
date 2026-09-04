@@ -221,18 +221,18 @@ class Handler(BaseHTTPRequestHandler):
         # A single point of application: impossible to forget a route.
         if not getattr(self, "_secu_faite", True):
             self._secu_faite = True
-            self._entetes_securite()
+            self._security_headers()
         BaseHTTPRequestHandler.end_headers(self)
 
     # Types worth compressing. `application/javascript` is listed explicitly:
     # it is the largest body the server sends (app.js, 300 KiB) and it does not
     # start with `text/`.
-    TYPES_GZIP = ("application/json", "application/javascript",
+    GZIP_TYPES = ("application/json", "application/javascript",
                   "application/manifest+json", "text/", "image/svg+xml")
     # Below this, the header and the compression time cost more than the gain.
-    SEUIL_GZIP = 1024
+    GZIP_THRESHOLD = 1024
 
-    def _accepte_gzip(self):
+    def _accepts_gzip(self):
         """Can the client read gzip?
 
         `gzip;q=0` means "definitely not": rare, but ignoring it would send an
@@ -251,12 +251,12 @@ class Handler(BaseHTTPRequestHandler):
             return True
         return False
 
-    def _compressible(self, corps, ctype):
-        return (len(corps) >= self.SEUIL_GZIP
-                and any(ctype.startswith(t) for t in self.TYPES_GZIP)
-                and self._accepte_gzip())
+    def _compressible(self, body, ctype):
+        return (len(body) >= self.GZIP_THRESHOLD
+                and any(ctype.startswith(t) for t in self.GZIP_TYPES)
+                and self._accepts_gzip())
 
-    def _ecrire(self, corps, ctype, code=200, entetes=(), cookie=False):
+    def _write_body(self, body, ctype, code=200, headers=(), cookie=False):
         """Write a response, compressed when it is worth it.
 
         One path, because there were six: compressing in `_json` alone would
@@ -271,23 +271,23 @@ class Handler(BaseHTTPRequestHandler):
         an intermediate cache serves the compressed variant to a client that
         cannot read it.
         """
-        entetes = list(entetes)
-        if self._compressible(corps, ctype):
-            corps = gzip.compress(corps, 6)
-            entetes.append(("Content-Encoding", "gzip"))
-        entetes.append(("Vary", "Accept-Encoding"))
+        headers = list(headers)
+        if self._compressible(body, ctype):
+            body = gzip.compress(body, 6)
+            headers.append(("Content-Encoding", "gzip"))
+        headers.append(("Vary", "Accept-Encoding"))
         self.send_response(code)
         self.send_header("Content-Type", ctype)
-        self.send_header("Content-Length", str(len(corps)))
-        for k, v in entetes:
+        self.send_header("Content-Length", str(len(body)))
+        for k, v in headers:
             self.send_header(k, v)
         if cookie:
             self._set_token_cookie()
         self.end_headers()
-        self.wfile.write(corps)
+        self.wfile.write(body)
 
     def _json(self, obj, code=200):
-        self._ecrire(json.dumps(obj).encode(),
+        self._write_body(json.dumps(obj).encode(),
                      "application/json; charset=utf-8", code)
 
     def _json_revalide(self, obj, volatiles=()):
@@ -316,8 +316,8 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Vary", "Accept-Encoding")
             self.end_headers()
             return
-        self._ecrire(body, "application/json; charset=utf-8", 200,
-                     entetes=[("ETag", etag),
+        self._write_body(body, "application/json; charset=utf-8", 200,
+                     headers=[("ETag", etag),
                               ("Cache-Control", "no-cache")])  # revalidate, not ignore
 
     def _static(self, name):
@@ -325,21 +325,21 @@ class Handler(BaseHTTPRequestHandler):
         if not path.is_file():
             self._json({"error": "introuvable"}, 404)
             return
-        self._ecrire(path.read_bytes(),
+        self._write_body(path.read_bytes(),
                      _CTYPES.get(path.suffix, "application/octet-stream")
                      + "; charset=utf-8", 200,
                      # always the latest version
-                     entetes=[("Cache-Control", "no-store")], cookie=True)
+                     headers=[("Cache-Control", "no-store")], cookie=True)
 
     # A JSON request body has no reason to exceed a few hundred kilobytes: the
     # largest is a list of paths. Without a bound, a POST announcing 4 GB filled
     # the server's memory before it was even parsed. File uploads have their own
     # route, streamed.
-    CORPS_MAX = 1 << 20            # 1 MiB
+    BODY_MAX = 1 << 20            # 1 MiB
 
     def _payload(self):
         n = int(self.headers.get("Content-Length", 0) or 0)
-        if n > self.CORPS_MAX:
+        if n > self.BODY_MAX:
             raise ValueError("corps de requete trop volumineux (%d octets)" % n)
         return json.loads(self.rfile.read(n) or b"{}")
 
@@ -370,7 +370,7 @@ class Handler(BaseHTTPRequestHandler):
         finally:
             _PLACES.release()
 
-    def _cookie(self, nom):
+    def _cookie(self, name):
         """A cookie's value, read as a cookie and not as text.
 
         The previous read looked for the substring "switch_token=<token>" in
@@ -385,7 +385,7 @@ class Handler(BaseHTTPRequestHandler):
             pot.load(brut)
         except CookieError:
             return ""
-        morceau = pot.get(nom)
+        morceau = pot.get(name)
         return morceau.value if morceau else ""
 
     def _token_ok(self):
@@ -406,13 +406,13 @@ class Handler(BaseHTTPRequestHandler):
 
     # Headers added by a relay. Their mere presence means the request is NOT
     # arriving directly from its author.
-    ENTETES_RELAI = ("X-Forwarded-For", "X-Real-IP", "Forwarded",
+    RELAY_HEADERS = ("X-Forwarded-For", "X-Real-IP", "Forwarded",
                      "X-Forwarded-Host", "X-Forwarded-Proto")
 
-    def _relayee(self):
-        return any(self.headers.get(h) for h in self.ENTETES_RELAI)
+    def _relayed(self):
+        return any(self.headers.get(h) for h in self.RELAY_HEADERS)
 
-    def _client_reel(self):
+    def _real_client(self):
         """The request author's address, or None when it cannot be determined.
 
         The TCP peer is enough while nobody relays. As soon as a relay steps
@@ -422,7 +422,7 @@ class Handler(BaseHTTPRequestHandler):
         believed when it comes from a declared proxy.
         """
         pair = self.client_address[0]
-        if not self._relayee():
+        if not self._relayed():
             return pair
         if not config.is_trusted_proxy(pair):
             return None                     # somebody is relaying without a mandate
@@ -442,18 +442,18 @@ class Handler(BaseHTTPRequestHandler):
         return self.headers.get("X-Real-IP", "").strip() or None
 
     def _local(self):
-        return self._client_reel() in ("127.0.0.1", "::1", "localhost")
+        return self._real_client() in ("127.0.0.1", "::1", "localhost")
 
     def _secure(self):
         """La requete arrive-t-elle en HTTPS (directement ou via un proxy) ?"""
         return (self.headers.get("X-Forwarded-Proto", "").lower() == "https"
                 or self.headers.get("X-Forwarded-Ssl", "").lower() == "on")
 
-    def _hote_attendu(self):
+    def _expected_host(self):
         return (self.headers.get("X-Forwarded-Host")
                 or self.headers.get("Host") or "").lower()
 
-    def _meme_origine(self):
+    def _same_origin(self):
         """Does the browser say the request really comes from THIS page?
 
         Without this check, a third-party site open in another tab could make
@@ -469,14 +469,14 @@ class Handler(BaseHTTPRequestHandler):
             if not ref:
                 return True
             origine = ref
-        hote = self._hote_attendu()
+        hote = self._expected_host()
         try:
             depuis = origine.split("//", 1)[1].split("/", 1)[0].lower()
         except IndexError:
             return False
         return bool(hote) and depuis == hote
 
-    def _entetes_securite(self):
+    def _security_headers(self):
         """Headers applied to every response.
 
         The interface calls no third-party domain and loads no external script:
@@ -524,28 +524,28 @@ class Handler(BaseHTTPRequestHandler):
                          "connect-src 'self'; frame-ancestors 'none'; "
                          "base-uri 'none'; form-action 'self'")
 
-    def _cadence_ok(self):
+    def _rate_ok(self):
         """Refuse past the quota, with a 429 and the wait time.
 
         Only the login was rate-limited until now. Everything else — token
         attempts and file uploads included — could be repeated endlessly.
         """
-        client = self._client_reel() or self.client_address[0]
+        client = self._real_client() or self.client_address[0]
         if not _trop_vite(client):
             return True
         try:
             self.send_response(429)
             self.send_header("Retry-After", "60")
             self.send_header("Content-Type", "text/plain; charset=utf-8")
-            corps = b"Trop de requetes. Reessaie dans une minute.\n"
-            self.send_header("Content-Length", str(len(corps)))
+            body = b"Trop de requetes. Reessaie dans une minute.\n"
+            self.send_header("Content-Length", str(len(body)))
             self.end_headers()
-            self.wfile.write(corps)
+            self.wfile.write(body)
         except Exception:
             pass
         return False
 
-    def _cle_api(self):
+    def _api_key(self):
         """The key presented, if there is one.
 
         The header is the normal form. The parameter exists because some
@@ -579,7 +579,7 @@ class Handler(BaseHTTPRequestHandler):
         # dashboard would also open `/api/compte-supprimer` — which would
         # amount to distributing the administrator's password under another
         # name.
-        cle = self._cle_api()
+        cle = self._api_key()
         if cle:
             if not apiv1.in_scope(self.path.partition("?")[0]):
                 return False
@@ -603,14 +603,14 @@ class Handler(BaseHTTPRequestHandler):
         # With an SSO configured we do not show a blunt refusal: we send the
         # user to log in, which is precisely what they came for.
         if auth.enabled(CFG):
-            return self._page_connexion()
+            return self._login_page()
         if config.TOKEN:
             msg = ("Acces protege.\n\nAjoute ?token=TON_JETON a l'adresse, "
                    "par exemple :\n  http://<serveur>:%d/?token=..." % config.PORT)
         else:
             msg = ("Acces reseau desactive.\n\nActive-le dans Reglages > "
                    "Acces depuis le telephone.")
-        self._ecrire(msg.encode(), "text/plain; charset=utf-8", 403)
+        self._write_body(msg.encode(), "text/plain; charset=utf-8", 403)
 
     def _set_token_cookie(self):
         """Remember the token after a ?token= access: no need to retype it."""
@@ -625,7 +625,7 @@ class Handler(BaseHTTPRequestHandler):
 
     # ------------------------------------------------------- connexion SSO
 
-    def _base_retour(self):
+    def _return_base(self):
         """The return address presented to the provider. It must match, word
         for word, the one declared in Authentik / Keycloak: so we build it
         predictably, and let the user pin it when their installation goes
@@ -638,19 +638,19 @@ class Handler(BaseHTTPRequestHandler):
         schema = "https" if self._secure() else "http"
         return "%s://%s/auth/callback" % (schema, hote)
 
-    def _page(self, titre, corps, code=200, entetes=()):
+    def _page(self, title, body, code=200, headers=()):
         html = ("<!doctype html><meta charset='utf-8'>"
                 "<meta name='viewport' content='width=device-width,initial-scale=1'>"
                 "<title>%s</title><link rel='stylesheet' href='/app.css'>"
                 "<body><div class='chargeur' style='opacity:1;pointer-events:auto'>"
-                "<div class='chargeur-in'>%s</div></div>" % (titre, corps))
-        self._ecrire(html.encode("utf-8"), "text/html; charset=utf-8",
-                     code, entetes)
+                "<div class='chargeur-in'>%s</div></div>" % (title, body))
+        self._write_body(html.encode("utf-8"), "text/html; charset=utf-8",
+                     code, headers)
 
-    CHAMP = ("padding:10px 12px;border-radius:9px;border:1px solid #3a3540;"
+    FIELD_STYLE = ("padding:10px 12px;border-radius:9px;border:1px solid #3a3540;"
              "background:#221e28;color:#eee")
 
-    def _page_connexion(self, message="", code=401, email="", second=False):
+    def _login_page(self, message="", code=401, email="", second=False):
         """The login page. `second` asks for the one-time code: the password
         has already been validated, we do not make them type it again."""
         erreur = ("<span class='tid' style='color:#f2a2a2'>%s</span>"
@@ -659,18 +659,18 @@ class Handler(BaseHTTPRequestHandler):
             champs = [
                 "<input name='email' type='email' autocomplete='username' required "
                 "placeholder='Adresse email' value='%s' style='%s'%s>"
-                % (html_escape(email), self.CHAMP, " readonly" if second else ""),
+                % (html_escape(email), self.FIELD_STYLE, " readonly" if second else ""),
                 "<input name='mdp' type='password' required "
                 "autocomplete='current-password' placeholder='Mot de passe' "
-                "style='%s'>" % self.CHAMP,
+                "style='%s'>" % self.FIELD_STYLE,
             ]
             if second:
                 champs.append(
                     "<input name='code' inputmode='numeric' maxlength='6' required "
                     "autocomplete='one-time-code' autofocus "
                     "placeholder='Code à 6 chiffres' "
-                    "style='%s;letter-spacing:.32em;text-align:center'>" % self.CHAMP)
-            corps = ("<b>Connexion</b>" + erreur
+                    "style='%s;letter-spacing:.32em;text-align:center'>" % self.FIELD_STYLE)
+            body = ("<b>Connexion</b>" + erreur
                      + "<form method='post' action='/auth/connexion' "
                        "style='display:flex;flex-direction:column;gap:10px;"
                        "min-width:min(300px,80vw);margin-top:14px'>"
@@ -679,19 +679,19 @@ class Handler(BaseHTTPRequestHandler):
                        "border-radius:9px;border:0;background:#e0a340;color:#17141a;"
                        "font-weight:600;cursor:pointer'>Se connecter</button></form>")
         else:
-            corps = ("<b>Cette ludotheque est protegee</b>" + erreur
+            body = ("<b>Cette ludotheque est protegee</b>" + erreur
                      + "<p><a class='go' style='padding:9px 16px;border-radius:9px;"
                        "background:#e0a340;color:#17141a;text-decoration:none' "
                        "href='/auth/login'>Se connecter</a></p>")
-        self._page("Connexion", corps, code=code)
+        self._page("Connexion", body, code=code)
 
     def _auth_route(self, p):
         """Return True when the request was handled by the SSO flow."""
         if p == "/auth/login":
             try:
-                url, transit = auth.start(CFG, self._base_retour())
+                url, transit = auth.start(CFG, self._return_base())
             except Exception as exc:
-                return self._page_connexion(str(exc)) or True
+                return self._login_page(str(exc)) or True
             self.send_response(302)
             self.send_header("Location", url)
             self.send_header("Set-Cookie", auth.transit_header(transit, self._secure()))
@@ -704,10 +704,10 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 session, qui = auth.finish(
                     CFG, params, auth.transit(self.headers.get("Cookie")),
-                    self._base_retour())
+                    self._return_base())
             except Exception as exc:
                 JOB.log("Connexion refusee : %s" % exc, "warn")
-                return self._page_connexion(str(exc)) or True
+                return self._login_page(str(exc)) or True
             JOB.log("Connexion de %s" % (qui.get("nom") or qui.get("sub")))
             access_log.record("connexion", self.client_address[0],
                                 qui.get("email") or qui.get("sub"), "sso")
@@ -737,10 +737,10 @@ class Handler(BaseHTTPRequestHandler):
             return True
         return False
 
-    def _connexion_interne(self):
+    def _internal_login(self):
         """Handle the email + password form. Always over POST."""
-        if not self._meme_origine():
-            return self._page_connexion("Requete rejetee : origine inattendue.", 403)
+        if not self._same_origin():
+            return self._login_page("Requete rejetee : origine inattendue.", 403)
         n = min(int(self.headers.get("Content-Length", 0) or 0), 4096)
         champs = parse_qs(self.rfile.read(n).decode("utf-8", "replace"))
         email = (champs.get("email") or [""])[0]
@@ -751,12 +751,12 @@ class Handler(BaseHTTPRequestHandler):
         except accounts.CodeNeeded as exc:
             # The password is right: we only ask for the code again.
             access_log.record("refus", self.client_address[0], email, str(exc))
-            return self._page_connexion(str(exc), 401, email, second=True)
+            return self._login_page(str(exc), 401, email, second=True)
         except ValueError as exc:
             JOB.log("Connexion refusee pour %s depuis %s : %s"
                     % (email or "(vide)", self.client_address[0], exc), "warn")
             access_log.record("refus", self.client_address[0], email, str(exc))
-            return self._page_connexion(str(exc), 401, email)
+            return self._login_page(str(exc), 401, email)
         JOB.log("Connexion de %s depuis %s" % (u["email"], self.client_address[0]))
         access_log.record("connexion", self.client_address[0], u["email"], "interne")
         self.send_response(302)
@@ -769,11 +769,11 @@ class Handler(BaseHTTPRequestHandler):
         # PNGs and JPEGs come through here: `TYPES_GZIP` does not list them,
         # so they go out untouched. The manifest, on the other hand, is
         # compressed.
-        self._ecrire(body, ctype, 200,
-                     entetes=[("Cache-Control", "max-age=86400")])
+        self._write_body(body, ctype, 200,
+                     headers=[("Cache-Control", "max-age=86400")])
 
     def do_GET(self):
-        if not self._cadence_ok():
+        if not self._rate_ok():
             return
         p = self.path.partition("?")[0]      # ignore ?token=... et autres parametres
         if p.startswith("/auth/") and self._auth_route(p):
@@ -797,12 +797,12 @@ class Handler(BaseHTTPRequestHandler):
             # while the inventory itself is identical.
             #
             # `moi` tells the interface what it may SHOW. This is not a
-            # security measure — `RESERVE_ADMIN` is what refuses, server-side,
+            # security measure — `ADMIN_ONLY` is what refuses, server-side,
             # and a test checks it. Hiding an action you cannot perform is a
             # courtesy: without it a non-administrator opens Settings and
             # collects 403s without understanding why.
             rep = _lib_response()
-            rep["moi"] = self._moi()
+            rep["moi"] = self._me()
             self._json_revalide(rep, volatiles=("shop_text", "moi"))
         elif p == "/api/job":
             self._json(JOB.snapshot())
@@ -954,7 +954,7 @@ class Handler(BaseHTTPRequestHandler):
         JOB.log("Recu par glisser-deposer : %s" % name)
         self._json({"message": name, "size": dest.stat().st_size})
 
-    def _admin_requis(self):
+    def _admin_required(self):
         """Return a reason to refuse, or "" when the caller may administer.
 
         The rule depends on the mode, and that is deliberate:
@@ -984,11 +984,11 @@ class Handler(BaseHTTPRequestHandler):
             return ""
         if not auth.session(self.headers.get("Cookie")):
             return "Aucun compte connecte."
-        if not self._est_admin():
+        if not self._is_admin():
             return "Reserve a un administrateur."
         return ""
 
-    def _qui(self):
+    def _who(self):
         """Compte INTERNE connecte, ou None.
 
         Returns nothing for an SSO session: there is no local record to
@@ -998,7 +998,7 @@ class Handler(BaseHTTPRequestHandler):
         s = auth.session(self.headers.get("Cookie"))
         return accounts.by_id(s.get("sub")) if s and s.get("src") == "interne" else None
 
-    def _moi(self):
+    def _me(self):
         """Who is looking, and with what role.
 
         `authentification` says whether there is an identity to have: without
@@ -1010,9 +1010,9 @@ class Handler(BaseHTTPRequestHandler):
                 "connecte": bool(s),
                 "nom": (s or {}).get("nom") or "",
                 "source": (s or {}).get("src") or "",
-                "admin": (not auth.enabled(CFG)) or self._est_admin()}
+                "admin": (not auth.enabled(CFG)) or self._is_admin()}
 
-    def _est_admin(self):
+    def _is_admin(self):
         """The role, whatever the session came from.
 
         An internal account carries its role in the accounts file; an SSO
@@ -1029,8 +1029,8 @@ class Handler(BaseHTTPRequestHandler):
         u = accounts.by_id(s.get("sub")) if s.get("src") == "interne" else None
         return bool(u and accounts.is_admin(u["id"]))
 
-    def _photo_envoi(self):
-        u = self._qui()
+    def _photo_upload(self):
+        u = self._who()
         if not u:
             return self._json({"error": "Aucun compte connecte."}, 401)
         taille = int(self.headers.get("Content-Length", 0) or 0)
@@ -1044,16 +1044,16 @@ class Handler(BaseHTTPRequestHandler):
         self._json({"message": "Photo mise a jour.", **d})
 
     def do_POST(self):
-        if not self._cadence_ok():
+        if not self._rate_ok():
             return
         if self.path.partition("?")[0] == "/auth/connexion":
             if CFG.get("auth_mode") != "interne":
                 return self._json({"error": "connexion interne desactivee"}, 404)
-            return self._connexion_interne()
+            return self._internal_login()
         if not self._allowed():
             return self._deny()
         # Every POST changes state: we require that it comes from this page.
-        if not self._meme_origine():
+        if not self._same_origin():
             JOB.log("POST rejete sur %s : origine %s"
                     % (self.path, self.headers.get("Origin") or "?"), "warn")
             return self._json({"error": "origine inattendue"}, 403)
@@ -1063,19 +1063,19 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/api/upload":
             return self._upload()
         if self.path == "/api/compte-photo":
-            return self._photo_envoi()
+            return self._photo_upload()
         p = self.path
         try:
             d = self._payload()
         except (ValueError, OSError) as exc:
             JOB.log("Requete invalide sur %s : %s" % (p, exc))
             return self._json({"error": "requete invalide"}, 400)
-        refus = self._reserve_admin(p)
+        refus = self._admin_only_for(p)
         if refus:
             JOB.log("%s refuse : %s" % (p, refus), "warn")
             return self._json({"error": refus}, 403)
         try:
-            self._route_post(p, d)
+            self._post_route(p, d)
         except Exception as exc:
             JOB.log("Erreur serveur sur %s : %s" % (p, exc))
             self._json({"error": "%s : %s" % (p, exc)}, 500)
@@ -1091,7 +1091,7 @@ class Handler(BaseHTTPRequestHandler):
     # a guard you must remember to add is a guard you forget. In the
     # no-authentication mode, `_admin_requis()` lets everything through: there
     # is no identity to tell apart, and `_allowed()` has already decided.
-    RESERVE_ADMIN = frozenset({
+    ADMIN_ONLY = frozenset({
         # --- erase or restore data
         "/api/sauvegarde-restaurer",   # contains the accounts file
         "/api/sauvegarde-creer",
@@ -1132,11 +1132,11 @@ class Handler(BaseHTTPRequestHandler):
         "/api/auth-test",
     })
 
-    def _reserve_admin(self, p):
+    def _admin_only_for(self, p):
         """A reason to refuse when the route requires the administrator role."""
-        return self._admin_requis() if p in self.RESERVE_ADMIN else ""
+        return self._admin_required() if p in self.ADMIN_ONLY else ""
 
-    def _route_post(self, p, d):
+    def _post_route(self, p, d):
         if p == "/api/versions":
             versions.load(LIB, force=bool(d.get("force")), log=JOB.log)
             self._json(_lib_response())
@@ -1244,7 +1244,7 @@ class Handler(BaseHTTPRequestHandler):
         # ---- comptes internes
         elif p == "/api/comptes":
             self._json({"comptes": accounts.list_all(),
-                        "moi": (self._qui() or {}).get("id", ""),
+                        "moi": (self._who() or {}).get("id", ""),
                         "mdp_min": accounts.MDP_MIN})
 
         elif p == "/api/compte-creer":
@@ -1259,7 +1259,7 @@ class Handler(BaseHTTPRequestHandler):
                         {"error": "Le premier compte se cree depuis la machine "
                                   "qui heberge la ludotheque."}, 403)
             else:
-                refus = self._admin_requis()
+                refus = self._admin_required()
                 if refus:
                     return self._json({"error": refus}, 403)
             try:
@@ -1273,7 +1273,7 @@ class Handler(BaseHTTPRequestHandler):
                         "compte": u, "comptes": accounts.list_all()})
 
         elif p == "/api/compte-modifier":
-            u = self._qui()
+            u = self._who()
             if not u:
                 return self._json({"error": "Aucun compte connecte."}, 401)
             try:
@@ -1283,7 +1283,7 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"message": "Profil enregistre.", "compte": v})
 
         elif p == "/api/compte-mdp":
-            u = self._qui()
+            u = self._who()
             if not u:
                 return self._json({"error": "Aucun compte connecte."}, 401)
             try:
@@ -1299,14 +1299,14 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_header("Set-Cookie", auth.cookie_header_for(
                 auth.internal_session(accounts.by_id(u["id"])), self._secure()))
-            corps = json.dumps({"message": "Mot de passe change. Les autres "
+            body = json.dumps({"message": "Mot de passe change. Les autres "
                                            "appareils ont ete deconnectes."}).encode()
-            self.send_header("Content-Length", str(len(corps)))
+            self.send_header("Content-Length", str(len(body)))
             self.end_headers()
-            self.wfile.write(corps)
+            self.wfile.write(body)
 
         elif p == "/api/compte-supprimer":
-            refus = self._admin_requis()
+            refus = self._admin_required()
             if refus:
                 return self._json({"error": refus}, 403)
             try:
@@ -1317,13 +1317,13 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"message": "Compte supprime.", "comptes": accounts.list_all()})
 
         elif p == "/api/compte-totp-preparer":
-            u = self._qui()
+            u = self._who()
             if not u:
                 return self._json({"error": "Aucun compte connecte."}, 401)
             self._json(accounts.totp_prepare(u["id"]))
 
         elif p == "/api/compte-totp-activer":
-            u = self._qui()
+            u = self._who()
             if not u:
                 return self._json({"error": "Aucun compte connecte."}, 401)
             try:
@@ -1335,7 +1335,7 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"message": "Double authentification activée."})
 
         elif p == "/api/compte-totp-desactiver":
-            u = self._qui()
+            u = self._who()
             if not u:
                 return self._json({"error": "Aucun compte connecte."}, 401)
             try:
@@ -1347,7 +1347,7 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"message": "Double authentification retirée."})
 
         elif p == "/api/compte-photo-effacer":
-            u = self._qui()
+            u = self._who()
             if not u:
                 return self._json({"error": "Aucun compte connecte."}, 401)
             accounts.photo_delete(u["id"])
@@ -1389,18 +1389,18 @@ class Handler(BaseHTTPRequestHandler):
             r = duplicates.report(LIB, CFG)
             # The full entries are heavy: the client only needs the name, the
             # size and the path in order to decide.
-            def _leger(e):
+            def _light(e):
                 return {"nom": e["nom"], "chemin": e["chemin"],
                         "taille": e["taille"], "plateforme": e["plateforme"]}
             self._json({
                 "identiques": r["identiques"][:50],
                 "multi_plateformes": [{"titre": x["titre"],
                                        "plateformes": x["plateformes"],
-                                       "entrees": [_leger(e) for e in x["entrees"]]}
+                                       "entrees": [_light(e) for e in x["entrees"]]}
                                       for x in r["multi_plateformes"][:50]],
                 "regions": [{"titre": x["titre"], "plateforme": x["plateforme"],
                              "octets": x["octets"],
-                             "entrees": [_leger(e) for e in x["entrees"]]}
+                             "entrees": [_light(e) for e in x["entrees"]]}
                             for x in r["regions"][:50]],
                 "recuperable": r["recuperable"]})
 
@@ -1437,10 +1437,10 @@ class Handler(BaseHTTPRequestHandler):
         elif p == "/api/auth-test":
             try:
                 self._json({"ok": True, "infos": auth.probe(CFG),
-                            "retour": self._base_retour()})
+                            "retour": self._return_base()})
             except Exception as exc:
                 self._json({"ok": False, "message": str(exc),
-                            "retour": self._base_retour()})
+                            "retour": self._return_base()})
 
         elif p == "/api/library-all":
             self._json({"systemes": systems.all_platforms(CFG)})
@@ -1538,7 +1538,7 @@ class Handler(BaseHTTPRequestHandler):
             # The Android package name changes from one emulator version to
             # the next. We ask the console which one is installed and remember
             # it, rather than asking again on every render.
-            refus = self._admin_requis()
+            refus = self._admin_required()
             if refus:
                 return self._json({"error": refus}, 403)
             trouve = profiles.detect(CFG)
@@ -1759,10 +1759,10 @@ class Handler(BaseHTTPRequestHandler):
         elif p == "/api/eden-profile-save":
             vals = d.get("valeurs") or edenconf.capture(
                 (d.get("tid") or "").strip() or None, d.get("sections"))
-            nom = edenconf.profile_save(d.get("nom", "profil"), vals,
+            name = edenconf.profile_save(d.get("nom", "profil"), vals,
                                         d.get("portee", "global"),
                                         d.get("description", ""))
-            self._json({"nom": nom, "profils": edenconf.profile_list()})
+            self._json({"nom": name, "profils": edenconf.profile_list()})
 
         elif p == "/api/eden-profile-apply":
             self._job(actions.apply_eden_profile, LIB, CFG, JOB,
@@ -1818,7 +1818,7 @@ class Handler(BaseHTTPRequestHandler):
         elif p == "/api/config":
             # The state BEFORE any change: `CFG` is mutated just after, so
             # reading it later would always answer "already active".
-            refus = self._admin_requis()
+            refus = self._admin_required()
             if refus:
                 return self._json({"error": refus}, 403)
             avant = auth.enabled(CFG)
@@ -1863,7 +1863,7 @@ class Handler(BaseHTTPRequestHandler):
             # yet ejected it immediately: the NEXT request got the login page,
             # including the one that would have undone the change. Whoever just
             # made that change was entitled to: we open them a session.
-            corps = json.dumps({"config": _config_publique()}).encode()
+            body = json.dumps({"config": _config_publique()}).encode()
             self.send_response(200)
             self.send_header("Content-Type", "application/json; charset=utf-8")
             if (not avant and auth.enabled(CFG)
@@ -1883,9 +1883,9 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_header("Set-Cookie", auth.cookie_header_for(jeton, self._secure()))
                 JOB.log("Authentification activée : ce navigateur reste connecté.",
                         "warn")
-            self.send_header("Content-Length", str(len(corps)))
+            self.send_header("Content-Length", str(len(body)))
             self.end_headers()
-            self.wfile.write(corps)
+            self.wfile.write(body)
 
         else:
             JOB.log("Route POST inconnue : %s (serveur a jour ?)" % p)
@@ -1897,7 +1897,7 @@ class Handler(BaseHTTPRequestHandler):
         on evolving."""
         params = parse_qs(self.path.partition("?")[2])
         try:
-            reponse = apiv1.router(chemin, params, methode, _contexte_v1())
+            reponse = apiv1.router(chemin, params, methode, _context_v1())
         except Exception as exc:
             JOB.log("Erreur API v1 sur %s : %s" % (chemin, exc), "warn")
             # The exception message is not returned: it often carries an
@@ -1909,18 +1909,18 @@ class Handler(BaseHTTPRequestHandler):
             return self._json({"error": "not_found",
                                "message": "Unknown route. See "
                                           "/api/v1/openapi.json."}, 404)
-        code, corps = reponse
-        self._json(corps, code)
+        code, body = reponse
+        self._json(body, code)
 
     def _job(self, fn, *args):
         ok = JOB.start(fn.__name__, fn, *args)
         self._json({} if ok else {"error": "Une tache est deja en cours."})
 
 
-DEMARRAGE = time.time()
+STARTED = time.time()
 
 
-def _inventaire_v1():
+def _inventory_v1():
     """The enriched inventory, without the shopping list or the paste-ready text.
 
     `_lib_response()` also builds what a screen needs — the shopping list, its
@@ -1933,30 +1933,30 @@ def _inventaire_v1():
     return {"files": LIB.files, "stats": LIB.stats()}
 
 
-def _lancer_v1(quoi):
+def _start_v1(what):
     """Return (started, reason). One task at a time: that is how Romule works,
     and the API says so rather than pretending there is a queue."""
     if JOB.snapshot()["running"]:
         return False, "Another task is already running."
-    if quoi == "scan":
-        return JOB.start("scan", _inventaire_v1), ""
-    if quoi == "convert":
+    if what == "scan":
+        return JOB.start("scan", _inventory_v1), ""
+    if what == "convert":
         return JOB.start("convert", actions.convert_files, LIB, CFG, JOB, []), ""
-    if quoi == "push":
+    if what == "push":
         return JOB.start("push", actions.push_files, LIB, CFG, JOB, []), ""
     return False, "Unknown task."
 
 
-def _contexte_v1():
+def _context_v1():
     return {
         "health": _health,
-        "demarrage": DEMARRAGE,
-        "inventaire": _inventaire_v1,
+        "demarrage": STARTED,
+        "inventaire": _inventory_v1,
         "plateformes": lambda: systems.summary(CFG),
         "console": device.state,
         "job": JOB.snapshot,
         "corbeille": trash.listing,
-        "lancer": _lancer_v1,
+        "lancer": _start_v1,
     }
 
 
@@ -2002,8 +2002,8 @@ def _health():
             # Enough to judge whether access must be protected BEFORE anything
             # else: a service reachable over the network with no authentication
             # is the worst defect a fresh installation can have.
-            "ecoute": _adresse_ecoute(),
-            "expose": _adresse_ecoute() != "127.0.0.1",
+            "ecoute": _listen_address(),
+            "expose": _listen_address() != "127.0.0.1",
             "auth_mode": CFG.get("auth_mode", "aucun"),
             "comptes": len(accounts.list_all()),
             "emulateur": CFG.get("emulateur") or profiles.DEFAULT,
@@ -2012,7 +2012,7 @@ def _health():
     }
 
 
-def _adresse_ecoute():
+def _listen_address():
     """Sur quelle interface se poser.
 
     The socket used to be bound to `0.0.0.0` in all circumstances, with
@@ -2071,7 +2071,7 @@ def _reconnect_wifi():
                                else "pas en wifi (%s)" % msg))
 
 
-def _audit_demarrage():
+def _startup_audit():
     """Run the audit on every launch and surface what is wrong.
 
     Offline: an audit must never delay startup nor depend on the network. The
@@ -2112,7 +2112,7 @@ def _notif_public(d):
             "apercu": hote}
 
 
-def _jeton_de_premier_demarrage():
+def _first_run_token():
     """Make an exposed service reachable when it has no way in yet.
 
     The problem, found while writing the image's smoke test: a container binds
@@ -2131,7 +2131,7 @@ def _jeton_de_premier_demarrage():
     SSO, an environment token or network access taken on knowingly: their
     decision always wins.
     """
-    if _adresse_ecoute() == "127.0.0.1":
+    if _listen_address() == "127.0.0.1":
         return None
     if config.TOKEN or auth.enabled(CFG) or CFG.get("lan_access"):
         return None
@@ -2147,7 +2147,7 @@ def _jeton_de_premier_demarrage():
     return jeton
 
 
-def _faits_de_demarrage(url, ip, jeton_auto):
+def _startup_facts(url, ip, auto_token):
     """What you want to read first when a service does not do what you think.
 
     Every line answers a question that otherwise costs half an hour of
@@ -2173,7 +2173,7 @@ def _faits_de_demarrage(url, ip, jeton_auto):
     # 0.0.0.0 and protects itself with a token — `lan_access` stays false, and
     # the banner announced "Network: disabled" two lines above the address you
     # had just been invited to enter by.
-    if _adresse_ecoute() == "127.0.0.1":
+    if _listen_address() == "127.0.0.1":
         faits.append(("Reseau", "cette machine seulement — ROMULE_BIND=0.0.0.0, "
                                 "ROMULE_LAN=1 ou un jeton, puis redemarrer"))
     else:
@@ -2181,8 +2181,8 @@ def _faits_de_demarrage(url, ip, jeton_auto):
                       % (ip or "<adresse-du-serveur>", config.PORT)))
     faits += [
         ("Acces", modes.get(CFG.get("auth_mode"), CFG.get("auth_mode"))
-         + (" + jeton" if config.TOKEN and not jeton_auto else "")
-         + (" + jeton engendre" if jeton_auto else "")),
+         + (" + jeton" if config.TOKEN and not auto_token else "")
+         + (" + jeton engendre" if auto_token else "")),
         ("Comptes", "%d" % accounts.count()),
         ("Ludotheque", "%s   (%s)"
          % (config.LUDO, "imposee par ROMULE_LIBRARY" if config.LIBRARY_FORCED
@@ -2220,10 +2220,10 @@ def serve(open_browser=True):
     # the upgrade.
     accounts.refresh_roles()
     JOB.notify_end = bool(CFG.get("notify", True))
-    jeton_auto = _jeton_de_premier_demarrage()
+    auto_token = _first_run_token()
     url = "http://127.0.0.1:%d" % config.PORT
     ip = _lan_ip()
-    console.banner(_faits_de_demarrage(url, ip, jeton_auto))
+    console.banner(_startup_facts(url, ip, auto_token))
     threading.Thread(target=_reconnect_wifi, daemon=True).start()
     LIB.scan(log=JOB.log)
     versions.load(LIB, log=JOB.log)
@@ -2231,27 +2231,27 @@ def serve(open_browser=True):
     # open a browser unasked.
     service = (_in_container() or config.ENV_LAN or config.TOKEN
                or config.env("NO_BROWSER", "").strip() not in ("", "0"))
-    _audit_demarrage()
+    _startup_audit()
     for souci in config.PROBLEMS:
         console.say(souci, "warn", "config")
     if CFG.get("lan_access") and not config.TOKEN:
         console.say("Accessible SANS MOT DE PASSE par tout appareil du reseau.",
                     "warn", "acces")
-    if jeton_auto:
+    if auto_token:
         # Without the full address, the token is a string the user has to
         # paste back by hand in the right place — that is where it fails.
         console.say("Ce service est joignable par le reseau et n'a pas encore "
                     "de compte. Ouvre cette adresse, puis cree ton compte :",
                     "warn", "acces")
         console.say("  http://%s:%d/?token=%s"
-                    % (ip or "<adresse-du-serveur>", config.PORT, jeton_auto),
+                    % (ip or "<adresse-du-serveur>", config.PORT, auto_token),
                     "warn", "acces")
     if not adb_hint():
         console.say("adb absent — la console ne pourra pas etre pilotee",
                     "warn", "device")
     if open_browser and not service:
         threading.Timer(1.0, lambda: webbrowser.open(url)).start()
-    srv = ThreadingHTTPServer((_adresse_ecoute(), config.PORT), Handler)
+    srv = ThreadingHTTPServer((_listen_address(), config.PORT), Handler)
 
     def stop(*_):
         # `docker stop` sends SIGTERM: we warn the running task and hand back
