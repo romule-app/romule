@@ -1734,7 +1734,7 @@ class Handler(BaseHTTPRequestHandler):
 
         # ---- Eden's configuration
         elif p in ("/api/eden-config", "/api/eden-apply", "/api/emuready-apply") \
-                and not edenconf.pilotable():
+                and not edenconf.editable():
             # Not every emulator exposes settings we know how to read:
             # Ryujinx keeps them in JSON, with a different layout. Better to say
             # so than to write at random into its files.
