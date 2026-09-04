@@ -27,7 +27,7 @@ from html import escape as html_escape
 from urllib.parse import parse_qs, unquote
 
 from . import (actions, apikeys, apiv1, audit, auth, comptes, config, console,
-               covers, maj, notifs, reseau,
+               covers, maj, net, notifs,
                device, edenconf,
                doublons, emuready, igdb, integrity, journal_acces, meta, nand,
                parcourir, sauvegarde, saves,

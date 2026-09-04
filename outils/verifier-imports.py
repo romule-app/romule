@@ -1,0 +1,189 @@
+#!/usr/bin/env python3
+"""Every module a file uses is a module that file imports.
+
+This tool was written during the rename of the package's modules into English,
+and it was written because the rename had already produced exactly the failure
+it looks for. `reseau.py` became `net.py`; a multi-line `from . import (...)`
+kept the old name while the twenty call sites in the same file moved to the new
+one. The file still parsed, `python3 -m romule` still started, and the test
+families that would have caught it were the server ones — the ones that cannot
+run on a machine whose ephemeral ports are exhausted.
+
+A `NameError` on a route nobody exercised is a defect that ships.
+
+The check is static and reads the AST, not the text: `net.check(...)` is an
+attribute access on a `Name`, and the set of those names must be covered by
+what the module imports, by its own globals, and by its locals. Anything else
+would have to be a builtin, and builtins are known.
+
+It also reports the reverse — a module imported and no longer used — because
+that is the other half of the same rename mistake, and because a stale import
+is what makes the first half survive review.
+
+    python3 outils/verifier-imports.py            # the shipped package
+    python3 outils/verifier-imports.py --tout     # tools and tests too
+    python3 outils/verifier-imports.py --autotest # checks the tool bites
+
+Exits 0 if nothing, 1 otherwise.
+"""
+
+import ast
+import builtins
+import sys
+from pathlib import Path
+
+RACINE = Path(__file__).resolve().parent.parent
+
+# Names that are attribute-accessed but never imported, and legitimately so:
+# they are bound by the runtime or by a `for` target the AST walk does not
+# model. Each one is here with its reason, never as a blanket exception.
+ALLOWED = {
+    "self", "cls", "super",
+}
+
+_BUILTINS = set(dir(builtins))
+
+
+def _bound_names(tree):
+    """Every name the module binds: imports, assignments, defs, arguments."""
+    bound = set()
+    for n in ast.walk(tree):
+        if isinstance(n, ast.ImportFrom):
+            for a in n.names:
+                bound.add(a.asname or a.name)
+        elif isinstance(n, ast.Import):
+            for a in n.names:
+                bound.add((a.asname or a.name).split(".")[0])
+        elif isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            bound.add(n.name)
+        elif isinstance(n, ast.Name) and isinstance(n.ctx, (ast.Store, ast.Del)):
+            bound.add(n.id)
+        elif isinstance(n, ast.arg):
+            bound.add(n.arg)
+        elif isinstance(n, ast.alias):
+            bound.add((n.asname or n.name).split(".")[0])
+        elif isinstance(n, ast.ExceptHandler) and n.name:
+            bound.add(n.name)
+        elif isinstance(n, (ast.Global, ast.Nonlocal)):
+            bound.update(n.names)
+    return bound
+
+
+def _module_imports(tree):
+    """Only the names bound by an import — the ones a rename moves."""
+    out = set()
+    for n in ast.walk(tree):
+        if isinstance(n, ast.ImportFrom):
+            for a in n.names:
+                out.add(a.asname or a.name)
+        elif isinstance(n, ast.Import):
+            for a in n.names:
+                out.add((a.asname or a.name).split(".")[0])
+    return out
+
+
+def _attribute_roots(tree):
+    """The names on the left of a dot: `net` in `net.check(url)`."""
+    return {n.value.id for n in ast.walk(tree)
+            if isinstance(n, ast.Attribute) and isinstance(n.value, ast.Name)}
+
+
+def _used_names(tree):
+    """Every name the module reads, whatever the shape."""
+    return {n.id for n in ast.walk(tree)
+            if isinstance(n, ast.Name) and isinstance(n.ctx, ast.Load)}
+
+
+def inspect_source(source, name="<source>"):
+    """Returns (missing, stale) for one file's source."""
+    tree = ast.parse(source, filename=name)
+    bound = _bound_names(tree) | _BUILTINS | ALLOWED
+    missing = sorted(_attribute_roots(tree) - bound)
+    imports = _module_imports(tree)
+    # `__init__` re-exports on purpose, and a module imported for its side
+    # effect has no name to read. Both are normal; neither is a rename mistake.
+    stale = sorted(imports - _used_names(tree)) if "__init__" not in name else []
+    return missing, stale
+
+
+GOOD = '''
+from . import net
+
+def f(url):
+    return net.check(url)
+'''
+
+MISSING_IMPORT = '''
+from . import reseau
+
+def f(url):
+    return net.check(url)
+'''
+
+STALE_IMPORT = '''
+from . import net, matching
+
+def f(url):
+    return net.check(url)
+'''
+
+LOCAL = '''
+import json
+
+def f(payload):
+    parsed = json.loads(payload)
+    return parsed.get("x")
+'''
+
+
+def autotest():
+    """A check that never bites protects against nothing."""
+    ok = True
+    cases = [
+        ("a correct import passes", GOOD, [], []),
+        ("a renamed module is caught", MISSING_IMPORT, ["net"], ["reseau"]),
+        ("an import no longer used is reported", STALE_IMPORT, [], ["matching"]),
+        ("a local name is not a missing import", LOCAL, [], []),
+    ]
+    for name, src, want_missing, want_stale in cases:
+        m, i = inspect_source(src, name)
+        if m == want_missing and i == want_stale:
+            print("  OK    %s" % name)
+        else:
+            ok = False
+            print("  FAIL  %s: missing=%s stale=%s" % (name, m, i))
+    return 0 if ok else 1
+
+
+def files_to_read(every):
+    yield from sorted((RACINE / "romule").glob("*.py"))
+    if every:
+        yield from sorted((RACINE / "outils").glob("*.py"))
+        yield from sorted((RACINE / "romule" / "tests").rglob("*.py"))
+        yield RACINE / "lancer_tests.py"
+
+
+def main(argv):
+    if "--autotest" in argv:
+        print("-- self-test of the detector --")
+        return autotest()
+    faults = 0
+    for p in files_to_read("--tout" in argv):
+        try:
+            missing, stale = inspect_source(p.read_text(encoding="utf-8"), p.name)
+        except (OSError, SyntaxError) as exc:
+            print("  SKIP    %-30s %s" % (p.name, exc))
+            continue
+        rel = p.relative_to(RACINE)
+        for m in missing:
+            print("  MISSING %-30s uses `%s.` but never imports it" % (rel, m))
+            faults += 1
+        for i in stale:
+            print("  STALE   %-30s imports `%s` and never uses it" % (rel, i))
+            faults += 1
+    print("   %d import problem(s)." % faults)
+    return 1 if faults else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
