@@ -121,7 +121,7 @@ vm.createContext(ctx);
 vm.runInContext(fs.readFileSync('romule/static/reactive.js', 'utf8'), ctx);
 ctx.R = ctx.window.R;
 // `const app = ...` stays within the script's scope: we expose it for the test.
-const SUFFIXE = "\n;globalThis.__t = {app, majBlocAuth, renderTache, uploadFiles, majFab, config: c => { DATA.config = c; }};";
+const SUFFIXE = "\n;globalThis.__t = {app, majBlocAuth, renderTask, uploadFiles, majFab, config: c => { DATA.config = c; }};";
 vm.runInContext(fs.readFileSync('romule/static/app.js', 'utf8') + SUFFIXE, ctx);
 
 
@@ -132,12 +132,12 @@ const fab = ids.get('fab'), jauge = ids.get('fabjauge');
 
 (async () => {
   console.log('   -- 1. au repos --');
-  ctx.__t.renderTache({running: false, log: []});
+  ctx.__t.renderTask({running: false, log: []});
   t('bouton non marque « travaille »', !fab.classList.contains('travaille'));
   t('aucun titre affiche', ids.get('fabtitre').textContent === '');
 
   console.log('   -- 2. tache avec total connu --');
-  ctx.__t.renderTache({running: true, label: 'convert_files', done: 3, total: 12,
+  ctx.__t.renderTask({running: true, label: 'convert_files', done: 3, total: 12,
                        detail: 'jeu.nsz', log: []});
   t('bouton marque « travaille »', fab.classList.contains('travaille'));
   t('nom de tache traduit', ids.get('fabtitre').textContent === 'Conversion',
@@ -150,18 +150,18 @@ const fab = ids.get('fab'), jauge = ids.get('fabjauge');
     ids.get('fabring').getAttribute('viewBox'));
 
   console.log('   -- 3. total inconnu --');
-  ctx.__t.renderTache({running: true, label: 'verify_library', done: 5, total: 0, log: []});
+  ctx.__t.renderTask({running: true, label: 'verify_library', done: 5, total: 0, log: []});
   t('mode indetermine', fab.classList.contains('cherche'));
   t('segment court qui tourne', jauge.style.strokeDasharray === '18 82', jauge.style.strokeDasharray);
   t('nom traduit', ids.get('fabtitre').textContent === 'Vérification');
 
   console.log('   -- 4. tache inconnue du tableau --');
-  ctx.__t.renderTache({running: true, label: 'tache_jamais_vue', done: 1, total: 2, log: []});
+  ctx.__t.renderTask({running: true, label: 'tache_jamais_vue', done: 1, total: 2, log: []});
   t('repli lisible', ids.get('fabtitre').textContent === 'Tâche en cours',
     ids.get('fabtitre').textContent);
 
   console.log('   -- 5. fin de tache --');
-  ctx.__t.renderTache({running: false, log: []});
+  ctx.__t.renderTask({running: false, log: []});
   t('temoin efface', !fab.classList.contains('travaille')
     && ids.get('fabtitre').textContent === '');
 
@@ -178,7 +178,7 @@ const fab = ids.get('fab'), jauge = ids.get('fabjauge');
     jauge.style.strokeDasharray);
 
   console.log('   -- 7. l\'envoi passe devant la tache serveur --');
-  ctx.__t.renderTache({running: true, label: 'sync_meta', done: 1, total: 4, log: []});
+  ctx.__t.renderTask({running: true, label: 'sync_meta', done: 1, total: 4, log: []});
   t('c\'est l\'envoi qui reste affiche', /Envoi/.test(ids.get('fabtitre').textContent),
     ids.get('fabtitre').textContent);
 

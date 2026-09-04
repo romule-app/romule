@@ -17,10 +17,10 @@ import time
 ETAPES = [
     "app.tab('jeux')",
     "app.tab('settings')",
-    "app.voirEntretien('doublons')",
-    "app.voirEntretien('integrite')",
-    "app.voirEntretien('acces')",
-    "app.auditer(true)",
+    "app.showMaintenance('doublons')",
+    "app.showMaintenance('integrite')",
+    "app.showMaintenance('acces')",
+    "app.runAudit(true)",
     "app.toggleJournal()",
     "app.toggleDrop(true)",
     # The settings sections are exclusive: each must be opened.
@@ -30,12 +30,12 @@ ETAPES = [
     "document.querySelector(\"#setnav a[href='#sec-acces']\").click()",
     "document.querySelector(\"#setnav a[href='#sec-interface']\").click()",
     # The server's folder browser.
-    "app.tab('settings'); app.ludoOuvrir()",
+    "app.tab('settings'); app.libOpen()",
     # A game's detail view: the densest screen.
     "app.tab('jeux'); (function(){const c=document.querySelector('#lib .gcard');"
     "if (c) app.openGame(c.dataset.key);})()",
-    "app.closeGame(); app.openOnboard && app.openOnboard()",
-    "app.closeOnboard && app.closeOnboard()",
+    "app.closeGame(); app.showOnboard()",
+    "app.closeOnboard()",
 ]
 
 

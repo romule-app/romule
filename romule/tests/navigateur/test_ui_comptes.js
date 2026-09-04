@@ -116,10 +116,10 @@ const t = (n, c, d) => c ? (ok++, console.log('      OK   ' + n))
                          : (ko++, console.log('      ECHEC ' + n + '  ' + (d ?? '')));
 
 (async () => {
-  t('app.ajouterCompte exposee', typeof ctx.__t.app.ajouterCompte === 'function');
-  t('app.chargerComptes exposee', typeof ctx.__t.app.chargerComptes === 'function');
+  t('app.addAccount is exposed', typeof ctx.__t.app.addAccount === 'function');
+  t('app.loadAccounts exposee', typeof ctx.__t.app.loadAccounts === 'function');
 
-  await ctx.__t.app.chargerComptes();
+  await ctx.__t.app.loadAccounts();
   t('/api/comptes appelee', appels.includes('/api/comptes'));
 
   const carte = ids.get('moncompte');
