@@ -27,30 +27,30 @@ def t(n, c, d=""):
 def _run():
     global ok, fail
     ok = fail = 0
-    secret = totp.secret_neuf()
+    secret = totp.new_secret()
     # A fixed instant, aligned on a window: no boundary can be crossed during
     # the test.
-    T = 1_700_000_000 - (1_700_000_000 % totp.PAS)
+    T = 1_700_000_000 - (1_700_000_000 % totp.STEP)
 
-    t("le code de l'instant est accepte", totp.verifier(secret, totp.code(secret, T), T)[0])
+    t("le code de l'instant est accepte", totp.verify(secret, totp.code(secret, T), T)[0])
     t("la fenetre precedente est toleree",
-      totp.verifier(secret, totp.code(secret, T - totp.PAS), T)[0])
+      totp.verify(secret, totp.code(secret, T - totp.STEP), T)[0])
     t("la fenetre suivante est toleree",
-      totp.verifier(secret, totp.code(secret, T + totp.PAS), T)[0])
+      totp.verify(secret, totp.code(secret, T + totp.STEP), T)[0])
     t("deux fenetres avant sont refusees",
-      not totp.verifier(secret, totp.code(secret, T - 2 * totp.PAS), T)[0])
+      not totp.verify(secret, totp.code(secret, T - 2 * totp.STEP), T)[0])
     t("deux fenetres apres sont refusees",
-      not totp.verifier(secret, totp.code(secret, T + 2 * totp.PAS), T)[0])
+      not totp.verify(secret, totp.code(secret, T + 2 * totp.STEP), T)[0])
 
-    bon, compteur = totp.verifier(secret, totp.code(secret, T), T, set())
-    t("un compteur est renvoye", bon and compteur == T // totp.PAS, compteur)
+    bon, compteur = totp.verify(secret, totp.code(secret, T), T, set())
+    t("un compteur est renvoye", bon and compteur == T // totp.STEP, compteur)
     t("le meme code rejoue est refuse",
-      not totp.verifier(secret, totp.code(secret, T), T, {compteur})[0])
+      not totp.verify(secret, totp.code(secret, T), T, {compteur})[0])
     t("une AUTRE fenetre reste acceptee malgre le rejeu de la premiere",
-      totp.verifier(secret, totp.code(secret, T + totp.PAS), T, {compteur})[0])
+      totp.verify(secret, totp.code(secret, T + totp.STEP), T, {compteur})[0])
 
-    t("un code trop court est refuse", not totp.verifier(secret, "123", T)[0])
-    t("un code non numerique est refuse", not totp.verifier(secret, "abcdef", T)[0])
+    t("un code trop court est refuse", not totp.verify(secret, "123", T)[0])
+    t("un code non numerique est refuse", not totp.verify(secret, "abcdef", T)[0])
     print("   %d controles OK, %d echec(s)" % (ok, fail))
     return fail == 0
 
