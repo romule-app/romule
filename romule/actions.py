@@ -445,7 +445,7 @@ def verify_library(lib, cfg, job, deep=False, sys_key=None, budget_go=None):
         return
     job.log("Verification de %d fichier(s)%s…" % (len(files), " (approfondie)" if deep else ""))
     integrity.check(files, job, deep,
-                    budget_octets=int(budget_go * 2 ** 30) if budget_go else None)
+                    budget_bytes=int(budget_go * 2 ** 30) if budget_go else None)
 
 
 def backup_saves(lib, cfg, job):
