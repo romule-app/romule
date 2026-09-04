@@ -61,16 +61,16 @@ def main():
         from romule import igdb
         vide = {"igdb_client_id": "", "igdb_client_secret": ""}
         t("inactif sans identifiants", igdb.configure(vide) is False)
-        t("aucun appel sans identifiants", igdb.chercher("Chrono Trigger", vide) is None)
+        t("aucun appel sans identifiants", igdb.search("Chrono Trigger", vide) is None)
 
         mauvais = {"igdb_client_id": "mauvais", "igdb_client_secret": "x",
                    "igdb_token_url": BASE + "/oauth2/token", "igdb_url": BASE}
-        t("identifiants refuses", igdb.jeton(mauvais, force=True) == "")
+        t("identifiants refuses", igdb.token(mauvais, force=True) == "")
 
         cfg = {"igdb_client_id": "bon-id", "igdb_client_secret": "bon-secret",
                "igdb_token_url": BASE + "/oauth2/token", "igdb_url": BASE}
-        t("jeton obtenu", igdb.jeton(cfg, force=True) == "jeton-test")
-        f = igdb.chercher("Chrono Trigger", cfg)
+        t("jeton obtenu", igdb.token(cfg, force=True) == "jeton-test")
+        f = igdb.search("Chrono Trigger", cfg)
         t("resume recupere", bool(f) and f["resume"].startswith("Un groupe"), f)
         t("le nom renvoye correspond bien a la recherche",
           bool(f) and f["nom"] == "Chrono Trigger", f)
@@ -78,12 +78,12 @@ def main():
         t("editeur, pas developpeur", bool(f) and f["editeur"] == "Square", f)
 
         avant = compteurs()["jetons"]
-        igdb.chercher("Chrono Trigger", cfg)
+        igdb.search("Chrono Trigger", cfg)
         t("jeton reutilise", compteurs()["jetons"] == avant)
 
-        t("jeu introuvable", igdb.chercher("titre introuvable zzz", cfg) is None)
+        t("jeu introuvable", igdb.search("titre introuvable zzz", cfg) is None)
         n = len(compteurs()["requetes"])
-        igdb.chercher("titre introuvable zzz", cfg)
+        igdb.search("titre introuvable zzz", cfg)
         t("echec non rejoue", len(compteurs()["requetes"]) == n)
 
         # --- The IGDB cover (the fallback when SteamGridDB has nothing) -----
@@ -91,27 +91,27 @@ def main():
         # Every check is double: what the fallback must RETURN, and what it must
         # REFUSE. A fallback that accepts everything would return covers of
         # unrelated games, which is worse than an empty sleeve.
-        u = igdb.jaquette("Chrono Trigger", cfg)
+        u = igdb.cover_url("Chrono Trigger", cfg)
         t("jaquette : adresse construite depuis l'image_id",
           u == "https://images.igdb.com/igdb/image/upload/t_cover_big_2x/co-test.jpg", u)
 
-        u = igdb.jaquette("un titre voisin", cfg)
+        u = igdb.cover_url("un titre voisin", cfg)
         t("jaquette : un jeu sans rapport est refuse meme s'il a une image",
           u is None, u)
 
-        u = igdb.jaquette("jeu sans image", cfg)
+        u = igdb.cover_url("jeu sans image", cfg)
         t("jaquette : un jeu sans image ne rend rien", u is None, u)
-        f2 = igdb.chercher("jeu sans image", cfg)
+        f2 = igdb.search("jeu sans image", cfg)
         t("jaquette : l'absence d'image ne raye pas le jeu pour son resume",
           bool(f2) and f2["resume"] == "Un jeu sans jaquette.", f2)
 
-        t("jaquette : rien sans identifiants", igdb.jaquette("Chrono Trigger", vide) is None)
+        t("jaquette : rien sans identifiants", igdb.cover_url("Chrono Trigger", vide) is None)
         n2 = len(compteurs()["requetes"])
-        igdb.jaquette("titre introuvable zzz", cfg)
+        igdb.cover_url("titre introuvable zzz", cfg)
         t("jaquette : un jeu deja introuvable n'est pas redemande",
           len(compteurs()["requetes"]) == n2)
 
-        r = igdb.tester(cfg)
+        r = igdb.probe(cfg)
         # The double now returns the title SEARCHED FOR: that is what the real
         # IGDB does, and what the anti-mismatch filter requires.
         t("test des identifiants",

@@ -1361,7 +1361,7 @@ class Handler(BaseHTTPRequestHandler):
 
         elif p == "/api/igdb-test":
             try:
-                self._json({"ok": True, "infos": igdb.tester(CFG)})
+                self._json({"ok": True, "infos": igdb.probe(CFG)})
             except Exception as exc:
                 self._json({"ok": False, "message": str(exc)})
 

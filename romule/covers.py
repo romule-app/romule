@@ -149,7 +149,7 @@ def fetch(tid, name=None, cfg=None):
         # cleans internally; IGDB expects an already-clean title, as for
         # `chercher()`.
         from . import igdb
-        from_igdb = igdb.jaquette(search_name(name), cfg)
+        from_igdb = igdb.cover_url(search_name(name), cfg)
         if from_igdb:
             p = try_url(from_igdb)
             if p:
