@@ -565,7 +565,7 @@ def _invalider_cache():
     """
     try:
         from . import systems
-        systems.vider_cache_arbre()
+        systems.clear_tree_cache()
     except Exception:
         pass
 

@@ -59,7 +59,7 @@ def _entries(lib, cfg):
             continue
         out.append({"plateforme": "switch", "nom": f["name"], "chemin": f["path"],
                     "taille": f.get("size", 0), "tid": (f.get("tid") or "").lower()})
-    for s in systems.liste(cfg):
+    for s in systems.list_all(cfg):
         if s["engine"] == "switch":
             continue
         for f in systems.scan_local(s["key"], cfg):
