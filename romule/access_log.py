@@ -20,7 +20,7 @@ TAILLE_MAX = 1 << 20            # 1 MiB, then rotation
 ARCHIVES = 3
 
 
-def _tourner():
+def _rotate():
     try:
         if FICHIER.exists() and FICHIER.stat().st_size > TAILLE_MAX:
             for i in range(ARCHIVES - 1, 0, -1):
@@ -32,14 +32,14 @@ def _tourner():
         pass
 
 
-def noter(evenement, ip="", email="", detail=""):
+def record(event, ip="", email="", detail=""):
     """Record an access event. Never raises: a log that breaks authentication
     would be worse than no log at all."""
     try:
-        _tourner()
+        _rotate()
         ligne = json.dumps({
             "t": time.strftime("%Y-%m-%dT%H:%M:%S"),
-            "e": evenement,               # connexion | refus | deconnexion | compte
+            "e": event,               # connexion | refus | deconnexion | compte
             "ip": str(ip or "")[:45],
             "email": str(email or "")[:120],
             "detail": str(detail or "")[:200],
@@ -53,7 +53,7 @@ def noter(evenement, ip="", email="", detail=""):
         pass
 
 
-def dernieres(n=200):
+def latest(n=200):
     """The last n events, newest first."""
     try:
         lignes = FICHIER.read_text(encoding="utf-8").splitlines()
@@ -68,9 +68,9 @@ def dernieres(n=200):
     return out
 
 
-def resume():
+def summary():
     """Enough to answer "did somebody try to get in?"."""
-    ev = dernieres(500)
+    ev = latest(500)
     refus = [e for e in ev if e.get("e") == "refus"]
     return {
         "evenements": len(ev),

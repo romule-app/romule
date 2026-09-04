@@ -939,8 +939,8 @@ def push(paths, device_dir, job, verify_mode="size", layout="type", incremental=
 
     # We record what is left to do: if the transfer stops, the user does not
     # have to rebuild the same selection to resume.
-    from . import transferts
-    transferts.demarrer([it["local"] for it in todo], device_dir, "switch")
+    from . import transfers
+    transfers.start([it["local"] for it in todo], device_dir, "switch")
 
     for it in todo:
         if not job.checkpoint():
@@ -961,7 +961,7 @@ def push(paths, device_dir, job, verify_mode="size", layout="type", incremental=
             return
         if res == "ok":
             job.log("OK  %s" % it["name"])
-            transferts.marquer_fait(it["local"])
+            transfers.mark_done(it["local"])
             okc += 1
             done_bytes += it["size"]
         job.tick()
@@ -976,5 +976,5 @@ def push(paths, device_dir, job, verify_mode="size", layout="type", incremental=
     job.set_detail("")
     job.log("Transfert termine (%d/%d) vers %s." % (okc, len(todo), device_dir))
     if okc == len(todo):
-        transferts.terminer()          # nothing to resume
+        transfers.finish()          # nothing to resume
     _invalidate_cache()

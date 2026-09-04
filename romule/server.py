@@ -26,10 +26,10 @@ from pathlib import Path
 from html import escape as html_escape
 from urllib.parse import parse_qs, unquote
 
-from . import (accounts, actions, apikeys, apiv1, audit, auth, backup, config,
-               console, covers, device, duplicates, edenconf, emuready, igdb,
-               integrity, journal_acces, meta, nand, net, notify, nsztool,
-               parcourir, profils, saves, scan, systems, titleid, transferts,
+from . import (access_log, accounts, actions, apikeys, apiv1, audit, auth,
+               backup, browse, config, console, covers, device, duplicates,
+               edenconf, emuready, igdb, integrity, meta, nand, net, notify,
+               nsztool, profils, saves, scan, systems, titleid, transfers,
                trash, updates, versions, views)
 from . import cli
 from . import LICENCE, SOURCE_URL, __version__
@@ -709,7 +709,7 @@ class Handler(BaseHTTPRequestHandler):
                 JOB.log("Connexion refusee : %s" % exc, "warn")
                 return self._page_connexion(str(exc)) or True
             JOB.log("Connexion de %s" % (qui.get("nom") or qui.get("sub")))
-            journal_acces.noter("connexion", self.client_address[0],
+            access_log.record("connexion", self.client_address[0],
                                 qui.get("email") or qui.get("sub"), "sso")
             self.send_response(302)
             self.send_header("Location", "/")
@@ -720,7 +720,7 @@ class Handler(BaseHTTPRequestHandler):
 
         if p == "/auth/logout":
             qui = auth.session(self.headers.get("Cookie")) or {}
-            journal_acces.noter("deconnexion", self.client_address[0], qui.get("email", ""))
+            access_log.record("deconnexion", self.client_address[0], qui.get("email", ""))
             self.send_response(302)
             self.send_header("Location", "/")
             self.send_header("Set-Cookie", auth.cookie_header_for("", self._secure()))
@@ -750,15 +750,15 @@ class Handler(BaseHTTPRequestHandler):
                                   (champs.get("code") or [""])[0])
         except accounts.CodeNeeded as exc:
             # The password is right: we only ask for the code again.
-            journal_acces.noter("refus", self.client_address[0], email, str(exc))
+            access_log.record("refus", self.client_address[0], email, str(exc))
             return self._page_connexion(str(exc), 401, email, second=True)
         except ValueError as exc:
             JOB.log("Connexion refusee pour %s depuis %s : %s"
                     % (email or "(vide)", self.client_address[0], exc), "warn")
-            journal_acces.noter("refus", self.client_address[0], email, str(exc))
+            access_log.record("refus", self.client_address[0], email, str(exc))
             return self._page_connexion(str(exc), 401, email)
         JOB.log("Connexion de %s depuis %s" % (u["email"], self.client_address[0]))
-        journal_acces.noter("connexion", self.client_address[0], u["email"], "interne")
+        access_log.record("connexion", self.client_address[0], u["email"], "interne")
         self.send_response(302)
         self.send_header("Location", "/")
         self.send_header("Set-Cookie",
@@ -1268,7 +1268,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"error": str(exc)}, 400)
             backup.auto("comptes")
             JOB.log("Compte cree : %s" % u["email"])
-            journal_acces.noter("compte", self.client_address[0], u["email"], "creation")
+            access_log.record("compte", self.client_address[0], u["email"], "creation")
             self._json({"message": "Compte cree pour %s." % u["email"],
                         "compte": u, "comptes": accounts.list_all()})
 
@@ -1291,7 +1291,7 @@ class Handler(BaseHTTPRequestHandler):
             except ValueError as exc:
                 return self._json({"error": str(exc)}, 400)
             JOB.log("Mot de passe change : %s" % u["email"])
-            journal_acces.noter("compte", self.client_address[0], u["email"],
+            access_log.record("compte", self.client_address[0], u["email"],
                                 "mot de passe change")
             # The current session was signed before the change: we hand THIS
             # browser a valid one, the others are cut.
@@ -1330,7 +1330,7 @@ class Handler(BaseHTTPRequestHandler):
                 accounts.totp_enable(u["id"], d.get("code", ""))
             except ValueError as exc:
                 return self._json({"error": str(exc)}, 400)
-            journal_acces.noter("compte", self.client_address[0], u["email"],
+            access_log.record("compte", self.client_address[0], u["email"],
                                 "double facteur active")
             self._json({"message": "Double authentification activée."})
 
@@ -1342,7 +1342,7 @@ class Handler(BaseHTTPRequestHandler):
                 accounts.totp_disable(u["id"], d.get("mdp", ""))
             except ValueError as exc:
                 return self._json({"error": str(exc)}, 400)
-            journal_acces.noter("compte", self.client_address[0], u["email"],
+            access_log.record("compte", self.client_address[0], u["email"],
                                 "double facteur desactive")
             self._json({"message": "Double authentification retirée."})
 
@@ -1364,16 +1364,16 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"ok": False, "message": str(exc)})
 
         elif p == "/api/transfert-etat":
-            self._json({"reprise": transferts.resume()})
+            self._json({"reprise": transfers.summary()})
 
         elif p == "/api/transfert-reprendre":
-            r = transferts.resume()
+            r = transfers.summary()
             if not r:
                 return self._json({"error": "Aucun transfert a reprendre."}, 400)
             self._job(actions.deploy_games, LIB, CFG, JOB, r["chemins"], [], [])
 
         elif p == "/api/transfert-oublier":
-            transferts.terminer()
+            transfers.finish()
             self._json({"message": "Reprise abandonnée."})
 
         elif p == "/api/import-suggestions":
@@ -1428,8 +1428,8 @@ class Handler(BaseHTTPRequestHandler):
                         "lots": backup.listing()})
 
         elif p == "/api/acces":
-            self._json({"resume": journal_acces.resume(),
-                        "evenements": journal_acces.dernieres(120)})
+            self._json({"resume": access_log.summary(),
+                        "evenements": access_log.latest(120)})
 
         elif p == "/api/audit":
             self._json(audit.lancer(CFG, hors_ligne=bool(d.get("hors_ligne"))))
@@ -1494,7 +1494,7 @@ class Handler(BaseHTTPRequestHandler):
 
         # ---- where the games are, on the machine hosting the service
         elif p == "/api/parcourir":
-            self._json(parcourir.lister(d.get("chemin", ""), CFG))
+            self._json(browse.list_dir(d.get("chemin", ""), CFG))
 
         elif p == "/api/ludotheque":
             # A running job holds absolute paths already computed: moving the
