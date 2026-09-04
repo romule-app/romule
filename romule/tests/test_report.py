@@ -134,11 +134,29 @@ def test_a_broken_source_does_not_break_the_report():
     t("the report survives a source that fails", rep["total"] >= 1, rep)
 
 
+def test_every_action_named_is_a_real_button():
+    """A family whose remedy names nothing produces a button that does not
+    respond — the exact failure `data-act` has a whitelist to prevent, arriving
+    through the back door of a server-side string."""
+    import re
+    racine = Path(__file__).resolve().parent.parent
+    src = (racine / "static" / "app.js").read_text(encoding="utf-8")
+    a = src.index("const ACTES = new Set([")
+    b = src.index("\n]);", a)
+    allow = set(re.findall(r"'([\w-]+)'", re.sub(r"//[^\n]*", "", src[a:b])))
+    rep = (racine / "report.py").read_text(encoding="utf-8")
+    named = set(re.findall(r'\n\s+"(\w+)", "[A-ZÀ-Ý]', rep))
+    named |= set(re.findall(r'"(verify|convertAll|refreshEntries|doImport)"', rep))
+    unknown = sorted(n for n in named if n and n not in allow)
+    t("every remedy names a real action", not unknown, unknown)
+
+
 for fn in (test_an_untroubled_library_says_so, test_each_defect_lands_in_its_family,
            test_a_file_counts_once_per_family, test_a_game_without_an_entry_is_named,
            test_the_drop_folder_is_part_of_the_picture,
            test_every_family_carries_what_to_do, test_examples_are_bounded,
-           test_a_broken_source_does_not_break_the_report):
+           test_a_broken_source_does_not_break_the_report,
+           test_every_action_named_is_a_real_button):
     fn()
 print("  %d checks OK, %d failure(s)" % (ok, ko))
 sys.exit(1 if ko else 0)

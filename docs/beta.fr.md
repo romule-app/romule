@@ -66,7 +66,7 @@ normal, pas un bogue.
 
 **Pas bêta — une limite assumée.** L'interface de Romule se traduit
 entièrement : chaque phrase vit dans un catalogue, un contrôle d'intégration
-continue échoue si l'une lui échappe, et un test navigateur parcourt dix-sept
+continue échoue si l'une lui échappe, et un test navigateur parcourt dix-huit
 écrans à la recherche de ce qui reste.
 
 Trois choses sortent de ce mécanisme, parce qu'elles ne sont pas construites

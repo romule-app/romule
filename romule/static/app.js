@@ -2188,7 +2188,12 @@ function renderImport(items) {
     btn.disabled = false;
     btn.textContent = tpl('Importer %s {élément|éléments}', items.length);
   }
-  if (info) info.textContent = fmt(items.reduce((s, i) => s + (i.size || 0), 0)) + ' en attente';
+  // Assembled, this sentence was two fragments no catalogue could hold. It only
+  // came to light when a neighbouring key taught the checker the words.
+  if (info) {
+    info.textContent = tpl('%s en attente',
+                           fmt(items.reduce((s, i) => s + (i.size || 0), 0)));
+  }
 
   const groupes = new Map();
   items.forEach(i => {
@@ -3662,6 +3667,42 @@ async function loadNotifications() {
   NOTIFS = r.destinations || [];
   NOTIF_EVTS = r.evenements || {};
   renderNotifications();
+}
+
+// What is wrong with the library, family by family, each with the button that
+// addresses it. A screen that lists problems and leaves you to find the remedy
+// elsewhere is a screen that gets read once.
+//
+// Nothing is drawn for a family with nothing in it: the server does not send
+// them, and a list of "0 problems" is what turns a health screen into
+// wallpaper.
+function renderHealth(r) {
+  const familles = (r && r.familles) || [];
+  const couv = (r && r.integrite) || {};
+  // Coverage is not a problem, it is the weight of "no problem found": at 4 %
+  // it means almost nothing, at 100 % it means a great deal.
+  const part = couv.fichiers
+    ? Math.round(100 * (couv.couverts || 0) / couv.fichiers) : 0;
+  const entete = '<p class="lead">'
+    + (familles.length
+        ? esc(countPhrase(r.total, '{point|points}')) + ' '
+          + esc(t('à regarder.'))
+        : esc(t('Rien à signaler.')))
+    + ' ' + esc(tpl('Empreintes connues pour %d %% de la ludothèque.', part))
+    + '</p>';
+  if (!familles.length) return entete;
+  return entete + familles.map(f =>
+    '<div class="upkeep-l">'
+    + '<b>' + esc(t(f.titre)) + '</b> '
+    + '<span class="badge b-upd" data-i18n-skip>' + f.nombre + '</span>'
+    + '<span class="upkeep-t">' + esc(t(f.detail)) + '</span>'
+    + (f.action
+        ? ' <button class="ghost mini" data-act="' + esc(f.action) + '">'
+          + esc(t('Traiter')) + '</button>'
+        : '')
+    + '<div class="mono" data-i18n-skip>'
+    + (f.exemples || []).map(x => esc(x.rel || '')).join('<br>')
+    + '</div></div>').join('');
 }
 
 // The declared consoles. A select rather than a list of cards: the point is to
@@ -5893,10 +5934,12 @@ const app = {
       R.classe(x, 'on', x.dataset.arg === quoi));
     R.texte(b, 'Lecture…');
     const rendus = {
+      sante: renderHealth,
       doublons: renderDuplicates, integrite: renderIntegrity,
       sauvegardes: renderBackups, acces: renderAccess, transfert: renderTransfer,
     };
     const routes = {
+      sante: '/api/library-report',
       doublons: '/api/doublons', integrite: '/api/integrite',
       sauvegardes: '/api/sauvegardes', acces: '/api/acces',
       transfert: '/api/transfert-etat',

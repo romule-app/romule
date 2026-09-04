@@ -61,7 +61,7 @@ an obscure title is a normal outcome, not a bug.
 
 **Not beta — a stated limitation.** Romule's interface translates completely:
 every string lives in a catalogue, a CI check fails if one escapes it, and a
-browser test walks seventeen screens looking for leftovers.
+browser test walks eighteen screens looking for leftovers.
 
 Three things fall outside that mechanism, because they are not built in the
 browser at all. The **audit report** is composed by the server and returned as
