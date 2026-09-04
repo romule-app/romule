@@ -1407,7 +1407,7 @@ class Handler(BaseHTTPRequestHandler):
                 "recuperable": r["recuperable"]})
 
         elif p == "/api/integrite":
-            self._json({"resume": integrity.resume(LIB.files)})
+            self._json({"resume": integrity.summary(LIB.files)})
 
         elif p == "/api/sauvegardes":
             self._json({"lots": sauvegarde.listing()})
