@@ -166,7 +166,7 @@ def _clean_import_dirs():
 
 # --------------------------------------------------------------- taches de fond
 
-def suggestions_import(cfg=None):
+def import_suggestions(cfg=None):
     """For each file the extension alone cannot classify, propose a platform.
 
     The extension gives the POSSIBLE candidates (.iso: seven platforms); IGDB
@@ -198,10 +198,10 @@ def suggestions_import(cfg=None):
     return out
 
 
-def classer_import(cfg, job, assignations):
+def assign_imports(cfg, job, assignments):
     """File the drop folder's files according to the user's choice."""
     n, ranges = 0, []
-    for chemin, cle in (assignations or {}).items():
+    for chemin, cle in (assignments or {}).items():
         src = Path(chemin)
         if not src.is_file() or str(src.parent) != str(config.IMPORT):
             job.log("Ignore (hors du depot) : %s" % src.name, "warn")
@@ -224,14 +224,14 @@ def classer_import(cfg, job, assignations):
         except OSError as exc:
             job.log("Impossible de ranger %s : %s" % (src.name, exc), "error")
     job.log("%d fichier(s) classe(s) a la main." % n)
-    _fiches_des_nouveaux(ranges, cfg, job)
+    _entries_for_new(ranges, cfg, job)
     return n
 
 
-def _fiches_des_nouveaux(chemins, cfg, job):
+def _entries_for_new(paths, cfg, job):
     """Title, summary and cover for the games that were just filed."""
     from . import covers, meta
-    nouveaux = [Path(c) for c in (chemins or [])]
+    nouveaux = [Path(c) for c in (paths or [])]
     if not nouveaux:
         return
     job.log("Recherche des fiches de %d nouveau(x) jeu(x)…" % len(nouveaux))
@@ -256,7 +256,7 @@ def _fiches_des_nouveaux(chemins, cfg, job):
     job.log("%d fiche(s) recuperee(s) sur %d." % (faits, len(nouveaux)))
 
 
-def _expliquer_ambigus(items, job):
+def _explain_ambiguous(items, job):
     """Say why a file is staying in the drop folder.
 
     Letting it sit there unexplained is the worst answer: the user thinks the
@@ -296,7 +296,7 @@ def import_files(lib, cfg, job, convert_after=True):
     ambigus = [i for i in scan_import() if i["type"] == "AMBIGU"]
     if not pending and not roms:
         if ambigus:
-            _expliquer_ambigus(ambigus, job)
+            _explain_ambiguous(ambigus, job)
         else:
             job.log("Aucun jeu a ranger dans _import "
                     "(archives non extraites eventuellement laissees).")
@@ -345,7 +345,7 @@ def import_files(lib, cfg, job, convert_after=True):
     # What is left that we could not place: say so, rather than let it sit in
     # _import unexplained. An extension like .iso is claimed by seven
     # platforms — the tool cannot guess.
-    _expliquer_ambigus([i for i in scan_import() if i["type"] == "AMBIGU"], job)
+    _explain_ambiguous([i for i in scan_import() if i["type"] == "AMBIGU"], job)
 
     _clean_import_dirs()
     lib.scan(log=job.log)
@@ -353,7 +353,7 @@ def import_files(lib, cfg, job, convert_after=True):
     # away avoids an empty card until the next synchronisation. We deal ONLY
     # with the newcomers: re-reading the other 120 on every import would be
     # absurd.
-    _fiches_des_nouveaux(moved, cfg, job)
+    _entries_for_new(moved, cfg, job)
     _auto_nand(lib, cfg, job, moved)
     todo = [p for p in moved if Path(p).suffix.lower() in config.COMPRESSED]
     if convert_after and todo:
@@ -371,7 +371,7 @@ def convert_files(lib, cfg, job, paths):
     lib.scan(log=job.log)
 
 
-def _types_connus(lib):
+def _known_types(lib):
     """Each file's real type, as the library determined it."""
     return {f["path"]: f["type"] for f in lib.files}
 
@@ -381,7 +381,7 @@ def push_files(lib, cfg, job, paths):
                 cfg.get("verify_mode", "size"),
                 cfg.get("push_layout", "type"),
                 cfg.get("incremental", True),
-                _types_connus(lib))
+                _known_types(lib))
 
 
 def remove_from_device(lib, cfg, job, paths):
@@ -429,7 +429,7 @@ def import_system_files(lib, cfg, job, sys_key):
 
 # --------------------------------------------------------------- integrite / saves
 
-def verify_library(lib, cfg, job, deep=False, sys_key=None, budget_go=None):
+def verify_library(lib, cfg, job, deep=False, sys_key=None, budget_gb=None):
     """Check file integrity (digests plus Switch containers).
 
     `budget_go` limits the pass to a slice: verification becomes a few-minute
@@ -445,7 +445,7 @@ def verify_library(lib, cfg, job, deep=False, sys_key=None, budget_go=None):
         return
     job.log("Verification de %d fichier(s)%s…" % (len(files), " (approfondie)" if deep else ""))
     integrity.check(files, job, deep,
-                    budget_bytes=int(budget_go * 2 ** 30) if budget_go else None)
+                    budget_bytes=int(budget_gb * 2 ** 30) if budget_gb else None)
 
 
 def backup_saves(lib, cfg, job):
@@ -499,8 +499,8 @@ def sync_meta(lib, cfg, job):
     langue = (cfg.get("meta_lang") or "fr").strip().lower()
     avec_resume = igdb.configure(cfg)
 
-    def a_completer(nom):
-        f = meta.entry_for_name(nom, cfg, network=False)
+    def a_completer(name):
+        f = meta.entry_for_name(name, cfg, network=False)
         if not f:
             return True
         if avec_resume and not f.get("resume"):
@@ -545,7 +545,7 @@ def sync_meta(lib, cfg, job):
                 % (trouves - resumes), "warn")
 
 
-def analyser_console(lib, cfg, job):
+def analyse_device(lib, cfg, job):
     """Review every platform on the console, out loud.
 
     A silent detection leaves the user with no way to understand why one
@@ -591,18 +591,18 @@ def analyser_console(lib, cfg, job):
                 "les Reglages et indique son dossier.", "warn")
 
 
-def apply_eden_config(lib, cfg, job, changements, tid=None):
+def apply_eden_config(lib, cfg, job, changes, tid=None):
     """Write settings into Eden's configuration (global or per-game)."""
-    edenconf.write_config(changements, job, tid or None)
+    edenconf.write_config(changes, job, tid or None)
 
 
-def apply_eden_profile(lib, cfg, job, nom, tid=None):
+def apply_eden_profile(lib, cfg, job, name, tid=None):
     """Applique un profil enregistre a la config globale ou a un jeu."""
-    prof = edenconf.profile_read(nom)
+    prof = edenconf.profile_read(name)
     if not prof:
-        job.log("Profil introuvable : %s" % nom)
+        job.log("Profil introuvable : %s" % name)
         return
-    job.log("Application du profil « %s »…" % nom)
+    job.log("Application du profil « %s »…" % name)
     edenconf.write_config(prof.get("valeurs", {}), job, tid or None)
 
 
@@ -627,7 +627,7 @@ def emuready_apply(lib, cfg, job, listing_id, tid):
     edenconf.write_raw(contenu, job, tid)
 
 
-def _auto_nand(lib, cfg, job, chemins):
+def _auto_nand(lib, cfg, job, paths):
     """Activate the updates/DLC that just arrived in Eden, when enabled.
 
     Without this an imported file stays inert: present on disk but invisible to
@@ -638,7 +638,7 @@ def _auto_nand(lib, cfg, job, chemins):
     if device.connection()["kind"] is None:
         job.log("Activation automatique : console non connectee, reporte.", "warn")
         return
-    interesse = {str(Path(c)) for c in chemins}
+    interesse = {str(Path(c)) for c in paths}
     cibles = [f["path"] for f in lib.files
               if f["path"] in interesse and f["type"] in ("UPDATE", "DLC")
               and f["ext"] in ("nsp", "xci")]
@@ -653,7 +653,7 @@ def _auto_nand(lib, cfg, job, chemins):
     nand.install(restants, job)
 
 
-def deploy_games(lib, cfg, job, a_envoyer, a_activer, configs=None):
+def deploy_games(lib, cfg, job, to_send, to_enable, configs=None):
     """Make games playable on the console, in a single operation.
 
     Three distinct Eden mechanisms, one gesture for the user:
@@ -664,20 +664,20 @@ def deploy_games(lib, cfg, job, a_envoyer, a_activer, configs=None):
     configs = configs or []
     etapes = 2 + (1 if configs else 0)
 
-    if a_envoyer:
-        job.log("Etape 1/%d — copie de %d fichier(s) vers la console." % (etapes, len(a_envoyer)))
-        device.push(a_envoyer, cfg["device_dir"], job,
+    if to_send:
+        job.log("Etape 1/%d — copie de %d fichier(s) vers la console." % (etapes, len(to_send)))
+        device.push(to_send, cfg["device_dir"], job,
                     cfg.get("verify_mode", "size"), cfg.get("push_layout", "type"),
-                    cfg.get("incremental", True), _types_connus(lib))
+                    cfg.get("incremental", True), _known_types(lib))
     else:
         job.log("Etape 1/%d — aucun fichier a copier." % etapes)
     if not job.checkpoint():
         return
 
-    if a_activer:
+    if to_enable:
         job.log("Etape 2/%d — activation de %d mise(s) a jour / DLC dans l'emulateur."
-                % (etapes, len(a_activer)))
-        nand.install(a_activer, job)
+                % (etapes, len(to_enable)))
+        nand.install(to_enable, job)
     else:
         job.log("Etape 2/%d — rien a activer." % etapes)
     if not job.checkpoint():
@@ -707,9 +707,9 @@ def deploy_games(lib, cfg, job, a_envoyer, a_activer, configs=None):
         job.log("Console a jour.", "ok")
 
 
-def restore_eden_config(lib, cfg, job, tid, fichier):
+def restore_eden_config(lib, cfg, job, tid, filename):
     """Put a game's configuration back as it was before the change."""
-    edenconf.restore_backup(tid, fichier, job)
+    edenconf.restore_backup(tid, filename, job)
 
 
 def install_nand(lib, cfg, job, paths):

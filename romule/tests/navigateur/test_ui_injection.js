@@ -280,6 +280,29 @@ const actions = fs.readFileSync(path.join(RACINE, 'romule', 'actions.py'), 'utf8
 t('the function exists in actions.py',
   !!appele && new RegExp('^def ' + appele + '\\(', 'm').test(actions), appele);
 
+// The same coupling, for EVERY task rather than one. `NOMS_TACHE` turns a
+// Python function name into the phrase the banner shows. A renamed action
+// leaves the interface displaying a raw identifier — no error, no trace, and
+// nobody looks at the banner while renaming a function. Both directions matter:
+// a key naming nothing is dead weight, and an action the server can start with
+// no entry is the defect itself.
+const blocNoms = (src.match(/const NOMS_TACHE = \{([\s\S]*?)\n\};/) || [])[1] || '';
+const clesNoms = [...blocNoms.matchAll(/^\s*(\w+):/gm)].map(m => m[1]);
+t('app.js declares NOMS_TACHE', clesNoms.length > 5, clesNoms.length);
+
+const defsActions = new Set(
+  [...actions.matchAll(/^def (\w+)\(/gm)].map(m => m[1]));
+const orphelines = clesNoms.filter(k => !defsActions.has(k));
+t('every task label names a function that exists',
+  orphelines.length === 0, orphelines.join(', '));
+
+// What the server can actually start, read from its own `_job(actions.X` calls.
+const lancees = new Set(
+  [...serveur.matchAll(/_job\(\s*actions\.(\w+)/g)].map(m => m[1]));
+const sansLibelle = [...lancees].filter(k => !clesNoms.includes(k));
+t('every task the server starts has a label',
+  sansLibelle.length === 0, sansLibelle.join(', '));
+
 console.log('   -- 7. setSystem does not empty before it can refill --');
 // The "jump" when switching platform came from there: the old version emptied
 // `SGAMES`, `SCONSOLE` and `SALL` THEN waited for the network. In between, the
