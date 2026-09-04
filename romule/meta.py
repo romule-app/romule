@@ -29,7 +29,7 @@ def fiche_nom(nom, cfg=None, reseau=True):
     caches.
     """
     from . import covers
-    cle = covers.cle_cache("", nom)
+    cle = covers.cache_key("", nom)
     if not cle:
         return None
     cfg = cfg or config.load_config()
@@ -89,7 +89,7 @@ def fiche_nom(nom, cfg=None, reseau=True):
     langue = (cfg.get("meta_lang") or "fr").strip().lower()
     if langue not in ("", "en"):
         pivot = d.get("nom") or covers.search_name(nom)
-        texte, url = wikipedia.resume(pivot, langue)
+        texte, url = wikipedia.summary(pivot, langue)
         if texte:
             d["resume_en"] = d.get("resume", "")
             d["resume"] = texte

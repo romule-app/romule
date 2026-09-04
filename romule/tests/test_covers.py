@@ -85,7 +85,7 @@ def main():
         p = covers.fetch("0100000000000000", "Introuvable Partout", cfg)
         t("sans image nulle part, on rend None", p is None, p)
         t("l'echec est memorise pour ne pas etre rejoue",
-          covers._echec_recent(covers.cle_cache("0100000000000000", None)))
+          covers._recent_failure(covers.cache_key("0100000000000000", None)))
 
         # --- With no name, IGDB cannot be queried ---------------------------
         appels["igdb"].clear()
