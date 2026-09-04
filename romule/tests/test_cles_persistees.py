@@ -116,7 +116,7 @@ def test_le_jeton_engendre():
 def test_les_comptes():
     d = Path(tempfile.mkdtemp()) / "c.json"
     accounts.create("essai@exemple.fr", "brouette-tranquille-42", "Essai")
-    ecrites = _cles_du_disque(config.fichier_etat("_romule-comptes.json",
+    ecrites = _cles_du_disque(config.state_file("_romule-comptes.json",
                                                   "_romule-comptes.json"))
     manquantes = sorted(ecrites - COMPTES)
     t("aucun champ de compte inconnu n'est ecrit", not manquantes,

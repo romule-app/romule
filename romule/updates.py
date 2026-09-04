@@ -31,7 +31,7 @@ from . import __version__
 _VERSION = re.compile(r"^v?(\d+)\.(\d+)\.(\d+)")
 
 SOURCE = "https://api.github.com/repos/romule-app/romule/releases/latest"
-CACHE = config.fichier_etat("_romule-maj.json", "_romule-maj.json")
+CACHE = config.state_file("_romule-maj.json", "_romule-maj.json")
 TTL = 24 * 3600
 # Past this, the release note is truncated: it shows in a dialog, not in a
 # documentation browser.

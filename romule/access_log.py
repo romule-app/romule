@@ -15,7 +15,7 @@ import time
 
 from . import config
 
-FICHIER = config.fichier_etat("_romule-acces.log", "_switch-acces.log")
+FICHIER = config.state_file("_romule-acces.log", "_switch-acces.log")
 TAILLE_MAX = 1 << 20            # 1 MiB, then rotation
 ARCHIVES = 3
 

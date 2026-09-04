@@ -206,14 +206,14 @@ def _verifier_racine():
         print("Le dossier de donnees n'est pas inscriptible :")
         print("    %s" % config.ROOT)
         print("Romule y ecrit sa configuration, ses comptes et ses journaux.")
-        if config.en_conteneur():
+        if config.in_container():
             print("En conteneur, c'est presque toujours l'identifiant du")
             print("proprietaire : l'image tourne sous 1000:1000.")
             print("    chown -R 1000:1000 <le dossier de l'hote>")
             print("ou adapte `user:` dans docker-compose.yml a ton identifiant")
             print("(`id -u` / `id -g`). Un volume nomme evite la question.")
         sys.exit(1)
-    souci = config.racine_douteuse()
+    souci = config.root_looks_wrong()
     if not souci:
         return
     print("Le dossier de donnees designe %s :" % souci)
@@ -301,7 +301,7 @@ def _verifier_jeton():
     public repository — worse than no token at all, because nobody is wary of
     it.
     """
-    if config.TOKEN and config.TOKEN.strip().lower() in config.JETONS_INTERDITS:
+    if config.TOKEN and config.TOKEN.strip().lower() in config.FORBIDDEN_TOKENS:
         _avis("ROMULE_TOKEN vaut encore une valeur d'exemple : %r" % config.TOKEN,
               "Genere le tien :",
               "    python3 -c \"import secrets; print(secrets.token_urlsafe(32))\"")
@@ -310,9 +310,9 @@ def _verifier_jeton():
 
 def _signaler_anciennes_variables():
     """The SWITCH_* names still work, but they are no longer the right ones."""
-    if not config.ANCIENNES_UTILISEES:
+    if not config.LEGACY_FILES_USED:
         return
-    noms = sorted(set(config.ANCIENNES_UTILISEES))
+    noms = sorted(set(config.LEGACY_FILES_USED))
     _avis("Variables d'environnement a renommer : %s" % ", ".join(noms),
           "     %s" % ", ".join(n.replace("SWITCH_", "ROMULE_") for n in noms))
 
@@ -521,7 +521,7 @@ def cmd_doctor(args):
             etat.append("inscriptible" if os.access(p, os.W_OK) else "LECTURE SEULE")
             etat.append(oct(p.stat().st_mode & 0o777))
         ligne(nom, "%s  [%s]" % (chemin, ", ".join(etat)))
-    if config.LUDO_IMPOSEE:
+    if config.LIBRARY_FORCED:
         ligne("", "ludotheque imposee par ROMULE_LIBRARY")
 
     bloc("acces")

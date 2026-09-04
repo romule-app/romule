@@ -37,7 +37,7 @@ from . import config, systems
 # `BASES` and the membership check live in `config`: the same rule must hold
 # for what we BROWSE and for what we CHOOSE.
 BASES = config.BASES
-autorise = config.dans_les_bases
+autorise = config.within_bases
 
 # Counting ceilings. A folder may hold a million files, and the user is
 # waiting for an answer while the dialog is open.
@@ -99,7 +99,7 @@ def list_dir(path="", cfg=None):
     # fallback, opening the dialog answered "path outside the allowed folders"
     # to someone who had not asked for anything yet.
     depart = config.LUDO
-    if not config.dans_les_bases(depart) and config.BASES:
+    if not config.within_bases(depart) and config.BASES:
         depart = config.BASES[0]
     cible = Path(brut).expanduser() if brut else depart
     try:
@@ -146,7 +146,7 @@ def list_dir(path="", cfg=None):
         "dossiers": dossiers,
         "ecrivable": os.access(cible, os.W_OK),
         "jeux": count_games(cible, cfg=cfg),
-        "douteux": config.racine_douteuse(cible),
+        "douteux": config.root_looks_wrong(cible),
         "raccourcis": shortcuts(),
     }
 

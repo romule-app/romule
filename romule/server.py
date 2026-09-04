@@ -424,14 +424,14 @@ class Handler(BaseHTTPRequestHandler):
         pair = self.client_address[0]
         if not self._relayee():
             return pair
-        if not config.proxy_de_confiance(pair):
+        if not config.is_trusted_proxy(pair):
             return None                     # somebody is relaying without a mandate
         # The declared proxy appended the peer it saw on the right. We walk
         # back up the chain, skipping relays that are themselves declared.
         chaine = [a.strip() for a in
                   (self.headers.get("X-Forwarded-For") or "").split(",") if a.strip()]
         for adresse in reversed(chaine):
-            if not config.proxy_de_confiance(adresse):
+            if not config.is_trusted_proxy(adresse):
                 return adresse
         # The whole chain is made of declared addresses. That happens when the
         # client is ITSELF on the proxy's machine — the common case of a local
@@ -935,12 +935,12 @@ class Handler(BaseHTTPRequestHandler):
             libre = shutil.disk_usage(config.IMPORT).free
         except OSError:
             libre = None
-        if libre is not None and left + config.DISQUE_MARGE > libre:
+        if libre is not None and left + config.DISK_MARGIN > libre:
             return self._json(
                 {"error": "Espace insuffisant : %s disponibles, %s demandes "
                           "(marge de securite de %s)."
                           % (_taille(libre), _taille(left),
-                             _taille(config.DISQUE_MARGE))}, 507)
+                             _taille(config.DISK_MARGIN))}, 507)
         try:
             with dest.open("wb") as fh:
                 while left > 0:
@@ -1503,8 +1503,8 @@ class Handler(BaseHTTPRequestHandler):
             if JOB.running:
                 return self._json(
                     {"error": "un travail est en cours — reessaie apres"}, 409)
-            souci = config.definir_ludotheque(d.get("chemin", ""),
-                                              creer=bool(d.get("creer")))
+            souci = config.set_library(d.get("chemin", ""),
+                                       create=bool(d.get("creer")))
             if souci:
                 return self._json({"error": souci}, 400)
             # Empty when the choice falls back to the service folder: the
@@ -1977,8 +1977,8 @@ def _health():
         # The library is distinct from the service root: it is the one the
         # wizard and the settings offer to choose.
         "ludotheque": str(config.LUDO),
-        "ludotheque_imposee": config.LUDO_IMPOSEE,
-        "problemes": list(config.PROBLEMES),
+        "ludotheque_imposee": config.LIBRARY_FORCED,
+        "problemes": list(config.PROBLEMS),
         "checks": {
             "nsz": bool(shutil.which("nsz")),
             "adb": device.adb_available(),
@@ -2042,7 +2042,7 @@ def _in_container():
     The detection lives in `config`: `cli` needs it before importing the server
     at all, to tailor the remedy it offers.
     """
-    return config.en_conteneur()
+    return config.in_container()
 
 
 def adb_hint():
@@ -2185,7 +2185,7 @@ def _faits_de_demarrage(url, ip, jeton_auto):
          + (" + jeton engendre" if jeton_auto else "")),
         ("Comptes", "%d" % accounts.count()),
         ("Ludotheque", "%s   (%s)"
-         % (config.LUDO, "imposee par ROMULE_LIBRARY" if config.LUDO_IMPOSEE
+         % (config.LUDO, "imposee par ROMULE_LIBRARY" if config.LIBRARY_FORCED
             else "modifiable depuis l'interface")),
     ]
     # The two folders are only distinguished when they differ: otherwise you
@@ -2232,7 +2232,7 @@ def serve(open_browser=True):
     service = (_in_container() or config.ENV_LAN or config.TOKEN
                or config.env("NO_BROWSER", "").strip() not in ("", "0"))
     _audit_demarrage()
-    for souci in config.PROBLEMES:
+    for souci in config.PROBLEMS:
         console.say(souci, "warn", "config")
     if CFG.get("lan_access") and not config.TOKEN:
         console.say("Accessible SANS MOT DE PASSE par tout appareil du reseau.",

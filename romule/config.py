@@ -21,7 +21,7 @@ STATIC = PKG / "static"
 #   1. ROMULE_ROOT   — the project's name
 #   2. SWITCH_ROOT   — the old name, still accepted
 #   3. ~/.local/share/romule (or XDG_DATA_HOME), created if needed
-def _racine_par_defaut():
+def _default_root():
     base = os.environ.get("XDG_DATA_HOME", "").strip()
     return Path(base or (Path.home() / ".local" / "share")) / "romule"
 
@@ -29,36 +29,36 @@ def _racine_par_defaut():
 # The project's variables are named ROMULE_*. The old SWITCH_* ones are still
 # read: someone upgrading must not see their service stop because a name
 # changed. They are reported once at startup.
-ANCIENNES_UTILISEES = []
+LEGACY_FILES_USED = []
 
 
-def env(nom, defaut=""):
+def env(name, default=""):
     """The value of ROMULE_<name>, or of SWITCH_<name> if only that one is set."""
-    v = os.environ.get("ROMULE_" + nom)
+    v = os.environ.get("ROMULE_" + name)
     if v is not None:
         return v
-    v = os.environ.get("SWITCH_" + nom)
+    v = os.environ.get("SWITCH_" + name)
     if v is not None:
-        ANCIENNES_UTILISEES.append("SWITCH_" + nom)
+        LEGACY_FILES_USED.append("SWITCH_" + name)
         return v
-    return defaut
+    return default
 
 
-def env_bool(nom):
-    return env(nom, "").strip().lower() in ("1", "true", "yes", "on")
+def env_bool(name):
+    return env(name, "").strip().lower() in ("1", "true", "yes", "on")
 
 
-ROOT = Path(env("ROOT") or _racine_par_defaut()).expanduser().resolve()
+ROOT = Path(env("ROOT") or _default_root()).expanduser().resolve()
 
 
-def racine_douteuse(chemin=None):
+def root_looks_wrong(path=None):
     """Does the root point somewhere nothing should be written?
 
     The application moves files and creates folders. A mis-set root is not an
     inconvenience: it is data loss. So we refuse the locations we are sure are
     not a game library.
     """
-    c = Path(chemin or ROOT).resolve()
+    c = Path(path or ROOT).resolve()
     if c == Path(c.anchor):
         return "la racine du disque"
     if c == Path.home().resolve():
@@ -72,7 +72,7 @@ def racine_douteuse(chemin=None):
     return ""
 
 
-def en_conteneur():
+def in_container():
     """Containerised deployment? The remedy to offer is not the same."""
     if os.path.exists("/.dockerenv"):
         return True
@@ -99,7 +99,7 @@ def en_conteneur():
 #
 # By default the library IS the root: an existing installation sees no
 # difference, and nothing moves on its own.
-LUDO_IMPOSEE = bool(env("LIBRARY").strip())
+LIBRARY_FORCED = bool(env("LIBRARY").strip())
 LUDO = Path(env("LIBRARY").strip() or ROOT).expanduser().resolve()
 
 # Folders the interface may enter, separated like a PATH.
@@ -117,21 +117,21 @@ BASES = [Path(b).expanduser().resolve()
          for b in env("BASES").split(os.pathsep) if b.strip()]
 
 
-def dans_les_bases(chemin):
+def within_bases(path):
     """Is the path inside the declared bases? True when none is declared."""
     if not BASES:
         return True
-    c = Path(chemin).resolve()
+    c = Path(path).resolve()
     return any(c == b or b in c.parents for b in BASES)
 
 # Problems met while reading the configuration, reported at startup.
 # They do not justify refusing to start: a path gone invalid — an external disk
 # unplugged — must leave the service reachable, otherwise you cannot even log
 # in to fix it.
-PROBLEMES = []
+PROBLEMS = []
 
 
-def _chemins_ludotheque():
+def _library_paths():
     """Recompute what must follow the games rather than the service's state.
 
     The trash and the drop folder live NEXT TO the games, not next to the
@@ -143,25 +143,25 @@ def _chemins_ludotheque():
     IMPORT = LUDO / "_import"
 
 
-def definir_ludotheque(chemin, creer=False):
+def set_library(path, create=False):
     """Change the scanned folder. Returns "" or the reason for refusal.
 
     A refusal always states why: this path is typed by a human in a settings
     dialog, and "failed" with no reason leaves them with no recourse.
     """
     global LUDO
-    if LUDO_IMPOSEE:
+    if LIBRARY_FORCED:
         return "la ludotheque est imposee par ROMULE_LIBRARY"
-    brut = str(chemin or "").strip()
+    brut = str(path or "").strip()
     if not brut:
         # Returning to the default is a legitimate operation, not an error.
         LUDO = ROOT
-        _chemins_ludotheque()
+        _library_paths()
         return ""
     c = Path(brut).expanduser()
     if not c.is_absolute():
         return "il faut un chemin absolu"
-    if creer and not c.exists():
+    if create and not c.exists():
         try:
             c.mkdir(parents=True)
         except OSError as exc:
@@ -169,17 +169,17 @@ def definir_ludotheque(chemin, creer=False):
     if not c.is_dir():
         return "ce dossier n'existe pas"
     c = c.resolve()
-    douteux = racine_douteuse(c)
+    douteux = root_looks_wrong(c)
     if douteux:
         return "emplacement refuse : %s" % douteux
-    if not dans_les_bases(c):
+    if not within_bases(c):
         return "hors des dossiers autorises (ROMULE_BASES)"
     # Romule moves and converts files. Accepting a read-only folder promises a
     # service that will fail on its first action.
     if not os.access(c, os.W_OK):
         return "dossier en lecture seule"
     LUDO = c
-    _chemins_ludotheque()
+    _library_paths()
     return ""
 
 
@@ -193,7 +193,7 @@ TIDCACHE = ROOT / "_cache_conteneurs.json"
 NAND_LIST = ROOT / "_a_installer_dans_NAND.txt"
 
 
-def fichier_etat(nom, ancien_nom):
+def state_file(name, old_name):
     """Path of a state file, picking up the old name if it still exists.
 
     State files used to carry the previous project's name. Settling for the new
@@ -202,8 +202,8 @@ def fichier_etat(nom, ancien_nom):
     so. The rename happens once, and its failure is not a fault — we simply go
     on reading where the data is.
     """
-    neuf = ROOT / nom
-    ancien = ROOT / ancien_nom
+    neuf = ROOT / name
+    ancien = ROOT / old_name
     # `exists()` can raise: a folder the process may not even enter refuses
     # the `stat`. This function runs at module IMPORT time — an exception here
     # kills the program before anyone could explain anything, and the user
@@ -221,8 +221,8 @@ def fichier_etat(nom, ancien_nom):
         return ancien
 
 
-LOGFILE = fichier_etat("_romule-lib.log", "_switch-lib.log")
-CONFIG_FILE = fichier_etat("_romule-config.json", "_switch-config.json")
+LOGFILE = state_file("_romule-lib.log", "_switch-lib.log")
+CONFIG_FILE = state_file("_romule-config.json", "_switch-config.json")
 
 EXTS = {".nsz", ".xcz", ".nsp", ".xci"}
 COMPRESSED = {".nsz", ".xcz"}
@@ -250,7 +250,7 @@ TOKEN = env("TOKEN").strip()
 # authorised device could fill the host's disk.
 TELEVERSEMENT_MAX = int(env("UPLOAD_MAX", 64 * 2 ** 30))
 # We also refuse to write if the disk would drop below this threshold.
-DISQUE_MARGE = int(env("DISK_MARGIN", 2 * 2 ** 30))
+DISK_MARGIN = int(env("DISK_MARGIN", 2 * 2 ** 30))
 
 # Example tokens: leaving them in place amounts to having no token at all, and
 # that is the default anyone gets who copies the compose file without reading
@@ -258,7 +258,7 @@ DISQUE_MARGE = int(env("DISK_MARGIN", 2 * 2 ** 30))
 # Where prod.keys lives. It used to be pinned to ~/.switch/prod.keys, which
 # survives neither a container running as another user, nor someone who keeps
 # their keys elsewhere.
-def _cles_par_defaut():
+def _default_keys():
     """~/.romule/prod.keys, or the old ~/.switch/prod.keys if it still exists.
 
     Changing a default location without looking at the old one breaks the
@@ -269,16 +269,16 @@ def _cles_par_defaut():
     return ancien if (ancien.exists() and not neuf.exists()) else neuf
 
 
-CLES = Path(env("KEYS") or _cles_par_defaut()).expanduser()
+CLES = Path(env("KEYS") or _default_keys()).expanduser()
 
 # fuite:ok this list IS the guard against these values: it has to quote them
-JETONS_INTERDITS = {"change-moi", "changeme", "change-me", "secret", "token",
+FORBIDDEN_TOKENS = {"change-moi", "changeme", "change-me", "secret", "token",
                     "colle-le-ici", "a-changer", "tondejeton"}
 
 _DECLARES = {a.strip() for a in env("TRUSTED_PROXIES").split(",") if a.strip()}
 
 
-def _reseaux_de_confiance(entrees):
+def _trusted_networks(entries):
     """The entries written in CIDR, converted once and for all.
 
     Exact string comparison was enough while you wrote `127.0.0.1`. It stopped
@@ -291,7 +291,7 @@ def _reseaux_de_confiance(entrees):
     an existing installation has nothing to change.
     """
     reseaux = []
-    for entree in entrees:
+    for entree in entries:
         if "/" not in entree:
             continue
         try:
@@ -299,12 +299,12 @@ def _reseaux_de_confiance(entrees):
         except ValueError:
             # An unreadable entry must above all not become permissive.
             # We report it at startup and ignore it.
-            PROBLEMES.append("ROMULE_TRUSTED_PROXIES : %r n'est pas un reseau "
+            PROBLEMS.append("ROMULE_TRUSTED_PROXIES : %r n'est pas un reseau "
                              "valide, entree ignoree" % entree)
     return reseaux
 
 
-RESEAUX_CONFIANCE = _reseaux_de_confiance(_DECLARES)
+RESEAUX_CONFIANCE = _trusted_networks(_DECLARES)
 # CIDR entries are REMOVED from the set of exact addresses. Without that, the
 # string "172.16.0.0/12" would sit in it verbatim — and `_client_reel()`
 # compares the links of `X-Forwarded-For`, which come from the client. Writing
@@ -313,21 +313,21 @@ RESEAUX_CONFIANCE = _reseaux_de_confiance(_DECLARES)
 PROXYS_CONFIANCE = {a for a in _DECLARES if "/" not in a}
 
 
-def proxy_de_confiance(adresse):
+def is_trusted_proxy(address):
     """Is this the address of a declared relay?
 
     The default is ALWAYS refusal: with no declaration, no forwarded header is
     worth anything. It is the only safe answer, because an `X-Forwarded-For`
     can be written by hand by anybody.
     """
-    if not adresse:
+    if not address:
         return False
-    if adresse in PROXYS_CONFIANCE:
+    if address in PROXYS_CONFIANCE:
         return True
     if not RESEAUX_CONFIANCE:
         return False
     try:
-        ip = ipaddress.ip_address(adresse)
+        ip = ipaddress.ip_address(address)
     except ValueError:
         return False
     return any(ip in reseau for reseau in RESEAUX_CONFIANCE)
@@ -418,20 +418,20 @@ def load_config():
         cfg["lan_access"] = True
     # The games folder is re-read HERE, and not only at startup: restoring a
     # backup reloads the configuration, and the library must follow.
-    if not LUDO_IMPOSEE:
-        souci = definir_ludotheque(cfg.get("library_path", ""))
+    if not LIBRARY_FORCED:
+        souci = set_library(cfg.get("library_path", ""))
         if souci:
             # The fallback must be EXPLICIT. Without it, a refused path leaves
             # `LUDO` on its previous value: the service would go on working on
             # the old library while announcing the new one.
-            definir_ludotheque("")
+            set_library("")
             # The value stays in the configuration: erasing it would make the
             # user think they never chose anything, when their disk may simply
             # be unplugged.
             avis = ("Ludotheque « %s » inutilisable (%s) — les jeux sont "
                     "cherches dans %s" % (cfg.get("library_path", ""), souci, ROOT))
-            if avis not in PROBLEMES:      # `load_config` is called several times
-                PROBLEMES.append(avis)
+            if avis not in PROBLEMS:      # `load_config` is called several times
+                PROBLEMS.append(avis)
     return cfg
 
 
