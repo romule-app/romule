@@ -41,7 +41,7 @@ import time
 
 from . import config
 
-FILE = config.fichier_etat("_romule-cles.json", "_romule-cles.json")
+FILE = config.state_file("_romule-cles.json", "_romule-cles.json")
 
 # `rml_` + 43 base64url characters (32 bytes). The displayed prefix covers the
 # marker and the first eight characters of the secret: enough to recognise a
