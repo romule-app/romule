@@ -8,6 +8,86 @@ and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 Romule is at `0.x`: the HTTP API is **not** stable yet, and a minor release may
 change it. Breaking changes are always listed under **Changed** with the reason.
 
+## [Unreleased]
+
+### Changed
+
+- **The code is in English.** Comments, docstrings, function and variable
+  names, CSS classes and the `data-act` action names. The repository is public,
+  under the AGPL, with an English README, documentation and interface; French
+  comments protected an internal consistency at the price of the only thing
+  that matters for an open project — that one can get in.
+
+  Nothing a user's disk holds moved. The configuration keys, the state files
+  and the interface strings are French because they are DATA — the last of them
+  are the i18n catalogue's keys, which is a mechanism, not a style.
+  `test_cles_persistees.py` is what makes that a rule rather than an intention.
+
+  Eleven modules were renamed: `rapprochement`→`matching`, `reseau`→`net`,
+  `maj`→`updates`, `notifs`→`notify`, `doublons`→`duplicates`,
+  `comptes`→`accounts`, `vues`→`views`, `sauvegarde`→`backup`,
+  `profils`→`profiles`, `transferts`→`transfers`, `parcourir`→`browse`,
+  `journal_acces`→`access_log`. `docs/openapi.json` is byte-identical: the
+  public API did not move.
+
+  The outputs of `cli.py` and `audit.py`, and the login pages, stay French:
+  they do not go through the interface's catalogue, and translating them needs
+  a server-side i18n Romule does not have. That limit is written in
+  `docs/beta.md`.
+
+### Added
+
+- **A scheduler** (`romule/scheduler.py`). Five presets — never, at startup,
+  hourly, every six hours, nightly at a chosen hour — on the five reversible
+  tasks. No cron field: a syntax where a misplaced star means "every minute"
+  has no place in a settings screen.
+
+  If a task is already running when another falls due, the due one is
+  **skipped** and logged — never queued. That is the same semantics as the
+  API's 409: Romule does one thing at a time, and says so. The last run is
+  persisted, without which a container that restarts often would run its
+  nightly task all day.
+
+  Emptying the trash, clearing the log and revoking a key are absent from the
+  list, and that is not an oversight.
+
+- **Several consoles** (`romule/consoles.py`). `wifi_addr` was singular, and so
+  were `device_dir`, `roms_root`, `emulateur` and four more. Each console now
+  keeps its own, and Romule remembers what each one held — so it can answer
+  *which console is this game on?* about the one that is not plugged in.
+
+  The migration is silent: an existing installation gets one console built from
+  its current settings. The flat keys are still written, mirroring the active
+  console, so a version that predates this reads the pairing where it left it.
+
+- **A library health screen** (`romule/report.py`, `/api/library-report`).
+  Broken files, orphaned DLC, superseded versions, duplicates, games with no
+  entry, what waits in the drop folder — each family with the button that
+  deals with it. It assembles what already existed and computes nothing of its
+  own. Coverage is shown beside it, because *no problem found* means something
+  different at 4 % than at 100 %.
+
+- **Three source checks**, each self-testing before it judges:
+  `outils/verifier-anglais.py` (French prose in comments, docstrings and HTML
+  comments), `outils/verifier-imports.py` (a module or a keyword a rename left
+  behind) and `outils/verifier-classes.py` (a CSS class styled in one file and
+  renamed in another). All three run in `lancer_tests.py` and in CI.
+
+### Fixed
+
+- **Two maintenance panels had been dead since 0.2.0.** `showMaintenance` and
+  `openPlatform` read `getAttribute('onclick')` — an attribute phase 4 had
+  removed. `null.includes` threw on the first line, so the five maintenance
+  panels and the platform cards never opened: no request, no error on screen,
+  nothing in the log. Found while adding the health screen beside them, and
+  `test_ui_injection.js` now refuses any read of a handler attribute that no
+  longer exists.
+
+- **`server.py` imported `reseau` and called `net`.** The file parsed, the
+  service started, and the failure waited for the first request on the route
+  concerned. Found by `verifier-imports.py`, which was written for it — and
+  which then immediately found two calls keeping a keyword a rename had moved.
+
 ## [0.3.1] — 2026-09-03
 
 A follow-up to 0.3.0: the reverse-proxy example the documentation kept
