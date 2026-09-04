@@ -38,6 +38,21 @@ uvx ruff check romule outils lancer_tests.py   # exactly what CI runs
 `uvx` (or `pipx run ruff`) keeps it out of the environment. CI runs the same
 command and it blocks, so running it locally saves a round trip.
 
+`lancer_tests.py` already runs the source checks — the leak check is separate
+because it reads the git index, not the working tree:
+
+| Check | What it refuses |
+|---|---|
+| `verifier-anglais.py` | French prose in comments, docstrings and HTML comments |
+| `verifier-imports.py` | a module or a keyword a rename left behind |
+| `verifier-classes.py` | a CSS class styled in one file and renamed in another |
+| `verifier-traduction.py` | a French sentence in the code with no catalogue entry |
+| `verifier-chiffres.py` | a number in the documentation the code no longer backs |
+| `verifier-reglages-doc.py` | a setting with no line in the reference |
+
+Each one self-tests before it judges: a check nobody has seen fail proves
+nothing.
+
 The browser suite drives a real headless Chrome and catches what reading CSS
 cannot: overflow, controls covered by other controls, untranslated strings.
 If you touch the interface, run it.
