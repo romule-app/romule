@@ -36,7 +36,25 @@ therefore ALWAYS exactly one console to talk about, which is what keeps an
 "if no console is declared" branch out of every screen and every route.
 """
 
+import json
 import time
+
+from . import config
+
+# What each console was last seen holding. Kept on disk rather than in memory
+# because the question it answers — "this game, which console is it on?" — is
+# asked about the console that is NOT plugged in. An inventory that only exists
+# while a console is connected cannot answer it.
+#
+# Only file names are stored, not the tree: the answer is "the Odin has it", not
+# "here is its path", and a path from a console nobody has read for a week is a
+# path that has probably moved.
+INVENTORY = config.state_file("_romule-consoles.json", "_romule-consoles.json")
+
+# Past this, an inventory is shown with its age rather than as fact. Nothing is
+# erased: knowing a console held a game a month ago beats knowing nothing, as
+# long as the screen says it is a month old.
+STALE_AFTER = 30 * 24 * 3600
 
 # The settings that belong to a CONSOLE rather than to the service. Anything
 # not in this list — the covers provider, the language, the schedule — is the
@@ -209,6 +227,94 @@ def rename(cfg, device_id, nom):
             cfg["devices"] = known
             return True
     return False
+
+
+# ------------------------------------------------------ what each one holds
+
+
+def _read_inventory():
+    try:
+        d = json.loads(INVENTORY.read_text(encoding="utf-8"))
+        return d if isinstance(d, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def _write_inventory(d):
+    try:
+        INVENTORY.parent.mkdir(parents=True, exist_ok=True)
+        tmp = INVENTORY.with_suffix(".tmp")
+        tmp.write_text(json.dumps(d, ensure_ascii=False) + "\n", encoding="utf-8")
+        tmp.replace(INVENTORY)
+    except OSError:
+        pass                      # a full disk must not break a console read
+
+
+def remember(cfg, names, device_id=None):
+    """Note what the console currently being driven holds.
+
+    `names` is whatever the caller has: file names, paths, entries. Only the
+    base name is kept — see INVENTORY for why.
+    """
+    current = active(cfg)
+    device_id = device_id or (current["id"] if current else "")
+    if not device_id:
+        return False
+    clean = sorted({str(n).rsplit("/", 1)[-1] for n in (names or []) if n})
+    d = _read_inventory()
+    d[device_id] = {"at": int(time.time()), "files": clean}
+    _write_inventory(d)
+    return True
+
+
+def inventory(device_id):
+    """What that console was last seen holding: (epoch, [names])."""
+    entry = _read_inventory().get(str(device_id or "")) or {}
+    return int(entry.get("at") or 0), list(entry.get("files") or [])
+
+
+def forget_inventory(device_id):
+    d = _read_inventory()
+    if str(device_id or "") in d:
+        del d[str(device_id)]
+        _write_inventory(d)
+        return True
+    return False
+
+
+def where_is(cfg, name):
+    """Which declared consoles were last seen holding this file.
+
+    Returns a list of {id, nom, at}, oldest reading last. This is the whole
+    point of keeping the inventory: answering for a console that is not
+    plugged in.
+    """
+    wanted = str(name or "").rsplit("/", 1)[-1]
+    if not wanted:
+        return []
+    d = _read_inventory()
+    out = []
+    for console in list_all(cfg):
+        entry = d.get(console["id"]) or {}
+        if wanted in (entry.get("files") or []):
+            out.append({"id": console["id"], "nom": console["nom"],
+                        "at": int(entry.get("at") or 0)})
+    return sorted(out, key=lambda x: -x["at"])
+
+
+def held_summary(cfg):
+    """Per console: how many files, and how old the reading is."""
+    d = _read_inventory()
+    now = int(time.time())
+    out = []
+    for console in list_all(cfg):
+        entry = d.get(console["id"]) or {}
+        at = int(entry.get("at") or 0)
+        out.append({"id": console["id"], "nom": console["nom"],
+                    "fichiers": len(entry.get("files") or []),
+                    "lu": at,
+                    "vieux": bool(at and now - at > STALE_AFTER)})
+    return out
 
 
 def public(cfg):

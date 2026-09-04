@@ -3677,6 +3677,18 @@ function renderConsoles() {
     '<option value="' + esc(d.id) + '"'
     + (d.id === CONSOLES.active_device ? ' selected' : '') + '>'
     + esc(d.nom) + '</option>').join('');
+  // What each console was last seen holding, and when. Shown beside its name
+  // because that is the only place the question is asked: the console you are
+  // NOT looking at is the one you wonder about.
+  const tenu = {};
+  (CONSOLES.tenu || []).forEach(x => { tenu[x.id] = x; });
+  const detail = liste.map(d => {
+    const h = tenu[d.id];
+    if (!h || !h.lu) return '';
+    return esc(d.nom) + ' — '
+      + countPhrase(h.fichiers, '{fichier|fichiers}')
+      + (h.vieux ? ' ' + esc(t('(lecture ancienne)')) : '');
+  }).filter(Boolean).join(' · ');
   boite.innerHTML =
     '<div class="setrow">'
     + '<div class="setlab"><b>' + esc(t('Console pilotée')) + '</b>'
@@ -3691,7 +3703,9 @@ function renderConsoles() {
     + (liste.length > 1
         ? '<button class="ghost" data-act="removeConsole">' + esc(t('Retirer')) + '</button>'
         : '')
-    + '</div>';
+    + '</div>'
+    + (detail ? '<p class="lead" style="margin:6px 0 0" data-i18n-skip>'
+                + detail + '</p>' : '');
 }
 
 // The schedule: one row per task, one select per row. The presets are phrases

@@ -169,11 +169,64 @@ def test_what_the_interface_sees():
       sorted(pub["devices"][0]))
 
 
+def test_each_console_remembers_what_it_holds():
+    """The question this answers is asked about the console that is NOT
+    plugged in. An inventory that only lives while a console is connected
+    cannot answer it, which is why it is on disk."""
+    write_config({"device_dir": "/A"})
+    cfg = config.load_config()
+    first = consoles.active(cfg)["id"]
+    second = consoles.add(cfg, "Odin")
+    config.save_config(cfg)
+    consoles.forget_inventory(first)
+    consoles.forget_inventory(second["id"])
+
+    consoles.remember(cfg, ["/a/Zelda.nsp", "/a/Mario.nsp"], first)
+    consoles.remember(cfg, ["/b/Mario.nsp"], second["id"])
+
+    ou = [x["nom"] for x in consoles.where_is(cfg, "Mario.nsp")]
+    t("a game on both consoles names both", len(ou) == 2, ou)
+    ou = [x["nom"] for x in consoles.where_is(cfg, "/somewhere/Zelda.nsp")]
+    t("a game on one names only that one",
+      ou == [consoles.DEFAULT_NAME], ou)
+    t("an unknown game names none", consoles.where_is(cfg, "Absent.nsp") == [])
+    t("the path is ignored, the name is not",
+      [x["nom"] for x in consoles.where_is(cfg, "Zelda.nsp")] == [consoles.DEFAULT_NAME])
+
+    resume = {x["nom"]: x["fichiers"] for x in consoles.held_summary(cfg)}
+    t("the summary counts per console",
+      resume == {consoles.DEFAULT_NAME: 2, "Odin": 1}, resume)
+    t("a fresh reading is not called old",
+      not any(x["vieux"] for x in consoles.held_summary(cfg)))
+
+    # Reading one console must not touch the other's inventory: that is the
+    # leak this whole file is about, in its last shape.
+    consoles.remember(cfg, ["/a/Zelda.nsp"], first)
+    ou = [x["nom"] for x in consoles.where_is(cfg, "Mario.nsp")]
+    t("re-reading one console leaves the other's inventory alone",
+      ou == ["Odin"], ou)
+
+
+def test_forgetting_a_console_forgets_its_inventory():
+    write_config({"device_dir": "/A"})
+    cfg = config.load_config()
+    second = consoles.add(cfg, "Odin")
+    config.save_config(cfg)
+    consoles.remember(cfg, ["/b/Solo.nsp"], second["id"])
+    t("it is there first",
+      [x["nom"] for x in consoles.where_is(cfg, "Solo.nsp")] == ["Odin"])
+    consoles.remove(cfg, second["id"])
+    consoles.forget_inventory(second["id"])
+    t("and gone with the console", consoles.where_is(cfg, "Solo.nsp") == [])
+
+
 for fn in (test_a_flat_configuration_migrates, test_a_fresh_install_still_has_one,
            test_each_console_keeps_its_own_settings,
            test_the_flat_keys_stay_readable, test_removing_and_renaming,
            test_only_known_fields_are_stored, test_the_list_is_bounded,
-           test_what_the_interface_sees):
+           test_what_the_interface_sees,
+           test_each_console_remembers_what_it_holds,
+           test_forgetting_a_console_forgets_its_inventory):
     fn()
 print("  %d checks OK, %d failure(s)" % (ok, ko))
 sys.exit(1 if ko else 0)
