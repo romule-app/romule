@@ -51,7 +51,7 @@ nav.tabs button.active{background:var(--panel2);color:var(--amber);
 /* ---------------------------------------------------------------- panneaux */
 main{max-width:var(--largeur-page);margin:0 auto;padding:22px}
 /* Prose and forms keep a readable column. */
-#panel-settings,#panel-jeux .vide{max-width:var(--largeur-texte);margin:0 auto}
+#panel-settings,#panel-jeux .empty{max-width:var(--largeur-texte);margin:0 auto}
 .panel{display:none}
 .panel.active{display:block;animation:enter .35s var(--ease)}
 @keyframes enter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
@@ -118,7 +118,7 @@ input[type=radio]{accent-color:var(--amber);cursor:pointer}
 /* `tid-vide` carries the LABEL shown when there is no title ID. It looks the
    same as `tid`, but does not share its role: `tid` is marked "never
    translate", this label must be. The same separation as `cnom` / `cvide`. */
-.tid,.tid-vide,.mono{font-family:var(--mono);font-size:11px;color:var(--mute);letter-spacing:.04em}
+.tid,.tid-empty,.mono{font-family:var(--mono);font-size:11px;color:var(--mute);letter-spacing:.04em}
 .tid b{color:var(--amber);font-weight:700;background:var(--primary-doux);padding:0 2px;border-radius:2px}
 .tag{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.09em;
   padding:2px 6px;border-radius:3px;border:1px solid currentColor;white-space:nowrap}
@@ -206,8 +206,8 @@ select{cursor:pointer}
 .b-ok{color:var(--green)}
 .gcard.sel{border-color:var(--amber);box-shadow:0 0 0 1px var(--amber)}
 /* a game already ready: nothing to do to it, we show it without offering it */
-.gcard.fige{cursor:default;opacity:.62}
-.gcard.fige:hover{transform:none;border-color:var(--rule);box-shadow:none}
+.gcard.frozen{cursor:default;opacity:.62}
+.gcard.frozen:hover{transform:none;border-color:var(--rule);box-shadow:none}
 .gcard .cap{padding:10px 11px}
 .gcard .gname{font-size:12.5px;font-weight:600;line-height:1.3;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -235,7 +235,7 @@ select{cursor:pointer}
 .sheet .cover{width:104px;aspect-ratio:3/4;border-radius:9px;object-fit:cover;background:var(--creux);flex-shrink:0}
 /* A cover missing or being retried: we keep the space and the background,
    never the browser's broken rectangle. */
-img.vide{visibility:hidden}
+img.empty{visibility:hidden}
 .sheet h3{margin:0 0 6px;font-size:17px}
 .sheet .sub2{font-family:var(--mono);font-size:11px;color:var(--mute)}
 .sheet .status{margin-top:9px;display:flex;flex-direction:column;gap:5px}
@@ -257,8 +257,8 @@ img.vide{visibility:hidden}
 /* Loading a platform: we DIM, we do not empty. Emptying made the grid
    collapse, the page scroll up, then everything come back — the "jump". The
    height no longer moves, only the content fades. */
-#lib.charge{opacity:.45;transition:opacity .12s var(--ease);pointer-events:none}
-@media (prefers-reduced-motion:reduce){#lib.charge{transition:none}}
+#lib.loading{opacity:.45;transition:opacity .12s var(--ease);pointer-events:none}
+@media (prefers-reduced-motion:reduce){#lib.loading{transition:none}}
 .cover{background:var(--panel);border:1px solid var(--rule);border-radius:11px;overflow:hidden;
   cursor:pointer;transition:transform .18s var(--ease),border-color .18s}
 .cover:hover{transform:translateY(-3px);border-color:var(--indigo)}
@@ -387,15 +387,15 @@ img.vide{visibility:hidden}
 /* ---------------------------------------------------- SECTION PILLS
    Two pills, two messages that must not be confused:
 
-     .portee  "this only concerns that platform" — information;
+     .scope  "this only concerns that platform" — information;
      .beta    "this may misbehave" — a warning.
 
    They used to share the same class. A scope and a warning rendered identically
    teach the user to ignore both. */
-.portee,.beta{display:inline-block;font-family:var(--body);font-size:9.5px;
+.scope,.beta{display:inline-block;font-family:var(--body);font-size:9.5px;
   font-weight:700;text-transform:uppercase;letter-spacing:.08em;padding:2px 6px;
   border-radius:4px;vertical-align:middle;margin-left:6px}
-.portee{background:var(--info-doux);color:var(--indigo)}
+.scope{background:var(--info-doux);color:var(--indigo)}
 .beta{background:var(--primary-doux);color:var(--amber);
   border:1px solid var(--primary-halo)}
 /* pastille de compatibilite, en bas a droite de la jaquette */
@@ -540,10 +540,10 @@ img.vide{visibility:hidden}
 .setadv>summary::after{content:" ▸";color:var(--mute)}
 .setadv[open]>summary::after{content:" ▾"}
 /* The save confirmation is shown in the sticky table of contents. */
-.setnav-etat{margin-left:auto;align-self:center;padding:0 12px;
+.setnav-state{margin-left:auto;align-self:center;padding:0 12px;
   font-family:var(--mono);font-size:11px;color:var(--green);
   opacity:0;transition:opacity .2s var(--ease)}
-.setnav-etat.okflash{opacity:1}
+.setnav-state.okflash{opacity:1}
 
 /* a switch: more readable than a checkbox for a yes/no */
 .sw{position:relative;display:inline-block;width:44px;height:25px;cursor:pointer;flex-shrink:0}
@@ -679,9 +679,9 @@ img.vide{visibility:hidden}
      and reappear with it. Three controls remain before the content: the
      platform, the search, and the button that opens the rest. */
   .repliable{display:none}
-  body.filtres-ouverts .repliable{display:inline-flex}
-  body.filtres-ouverts #filters{display:flex}
-  body.filtres-ouverts #toolbar{display:flex}
+  body.filters-open .repliable{display:inline-flex}
+  body.filters-open #filters{display:flex}
+  body.filters-open #toolbar{display:flex}
   .replier[aria-expanded="true"]{border-color:var(--amber);color:var(--amber)}
 }
 
@@ -1122,7 +1122,7 @@ button .tid{color:inherit;opacity:.72;font-weight:400}
   touch-action:none}
 /* While dragging: no transition, otherwise the button chases the finger
    instead of following it. And no accidental text selection. */
-.jfab.glisse{transition:none;cursor:grabbing;user-select:none}
+.jfab.dragging{transition:none;cursor:grabbing;user-select:none}
 .jfab:hover{color:var(--ink);background:var(--panel2);
   transform:translate(-3px,-50%);box-shadow:-6px 0 18px -10px var(--ombre)}
 /* A comfortable touch target without an empty box: since the label is hidden
@@ -1190,14 +1190,14 @@ body.sansdefilement{overflow:hidden}
 .stline span{color:var(--ink)}
 
 /* key figures: read at once, aligned, with no frame around each */
-.chiffres{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));
+.figures{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));
   gap:1px;margin:14px 0;background:var(--rule);border:1px solid var(--rule);
   border-radius:10px;overflow:hidden}
-.chiffres>div{background:var(--panel);padding:11px 13px;display:flex;
+.figures>div{background:var(--panel);padding:11px 13px;display:flex;
   flex-direction:column;gap:3px}
-.chiffres b{font-family:var(--disp);font-size:19px;letter-spacing:.3px;
+.figures b{font-family:var(--disp);font-size:19px;letter-spacing:.3px;
   font-variant-numeric:tabular-nums}
-.chiffres span{font-size:11px;color:var(--mute);letter-spacing:.2px}
+.figures span{font-size:11px;color:var(--mute);letter-spacing:.2px}
 
 /* a section subheading inside the detail view */
 .ssect{margin:16px 0 8px;font-family:var(--disp);font-size:12px;letter-spacing:1px;
@@ -1224,7 +1224,7 @@ body.sansdefilement{overflow:hidden}
 .ovslot{position:absolute;left:0;right:0;top:0;display:flex;align-items:flex-start;
   justify-content:space-between;gap:6px;padding:7px;pointer-events:none;
   background:linear-gradient(180deg,var(--capot),transparent)}
-.ovtaille{font-family:var(--mono);font-size:10px;font-variant-numeric:tabular-nums;
+.ovsize{font-family:var(--mono);font-size:10px;font-variant-numeric:tabular-nums;
   color:var(--sur-image);text-shadow:0 1px 3px rgba(0,0,0,.9);letter-spacing:.2px}
 .ovdroite{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
 .ov{font-family:var(--disp);font-size:9.5px;font-weight:600;letter-spacing:.7px;
@@ -1236,20 +1236,20 @@ body.sansdefilement{overflow:hidden}
 
 /* a single line under the title: height reserved so the "Details" buttons stay
    aligned from one card to the next */
-.gcard .ligne{margin-top:5px;min-height:2.5em;font-size:10.5px;line-height:1.32;
+.gcard .line{margin-top:5px;min-height:2.5em;font-size:10.5px;line-height:1.32;
   color:var(--mute);display:-webkit-box;-webkit-line-clamp:2;
   -webkit-box-orient:vertical;overflow:hidden}
-.gcard .ligne.bad{color:var(--red)}
-.gcard .ligne.warn{color:var(--amber)}
-.gcard .ligne.action{color:var(--ink)}
-.gcard .ligne.er{font-weight:600}
-.gcard .ligne.er.b-ok{color:var(--green)}
-.gcard .ligne.er.b-upd{color:var(--amber)}
-.gcard .ligne.er.b-orph{color:var(--red)}
-.gcard .ligne.er.b-dlc{color:var(--mute)}
+.gcard .line.bad{color:var(--red)}
+.gcard .line.warn{color:var(--amber)}
+.gcard .line.action{color:var(--ink)}
+.gcard .line.er{font-weight:600}
+.gcard .line.er.b-ok{color:var(--green)}
+.gcard .line.er.b-upd{color:var(--amber)}
+.gcard .line.er.b-orph{color:var(--red)}
+.gcard .line.er.b-dlc{color:var(--mute)}
 /* in compact thumbnails the line disappears: the badge and the dots are enough */
-.games.taille-compact .ligne{display:none}
-.games.taille-compact .ovtaille{font-size:9px}
+.games.taille-compact .line{display:none}
+.games.taille-compact .ovsize{font-size:9px}
 
 /* The placeholder letter was absolutely positioned, so painted ON TOP of the
    cover: a grey "M" floated in the middle of every image. We put it behind; it
@@ -1289,7 +1289,7 @@ body.sansdefilement{overflow:hidden}
 .tem{min-width:6px}
 .tem:empty{gap:0}
 
-.etatmot{font-family:var(--disp);font-size:9.5px;font-weight:700;letter-spacing:.9px;
+.stateword{font-family:var(--disp);font-size:9.5px;font-weight:700;letter-spacing:.9px;
   text-transform:uppercase;text-align:right;white-space:nowrap;
   overflow:hidden;text-overflow:ellipsis}
 
@@ -1297,13 +1297,13 @@ body.sansdefilement{overflow:hidden}
    through the colour, and the game's name takes the room back */
 .games.taille-compact .tem{font-size:0;gap:0}
 .games.taille-compact .tem:before{width:7px;height:7px}
-.games.taille-compact .etatmot{font-size:8.5px;letter-spacing:.5px}
+.games.taille-compact .stateword{font-size:8.5px;letter-spacing:.5px}
 
 /* the same colour code in the detail view as on the card: yes green, partly amber */
-.chiffres .pres b.p-oui{color:var(--green)}
-.chiffres .pres b.p-partiel{color:var(--amber)}
-.chiffres .pres b.p-non{color:var(--mute)}
-.chiffres .pres b.p-inconnu{color:var(--text-3)}
+.figures .pres b.p-oui{color:var(--green)}
+.figures .pres b.p-partiel{color:var(--amber)}
+.figures .pres b.p-non{color:var(--mute)}
+.figures .pres b.p-inconnu{color:var(--text-3)}
 
 /* The cover's stacking, declared in one single place so as not to break it by
    accident again: giving the image a z-index (to hide the placeholder letter)
@@ -1315,13 +1315,13 @@ body.sansdefilement{overflow:hidden}
 .gcard .pcheck{z-index:3}
 
 /* debut de resume : texte de lecture, volontairement discret face au titre */
-.gcard .ligne.resume{color:var(--text-3);font-style:normal;line-height:1.38;
+.gcard .line.resume{color:var(--text-3);font-style:normal;line-height:1.38;
   -webkit-line-clamp:3;min-height:3.7em}
 
 /* the EmuReady block: running text, never a boxed insert */
 .erdit{margin:8px 0;font-size:12.5px;line-height:1.5;color:var(--mute)}
 .erdit.alerte{color:var(--amber)}
-.erdit.petit{font-size:11.5px;margin-top:10px}
+.erdit.small{font-size:11.5px;margin-top:10px}
 .errow{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;
   flex-wrap:wrap}
 .errow + .errow{margin-top:2px}
@@ -1470,62 +1470,62 @@ button.lien:hover:not(:disabled){color:var(--text)}
 /* The detail of what is running now lives INSIDE the "+" button's panel: a
    separate floating bubble repeated what the button already showed, somewhere
    else on the screen. */
-.tachewrap{position:fixed;right:22px;bottom:calc(var(--dock-h,46px) + 82px);z-index:31;
+.taskwrap{position:fixed;right:22px;bottom:calc(var(--dock-h,46px) + 82px);z-index:31;
   width:min(380px,92vw);padding:16px 18px;border-radius:14px;
   background:var(--panel);border:1px solid var(--rule);
   box-shadow:0 22px 50px -20px var(--ombre);opacity:0;transform:translateY(14px) scale(.98);
   pointer-events:none;transition:opacity .22s var(--ease),transform .22s var(--ease)}
-.tachewrap.on{opacity:1;transform:none;pointer-events:auto}
-.tache[hidden],.tache-vide[hidden]{display:none}
-.tache-detail{margin-top:8px;font-family:var(--mono);font-size:11px;
+.taskwrap.on{opacity:1;transform:none;pointer-events:auto}
+.task[hidden],.task-empty[hidden]{display:none}
+.task-detail{margin-top:8px;font-family:var(--mono);font-size:11px;
   color:var(--mute);word-break:break-word;min-height:0}
-.tache-detail:empty{display:none}
-.tache-tete{display:flex;align-items:center;gap:8px}
-.tache-nom{flex:1;min-width:0;font-size:12.5px;font-weight:600;
+.task-detail:empty{display:none}
+.task-head{display:flex;align-items:center;gap:8px}
+.task-name{flex:1;min-width:0;font-size:12.5px;font-weight:600;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tache-tete button{padding:3px 9px;font-size:11px}
-.tache-barre{height:4px;margin:9px 0 7px;border-radius:3px;
+.task-head button{padding:3px 9px;font-size:11px}
+.task-bar{height:4px;margin:9px 0 7px;border-radius:3px;
   background:var(--surface-3);overflow:hidden}
-.tache-barre i{display:block;height:100%;width:0;border-radius:3px;
+.task-bar i{display:block;height:100%;width:0;border-radius:3px;
   background:var(--primary);transition:width .35s var(--ease)}
 /* total unknown: we show something is happening without lying about progress */
-.tache.indetermine .tache-barre i{width:38% !important;
+.task.indetermine .task-bar i{width:38% !important;
   animation:vaEtVient 1.5s var(--ease) infinite}
 @keyframes vaEtVient{0%{margin-left:-38%}100%{margin-left:100%}}
-.tache-pied{display:flex;gap:10px;font-family:var(--mono);font-size:10.5px;
+.task-foot{display:flex;gap:10px;font-family:var(--mono);font-size:10.5px;
   color:var(--text-3);font-variant-numeric:tabular-nums}
 #tachereste{color:var(--primary)}
 
 /* the log button becomes an indicator: a task is running, and you see it */
-.jfab.occupe{color:var(--primary);border-color:var(--primary)}
-.jfab.occupe .jfab-ic{animation:battement 1.6s ease-in-out infinite}
+.jfab.busy{color:var(--primary);border-color:var(--primary)}
+.jfab.busy .jfab-ic{animation:battement 1.6s ease-in-out infinite}
 @keyframes battement{0%,100%{opacity:1}50%{opacity:.35}}
 
 /* no banner at the bottom any more: the floating elements take their place back */
 :root{--dock-h:0px}
 @media(max-height:520px){
-  .tachewrap{right:10px;width:min(340px,calc(100vw - 20px));padding:13px 14px}
-  .tache-pied{font-size:10px}
+  .taskwrap{right:10px;width:min(340px,calc(100vw - 20px));padding:13px 14px}
+  .task-foot{font-size:10px}
 }
 @media(prefers-reduced-motion:reduce){
-  .tache.indetermine .tache-barre i{animation:none}
-  .jfab.occupe .jfab-ic{animation:none}
+  .task.indetermine .task-bar i{animation:none}
+  .jfab.busy .jfab-ic{animation:none}
 }
 
 /* ================================================================================
    DETECTED PLATFORMS — the heart of "plug & play"
    The user sees what their console hosts, and reaches it in one click.
    ================================================================================ */
-.plateformes{margin:12px 0}
+.platforms{margin:12px 0}
 .pfgrille{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:8px}
-.pfcarte{display:flex;flex-direction:column;align-items:flex-start;gap:2px;
+.pfcard{display:flex;flex-direction:column;align-items:flex-start;gap:2px;
   padding:11px 12px;border-radius:10px;text-align:left;cursor:pointer;
   --btn-fond:var(--surface-2); --btn-fond-survol:var(--surface-3);
   --btn-trait:var(--line); --btn-trait-survol:var(--primary)}
-.pfnom{font-family:var(--disp);font-size:13.5px;letter-spacing:.2px;color:var(--text)}
+.pfname{font-family:var(--disp);font-size:13.5px;letter-spacing:.2px;color:var(--text)}
 .pfn{font-family:var(--disp);font-size:22px;line-height:1.1;color:var(--primary);
   font-variant-numeric:tabular-nums}
-.pftaille,.pfdir{font-family:var(--mono);font-size:10px;color:var(--text-3)}
+.pfsize,.pfdir{font-family:var(--mono);font-size:10px;color:var(--text-3)}
 .pfdir{opacity:.7}
 
 /* A platform's own settings are now REALLY grouped in the HTML, under "Console
@@ -1567,23 +1567,23 @@ button.lien:hover:not(:disabled){color:var(--text)}
 /* ================================================================================
    STARTUP — assert nothing before knowing
    ================================================================================ */
-.chargeur{position:fixed;inset:0;z-index:60;display:flex;align-items:center;
+.spinner{position:fixed;inset:0;z-index:60;display:flex;align-items:center;
   justify-content:center;background:var(--bg);
   opacity:0;pointer-events:none;transition:opacity .3s var(--ease)}
-body.chargement .chargeur{opacity:1;pointer-events:auto}
-.chargeur-in{display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center}
-.chargeur-in b{font-family:var(--disp);font-size:17px;letter-spacing:.3px}
-.chargeur-anneau{width:34px;height:34px;border-radius:50%;
+body.loadingstate .spinner{opacity:1;pointer-events:auto}
+.spinner-in{display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center}
+.spinner-in b{font-family:var(--disp);font-size:17px;letter-spacing:.3px}
+.spinner-ring{width:34px;height:34px;border-radius:50%;
   border:2.5px solid var(--line);border-top-color:var(--primary);
   animation:tourne .8s linear infinite}
 @keyframes tourne{to{transform:rotate(360deg)}}
 /* while loading, the interface stays in place but silent */
-body.chargement main,body.chargement header{opacity:.25;filter:blur(1px)}
-body.chargement main,body.chargement header,.chargeur{transition:opacity .3s var(--ease)}
-@media(prefers-reduced-motion:reduce){.chargeur-anneau{animation-duration:2s}}
+body.loadingstate main,body.loadingstate header{opacity:.25;filter:blur(1px)}
+body.loadingstate main,body.loadingstate header,.spinner{transition:opacity .3s var(--ease)}
+@media(prefers-reduced-motion:reduce){.spinner-ring{animation-duration:2s}}
 
 /* a platform's detail, opened under the grid */
-.pfcarte.on{--btn-trait:var(--primary);--btn-fond:var(--surface-3)}
+.pfcard.on{--btn-trait:var(--primary);--btn-fond:var(--surface-3)}
 .pfdetail:not(:empty){margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
 .pftitre{display:flex;align-items:center;justify-content:space-between;gap:12px;
   margin-bottom:10px;font-family:var(--disp);font-size:15px;letter-spacing:.2px}
@@ -1592,13 +1592,13 @@ body.chargement main,body.chargement header,.chargeur{transition:opacity .3s var
 .tok{color:var(--success)} .tko{color:var(--danger)}
 
 /* the "on the console" button in the header: compact, it pushes nothing */
-.surconsole{display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;
+.onconsole{display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;
   padding:5px 10px;font-size:11.5px;white-space:nowrap}
-.surconsole .hicon{font-size:13px}
+.onconsole .hicon{font-size:13px}
 /* The rule hid "the last span" to remove the label on a small screen. Since the
    button now carries only an icon, it hid precisely that icon: a 44 px button,
    entirely empty. We only hide what is explicitly a label. */
-@media(max-width:820px){.surconsole .hlbl{display:none}}
+@media(max-width:820px){.onconsole .hlbl{display:none}}
 
 
 /* the folder field in a platform's detail */
@@ -1614,8 +1614,8 @@ body.chargement main,body.chargement header,.chargeur{transition:opacity .3s var
 .setlab span.avert{color:var(--amber)}
 
 /* the "on the console" button: icon only, it must not weigh on the header */
-.surconsole{padding:5px 8px;min-width:0}
-.surconsole .hicon{font-size:15px;line-height:1}
+.onconsole{padding:5px 8px;min-width:0}
+.onconsole .hicon{font-size:15px;line-height:1}
 
 /* input fields inside a dialog */
 .dchamps{display:flex;flex-direction:column;gap:12px;margin:16px 0;
@@ -1635,8 +1635,8 @@ body.chargement main,body.chargement header,.chargeur{transition:opacity .3s var
 /* `.sw` was already the switches' class (44x25 px): naming the setting groups
    that way gave them that size, hence the crushed display. The name is now
    explicit and can no longer collide. */
-.setgroup.groupe-plateforme{display:block;width:auto;height:auto;position:static}
-.setgroup.groupe-plateforme[hidden]{display:none}
+.setgroup.platform-group{display:block;width:auto;height:auto;position:static}
+.setgroup.platform-group[hidden]{display:none}
 
 /* --- Console and emulator: the selector and its blocks form one whole.
    The rule on the left visually ties the settings to the platform chosen just
@@ -1654,7 +1654,7 @@ body.chargement main,body.chargement header,.chargeur{transition:opacity .3s var
 /* ------------------------------------------------------------- accounts
    The "my account" card and the list of the people allowed in. No coloured frame
    around the text: only the avatar dot carries any material. */
-.moncompte{display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+.myaccount{display:flex;align-items:center;gap:14px;flex-wrap:wrap;
   padding:14px;margin-bottom:16px;border-radius:12px;
   background:var(--panel2);border:1px solid var(--rule)}
 .avatar{flex:0 0 auto;width:46px;height:46px;border-radius:50%;
@@ -1662,24 +1662,24 @@ body.chargement main,body.chargement header,.chargeur{transition:opacity .3s var
   background:var(--panel);border:1px solid var(--rule);
   background-size:cover;background-position:center;
   font-family:var(--disp);font-size:19px;font-weight:600;color:var(--amber)}
-.moncompte-txt{min-width:0;display:flex;flex-direction:column;gap:2px}
-.moncompte-txt b{font-size:14px}
-.moncompte-act{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+.myaccount-txt{min-width:0;display:flex;flex-direction:column;gap:2px}
+.myaccount-txt b{font-size:14px}
+.myaccount-act{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
 button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
 
-.compte-ligne{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+.account-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
   padding:8px 0;border-bottom:1px solid var(--rule)}
-.compte-ligne:last-child{border-bottom:0}
-.compte-nom{font-weight:600}
-.compte-ligne button{margin-left:auto}
+.account-row:last-child{border-bottom:0}
+.account-name{font-weight:600}
+.account-row button{margin-left:auto}
 
 /* On the handheld's screen, the card goes to a column rather than squeeze the
    buttons. */
 @media (max-width:640px){
-  .moncompte-act{margin-left:0;width:100%}
-  .moncompte-act button{flex:1 1 auto}
+  .myaccount-act{margin-left:0;width:100%}
+  .myaccount-act button{flex:1 1 auto}
 }
-#listecomptes.vide::after{content:"Aucun compte pour l'instant.";
+#listecomptes.empty::after{content:"Aucun compte pour l'instant.";
   font-family:var(--mono);font-size:11.5px;color:var(--mute)}
 
 /* ---------------------------------------------------------------- audit
@@ -1735,8 +1735,8 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
   opacity:0;transform:scale(.86);pointer-events:none;
   transition:opacity var(--t-moyen) var(--ease),
              transform var(--t-moyen) var(--ease)}
-.fab.travaille .fabeta{opacity:1;transform:none}
-.fab.travaille .fabmark{opacity:0;transform:rotate(90deg) scale(.7)}
+.fab.working .fabeta{opacity:1;transform:none}
+.fab.working .fabmark{opacity:0;transform:rotate(90deg) scale(.7)}
 /* The number changes: it settles, it does not jump. */
 @keyframes fabchiffre{
   from{opacity:0;transform:translateY(4px) scale(.9)}
@@ -1769,18 +1769,18 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
 .fabjauge{stroke:var(--primary-vif);opacity:0;
   stroke-dasharray:0 100;stroke-dashoffset:0;
   transition:stroke-dasharray .4s var(--ease),opacity .25s,stroke .3s}
-.fab.travaille .fabpiste,.fab.travaille .fabjauge{opacity:1}
+.fab.working .fabpiste,.fab.working .fabjauge{opacity:1}
 /* Enough clearance for the stroke not to bite into the button's edge. */
 .fabring{transform:scale(1.16)}
 
 /* Total unknown: instead of announcing an invented percentage, a short segment
    turns around the button. */
-.fab.cherche .fabjauge{transition:none;animation:fabtourne 1.5s linear infinite}
+.fab.seeking .fabjauge{transition:none;animation:fabtourne 1.5s linear infinite}
 @keyframes fabtourne{to{stroke-dashoffset:-100}}
 
 /* A slow breath while working: visible out of the corner of the eye, without
    demanding attention all the time. */
-.fab.travaille{animation:fabsouffle 2.8s ease-in-out infinite}
+.fab.working{animation:fabsouffle 2.8s ease-in-out infinite}
 @keyframes fabsouffle{
   0%,100%{box-shadow:0 0 0 1px var(--primary-trait),0 14px 30px -14px var(--primary-trait-fort)}
   50%    {box-shadow:0 0 0 1px var(--primary-trait-fort),0 16px 38px -12px var(--primary-trait-fort)}
@@ -1824,7 +1824,7 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
 
 /* On the handheld's screen, the button keeps its place but bounds its text. */
 @media(max-width:720px){
-  .fab.travaille .fabinfo{max-width:min(46vw,190px)}
+  .fab.working .fabinfo{max-width:min(46vw,190px)}
   .fab .fabinfo b{font-size:11.5px}
   .dropzone-in{padding:30px 26px}
 }
@@ -1832,8 +1832,8 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
 /* Someone who asked for less animation does not want a breathing button or a
    turning segment: the information stays, the movement goes. */
 @media(prefers-reduced-motion:reduce){
-  .fab.travaille{animation:none}
-  .fab.cherche .fabjauge{animation:none;stroke-dasharray:50 100}
+  .fab.working{animation:none}
+  .fab.seeking .fabjauge{animation:none;stroke-dasharray:50 100}
   .dropzone-ic{animation:none}
 }
 
@@ -1933,27 +1933,27 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
 
 /* -------------------------------------------------------- maintenance
    Five panels, one on screen at a time: the question asked stays readable. */
-.entretien{display:flex;flex-wrap:wrap;gap:8px}
-.entretien button.on{background:var(--panel2);color:var(--amber);
+.upkeep{display:flex;flex-wrap:wrap;gap:8px}
+.upkeep button.on{background:var(--panel2);color:var(--amber);
   border-color:var(--amber)}
 #entretien{margin-top:14px}
 #entretien:empty{display:none}
-.entretien-t{font-family:var(--disp);font-size:13px;letter-spacing:.06em;
+.upkeep-t{font-family:var(--disp);font-size:13px;letter-spacing:.06em;
   text-transform:uppercase;color:var(--amber);margin:18px 0 4px}
-.entretien-l{list-style:none;margin:8px 0 0;padding:0;
+.upkeep-l{list-style:none;margin:8px 0 0;padding:0;
   display:flex;flex-direction:column;gap:2px}
-.entretien-l li{padding:9px 0;border-bottom:1px solid var(--rule);font-size:12.5px;
+.upkeep-l li{padding:9px 0;border-bottom:1px solid var(--rule);font-size:12.5px;
   line-height:1.55}
-.entretien-l li:last-child{border-bottom:0}
-.entretien-l code{font-size:11px;color:var(--mute);word-break:break-all}
+.upkeep-l li:last-child{border-bottom:0}
+.upkeep-l code{font-size:11px;color:var(--mute);word-break:break-all}
 /* The colour carries the event's type through a dot at the head of the line,
    never through a frame around the text. */
-.entretien-acces li{padding-left:14px;position:relative}
-.entretien-acces li::before{content:"";position:absolute;left:0;top:15px;
+.upkeep-access li{padding-left:14px;position:relative}
+.upkeep-access li::before{content:"";position:absolute;left:0;top:15px;
   width:6px;height:6px;border-radius:50%;background:var(--mute)}
-.entretien-acces li.ac-connexion::before{background:var(--green)}
-.entretien-acces li.ac-refus::before{background:var(--red)}
-.entretien-acces li.ac-compte::before{background:var(--amber)}
+.upkeep-access li.ac-connexion::before{background:var(--green)}
+.upkeep-access li.ac-refus::before{background:var(--red)}
+.upkeep-access li.ac-compte::before{background:var(--amber)}
 
 /* ======================================================================
    SETTINGS: SECTIONS
@@ -2021,25 +2021,25 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
 /* -------------------------------------------------- platform choice
    One row per file, the choice on the right: you see at once what is left to
    decide, without a chain of dialogs. */
-.classer{display:flex;flex-direction:column;gap:2px;padding:14px 20px 0;
+.assign{display:flex;flex-direction:column;gap:2px;padding:14px 20px 0;
   max-height:min(52vh,420px);overflow:auto}
-.classer-l{display:flex;align-items:center;gap:14px;padding:11px 0;
+.assign-l{display:flex;align-items:center;gap:14px;padding:11px 0;
   border-bottom:1px solid var(--rule)}
-.classer-l:last-child{border-bottom:0}
-.classer-n{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
-.classer-n b{font-size:13px;word-break:break-word}
-.classer-l select{flex:0 0 auto;width:min(210px,42%)}
+.assign-l:last-child{border-bottom:0}
+.assign-n{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.assign-n b{font-size:13px;word-break:break-word}
+.assign-l select{flex:0 0 auto;width:min(210px,42%)}
 @media (max-width:640px){
-  .classer-l{flex-direction:column;align-items:stretch;gap:8px}
-  .classer-l select{width:100%}
+  .assign-l{flex-direction:column;align-items:stretch;gap:8px}
+  .assign-l select{width:100%}
 }
 
 /* ------------------------------------------------------ entry on its way
    A game imported a moment ago has neither official title nor cover. An empty
    card suggests a failure: we show the search is under way, and the veil
    disappears by itself when the entry arrives. */
-.gcard.sansfiche .art{position:relative}
-.gcard.sansfiche .art::after{content:"";position:absolute;inset:0;z-index:4;
+.gcard.noentry .art{position:relative}
+.gcard.noentry .art::after{content:"";position:absolute;inset:0;z-index:4;
   background:linear-gradient(100deg,transparent 20%,var(--eclat) 45%,
     transparent 70%);background-size:220% 100%;
   animation:fiche-attente 1.6s ease-in-out infinite}
@@ -2048,9 +2048,9 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
   padding:5px 8px;border-radius:7px;text-align:center;
   background:var(--verre);backdrop-filter:blur(3px);
   font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--amber)}
-.gcard.sansfiche .gname{opacity:.72}
+.gcard.noentry .gname{opacity:.72}
 @media (prefers-reduced-motion:reduce){
-  .gcard.sansfiche .art::after{animation:none;background:var(--eclat-faible)}
+  .gcard.noentry .art::after{animation:none;background:var(--eclat-faible)}
 }
 
 /* A file whose platform is not known yet: it is waiting for a decision, which
@@ -2082,7 +2082,7 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
   transform:translateX(-2px)}
 /* A letter with no game stays visible but unlit: making it disappear would make
    the column jump on every filter. */
-.alpha.vide{opacity:.22;cursor:default}
+.alpha.empty{opacity:.22;cursor:default}
 .alpha.on{color:var(--amber);background:var(--panel2);
   box-shadow:inset 0 0 0 1px var(--rule)}
 
@@ -2091,7 +2091,7 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
 /* The header is sticky: without this margin, the targeted card lands UNDER it
    and the index already points at the next letter. */
 .gcard{scroll-margin-top:calc(var(--tete-h,60px) + 18px)}
-.gcard.visee{animation:carte-visee 1.4s var(--ease)}
+.gcard.targeted{animation:carte-visee 1.4s var(--ease)}
 @keyframes carte-visee{
   0%,100%{box-shadow:0 0 0 0 var(--primary-nul)}
   18%{box-shadow:0 0 0 3px var(--primary-trait-fort)}
@@ -2108,7 +2108,7 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
   .alpha:hover:not(:disabled){transform:none}
 }
 @media (prefers-reduced-motion:reduce){
-  .gcard.visee{animation:none;box-shadow:0 0 0 3px var(--primary-halo)}
+  .gcard.targeted{animation:none;box-shadow:0 0 0 3px var(--primary-halo)}
 }
 
 /* ================================================================================
@@ -2386,7 +2386,7 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
 .gcard .art img{transition:transform var(--t-long) var(--ease),
                            filter var(--t-long) var(--ease)}
 /* a game already ready has nothing to offer: it does not react */
-.gcard.fige:hover{transform:none !important;border-color:var(--rule);
+.gcard.frozen:hover{transform:none !important;border-color:var(--rule);
   box-shadow:none}
 
 @media (hover:hover){
@@ -2465,7 +2465,7 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
 :root[data-carte="3"] .gcard:hover .art img{transform:scale(1.08)}
 /* A game without a cover would become an empty anonymous rectangle: so its
    caption stays displayed, whatever the setting. */
-:root[data-carte="3"] .gcard.sansfiche .cap{transform:none}
+:root[data-carte="3"] .gcard.noentry .cap{transform:none}
 
 /* --- 4: TURNING EDGE ------------------------------------------------------ */
 @property --ang{syntax:"<angle>";initial-value:0deg;inherits:false}
@@ -2646,8 +2646,8 @@ nav.tabs{position:relative}
 @keyframes feuille-sort{
   to{opacity:0;transform:translateY(calc(10px * var(--amplitude))) scale(.985)}
 }
-.modal.ferme,#dialog.ferme{animation:voile-entre var(--t-court) var(--ease) reverse both}
-.modal.ferme .sheet,#dialog.ferme .dlg{
+.modal.closing,#dialog.closing{animation:voile-entre var(--t-court) var(--ease) reverse both}
+.modal.closing .sheet,#dialog.closing .dlg{
   animation:feuille-sort var(--t-court) var(--ease) both}
 
 /* --- the log: each line arrives from the bottom, like a real terminal */
@@ -2682,8 +2682,8 @@ nav.tabs{position:relative}
 /* The skeleton only lives during the loading, and disappears as soon as the
    first real card exists — otherwise the grid would show both. */
 #libsquelette{display:none}
-body.chargement #libsquelette{display:grid}
-body.chargement #lib{display:none}
+body.loadingstate #libsquelette{display:grid}
+body.loadingstate #lib{display:none}
 
 /* --- buttons: a press must be felt by the finger as much as seen by the eye */
 button:active:not(:disabled){transform:scale(.97)}
@@ -2701,7 +2701,7 @@ button{transition:background var(--t-court) var(--ease),
 @keyframes lettre-atteinte{
   0%{transform:scale(1)} 40%{transform:scale(1.35)} 100%{transform:scale(1)}
 }
-.alpha.atteinte{animation:lettre-atteinte var(--t-long) var(--ease);
+.alpha.reached{animation:lettre-atteinte var(--t-long) var(--ease);
   color:var(--primary)}
 
 /* --- settings: each block settles when the tab opens */
@@ -2764,7 +2764,7 @@ body.compact .filters{margin-bottom:2px}
   --btn-fond:var(--surface-2);--btn-fond-survol:var(--surface-3)}
 .animopt.on{border-color:var(--primary);
   box-shadow:0 0 0 1px var(--primary),0 0 22px -8px var(--primary-halo)}
-.animopt .apercu{position:relative;aspect-ratio:3/4;border-radius:6px;
+.animopt .preview{position:relative;aspect-ratio:3/4;border-radius:6px;
   overflow:hidden;background:var(--art-fond);
   transition:transform var(--t-moyen) var(--ease),
              box-shadow var(--t-moyen) var(--ease)}
@@ -2777,7 +2777,7 @@ body.compact .filters{margin-bottom:2px}
 .animopt .apbandeau{position:absolute;left:0;right:0;bottom:0;height:19%;
   z-index:2;background:var(--capot);border-top:1px solid var(--eclat)}
 /* the effects (reflection, caption, edge) go above the sleeve */
-.animopt .apercu::before,.animopt .apercu::after{z-index:3}
+.animopt .preview::before,.animopt .preview::after{z-index:3}
 .animopt .anom{font-size:11.5px;font-weight:600;color:var(--text-2);
   line-height:1.25}
 .animopt.on .anom{color:var(--primary)}
@@ -2786,29 +2786,29 @@ body.compact .filters{margin-bottom:2px}
    above but carried by `data-apercu`: a thumbnail must not depend on the setting
    currently saved. */
 @media (hover:hover){
-  .animopt[data-apercu="0"]:hover .apercu{transform:translateY(-3px);
+  .animopt[data-apercu="0"]:hover .preview{transform:translateY(-3px);
     box-shadow:0 10px 22px -14px var(--ombre)}
   /* the same high pivot as on the real card, so the preview does not lie */
-  .animopt[data-apercu="1"] .apercu{transform-origin:50% 32%}
-  .animopt[data-apercu="1"]:hover .apercu{
+  .animopt[data-apercu="1"] .preview{transform-origin:50% 32%}
+  .animopt[data-apercu="1"]:hover .preview{
     transform:perspective(500px) rotateX(6deg) rotateY(-9deg) scale(1.04);
     box-shadow:-8px 14px 26px -12px var(--ombre)}
-  .animopt[data-apercu="1"] .apercu::after{content:"";position:absolute;
+  .animopt[data-apercu="1"] .preview::after{content:"";position:absolute;
     inset:-40%;background:linear-gradient(112deg,transparent 38%,
     rgba(255,255,255,.3) 48%,rgba(255,255,255,.06) 56%,transparent 64%);
     transform:translateX(-70%);opacity:0;
     transition:transform .62s var(--ease),opacity .28s}
-  .animopt[data-apercu="1"]:hover .apercu::after{
+  .animopt[data-apercu="1"]:hover .preview::after{
     transform:translateX(70%);opacity:1}
-  .animopt[data-apercu="2"]:hover .apercu{transform:translateY(-6px);
+  .animopt[data-apercu="2"]:hover .preview{transform:translateY(-6px);
     box-shadow:0 0 0 1px var(--primary-trait-fort),
                0 0 24px -4px var(--primary-halo)}
-  .animopt[data-apercu="3"] .apercu::after{content:"";position:absolute;
+  .animopt[data-apercu="3"] .preview::after{content:"";position:absolute;
     left:0;right:0;bottom:0;height:34%;
     background:linear-gradient(to top,var(--capot),transparent);
     transform:translateY(101%);transition:transform var(--t-moyen) var(--ease)}
-  .animopt[data-apercu="3"]:hover .apercu::after{transform:none}
-  .animopt[data-apercu="4"] .apercu::before{content:"";position:absolute;
+  .animopt[data-apercu="3"]:hover .preview::after{transform:none}
+  .animopt[data-apercu="4"] .preview::before{content:"";position:absolute;
     inset:0;border-radius:inherit;padding:1px;opacity:0;
     transition:opacity var(--t-moyen);
     background:conic-gradient(from var(--ang,0deg),transparent 0deg,
@@ -2816,9 +2816,9 @@ body.compact .filters{margin-bottom:2px}
     -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
     mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
     -webkit-mask-composite:xor;mask-composite:exclude}
-  .animopt[data-apercu="4"]:hover .apercu::before{opacity:1;
+  .animopt[data-apercu="4"]:hover .preview::before{opacity:1;
     animation:lisere-tourne 2.6s linear infinite}
-  .animopt[data-apercu="5"]:hover .apercu{
+  .animopt[data-apercu="5"]:hover .preview{
     transform:perspective(400px) translateY(-5px) rotateX(6deg);
     box-shadow:0 16px 30px -16px var(--ombre)}
   /* it is the OFFSET between the strip and the cover that makes the effect:
@@ -2856,10 +2856,10 @@ body.compact .filters{margin-bottom:2px}
 .ov.ovconsole.p-non{color:var(--sur-image);opacity:.55}
 .ov.ovconsole.p-non .ecran{fill:none}
 
-.ov.ovlangue{background:var(--capot);color:var(--sur-image);
+.ov.ovlang{background:var(--capot);color:var(--sur-image);
   box-shadow:inset 0 0 0 1px var(--primary-trait-fort);
   text-transform:none;letter-spacing:.2px}
-.gcard.groupe{box-shadow:inset 3px 0 0 var(--primary-trait)}
+.gcard.grouped{box-shadow:inset 3px 0 0 var(--primary-trait)}
 /* The versions get their own dialog: a list, not an unfolding inside the grid.
    Unfolded in place, they mixed with the other games and nothing said any more
    where the group began. */
@@ -2903,14 +2903,14 @@ body.compact .filters{margin-bottom:2px}
 .games.taille-compact .gcard .ph{padding:16%}
 
 /* In the detail view: the medium's name, preceded by its drawing. */
-.supportligne{display:flex;align-items:center;gap:7px;margin:0 0 7px;
+.mediumrow{display:flex;align-items:center;gap:7px;margin:0 0 7px;
   font-family:var(--disp);font-size:11.5px;font-weight:600;letter-spacing:.08em;
   text-transform:uppercase;color:var(--text-3)}
-.supportligne{flex-wrap:wrap}
-.supportligne .support.gros{width:15px;height:15px;flex:0 0 auto;
+.mediumrow{flex-wrap:wrap}
+.mediumrow .support.gros{width:15px;height:15px;flex:0 0 auto;
   color:var(--text-2)}
-.supportligne .sep{opacity:.5}
-.supportligne .langues{letter-spacing:.04em;text-transform:none;
+.mediumrow .sep{opacity:.5}
+.mediumrow .languages{letter-spacing:.04em;text-transform:none;
   font-family:var(--body);font-size:12px;font-weight:500}
 
 /* The medium's edge, at the top of the cover. It only appears in the "all
@@ -3006,11 +3006,11 @@ body.compact .filters{margin-bottom:2px}
 .palitem.on .paltype{border-color:var(--primary-trait);color:var(--primary)}
 .paltitre{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;
   white-space:nowrap;color:var(--text)}
-.paletat{font:9.5px/1 var(--disp);font-weight:700;letter-spacing:.8px;
+.palstate{font:9.5px/1 var(--disp);font-weight:700;letter-spacing:.8px;
   text-transform:uppercase;flex:0 0 auto}
 .paldetail{font:10.5px/1 var(--mono);color:var(--text-3);flex:0 0 auto;
   font-variant-numeric:tabular-nums}
-.palvide{padding:22px;text-align:center;color:var(--text-3);font-size:13px}
+.palempty{padding:22px;text-align:center;color:var(--text-3);font-size:13px}
 .palpied{display:flex;gap:16px;justify-content:flex-end;padding:9px 14px;
   border-top:1px solid var(--line);background:var(--surface-2);
   font-size:11px;color:var(--text-3)}
@@ -3032,26 +3032,26 @@ body.compact .filters{margin-bottom:2px}
    A reduced detail view that appears after a held hover. Deliberately narrow: it
    answers "what is this, and where does it stand?", no more — otherwise you may
    as well open the real detail view. */
-.apercujeu{position:fixed;z-index:40;width:270px;max-width:82vw;
+.gamepreview{position:fixed;z-index:40;width:270px;max-width:82vw;
   padding:13px 15px;border-radius:12px;
   background:var(--verre-plein);border:1px solid var(--line);
   box-shadow:0 22px 50px -22px var(--ombre);backdrop-filter:blur(10px);
   opacity:0;transform:translateY(6px) scale(.985);pointer-events:none;
   transition:opacity var(--t-court) var(--ease),
              transform var(--t-court) var(--ease)}
-.apercujeu.on{opacity:1;transform:none}
-.apercujeu .aptitre{font-size:13.5px;font-weight:600;line-height:1.3;
+.gamepreview.on{opacity:1;transform:none}
+.gamepreview .aptitre{font-size:13.5px;font-weight:600;line-height:1.3;
   color:var(--text)}
-.apercujeu .apetat{margin-top:5px;font-family:var(--disp);font-size:10px;
+.gamepreview .apetat{margin-top:5px;font-family:var(--disp);font-size:10px;
   font-weight:700;letter-spacing:.9px;text-transform:uppercase}
-.apercujeu .apgrille{margin-top:10px;display:grid;gap:4px;
+.gamepreview .apgrille{margin-top:10px;display:grid;gap:4px;
   border-top:1px solid var(--line);padding-top:9px}
-.apercujeu .apl{display:flex;justify-content:space-between;gap:12px;
+.gamepreview .apl{display:flex;justify-content:space-between;gap:12px;
   font-size:11.5px;color:var(--text-3)}
-.apercujeu .apl b{color:var(--text-2);font-weight:600;
+.gamepreview .apl b{color:var(--text-2);font-weight:600;
   font-family:var(--mono);font-size:11px;font-variant-numeric:tabular-nums;
   text-align:right}
-.apercujeu .apresume{margin:9px 0 0;font-size:11.5px;line-height:1.5;
+.gamepreview .apresume{margin:9px 0 0;font-size:11.5px;line-height:1.5;
   color:var(--text-3);border-top:1px solid var(--line);padding-top:9px}
 
 /* --- segmented selector: theme and motion are chosen at a glance, not from a
@@ -3074,7 +3074,7 @@ body.compact .filters{margin-bottom:2px}
    short step to a long one made the footer jump under the cursor, and the user
    clicked "Next" twice.
    ========================================================================= */
-.onbcarte{max-width:600px;display:flex;flex-direction:column;gap:0}
+.onbcard{max-width:600px;display:flex;flex-direction:column;gap:0}
 .onbtete{display:flex;align-items:center;justify-content:space-between;
   gap:12px;margin-bottom:14px}
 .onbrang{font-family:var(--mono);font-size:11px;letter-spacing:.08em;
@@ -3143,7 +3143,7 @@ body.compact .filters{margin-bottom:2px}
 .onbresultat{margin-top:14px;padding:13px 14px;border-radius:9px;
   border:1px solid var(--success-trait);background:var(--success-voile);
   font-size:13px;animation:enter .3s var(--ease)}
-.onbresultat.vide{border-color:var(--primary-halo);background:var(--primary-doux)}
+.onbresultat.empty{border-color:var(--primary-halo);background:var(--primary-doux)}
 .onbpf{display:flex;flex-wrap:wrap;gap:7px;margin-top:11px}
 .onbpuce{font-size:11.5px;padding:4px 9px;border-radius:999px;
   background:var(--panel);border:1px solid var(--rule);color:var(--mute);
@@ -3221,8 +3221,8 @@ body.compact .filters{margin-bottom:2px}
 #ludowrap #ludobrowser .card{max-height:min(46vh,420px);overflow:auto}
 /* A folder we are not allowed to read stays visible — hiding it would suggest
    it does not exist — but it says it leads nowhere. */
-.brow.dir.muet{opacity:.5}
-.brow.dir.muet .ic{color:var(--mute)}
+.brow.dir.mute{opacity:.5}
+.brow.dir.mute .ic{color:var(--mute)}
 /* The current path, inside a settings row. It must neither overflow nor push
    the button off the row.
    An earlier version let it wrap, and its comment said why: truncating

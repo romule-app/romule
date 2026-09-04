@@ -166,6 +166,15 @@ jobs:
           python3 outils/verifier-imports.py --autotest
           python3 outils/verifier-imports.py --tout
 
+      # Une classe CSS vit dans trois fichiers. Renommee dans deux, la page
+      # s'affiche encore, avec une regle qui ne correspond plus a rien. Le
+      # controle compare a une reference figee : le but n'est pas d'atteindre
+      # zero, c'est qu'un renommage ne CHANGE pas les deux listes.
+      - name: Les classes CSS sont-elles toutes reliees ?
+        run: |
+          python3 outils/verifier-classes.py --autotest
+          python3 outils/verifier-classes.py --strict
+
       - name: La specification OpenAPI est-elle a jour ?
         run: |
           python -m romule.apiv1 > /tmp/openapi-attendu.json

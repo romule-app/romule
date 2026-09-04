@@ -133,25 +133,25 @@ const fab = ids.get('fab'), jauge = ids.get('fabjauge');
 (async () => {
   console.log('   -- 1. at rest --');
   ctx.__t.renderTask({running: false, log: []});
-  t('button not marked as working', !fab.classList.contains('travaille'));
+  t('button not marked as working', !fab.classList.contains('working'));
   t('no title displayed', ids.get('fabtitre').textContent === '');
 
   console.log('   -- 2. a task with a known total --');
   ctx.__t.renderTask({running: true, label: 'convert_files', done: 3, total: 12,
                        detail: 'jeu.nsz', log: []});
-  t('button marked as working', fab.classList.contains('travaille'));
+  t('button marked as working', fab.classList.contains('working'));
   t('the task name is translated', ids.get('fabtitre').textContent === 'Conversion',
     ids.get('fabtitre').textContent);
   t('counter on the button', /3\/12/.test(ids.get('fabreste').textContent),
     ids.get('fabreste').textContent);
   t('gauge at 25 %', jauge.style.strokeDasharray === '25 100', jauge.style.strokeDasharray);
-  t('not in indeterminate mode', !fab.classList.contains('cherche'));
+  t('not in indeterminate mode', !fab.classList.contains('seeking'));
   t('the ring is measured on the outline', ids.get('fabring').getAttribute('viewBox') === '0 0 54 54',
     ids.get('fabring').getAttribute('viewBox'));
 
   console.log('   -- 3. unknown total --');
   ctx.__t.renderTask({running: true, label: 'verify_library', done: 5, total: 0, log: []});
-  t('indeterminate mode', fab.classList.contains('cherche'));
+  t('indeterminate mode', fab.classList.contains('seeking'));
   t('a short segment turning', jauge.style.strokeDasharray === '18 82', jauge.style.strokeDasharray);
   t('the name is translated', ids.get('fabtitre').textContent === 'Vérification');
 
@@ -162,14 +162,14 @@ const fab = ids.get('fab'), jauge = ids.get('fabjauge');
 
   console.log('   -- 5. end of task --');
   ctx.__t.renderTask({running: false, log: []});
-  t('the indicator is cleared', !fab.classList.contains('travaille')
+  t('the indicator is cleared', !fab.classList.contains('working')
     && ids.get('fabtitre').textContent === '');
 
   console.log('   -- 6. uploading files --');
   ctx.__t.uploadFiles([{name: 'gros.nsp', size: 9000}, {name: 'petit.nsp', size: 1000},
                        {name: 'notice.txt', size: 10}]);
   t('only the handled types are sent', ENVOIS.length === 1, ENVOIS.length);
-  t('the indicator is active during the upload', fab.classList.contains('travaille'));
+  t('the indicator is active during the upload', fab.classList.contains('working'));
   t('the title shows the progress', /Envoi 1\/2/.test(ids.get('fabtitre').textContent),
     ids.get('fabtitre').textContent);
   // 50 % of the FIRST file = 4500 / 10000 bytes in total, so 45 %
