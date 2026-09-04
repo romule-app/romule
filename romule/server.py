@@ -27,7 +27,7 @@ from html import escape as html_escape
 from urllib.parse import parse_qs, unquote
 
 from . import (actions, apikeys, apiv1, audit, auth, comptes, config, console,
-               covers, maj, net, notifs,
+               covers, net, notifs, updates,
                device, edenconf,
                doublons, emuready, igdb, integrity, journal_acces, meta, nand,
                parcourir, sauvegarde, saves,
@@ -825,7 +825,7 @@ class Handler(BaseHTTPRequestHandler):
             # Lazy: it returns what it knows and only goes out when the cache
             # is more than a day old. A GitHub outage answers "I don't know",
             # never an error — a failed check must not show.
-            self._json(maj.etat(CFG))
+            self._json(updates.state(CFG))
         elif p == "/api/vues":
             self._json({"vues": vues.liste()})
         elif p == "/api/notifs":
