@@ -29,7 +29,7 @@ from urllib.parse import parse_qs, unquote
 from . import (actions, apikeys, apiv1, audit, auth, comptes, config, console,
                covers, net, notify, updates,
                device, edenconf,
-               doublons, emuready, igdb, integrity, journal_acces, meta, nand,
+               duplicates, emuready, igdb, integrity, journal_acces, meta, nand,
                parcourir, sauvegarde, saves,
                scan, systems, titleid, transferts, trash, versions, vues,
                profils, nsztool)
@@ -1388,7 +1388,7 @@ class Handler(BaseHTTPRequestHandler):
                         "items": actions.scan_import()})
 
         elif p == "/api/doublons":
-            r = doublons.rapport(LIB, CFG)
+            r = duplicates.report(LIB, CFG)
             # The full entries are heavy: the client only needs the name, the
             # size and the path in order to decide.
             def _leger(e):
