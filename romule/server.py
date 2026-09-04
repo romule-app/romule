@@ -1997,8 +1997,8 @@ def _health():
             # Installation advice suited to THIS machine. The wizard used to
             # show a Homebrew command to everyone, including on a Debian NAS or
             # inside a container.
-            "remede_nsz": cli.remede("nsz"),
-            "remede_adb": cli.remede("adb"),
+            "remede_nsz": cli.remedy("nsz"),
+            "remede_adb": cli.remedy("adb"),
             # Enough to judge whether access must be protected BEFORE anything
             # else: a service reachable over the network with no authentication
             # is the worst defect a fresh installation can have.
@@ -2207,7 +2207,7 @@ def _faits_de_demarrage(url, ip, jeton_auto):
 
 
 def serve(open_browser=True):
-    # The data folder has already been validated by `cli._verifier_racine()`.
+    # The data folder has already been validated by `cli._check_root()`.
     # The drop folder, on the other hand, is a CONVENIENCE: the library may be
     # read-only and the rest of the service stay perfectly useful. We report,
     # we do not stop.
