@@ -75,6 +75,20 @@
   Telegram, ntfy, Gotify, or any webhook — the service is worked out from the
   address you paste. A thirty-file conversion is exactly when you are not in
   front of the screen.
+- 🗓️ **Does the boring part while you sleep.** Five presets — never, at
+  startup, hourly, every six hours, nightly at an hour you pick — on the tasks
+  that are reversible. If one is already running, the due one is skipped rather
+  than queued, and the log says so. Emptying the trash is not schedulable, and
+  that is not an oversight.
+- 🎛️ **Several consoles, not one setting overwritten twice.** An Odin and a
+  Retroid each keep their own folder, pairing, emulator and layout, and Romule
+  remembers what each one held — so it can answer *which console is this game
+  on?* about the one that is not plugged in.
+- 📋 **One screen that says what is wrong.** Broken files, orphaned DLC,
+  superseded versions, duplicates, games with no entry, what is still waiting
+  in the drop folder — each with the button that deals with it, and with how
+  much of the library has ever been fingerprinted, because *no problem found*
+  means something different at 4 % than at 100 %.
 - 🩺 **Debuggable from a terminal.** `romule doctor` prints everything a bug
   report should contain; `romule user passwd` gets you back in when the
   password and the second factor are both gone; `ROMULE_LOG=debug` turns
