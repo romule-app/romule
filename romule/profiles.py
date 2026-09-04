@@ -25,7 +25,10 @@ from pathlib import Path
 
 from . import config
 
-DOSSIER = Path(__file__).resolve().parent / "profils"
+# The FOLDER keeps its French name while the module took an English one: it is
+# shipped by `pyproject.toml`'s `package-data`, and its name is a path in every
+# wheel already built. A file name on someone's disk is data, not code.
+FOLDER = Path(__file__).resolve().parent / "profils"
 DEFAULT = "eden"
 
 _CACHE = None
@@ -36,7 +39,7 @@ def all_profiles():
     global _CACHE
     if _CACHE is None:
         out = []
-        for f in sorted(DOSSIER.glob("*.json")):
+        for f in sorted(FOLDER.glob("*.json")):
             try:
                 out.append(json.loads(f.read_text(encoding="utf-8")))
             except (OSError, ValueError):
