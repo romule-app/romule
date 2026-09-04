@@ -21,7 +21,7 @@ from . import systems
 
 # What is stripped from a file name to compare TITLES: region, language,
 # revision, version number, scene tags, extension.
-_BRUIT = [
+_NOISE = [
     r"\((?:europe|usa|japan|france|germany|spain|italy|world|eur|us|jp|fr|de|es|it|"
     r"en|multi\d*|rev\s*\d+|v\d[\d.]*|proto|beta|demo|unl|beta\d*)\)",
     r"\[(?:[^\]]*)\]",
@@ -33,23 +33,23 @@ _BRUIT = [
 ]
 
 # Words that do not tell two titles apart.
-_VIDES = {"the", "a", "le", "la", "les", "of", "de", "du", "and", "et"}
+_STOPWORDS = {"the", "a", "le", "la", "les", "of", "de", "du", "and", "et"}
 
 
-def titre_reduit(nom):
+def reduced_title(name):
     """A comparable form of a game name: lowercase, no region, no version."""
     # Without unfolding accents, "Pokémon" becomes "poke mon": two words where
     # there is one, and a reduced title that reads as nonsense in the report.
-    s = unicodedata.normalize("NFKD", nom or "")
+    s = unicodedata.normalize("NFKD", name or "")
     s = "".join(c for c in s if not unicodedata.combining(c)).lower()
-    for motif in _BRUIT:
-        s = re.sub(motif, " ", s)
+    for pattern in _NOISE:
+        s = re.sub(pattern, " ", s)
     s = re.sub(r"[^a-z0-9]+", " ", s)
-    mots = [m for m in s.split() if m and m not in _VIDES]
-    return " ".join(mots)
+    words = [m for m in s.split() if m and m not in _STOPWORDS]
+    return " ".join(words)
 
 
-def _entrees(lib, cfg):
+def _entries(lib, cfg):
     """Every known game, Switch and other platforms, in one common shape."""
     out = []
     for f in lib.files:
@@ -68,55 +68,55 @@ def _entrees(lib, cfg):
     return out
 
 
-def chercher(lib, cfg, empreintes=None):
+def find(lib, cfg, digests=None):
     """Return the three families of duplicates."""
-    entrees = _entrees(lib, cfg)
+    entries = _entries(lib, cfg)
 
     # 1. strictly identical files (same known digest)
-    identiques = []
-    if empreintes:
-        par_sha = {}
-        for rel, e in empreintes.items():
-            par_sha.setdefault(e.get("sha1"), []).append((rel, e.get("size", 0)))
-        for sha, lot in par_sha.items():
-            if sha and len(lot) > 1:
-                identiques.append({"empreinte": sha, "taille": lot[0][1],
-                                   "fichiers": [r for r, _ in lot]})
+    identical = []
+    if digests:
+        by_sha = {}
+        for rel, e in digests.items():
+            by_sha.setdefault(e.get("sha1"), []).append((rel, e.get("size", 0)))
+        for sha, batch in by_sha.items():
+            if sha and len(batch) > 1:
+                identical.append({"empreinte": sha, "taille": batch[0][1],
+                                   "fichiers": [r for r, _ in batch]})
 
     # 2. same title, different platforms
     # 3. same title, same platform (regions/revisions)
-    par_titre = {}
-    for e in entrees:
-        cle = titre_reduit(e["nom"])
-        if len(cle) < 3:
+    by_title = {}
+    for e in entries:
+        key = reduced_title(e["nom"])
+        if len(key) < 3:
             continue
-        par_titre.setdefault(cle, []).append(e)
+        by_title.setdefault(key, []).append(e)
 
     multi, regions = [], []
-    for cle, lot in sorted(par_titre.items()):
-        if len(lot) < 2:
+    for key, batch in sorted(by_title.items()):
+        if len(batch) < 2:
             continue
-        plateformes = {e["plateforme"] for e in lot}
+        platforms = {e["plateforme"] for e in batch}
         # On the Switch, two files sharing a base title ID are the same copy
         # seen twice, not a duplicate.
-        tids = {e["tid"][:13] for e in lot if e["tid"]}
-        if len(plateformes) > 1:
-            multi.append({"titre": cle, "plateformes": sorted(plateformes),
-                          "entrees": lot})
-        elif len(lot) > 1 and len(tids) != 1:
-            regions.append({"titre": cle, "plateforme": lot[0]["plateforme"],
-                            "entrees": lot,
-                            "octets": sum(e["taille"] for e in lot[1:])})
+        tids = {e["tid"][:13] for e in batch if e["tid"]}
+        if len(platforms) > 1:
+            multi.append({"titre": key, "plateformes": sorted(platforms),
+                          "entrees": batch})
+        elif len(batch) > 1 and len(tids) != 1:
+            regions.append({"titre": key, "plateforme": batch[0]["plateforme"],
+                            "entrees": batch,
+                            "octets": sum(e["taille"] for e in batch[1:])})
 
     return {
-        "identiques": sorted(identiques, key=lambda x: -x["taille"]),
+        "identiques": sorted(identical, key=lambda x: -x["taille"]),
         "multi_plateformes": multi,
         "regions": sorted(regions, key=lambda x: -x["octets"]),
-        "recuperable": sum(x["taille"] * (len(x["fichiers"]) - 1) for x in identiques)
+        "recuperable": sum(x["taille"] * (len(x["fichiers"]) - 1) for x in identical)
                        + sum(x["octets"] for x in regions),
     }
 
 
-def rapport(lib, cfg):
+def report(lib, cfg):
     from . import integrity
-    return chercher(lib, cfg, integrity._load())
+    return find(lib, cfg, integrity._load())
