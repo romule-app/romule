@@ -32,16 +32,16 @@ from pathlib import Path
 
 from . import config, net
 
-NIVEAUX = {"grave": 3, "alerte": 2, "info": 1, "bon": 0}
+LEVELS = {"grave": 3, "alerte": 2, "info": 1, "bon": 0}
 
 
-def _c(niveau, titre, constat, remede=""):
-    return {"niveau": niveau, "titre": titre, "constat": constat, "remede": remede}
+def _c(level, title, finding, remedy=""):
+    return {"niveau": level, "titre": title, "constat": finding, "remede": remedy}
 
 
 # ------------------------------------------------------------------ posture
 
-def _acces(cfg):
+def _access(cfg):
     """Who can open the library, and with what."""
     from . import auth, accounts
     out = []
@@ -179,7 +179,7 @@ def _code():
     ]
     out = []
     fichiers = list(config.PKG.glob("*.py")) + list((config.PKG / "static").glob("*.js"))
-    for motif, titre, pourquoi, portee in interdits:
+    for motif, title, pourquoi, portee in interdits:
         touches = []
         for f in fichiers:
             if f.name == "audit.py":
@@ -191,7 +191,7 @@ def _code():
                 if re.search(motif, ligne):
                     touches.append("%s:%d" % (f.name, n))
         if touches:
-            out.append(_c("alerte", titre, "%s  (%s)" % (pourquoi, ", ".join(touches[:5])),
+            out.append(_c("alerte", title, "%s  (%s)" % (pourquoi, ", ".join(touches[:5])),
                           "Verifie chaque occurrence, ou justifie-la en commentaire."))
     out += _innerhtml()
     if not out:
@@ -203,10 +203,10 @@ def _code():
 
 
 # Fields that come from the user or the network and end up on screen.
-_SENSIBLES = ("nom", "email", "titre", "name", "message", "error", "resume")
+_SENSITIVE = ("nom", "email", "titre", "name", "message", "error", "resume")
 
 
-def _sans_esc(expression):
+def _without_esc(expression):
     """Sensitive identifiers concatenated WITHOUT going through esc().
 
     We first strip everything already inside an `esc(...)`, then look at what
@@ -226,7 +226,7 @@ def _sans_esc(expression):
             k += 1
         i = k
     texte_restant = "".join(reste)
-    return [c for c in _SENSIBLES
+    return [c for c in _SENSITIVE
             if re.search(r"[+\s]\w+\.%s\b" % c, texte_restant)]
 
 
@@ -239,7 +239,7 @@ def _innerhtml():
             fin = src.find(";", m.end())
             expression = src[m.end():fin if fin > 0 else len(src)]
             ligne = src.count("\n", 0, m.start()) + 1
-            for champ in _sans_esc(expression):
+            for champ in _without_esc(expression):
                 touches.append("%s:%d (%s)" % (f.name, ligne, champ))
     if touches:
         return [_c("alerte", "Donnee injectee en innerHTML sans echappement",
@@ -249,7 +249,7 @@ def _innerhtml():
     return []
 
 
-def _entetes():
+def _headers():
     """Are the security headers still being set by the server?"""
     src = (config.PKG / "server.py").read_text(encoding="utf-8", errors="replace")
     attendus = ("Content-Security-Policy", "X-Content-Type-Options",
@@ -307,10 +307,10 @@ def _csrf():
 
 # ---------------------------------------------------------------- dependances
 
-def _python(hors_ligne):
+def _python(offline):
     v = "%d.%d" % sys.version_info[:2]
     detail = "Python %d.%d.%d" % sys.version_info[:3]
-    if hors_ligne:
+    if offline:
         return [_c("info", "Version de Python", detail + " — non verifiee "
                    "(mode hors ligne).")]
     try:
@@ -336,7 +336,7 @@ def _python(hors_ligne):
                detail + " — serie inconnue du referentiel.")]
 
 
-def _dependances():
+def _dependencies():
     """The project claims zero dependencies: we check it, it is not decreed.
 
     Parsed with `ast`, not with a regular expression. The regex matched any
@@ -382,7 +382,7 @@ def _dependances():
                "en amont, rien a mettre a jour en urgence.")]
 
 
-def _cles_api():
+def _api_keys():
     """API keys are an access path in their own right: they belong in the
     report that says who can get in.
 
@@ -415,42 +415,42 @@ def _cles_api():
 
 # -------------------------------------------------------------------- rapport
 
-def lancer(cfg=None, hors_ligne=False):
+def run(cfg=None, offline=False):
     cfg = cfg or config.load_config()
     controles = []
-    for f in (_acces, _secrets):
+    for f in (_access, _secrets):
         controles += f(cfg)
-    controles += _permissions() + _entetes() + _csp() + _csrf() + _code()
-    controles += _cles_api()
-    controles += _dependances() + _python(hors_ligne)
-    pire = max((NIVEAUX[c["niveau"]] for c in controles), default=0)
+    controles += _permissions() + _headers() + _csp() + _csrf() + _code()
+    controles += _api_keys()
+    controles += _dependencies() + _python(offline)
+    pire = max((LEVELS[c["niveau"]] for c in controles), default=0)
     return {
         "controles": controles,
         "pire": pire,
         "resume": {n: sum(1 for c in controles if c["niveau"] == n)
-                   for n in NIVEAUX},
+                   for n in LEVELS},
     }
 
 
-def code_sortie(rapport):
+def exit_code(report):
     """2 = severe problem, 1 = warning, 0 = nothing to report."""
-    return {3: 2, 2: 1}.get(rapport["pire"], 0)
+    return {3: 2, 2: 1}.get(report["pire"], 0)
 
 
-SYMBOLE = {"grave": "[GRAVE ]", "alerte": "[ALERTE]",
+SYMBOL = {"grave": "[GRAVE ]", "alerte": "[ALERTE]",
            "info": "[ INFO ]", "bon": "[  OK  ]"}
 
 
-def texte(rapport):
+def text(report):
     lignes = ["Audit de securite — %s" % config.ROOT,
               "Ludotheque — %s" % config.LUDO, ""]
-    for c in sorted(rapport["controles"], key=lambda x: -NIVEAUX[x["niveau"]]):
-        lignes.append("%s %s" % (SYMBOLE[c["niveau"]], c["titre"]))
+    for c in sorted(report["controles"], key=lambda x: -LEVELS[x["niveau"]]):
+        lignes.append("%s %s" % (SYMBOL[c["niveau"]], c["titre"]))
         lignes.append("         %s" % c["constat"])
         if c["remede"]:
             lignes.append("         -> %s" % c["remede"])
         lignes.append("")
-    r = rapport["resume"]
+    r = report["resume"]
     lignes.append("%d grave(s), %d alerte(s), %d info, %d conforme(s)."
                   % (r["grave"], r["alerte"], r["info"], r["bon"]))
     return "\n".join(lignes)
@@ -458,12 +458,12 @@ def texte(rapport):
 
 def main(argv=None):
     argv = argv if argv is not None else sys.argv[1:]
-    rapport = lancer(hors_ligne="--hors-ligne" in argv)
+    report = run(offline="--hors-ligne" in argv)
     if "--json" in argv:
-        print(json.dumps(rapport, indent=2, ensure_ascii=False))
+        print(json.dumps(report, indent=2, ensure_ascii=False))
     else:
-        print(texte(rapport))
-    return code_sortie(rapport)
+        print(text(report))
+    return exit_code(report)
 
 
 if __name__ == "__main__":
