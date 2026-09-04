@@ -32,7 +32,7 @@ _VERSION = re.compile(r"^v?(\d+)\.(\d+)\.(\d+)")
 
 SOURCE = "https://api.github.com/repos/romule-app/romule/releases/latest"
 CACHE = config.fichier_etat("_romule-maj.json", "_romule-maj.json")
-DUREE = 24 * 3600
+TTL = 24 * 3600
 # Past this, the release note is truncated: it shows in a dialog, not in a
 # documentation browser.
 MAX_NOTES = 4000
@@ -43,18 +43,18 @@ def _triplet(v):
     return tuple(int(x) for x in m.groups()) if m else None
 
 
-def plus_recente(publiee, courante=None):
-    """Is `publiee` strictly newer than `courante`?
+def newer_than(published, current=None):
+    """Is `published` strictly newer than `current`?
 
     Compares NUMBERS, not strings: "0.10.0" comes after "0.9.0", which a
     lexical comparison gets wrong. A version we cannot read triggers nothing —
     better to stay silent than to cry out wrongly.
     """
-    a, b = _triplet(publiee), _triplet(courante or __version__)
+    a, b = _triplet(published), _triplet(current or __version__)
     return bool(a and b and a > b)
 
 
-def _lire_cache():
+def _read_cache():
     try:
         d = json.loads(CACHE.read_text(encoding="utf-8"))
         return d if isinstance(d, dict) else {}
@@ -62,7 +62,7 @@ def _lire_cache():
         return {}
 
 
-def _ecrire_cache(d):
+def _write_cache(d):
     try:
         CACHE.parent.mkdir(parents=True, exist_ok=True)
         CACHE.write_text(json.dumps(d, indent=2, ensure_ascii=False) + "\n",
@@ -71,7 +71,7 @@ def _ecrire_cache(d):
         pass                      # a full disk must not break the interface
 
 
-def _demander():
+def _ask_github():
     """Ask GitHub. Returns a dict, or raises."""
     req = net.urllib.request.Request(
         SOURCE, headers={"Accept": "application/vnd.github+json",
@@ -88,7 +88,7 @@ def _demander():
             "publiee": str(d.get("published_at") or "")}
 
 
-def etat(cfg=None, forcer=False):
+def state(cfg=None, force=False):
     """What we know about the latest version. Never raises.
 
     Always returns the same keys, so the interface need not tell "not checked
@@ -96,27 +96,27 @@ def etat(cfg=None, forcer=False):
     to show.
     """
     cfg = cfg or config.load_config()
-    reponse = {"courante": __version__, "disponible": False, "version": "",
-               "titre": "", "notes": "", "url": "", "verifie": 0,
-               "actif": bool(cfg.get("maj_check", True))}
-    if not reponse["actif"]:
-        return reponse
+    answer = {"courante": __version__, "disponible": False, "version": "",
+              "titre": "", "notes": "", "url": "", "verifie": 0,
+              "actif": bool(cfg.get("maj_check", True))}
+    if not answer["actif"]:
+        return answer
 
-    cache = _lire_cache()
-    frais = (time.time() - float(cache.get("verifie") or 0)) < DUREE
-    if forcer or not frais:
+    cache = _read_cache()
+    fresh = (time.time() - float(cache.get("verifie") or 0)) < TTL
+    if force or not fresh:
         try:
-            cache = _demander()
+            cache = _ask_github()
             cache["verifie"] = int(time.time())
-            _ecrire_cache(cache)
+            _write_cache(cache)
         except Exception:
             # Network down, GitHub unavailable, quota reached: keep what we
             # had. A failed check is not an event.
             if not cache:
-                return reponse
+                return answer
 
-    reponse.update({k: cache.get(k, reponse[k])
-                    for k in ("version", "titre", "notes", "url")})
-    reponse["verifie"] = int(cache.get("verifie") or 0)
-    reponse["disponible"] = plus_recente(cache.get("version"))
-    return reponse
+    answer.update({k: cache.get(k, answer[k])
+                   for k in ("version", "titre", "notes", "url")})
+    answer["verifie"] = int(cache.get("verifie") or 0)
+    answer["disponible"] = newer_than(cache.get("version"))
+    return answer

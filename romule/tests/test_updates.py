@@ -17,8 +17,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 _TMP = Path(tempfile.mkdtemp(prefix="romule-maj-"))
-from romule import maj                                          # noqa: E402
-maj.CACHE = _TMP / "_romule-maj.json"
+from romule import updates                                          # noqa: E402
+updates.CACHE = _TMP / "_romule-updates.json"
 
 ok = ko = 0
 
@@ -45,7 +45,7 @@ def test_comparaison():
         ("", "0.2.0", False, "vide"),
     ]
     for publiee, courante, attendu, pourquoi in CAS:
-        v = maj.plus_recente(publiee, courante)
+        v = updates.newer_than(publiee, courante)
         t("%-10s > %-9s -> %s" % (repr(publiee), repr(courante), attendu),
           v == attendu, "obtenu %s (%s)" % (v, pourquoi))
 
@@ -54,55 +54,55 @@ def test_le_reglage_coupe_avant_le_reseau():
     """The setting must be read BEFORE going out: otherwise "disabled" would
     mean "we ask anyway, but we do not display"."""
     appels = []
-    vrai = maj.net.open_url
-    maj.net.open_url = lambda *a, **k: appels.append(a) or (_ for _ in ()).throw(
+    vrai = updates.net.open_url
+    updates.net.open_url = lambda *a, **k: appels.append(a) or (_ for _ in ()).throw(
         RuntimeError("ne doit pas etre appele"))
     try:
-        r = maj.etat({"maj_check": False})
+        r = updates.state({"maj_check": False})
         t("desactive : aucune sortie reseau", not appels, appels)
         t("desactive : rien a montrer", r["disponible"] is False and not r["version"])
         t("desactive : l'interface le sait", r["actif"] is False)
     finally:
-        maj.net.open_url = vrai
+        updates.net.open_url = vrai
 
 
 def test_une_panne_ne_se_voit_pas():
-    maj.CACHE.unlink(missing_ok=True)
-    vrai = maj.net.open_url
+    updates.CACHE.unlink(missing_ok=True)
+    vrai = updates.net.open_url
 
     def casse(*a, **k):
         raise OSError("network down")
 
-    maj.net.open_url = casse
+    updates.net.open_url = casse
     try:
-        r = maj.etat({"maj_check": True})
+        r = updates.state({"maj_check": True})
         t("network down: no exception", isinstance(r, dict))
         t("network down: nothing to announce", r["disponible"] is False)
         t("network down: the current version is returned all the same",
-          r["courante"] == maj.__version__)
+          r["courante"] == updates.__version__)
     finally:
-        maj.net.open_url = vrai
+        updates.net.open_url = vrai
 
 
 def test_le_cache_evite_les_appels():
     """GitHub limits anonymous requests. A fresh cache must be enough."""
-    maj.CACHE.write_text(json.dumps({
+    updates.CACHE.write_text(json.dumps({
         "version": "v99.0.0", "titre": "Essai", "notes": "des notes",
         "url": "https://exemple.fr", "verifie": int(__import__("time").time())}),
         encoding="utf-8")
     appels = []
-    vrai = maj.net.open_url
-    maj.net.open_url = lambda *a, **k: appels.append(a) or (_ for _ in ()).throw(
+    vrai = updates.net.open_url
+    updates.net.open_url = lambda *a, **k: appels.append(a) or (_ for _ in ()).throw(
         RuntimeError("ne doit pas etre appele"))
     try:
-        r = maj.etat({"maj_check": True})
+        r = updates.state({"maj_check": True})
         t("cache frais : aucun appel reseau", not appels, appels)
         t("cache frais : la version est rendue", r["version"] == "v99.0.0")
         t("cache frais : elle est annoncee plus recente", r["disponible"] is True)
         t("cache frais : les notes suivent", r["notes"] == "des notes")
     finally:
-        maj.net.open_url = vrai
-        maj.CACHE.unlink(missing_ok=True)
+        updates.net.open_url = vrai
+        updates.CACHE.unlink(missing_ok=True)
 
 
 def test_le_prefixe_du_tag_est_retire():
@@ -121,10 +121,10 @@ def test_le_prefixe_du_tag_est_retire():
     corps = json.dumps({"tag_name": "v9.9.9", "name": "Essai",
                         "body": "notes", "html_url": "https://exemple.fr",
                         "published_at": "2026-01-01T00:00:00Z"}).encode()
-    vrai = maj.net.open_url
-    maj.net.open_url = lambda *a, **k: Fausse(corps)
+    vrai = updates.net.open_url
+    updates.net.open_url = lambda *a, **k: Fausse(corps)
     try:
-        r = maj.etat({"maj_check": True}, forcer=True)
+        r = updates.state({"maj_check": True}, force=True)
         t("le `v` du tag ne remonte pas a l'interface", r["version"] == "9.9.9",
           r["version"])
         t("et la version reste reconnue comme plus recente",
@@ -132,19 +132,19 @@ def test_le_prefixe_du_tag_est_retire():
         # The prefix never troubled the comparison: `_triplet` ignores it.
         # Checking it avoids believing this cleanup fixes it.
         t("la comparaison acceptait deja le prefixe",
-          maj.plus_recente("v9.9.9", "0.1.0") is True)
+          updates.newer_than("v9.9.9", "0.1.0") is True)
     finally:
-        maj.net.open_url = vrai
-        maj.CACHE.unlink(missing_ok=True)
+        updates.net.open_url = vrai
+        updates.CACHE.unlink(missing_ok=True)
 
 
 def test_la_sortie_est_gardee():
     """Every outbound call in Romule goes through `net.open_url()`, which
     refuses schemes other than http/https. This module must not escape it."""
-    src = (Path(maj.__file__)).read_text(encoding="utf-8")
-    t("maj.py n'appelle pas urlopen directement",
+    src = (Path(updates.__file__)).read_text(encoding="utf-8")
+    t("updates.py n'appelle pas urlopen directement",
       "urlopen(" not in src)
-    t("maj.py goes through net.open_url", "net.open_url(" in src)
+    t("updates.py goes through net.open_url", "net.open_url(" in src)
 
 
 for fn in (test_comparaison, test_le_reglage_coupe_avant_le_reseau,
