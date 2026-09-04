@@ -130,6 +130,10 @@ def _lib_response():
                  for f in a_installer],
         "pending": actions.scan_import(),
         "config": _config_publique(),
+        # Which consoles are declared, and which one is being driven. It travels
+        # with the inventory rather than on a route of its own: the selector is
+        # drawn on the same pass as everything else it sits next to.
+        "consoles": consoles.public(CFG),
         "device": device.state(),
         "covers_v": covers.version(),
         # translated titles and summaries already cached: disk reads only, so
