@@ -851,7 +851,7 @@ class Handler(BaseHTTPRequestHandler):
                 if n:
                     JOB.log("Purge automatique : %d lot(s), %.1f Go liberes"
                             % (n, octets / 2 ** 30))
-            self._json({"items": trash.listing(), "resume": trash.resume(),
+            self._json({"items": trash.listing(), "resume": trash.summary(),
                         "jours": jours})
         elif p == "/api/health":
             # The container's probe queries this route with GET. It was only
@@ -1479,7 +1479,7 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"message": "%d lot(s) purge(s), %.1f Go liberes"
                         % (n, octets / 2 ** 30) if n
                         else "Rien a purger (aucun lot au-dela du delai).",
-                        "resume": trash.resume()})
+                        "resume": trash.summary()})
 
         elif p == "/api/restore":
             self._json({"message": trash.restore(d.get("name", ""))})
