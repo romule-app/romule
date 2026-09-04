@@ -15,30 +15,30 @@ from . import console
 # Log: we write on every event (a message lost in a crash is worth nothing),
 # and rotate the file by size — standard practice, better than a periodic
 # flush.
-MAX_OCTETS = 2 * 1024 * 1024
-GARDER = 3
-NIVEAUX = ("debug", "info", "ok", "warn", "error")
+MAX_BYTES = 2 * 1024 * 1024
+KEEP = 3
+LEVELS = ("debug", "info", "ok", "warn", "error")
 
 
-def _rotate(chemin):
+def _rotate(path):
     try:
-        if os.path.getsize(chemin) < MAX_OCTETS:
+        if os.path.getsize(path) < MAX_BYTES:
             return
     except OSError:
         return
-    for i in range(GARDER - 1, 0, -1):
-        vieux, neuf = "%s.%d" % (chemin, i), "%s.%d" % (chemin, i + 1)
+    for i in range(KEEP - 1, 0, -1):
+        vieux, neuf = "%s.%d" % (path, i), "%s.%d" % (path, i + 1)
         if os.path.exists(vieux):
             os.replace(vieux, neuf)
     try:
-        os.replace(chemin, "%s.1" % chemin)
+        os.replace(path, "%s.1" % path)
     except OSError:
         pass
 
 
-def _devine_niveau(texte):
+def _guess_level(text):
     """Infer the severity of a message that does not state one."""
-    t = texte.lower()
+    t = text.lower()
     if any(m in t for m in ("erreur", "echec", "impossible", "invalide", "corrompu",
                             "introuvable", "[erreur]")):
         return "error"
@@ -84,12 +84,12 @@ class JobRunner:
         # in front of a chatty log.
         self.module = "job"
 
-    def log(self, line, niveau=None):
+    def log(self, line, level=None):
         """Log an event. The level is inferred when not given."""
-        niveau = niveau if niveau in NIVEAUX else _devine_niveau(str(line))
+        level = level if level in LEVELS else _guess_level(str(line))
         entree = {"t": datetime.now().strftime("%H:%M:%S"),
                   "date": datetime.now().strftime("%F"),
-                  "n": niveau, "m": str(line)}
+                  "n": level, "m": str(line)}
         with self._lock:
             self.log_lines.append(entree)
             del self.log_lines[:-800]
@@ -97,13 +97,13 @@ class JobRunner:
         # it `docker logs romule` showed only the startup banner: everything
         # that happened afterwards existed for a browser only — that is, for
         # nobody on a server administered over ssh.
-        console.event(entree["m"], niveau, self.module)
+        console.event(entree["m"], level, self.module)
         if self.logfile:
             try:
                 _rotate(self.logfile)
                 with open(self.logfile, "a", encoding="utf-8") as fh:
                     fh.write("%s %s %-5s %s\n" % (entree["date"], entree["t"],
-                                                  niveau.upper(), entree["m"]))
+                                                  level.upper(), entree["m"]))
             except OSError:
                 pass
 
@@ -186,12 +186,12 @@ class JobRunner:
                     self.running = False
                     done, total, cancelled = self.done, self.total, self.cancelled
                 if err:
-                    resume, evt, niveau = "failed: %s" % err, "tache_echec", "error"
+                    resume, evt, level = "failed: %s" % err, "tache_echec", "error"
                 elif cancelled:
-                    resume, evt, niveau = ("interrupted at %d/%d" % (done, total),
+                    resume, evt, level = ("interrupted at %d/%d" % (done, total),
                                            "tache_echec", "warn")
                 else:
-                    resume, evt, niveau = ("finished (%d/%d)" % (done, total),
+                    resume, evt, level = ("finished (%d/%d)" % (done, total),
                                            "tache_ok", "ok")
                 if self.notify_end:
                     notify("%s : %s" % (label, resume))
@@ -204,7 +204,7 @@ class JobRunner:
                 # would fail startup rather than one notification.
                 try:
                     from . import notify
-                    notify.send(evt, "Romule — %s" % label, resume, niveau)
+                    notify.send(evt, "Romule — %s" % label, resume, level)
                 except Exception as exc:      # never fatal: this is a convenience
                     console.event("Notification impossible : %s" % exc,
                                       "warn", "notifs")

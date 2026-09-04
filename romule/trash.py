@@ -66,7 +66,7 @@ def move(paths, reason, log=lambda m: None):
     return moved, str(d.relative_to(config.LUDO))
 
 
-def _taille(d):
+def _size(d):
     total = 0
     for p in d.rglob("*"):
         if p.is_file():
@@ -82,15 +82,15 @@ def listing():
             if man.is_file():
                 lines = [l for l in man.read_text(errors="ignore").splitlines() if l.strip()]
                 out.append({"name": d.name, "count": len(lines),
-                            "size": _taille(d), "age": _age_jours(d)})
+                            "size": _size(d), "age": _age_days(d)})
     return out
 
 
-def _age_jours(d):
+def _age_days(d):
     return int((time.time() - d.stat().st_mtime) / 86400)
 
 
-def resume():
+def summary():
     """Overall figures: enough to decide without reading a 50-line list."""
     lots = listing()
     return {"lots": len(lots),
@@ -99,15 +99,15 @@ def resume():
             "plus_vieux": max((l["age"] for l in lots), default=0)}
 
 
-def purge(jours, log=lambda m: None):
+def purge(days, log=lambda m: None):
     """Permanently delete batches older than `jours`. 0 = never.
 
     This is the only function in the tool that really erases data: it acts on
     the trash alone, and only on batches the user chose to let age past the
     delay they set themselves.
     """
-    jours = int(jours or 0)
-    if jours <= 0 or not config.TRASH.is_dir():
+    days = int(days or 0)
+    if days <= 0 or not config.TRASH.is_dir():
         return 0, 0
     n, octets = 0, 0
     for d in sorted(config.TRASH.iterdir()):
@@ -115,9 +115,9 @@ def purge(jours, log=lambda m: None):
             continue
         if not (d / "manifeste.tsv").is_file():
             continue          # unexpected folder: we leave it alone
-        if _age_jours(d) < jours:
+        if _age_days(d) < days:
             continue
-        taille = _taille(d)
+        taille = _size(d)
         try:
             shutil.rmtree(d)
         except OSError as exc:
