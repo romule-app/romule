@@ -866,7 +866,7 @@ def integrity(path):
     from . import nand  # tardif : nand importe device
     try:
         nand.read_pfs0(path)
-    except nand.Incomplet as exc:
+    except nand.Incomplete as exc:
         return str(exc)
     except Exception:
         return None  # unexpected format: we do not block on a mere doubt

@@ -23,7 +23,7 @@ from . import config, device, profiles
 # unreachable without editing the code.
 
 
-def dossier():
+def folder():
     """The active emulator's data folder, or "" when it is unknown."""
     return profiles.data_dir()
 
@@ -41,7 +41,7 @@ TIK_KEY_OFF, TIK_RIGHTS_OFF = 0x180, 0x2A0
 
 # --------------------------------------------------------------------- PFS0
 
-class Incomplet(ValueError):
+class Incomplete(ValueError):
     """The archive announces more data than it holds (a failed download)."""
 
 
@@ -56,7 +56,7 @@ def read_pfs0(path):
     with open(path, "rb") as fh:
         tete = fh.read(16)
         if len(tete) < 16:
-            raise Incomplet("fichier vide ou tronque")
+            raise Incomplete("fichier vide ou tronque")
         magic, count, strtab, _ = struct.unpack("<4sIII", tete)
         if magic != b"PFS0":
             raise ValueError("ce fichier n'est pas une archive NSP (PFS0)")
@@ -70,7 +70,7 @@ def read_pfs0(path):
             attendu = max(attendu, base + off + size)
         if attendu > reel:
             manque = attendu - reel
-            raise Incomplet("il manque %.1f Mo (fichier de %.1f Mo, %.1f Mo attendus)"
+            raise Incomplete("il manque %.1f Mo (fichier de %.1f Mo, %.1f Mo attendus)"
                             % (manque / 1048576, reel / 1048576, attendu / 1048576))
         return out
 
@@ -126,11 +126,11 @@ def backup_state(job):
     """Record the state of registered/ and title.keys before touching them."""
     liste = device._shell("ls -1 %s 2>/dev/null" % device._q(registered()), timeout=60)
     cles = device._shell("cat %s 2>/dev/null" % device._q(title_keys()), timeout=60)
-    dossier = config.ROOT / "_eden-backup"
-    dossier.mkdir(exist_ok=True)
+    folder = config.ROOT / "_eden-backup"
+    folder.mkdir(exist_ok=True)
     horo = datetime.now().strftime("%Y-%m-%d_%H%M%S")
-    (dossier / ("registered_%s.txt" % horo)).write_text(liste, encoding="utf-8")
-    (dossier / ("title.keys_%s" % horo)).write_text(cles, encoding="utf-8")
+    (folder / ("registered_%s.txt" % horo)).write_text(liste, encoding="utf-8")
+    (folder / ("title.keys_%s" % horo)).write_text(cles, encoding="utf-8")
     n = len([l for l in liste.splitlines() if l.strip()])
     job.log("Etat sauvegarde : %d fichier(s) deja dans la NAND (_eden-backup/)." % n)
     return horo
@@ -146,7 +146,7 @@ def content_names(nsp_path):
     """The .nca names inside a .nsp. Returns (names, problem)."""
     try:
         return [n for n, _, _ in read_pfs0(nsp_path) if n.lower().endswith(".nca")], None
-    except Incomplet as exc:
+    except Incomplete as exc:
         return [], "incomplet : %s" % exc
     except (ValueError, OSError, struct.error) as exc:
         return [], "illisible : %s" % exc
@@ -191,7 +191,7 @@ def install(paths, job):
     if device.state() != "device":
         job.log("Console non connectee.")
         return
-    if not device._shell("[ -d %s ] && echo 1" % device._q(dossier())).strip():
+    if not device._shell("[ -d %s ] && echo 1" % device._q(folder())).strip():
         job.log("%s introuvable sur la console (%s)."
                 % (profiles.active()["nom"], profiles.package() or "paquet inconnu"))
         return
@@ -213,7 +213,7 @@ def install(paths, job):
             job.log("Lecture de %s…" % src.name)
             try:
                 contenu = read_pfs0(src)
-            except Incomplet as exc:
+            except Incomplete as exc:
                 job.log("  ignore, telechargement incomplet : %s" % exc, "warn")
                 job.tick()
                 continue
@@ -272,7 +272,7 @@ def install(paths, job):
         job.log("Relance Eden pour que les mises a jour et DLC soient pris en compte.")
 
 
-def _merge_title_keys(nouvelles, job):
+def _merge_title_keys(new_keys, job):
     """Add the title keys without touching those already present."""
     actuel = device._shell("cat %s 2>/dev/null" % device._q(title_keys()), timeout=60)
     lignes, connues = [], set()
@@ -281,7 +281,7 @@ def _merge_title_keys(nouvelles, job):
         if "=" in l:
             connues.add(l.split("=")[0].strip().lower())
     ajout = 0
-    for rights, key in sorted(nouvelles.items()):
+    for rights, key in sorted(new_keys.items()):
         if rights.lower() in connues:
             continue
         lignes.append("%s = %s" % (rights, key))
@@ -291,7 +291,7 @@ def _merge_title_keys(nouvelles, job):
         return
     local = config.IMPORT / "_title.keys"
     local.write_text("\n".join([l for l in lignes if l.strip()]) + "\n", encoding="utf-8")
-    device._shell("mkdir -p %s" % device._q(dossier() + "/keys"))
+    device._shell("mkdir -p %s" % device._q(folder() + "/keys"))
     device._run(["push", str(local), title_keys()], timeout=120)
     device.open_permissions(title_keys())
     local.unlink(missing_ok=True)
