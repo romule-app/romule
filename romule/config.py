@@ -401,6 +401,12 @@ DEFAULTS = {
     # When each scheduled task last ran. Written by the scheduler, never by
     # hand: without it a restart makes every nightly task due again.
     "schedule_state": {},
+    # The consoles you own, and the one being driven. `consoles.py` explains
+    # why the per-console settings ALSO stay at the top level: seventy reads of
+    # `cfg["device_dir"]` keep working, and going back a version keeps its
+    # pairing.
+    "devices": [],
+    "active_device": "",
 }
 
 SAVES = ROOT / "_saves"
@@ -421,6 +427,13 @@ def load_config():
             cfg.update(json.loads(CONFIG_FILE.read_text()))
         except (ValueError, OSError):
             pass
+    # One console's settings used to be THE settings. They are now the active
+    # console's, overlaid here so that every existing read keeps working and
+    # reads the right one. The migration builds that first console out of the
+    # flat keys, once, without asking.
+    from . import consoles
+    consoles.migrate(cfg)
+    consoles.overlay(cfg)
     # As a service, the environment has the last word on network access.
     if ENV_LAN or TOKEN:
         cfg["lan_access"] = True
@@ -467,6 +480,11 @@ def save_config(cfg):
     #     `auth_secret` — hence every session — and every setting.
     #
     # `comptes.py` already did it this way for password digests.
+    # The flat keys go back into the active console's entry. Without this, a
+    # setting changed at the top level would be lost the moment another console
+    # is chosen — accepted on screen, gone on the next click.
+    from . import consoles
+    cfg = consoles.mirror(dict(cfg))
     tmp = CONFIG_FILE.with_suffix(".tmp")
     try:
         tmp.write_text(json.dumps(cfg, indent=2, ensure_ascii=False) + "\n",

@@ -45,10 +45,11 @@ def t(nom, cond, detail=""):
 
 # --- `_romule-config.json` -------------------------------------------------
 #
-# The 43 settings, as they are written today at everyone's.
+# The 45 settings, as they are written today at everyone's.
 CONFIG = {
-    "auth_mode", "auth_secret", "auto_nand", "cover_provider", "cover_url",
-    "device_dir", "emulateur", "emulateur_paquet", "emuready",
+    "active_device", "auth_mode", "auth_secret", "auto_nand", "cover_provider",
+    "cover_url", "device_dir", "devices", "emulateur", "emulateur_paquet",
+    "emuready",
     "emuready_device", "emuready_device_nom", "igdb_client_id",
     "igdb_client_secret", "incremental", "jobs", "lan_access", "library_path",
     "local_layout", "maj_check", "meta_lang", "notif_destinations", "notify",
