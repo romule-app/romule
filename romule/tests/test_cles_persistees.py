@@ -28,7 +28,7 @@ RACINE = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(RACINE))
 os.environ.setdefault("ROMULE_ROOT", tempfile.mkdtemp(prefix="cles-"))
 
-from romule import apikeys, comptes, config, views                # noqa: E402
+from romule import apikeys, accounts, config, views                # noqa: E402
 
 ok = ko = 0
 
@@ -115,7 +115,7 @@ def test_le_jeton_engendre():
 
 def test_les_comptes():
     d = Path(tempfile.mkdtemp()) / "c.json"
-    comptes.creer("essai@exemple.fr", "brouette-tranquille-42", "Essai")
+    accounts.create("essai@exemple.fr", "brouette-tranquille-42", "Essai")
     ecrites = _cles_du_disque(config.fichier_etat("_romule-comptes.json",
                                                   "_romule-comptes.json"))
     manquantes = sorted(ecrites - COMPTES)

@@ -349,11 +349,11 @@ def _demander_mdp(invite="Nouveau mot de passe : "):
 
 def cmd_user(args):
     """Accounts: list, reset, promote, remove the second factor."""
-    from . import comptes
+    from . import accounts
     action = getattr(args, "action", None) or "list"
 
     if action == "list":
-        liste = comptes.liste()
+        liste = accounts.list_all()
         if not liste:
             print("Aucun compte. Le premier cree sera administrateur.")
             return
@@ -373,7 +373,7 @@ def cmd_user(args):
         if mdp is None:
             return 1
         try:
-            u = comptes.reinitialiser_mdp(args.email, mdp)
+            u = accounts.reset_password(args.email, mdp)
         except ValueError as exc:
             print("Refuse : %s" % exc)
             return 1
@@ -386,7 +386,7 @@ def cmd_user(args):
 
     if action == "admin":
         try:
-            u = comptes.par_email(args.email)
+            u = accounts.by_email(args.email)
         except ValueError as exc:
             print("Refuse : %s" % exc)
             return 1
@@ -395,7 +395,7 @@ def cmd_user(args):
             return 1
         vise = not args.retirer
         try:
-            comptes.promouvoir(u["id"], vise)
+            accounts.set_admin(u["id"], vise)
         except ValueError as exc:
             # "The last administrator cannot be removed": an instance nobody
             # can administer is repaired by hand, in a file.
@@ -407,7 +407,7 @@ def cmd_user(args):
 
     if action == "totp-off":
         try:
-            avait = comptes.desactiver_totp(args.email)
+            avait = accounts.disable_totp(args.email)
         except ValueError as exc:
             print("Refuse : %s" % exc)
             return 1
@@ -418,7 +418,7 @@ def cmd_user(args):
         return
 
     if action == "rm":
-        u = comptes.par_email(args.email)
+        u = accounts.by_email(args.email)
         if not u:
             print("Aucun compte avec cette adresse.")
             return 1
@@ -427,7 +427,7 @@ def cmd_user(args):
             print("Relance avec --oui pour confirmer.")
             return 1
         try:
-            comptes.supprimer(u["id"])
+            accounts.delete(u["id"])
         except ValueError as exc:
             print("Refuse : %s" % exc)
             return 1
@@ -492,7 +492,7 @@ def cmd_doctor(args):
     """
     import platform
     import socket
-    from . import comptes, notify, systems
+    from . import accounts, notify, systems
     cfg = config.load_config()
 
     def bloc(titre):
@@ -527,8 +527,8 @@ def cmd_doctor(args):
     bloc("acces")
     ligne("Mode", cfg.get("auth_mode"))
     ligne("Comptes", "%d (%d administrateur(s))"
-          % (comptes.nombre(),
-             sum(1 for u in comptes.liste() if u.get("admin"))))
+          % (accounts.count(),
+             sum(1 for u in accounts.list_all() if u.get("admin"))))
     ligne("Reseau ouvert", "oui" if cfg.get("lan_access") else "non")
     ligne("Jeton", "pose" if config.TOKEN else "aucun")
     ligne("Proxies de confiance", config.env("TRUSTED_PROXIES") or "aucun")

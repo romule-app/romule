@@ -214,8 +214,8 @@ def actif(cfg=None):
     cfg = cfg or config.load_config()
     mode = cfg.get("auth_mode")
     if mode == "interne":
-        from . import comptes
-        return comptes.nombre() > 0
+        from . import accounts
+        return accounts.count() > 0
     if mode == "oidc":
         return bool((cfg.get("oidc_issuer") or "").strip()
                     and (cfg.get("oidc_client_id") or "").strip())
@@ -391,8 +391,8 @@ def session(cookie_header):
             continue
         d = _verifier(valeur)
         if d and d.get("src") == "interne":
-            from . import comptes
-            u = comptes.par_id(d.get("sub"))
+            from . import accounts
+            u = accounts.by_id(d.get("sub"))
             # Account deleted, or password changed since: the signed session
             # is worth nothing any more, even with a valid signature.
             if not u or u.get("maj_mdp", 0) != d.get("mdp"):
