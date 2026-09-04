@@ -30,7 +30,7 @@ from . import (access_log, accounts, actions, apikeys, apiv1, audit, auth,
                backup, browse, config, console, covers, device, duplicates,
                edenconf, emuready, igdb, integrity, meta, nand, net, notify,
                nsztool, profiles, saves, scan, systems, titleid, transfers,
-               scheduler, trash, updates, versions, views)
+               consoles, scheduler, trash, updates, versions, views)
 from . import cli
 from . import LICENCE, SOURCE_URL, __version__
 from .jobs import JobRunner
@@ -1121,6 +1121,10 @@ class Handler(BaseHTTPRequestHandler):
         # --- choose where the service reads and writes on the host
         "/api/parcourir",             # reveals the host's directory tree
         "/api/ludotheque",
+        # Declaring or dropping a console changes eight settings at once — the
+        # folder written to, the pairing, the emulator. It belongs where the
+        # rest of the configuration belongs.
+        "/api/consoles",
         # --- send outward in the service's name
         "/api/notifs",              # the addresses are bearer secrets
         "/api/notif-creer",
@@ -1151,6 +1155,47 @@ class Handler(BaseHTTPRequestHandler):
         elif p == "/api/vue-supprimer":
             views.delete(str(d.get("id") or ""))
             self._json({"vues": views.list_all()})
+
+        elif p == "/api/consoles":
+            # One route for the four gestures a list needs. The alternative —
+            # four routes — would each have to repeat the same admin check, the
+            # same save and the same answer, and the reserve list would have to
+            # name all four.
+            geste = str(d.get("geste") or "")
+            cid = str(d.get("id") or "")
+            if geste == "ajouter":
+                if not consoles.add(CFG, str(d.get("nom") or "")):
+                    return self._json({"error": "Too many consoles (%d)."
+                                       % consoles.MAX_DEVICES}, 400)
+            elif geste == "retirer":
+                if len(consoles.list_all(CFG)) <= 1:
+                    # Removing the last one empties the list, and an empty list
+                    # migrates the flat keys again on the next load: the console
+                    # would come back on its own, which reads as the removal
+                    # having silently failed.
+                    return self._json({"error": "The last console cannot be "
+                                       "removed."}, 400)
+                if not consoles.remove(CFG, cid):
+                    return self._json({"error": "Unknown console."}, 404)
+            elif geste == "choisir":
+                if not consoles.select(CFG, cid):
+                    return self._json({"error": "Unknown console."}, 404)
+                # The tree read from the PREVIOUS console has nothing to say
+                # about this one. Keeping it would show one console's games
+                # under the other's name.
+                systems.clear_tree_cache()
+            elif geste == "renommer":
+                if not consoles.rename(CFG, cid, str(d.get("nom") or "")):
+                    return self._json({"error": "Unknown console."}, 404)
+            else:
+                return self._json({"error": "Unknown gesture."}, 400)
+            config.save_config(CFG)
+            # Re-read rather than patch: `load_config` is what overlays the
+            # active console's fields, and after a `choisir` the eight flat keys
+            # must all follow. Patching them here would be writing that overlay
+            # a second time, in a second place.
+            CFG.update(config.load_config())
+            self._json(dict(consoles.public(CFG), config=_config_publique()))
 
         elif p == "/api/notif-creer":
             url = str(d.get("url") or "").strip()
