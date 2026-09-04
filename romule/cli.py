@@ -492,7 +492,7 @@ def cmd_doctor(args):
     """
     import platform
     import socket
-    from . import comptes, notifs, systems
+    from . import comptes, notify, systems
     cfg = config.load_config()
 
     def bloc(titre):
@@ -551,7 +551,7 @@ def cmd_doctor(args):
                      ("igdb_client_id", "IGDB"),
                      ("oidc_issuer", "OIDC")):
         ligne(nom, "configure" if (cfg.get(cle) or "").strip() else "non configure")
-    dests = notifs.destinations(cfg)
+    dests = notify.destinations(cfg)
     ligne("Notifications", "%d destination(s) : %s" % (
         len(dests), ", ".join(d["service"] for d in dests) or "aucune"))
 

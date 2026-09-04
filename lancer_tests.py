@@ -118,7 +118,7 @@ def serveur():
     for f in ("test_auth_interne.py", "test_oidc_sso.py", "test_totp.py",
               "test_verrouillage.py", "test_proxy.py",
               "test_autorisation.py", "test_limites.py", "test_premier_acces.py", "test_oidc_negatif.py", "test_intrusion.py", "test_ludotheque.py", "test_compression.py", "test_igdb.py",
-              "test_apiv1.py", "test_notifs.py"):
+              "test_apiv1.py", "test_notify.py"):
         ok = script(TESTS / f) and ok
     return ok
 
