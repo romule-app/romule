@@ -571,7 +571,7 @@ class Handler(BaseHTTPRequestHandler):
         shared.
         """
         # The API key comes BEFORE the SSO, and that is deliberate. As things
-        # stand `auth.actif()` refuses anything without a session cookie: right
+        # stand `auth.enabled()` refuses anything without a session cookie: right
         # for a browser, and it would make the API unusable precisely in the
         # installations that protect it best.
         #
@@ -589,7 +589,7 @@ class Handler(BaseHTTPRequestHandler):
                 return True
             return False
 
-        if auth.actif(CFG):
+        if auth.enabled(CFG):
             if self.path.startswith("/auth/"):
                 return True                       # the login flow itself
             return bool(auth.session(self.headers.get("Cookie")))
@@ -602,7 +602,7 @@ class Handler(BaseHTTPRequestHandler):
     def _deny(self):
         # With an SSO configured we do not show a blunt refusal: we send the
         # user to log in, which is precisely what they came for.
-        if auth.actif(CFG):
+        if auth.enabled(CFG):
             return self._page_connexion()
         if config.TOKEN:
             msg = ("Acces protege.\n\nAjoute ?token=TON_JETON a l'adresse, "
@@ -689,12 +689,12 @@ class Handler(BaseHTTPRequestHandler):
         """Return True when the request was handled by the SSO flow."""
         if p == "/auth/login":
             try:
-                url, transit = auth.demarrer(CFG, self._base_retour())
+                url, transit = auth.start(CFG, self._base_retour())
             except Exception as exc:
                 return self._page_connexion(str(exc)) or True
             self.send_response(302)
             self.send_header("Location", url)
-            self.send_header("Set-Cookie", auth.entete_transit(transit, self._secure()))
+            self.send_header("Set-Cookie", auth.transit_header(transit, self._secure()))
             self.end_headers()
             return True
 
@@ -702,7 +702,7 @@ class Handler(BaseHTTPRequestHandler):
             params = {k: v[0] for k, v in
                       parse_qs(self.path.partition("?")[2]).items()}
             try:
-                session, qui = auth.terminer(
+                session, qui = auth.finish(
                     CFG, params, auth.transit(self.headers.get("Cookie")),
                     self._base_retour())
             except Exception as exc:
@@ -713,8 +713,8 @@ class Handler(BaseHTTPRequestHandler):
                                 qui.get("email") or qui.get("sub"), "sso")
             self.send_response(302)
             self.send_header("Location", "/")
-            self.send_header("Set-Cookie", auth.entete_cookie(session, self._secure()))
-            self.send_header("Set-Cookie", auth.entete_transit("", self._secure()))
+            self.send_header("Set-Cookie", auth.cookie_header_for(session, self._secure()))
+            self.send_header("Set-Cookie", auth.transit_header("", self._secure()))
             self.end_headers()
             return True
 
@@ -723,16 +723,16 @@ class Handler(BaseHTTPRequestHandler):
             journal_acces.noter("deconnexion", self.client_address[0], qui.get("email", ""))
             self.send_response(302)
             self.send_header("Location", "/")
-            self.send_header("Set-Cookie", auth.entete_cookie("", self._secure()))
+            self.send_header("Set-Cookie", auth.cookie_header_for("", self._secure()))
             self.end_headers()
             return True
 
         if p == "/auth/moi":
-            self._json({"actif": auth.actif(CFG),
+            self._json({"actif": auth.enabled(CFG),
                         "mode": auth.mode(CFG),
                         "demande": CFG.get("auth_mode", "aucun"),
                         "comptes": accounts.count(),
-                        "incomplet": auth.incomplet(CFG),
+                        "incomplet": auth.incomplete(CFG),
                         "session": auth.session(self.headers.get("Cookie"))})
             return True
         return False
@@ -762,7 +762,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(302)
         self.send_header("Location", "/")
         self.send_header("Set-Cookie",
-                         auth.entete_cookie(auth.session_interne(u), self._secure()))
+                         auth.cookie_header_for(auth.internal_session(u), self._secure()))
         self.end_headers()
 
     def _binary(self, body, ctype):
@@ -972,7 +972,7 @@ class Handler(BaseHTTPRequestHandler):
         first account is the administrator" would mean "the first person on the
         network becomes the administrator".
         """
-        if not auth.actif(CFG):
+        if not auth.enabled(CFG):
             return ""
         # The anti-lockout session: handed to whoever just switched
         # authentication on from an already-authorised access, so they do not
@@ -1006,11 +1006,11 @@ class Handler(BaseHTTPRequestHandler):
         audit already reports it as a point of attention.
         """
         s = auth.session(self.headers.get("Cookie"))
-        return {"authentification": bool(auth.actif(CFG)),
+        return {"authentification": bool(auth.enabled(CFG)),
                 "connecte": bool(s),
                 "nom": (s or {}).get("nom") or "",
                 "source": (s or {}).get("src") or "",
-                "admin": (not auth.actif(CFG)) or self._est_admin()}
+                "admin": (not auth.enabled(CFG)) or self._est_admin()}
 
     def _est_admin(self):
         """The role, whatever the session came from.
@@ -1297,8 +1297,8 @@ class Handler(BaseHTTPRequestHandler):
             # browser a valid one, the others are cut.
             self.send_response(200)
             self.send_header("Content-Type", "application/json; charset=utf-8")
-            self.send_header("Set-Cookie", auth.entete_cookie(
-                auth.session_interne(accounts.by_id(u["id"])), self._secure()))
+            self.send_header("Set-Cookie", auth.cookie_header_for(
+                auth.internal_session(accounts.by_id(u["id"])), self._secure()))
             corps = json.dumps({"message": "Mot de passe change. Les autres "
                                            "appareils ont ete deconnectes."}).encode()
             self.send_header("Content-Length", str(len(corps)))
@@ -1436,7 +1436,7 @@ class Handler(BaseHTTPRequestHandler):
 
         elif p == "/api/auth-test":
             try:
-                self._json({"ok": True, "infos": auth.tester(CFG),
+                self._json({"ok": True, "infos": auth.probe(CFG),
                             "retour": self._base_retour()})
             except Exception as exc:
                 self._json({"ok": False, "message": str(exc),
@@ -1821,7 +1821,7 @@ class Handler(BaseHTTPRequestHandler):
             refus = self._admin_requis()
             if refus:
                 return self._json({"error": refus}, 403)
-            avant = auth.actif(CFG)
+            avant = auth.enabled(CFG)
             # A field returned masked means "do not change": otherwise saving
             # the settings would erase the secret every time.
             for k in SECRETS:
@@ -1866,7 +1866,7 @@ class Handler(BaseHTTPRequestHandler):
             corps = json.dumps({"config": _config_publique()}).encode()
             self.send_response(200)
             self.send_header("Content-Type", "application/json; charset=utf-8")
-            if (not avant and auth.actif(CFG)
+            if (not avant and auth.enabled(CFG)
                     and not auth.session(self.headers.get("Cookie"))):
                 u = None
                 if CFG.get("auth_mode") == "interne":
@@ -1876,11 +1876,11 @@ class Handler(BaseHTTPRequestHandler):
                 # enough to finish configuring and log in properly. Giving it
                 # the twelve hours of a real session made it an anonymous
                 # administrator access lasting half a day.
-                jeton = (auth.session_interne(u) if u else
-                         auth._signer({"sub": "local", "nom": "Accès local",
+                jeton = (auth.internal_session(u) if u else
+                         auth._sign({"sub": "local", "nom": "Accès local",
                                        "email": "", "src": "config",
-                                       "exp": time.time() + auth.DUREE_PONT}))
-                self.send_header("Set-Cookie", auth.entete_cookie(jeton, self._secure()))
+                                       "exp": time.time() + auth.BRIDGE_TTL}))
+                self.send_header("Set-Cookie", auth.cookie_header_for(jeton, self._secure()))
                 JOB.log("Authentification activée : ce navigateur reste connecté.",
                         "warn")
             self.send_header("Content-Length", str(len(corps)))
@@ -2133,7 +2133,7 @@ def _jeton_de_premier_demarrage():
     """
     if _adresse_ecoute() == "127.0.0.1":
         return None
-    if config.TOKEN or auth.actif(CFG) or CFG.get("lan_access"):
+    if config.TOKEN or auth.enabled(CFG) or CFG.get("lan_access"):
         return None
     jeton = (CFG.get("jeton_auto") or "").strip()
     if not jeton:
