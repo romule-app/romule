@@ -146,6 +146,24 @@ All of these are edited from the interface. The names are the keys stored in
 | `jobs` | `3` | Parallel conversions |
 | `versions_urls` | titledb | Mirrors for the Switch version database |
 
+### On its own
+
+Romule does nothing unasked until you tell it to. These two keys are what
+change that, and only the first is yours to set.
+
+| Key | Default | What it does |
+|---|---|---|
+| `schedule` | `{}` | What runs on its own: `{task: preset}`. The tasks are `scan`, `import`, `convert`, `push`, `meta`; the presets are `never`, `startup`, `hourly`, `6h` and `nightly:HH`. Set from **Settings → Maintenance → On its own**. |
+| `schedule_state` | `{}` | When each scheduled task last ran. Written by Romule, never by hand: without it a restart makes every nightly task due again. |
+
+Only reversible tasks can be scheduled. Emptying the trash, clearing the log
+and revoking a key are absent from the list, and that is not an oversight: an
+unattended action must be one whose result you can still look at in the
+morning.
+
+If a task is already running when another falls due, the due one is **skipped**
+and said so in the log — it is not queued. Romule does one thing at a time.
+
 ### Covers and details
 
 | Key | Default | Meaning |

@@ -79,6 +79,7 @@ def unitaires():
                 "romule.tests.test_apikeys",
                 "romule.tests.test_reglages",
                 "romule.tests.test_matching",
+                "romule.tests.test_scheduler",
                 "romule.tests.test_updates",
                 "romule.tests.test_covers",
                 "romule.tests.test_console",

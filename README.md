@@ -211,7 +211,7 @@ must be known before it starts.
 `ROMULE_BIND` defaults to `127.0.0.1`, except in a container or when network
 access has been enabled — otherwise a published port would reach nothing.
 
-All 41 settings in the configuration file are edited from the interface and
+All 43 settings in the configuration file are edited from the interface and
 documented on the
 [documentation site](https://romule-app.github.io/romule/).
 
