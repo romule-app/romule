@@ -74,7 +74,7 @@ def unitaires():
     for mod in ("romule.tests.test_titleid", "romule.tests.test_device",
                 "romule.tests.test_import_roms",
                 "romule.tests.test_totp_unite",
-                "romule.tests.test_profils",
+                "romule.tests.test_profiles",
                 "romule.tests.test_net",
                 "romule.tests.test_apikeys",
                 "romule.tests.test_reglages",

@@ -37,7 +37,7 @@ remembered too — it is a result like any other, and it cost just as much.
 _TID_CACHE = None
 
 
-def _cache_charger():
+def _cache_load():
     global _TID_CACHE
     if _TID_CACHE is not None:
         return _TID_CACHE
@@ -51,7 +51,7 @@ def _cache_charger():
     return _TID_CACHE
 
 
-def _cache_ecrire():
+def _cache_write():
     try:
         from . import config
         config.TIDCACHE.write_text(
@@ -68,7 +68,7 @@ def _signature(path):
 def container_tid(path):
     """Read the title ID from inside the container (for badly named files)."""
     cle = str(path)
-    cache = _cache_charger()
+    cache = _cache_load()
     try:
         sig = _signature(path)
     except OSError:
@@ -81,7 +81,7 @@ def container_tid(path):
     tid = m.group(1).lower() if m else None
     if sig is not None:
         cache[cle] = [sig, tid]
-        _cache_ecrire()
+        _cache_write()
     return tid
 
 

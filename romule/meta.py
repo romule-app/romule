@@ -20,7 +20,7 @@ def _path(tid, lang):
     return config.COVERS / ("%s.%s.json" % (tid.lower(), lang))
 
 
-def fiche_nom(nom, cfg=None, reseau=True):
+def entry_for_name(name, cfg=None, network=True):
     """Details for a game WITHOUT a title ID (every platform but the Switch).
 
     nlib only knows Switch games. For the rest, the one source already at hand
@@ -29,7 +29,7 @@ def fiche_nom(nom, cfg=None, reseau=True):
     caches.
     """
     from . import covers
-    cle = covers.cache_key("", nom)
+    cle = covers.cache_key("", name)
     if not cle:
         return None
     cfg = cfg or config.load_config()
@@ -62,21 +62,21 @@ def fiche_nom(nom, cfg=None, reseau=True):
             return True
         return str(f.get("source_resume", "")).endswith(_langue)
 
-    if en_cache and (_complete(en_cache) or not reseau):
+    if en_cache and (_complete(en_cache) or not network):
         return en_cache
-    if not reseau:
+    if not network:
         return None
     key = (cfg.get("steamgriddb_key") or "").strip()
     if not key and not _igdb.configure(cfg):
         return None                       # aucune source configuree
-    infos = covers.sgdb_infos(nom, key) if key else None
+    infos = covers.sgdb_infos(name, key) if key else None
     d = dict(en_cache or {})
     d["nom"] = d.get("nom") or (infos or {}).get("titre") or ""
     # The title comes from SteamGridDB, the summary from IGDB: the two sources
     # are independent, and the absence of one must not block the other.
     from . import igdb, wikipedia
     if igdb.configure(cfg):
-        fiche = igdb.search(d["nom"] or covers.search_name(nom), cfg)
+        fiche = igdb.search(d["nom"] or covers.search_name(name), cfg)
         if fiche:
             d["nom"] = d["nom"] or fiche.get("nom") or ""
             for cle in ("resume", "annee", "editeur"):
@@ -88,7 +88,7 @@ def fiche_nom(nom, cfg=None, reseau=True):
     # right article. The English summary stays as a fallback.
     langue = (cfg.get("meta_lang") or "fr").strip().lower()
     if langue not in ("", "en"):
-        pivot = d.get("nom") or covers.search_name(nom)
+        pivot = d.get("nom") or covers.search_name(name)
         texte, url = wikipedia.summary(pivot, langue)
         if texte:
             d["resume_en"] = d.get("resume", "")
@@ -148,7 +148,7 @@ def bulk(tids, cfg=None):
     return out
 
 
-def manquants(tids, cfg=None):
+def missing(tids, cfg=None):
     """Title IDs with no cached entry, in the order received."""
     cfg = cfg or config.load_config()
     vus, out = set(), []
