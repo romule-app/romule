@@ -26,12 +26,12 @@ from pathlib import Path
 from . import config
 
 DOSSIER = Path(__file__).resolve().parent / "profils"
-DEFAUT = "eden"
+DEFAULT = "eden"
 
 _CACHE = None
 
 
-def tous():
+def all_profiles():
     """Every shipped profile, in display order."""
     global _CACHE
     if _CACHE is None:
@@ -46,22 +46,22 @@ def tous():
 
 
 def get(cle):
-    for p in tous():
+    for p in all_profiles():
         if p.get("cle") == cle:
             return p
-    for p in tous():
-        if p.get("cle") == DEFAUT:
+    for p in all_profiles():
+        if p.get("cle") == DEFAULT:
             return p
     return {"cle": "generique", "nom": "Autre", "paquets": [], "donnees": "",
             "config": None, "sauvegardes": [], "verifie": False}
 
 
-def actif(cfg=None):
+def active(cfg=None):
     cfg = cfg if cfg is not None else config.load_config()
-    return get(cfg.get("emulateur") or DEFAUT)
+    return get(cfg.get("emulateur") or DEFAULT)
 
 
-def paquet(cfg=None):
+def package(cfg=None):
     """The package name we keep: the one detected on the console, else the first.
 
     Detection happens elsewhere and is stored in the configuration: resolving it
@@ -72,32 +72,32 @@ def paquet(cfg=None):
     trouve = (cfg.get("emulateur_paquet") or "").strip()
     if trouve:
         return trouve
-    liste = actif(cfg).get("paquets") or []
+    liste = active(cfg).get("paquets") or []
     return liste[0] if liste else ""
 
 
-def dossier_donnees(cfg=None):
+def data_dir(cfg=None):
     """The emulator's data folder on the console, or "" when unknown."""
     cfg = cfg if cfg is not None else config.load_config()
-    gabarit = actif(cfg).get("donnees") or ""
-    p = paquet(cfg)
+    gabarit = active(cfg).get("donnees") or ""
+    p = package(cfg)
     if not gabarit or (not p and "{paquet}" in gabarit):
         return ""
     return gabarit.replace("{paquet}", p)
 
 
-def sous(chemin, cfg=None):
+def under(path, cfg=None):
     """A path under the data folder, or "" when that folder is unknown."""
-    base = dossier_donnees(cfg)
-    return (base + "/" + chemin.lstrip("/")) if base else ""
+    base = data_dir(cfg)
+    return (base + "/" + path.lstrip("/")) if base else ""
 
 
-def config_pilotable(cfg=None):
+def config_editable(cfg=None):
     """Can we read and write this emulator's settings?"""
-    return bool((actif(cfg).get("config") or {}).get("format") == "ini-qt")
+    return bool((active(cfg).get("config") or {}).get("format") == "ini-qt")
 
 
-def detecter(cfg=None):
+def detect(cfg=None):
     """Ask the console which of the candidate packages is installed.
 
     Returns the package name, or "" when none is. This is what replaces the
@@ -107,7 +107,7 @@ def detecter(cfg=None):
     from . import device
     if not device.adb_available():
         return ""
-    for p in (actif(cfg).get("paquets") or []):
+    for p in (active(cfg).get("paquets") or []):
         sortie = device._shell("pm path %s 2>/dev/null" % device._q(p), timeout=20)
         if sortie and "package:" in sortie:
             return p
@@ -118,4 +118,4 @@ def public():
     """What the interface needs to know, without the layout details."""
     return [{"cle": p["cle"], "nom": p["nom"], "verifie": bool(p.get("verifie")),
              "reglages": bool((p.get("config") or {}).get("format")),
-             "note": p.get("note", "")} for p in tous()]
+             "note": p.get("note", "")} for p in all_profiles()]

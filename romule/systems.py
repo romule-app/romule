@@ -375,7 +375,7 @@ def scan_local(sys_key, cfg=None):
         if p.suffix.lower() in config.ARCHIVES:
             continue
         from . import meta
-        fiche = meta.fiche_nom(p.name, cfg, reseau=False)   # cache only: never any network here
+        fiche = meta.entry_for_name(p.name, cfg, network=False)   # cache only: never any network here
         out.append({
             "path": str(p),
             "rel": str(p.relative_to(config.LUDO)),
@@ -446,7 +446,7 @@ def all_platforms(cfg):
             # The same official title as in the per-platform view: without it,
             # the "all platforms" view fell back to the file name.
             owned = [{"nom": f["name"], "chemin": f["path"], "taille": f["size"],
-                      **_light_entry(meta.fiche_nom(f["name"], cfg, reseau=False))}
+                      **_light_entry(meta.entry_for_name(f["name"], cfg, network=False))}
                      for f in remote
                      if f["path"].startswith(prefix)
                      and any(f["path"].lower().endswith(e) for e in s["exts"])

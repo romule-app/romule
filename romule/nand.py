@@ -16,7 +16,7 @@ import struct
 from datetime import datetime
 from pathlib import Path
 
-from . import config, device, profils
+from . import config, device, profiles
 
 # These paths depend on the chosen emulator: they can no longer be module
 # constants. They used to be, pinned to Eden, which made every other emulator
@@ -25,15 +25,15 @@ from . import config, device, profils
 
 def dossier():
     """The active emulator's data folder, or "" when it is unknown."""
-    return profils.dossier_donnees()
+    return profiles.data_dir()
 
 
 def registered():
-    return profils.sous("nand/user/Contents/registered")
+    return profiles.under("nand/user/Contents/registered")
 
 
 def title_keys():
-    return profils.sous("keys/title.keys")
+    return profiles.under("keys/title.keys")
 
 # Ticket offsets (Nintendo format): encrypted title key and rights ID.
 TIK_KEY_OFF, TIK_RIGHTS_OFF = 0x180, 0x2A0
@@ -193,7 +193,7 @@ def install(paths, job):
         return
     if not device._shell("[ -d %s ] && echo 1" % device._q(dossier())).strip():
         job.log("%s introuvable sur la console (%s)."
-                % (profils.actif()["nom"], profils.paquet() or "paquet inconnu"))
+                % (profiles.active()["nom"], profiles.package() or "paquet inconnu"))
         return
 
     backup_state(job)

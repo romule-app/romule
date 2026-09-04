@@ -34,9 +34,9 @@ NIVEAUX = {1: ("parfait", "Parfait"), 2: ("parfait", "Très bon"),
 _TM = re.compile(r"[™®©]")
 
 
-def clean_title(nom):
+def clean_title(name):
     """A usable name for searching: no trademarks, no noise."""
-    n = _TM.sub("", nom or "")
+    n = _TM.sub("", name or "")
     n = re.sub(r"\s*[\[\(][^\])]*[\])]", " ", n)
     return re.sub(r"\s{2,}", " ", n).strip(" .-")
 
@@ -83,7 +83,7 @@ def clear():
 
 # ------------------------------------------------------------------ appareils
 
-def devices(recherche="", force=False):
+def devices(query="", force=False):
     """The devices EmuReady knows about (cached)."""
     c = _load()
     if c["appareils"] and not force and (time.time() - c.get("maj", 0)) < CACHE_TTL:
@@ -100,15 +100,15 @@ def devices(recherche="", force=False):
             _save(c)
         except Exception:
             liste = c["appareils"]
-    if recherche:
-        q = recherche.lower()
+    if query:
+        q = query.lower()
         liste = [d for d in liste if q in d["nom"].lower()]
     return liste
 
 
-def suggest_devices(modele):
+def suggest_devices(model):
     """Plausible variants of a detected model ("AYN Thor" -> Thor Base/Lite/Pro/Max)."""
-    mots = [m for m in re.split(r"\W+", clean_title(modele or "")) if len(m) > 2]
+    mots = [m for m in re.split(r"\W+", clean_title(model or "")) if len(m) > 2]
     if not mots:
         return []
     tous = devices()
@@ -121,10 +121,10 @@ def suggest_devices(modele):
 
 # ------------------------------------------------------------- correspondance
 
-def match_game(tid, nom_fichier, cfg=None):
+def match_game(tid, filename, cfg=None):
     """Retrouve un jeu sur EmuReady. Renvoie {id, titre, niveau_confiance}."""
     fiche = meta.fetch(tid, dict(cfg or {}, meta_lang="en")) or {}
-    requete = clean_title(fiche.get("name") or nom_fichier)
+    requete = clean_title(fiche.get("name") or filename)
     if not requete:
         return None
     try:
@@ -193,13 +193,13 @@ def config_of(listing_id):
 
 # ------------------------------------------------------------ synchronisation
 
-def sync(jeux, cfg, job, force=False):
+def sync(games, cfg, job, force=False):
     """Refresh the compatibility status of the library's games."""
     c = _load()
     device_id = (cfg.get("emuready_device") or "").strip() or None
-    job.set_total(len(jeux))
+    job.set_total(len(games))
     neufs = 0
-    for g in jeux:
+    for g in games:
         if not job.checkpoint():
             job.log("Synchronisation interrompue.")
             break

@@ -246,7 +246,7 @@ def _fiches_des_nouveaux(chemins, cfg, job):
             if tid:
                 meta.fetch(titleid.tid_base(tid), cfg)
             else:
-                meta.fiche_nom(p.name, cfg)
+                meta.entry_for_name(p.name, cfg)
             # la jaquette se telecharge et se met en cache au passage
             covers.fetch(titleid.tid_base(tid) if tid else "", p.name, cfg)
             faits += 1
@@ -459,7 +459,7 @@ def sync_meta(lib, cfg, job):
     # or whose base is an untyped .xci pack, has no "BASE" file at all — so its
     # details were never requested.
     tids = [titleid.tid_base(f["tid"]) for f in lib.files if f["tid"]]
-    a_faire = meta.manquants(tids, cfg)
+    a_faire = meta.missing(tids, cfg)
     if not a_faire:
         job.log("Fiches Switch : toutes deja en cache.")
     job.set_total(len(a_faire))
@@ -500,7 +500,7 @@ def sync_meta(lib, cfg, job):
     avec_resume = igdb.configure(cfg)
 
     def a_completer(nom):
-        f = meta.fiche_nom(nom, cfg, reseau=False)
+        f = meta.entry_for_name(nom, cfg, network=False)
         if not f:
             return True
         if avec_resume and not f.get("resume"):
@@ -525,7 +525,7 @@ def sync_meta(lib, cfg, job):
             job.log("Interrompu : %d fiche(s) traitee(s) sur %d."
                     % (trouves, len(restants)), "warn")
             return
-        d = meta.fiche_nom(n, cfg)
+        d = meta.entry_for_name(n, cfg)
         if d and d.get("nom"):
             trouves += 1
             resumes += 1 if d.get("resume") else 0
@@ -536,7 +536,7 @@ def sync_meta(lib, cfg, job):
     job.set_detail("")
     dans_la_langue = sum(
         1 for n in restants
-        if str((meta.fiche_nom(n, cfg, reseau=False) or {}).get("source_resume", ""))
+        if str((meta.entry_for_name(n, cfg, network=False) or {}).get("source_resume", ""))
         .endswith(langue))
     job.log("%d titre(s) sur %d, dont %d avec un resume (%d en %s)."
             % (trouves, len(restants), resumes, dans_la_langue, langue))

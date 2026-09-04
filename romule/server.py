@@ -29,7 +29,7 @@ from urllib.parse import parse_qs, unquote
 from . import (access_log, accounts, actions, apikeys, apiv1, audit, auth,
                backup, browse, config, console, covers, device, duplicates,
                edenconf, emuready, igdb, integrity, meta, nand, net, notify,
-               nsztool, profils, saves, scan, systems, titleid, transfers,
+               nsztool, profiles, saves, scan, systems, titleid, transfers,
                trash, updates, versions, views)
 from . import cli
 from . import LICENCE, SOURCE_URL, __version__
@@ -581,7 +581,7 @@ class Handler(BaseHTTPRequestHandler):
         # name.
         cle = self._cle_api()
         if cle:
-            if not apiv1.dans_la_portee(self.path.partition("?")[0]):
+            if not apiv1.in_scope(self.path.partition("?")[0]):
                 return False
             qui = apikeys.verify(cle)
             if qui:
@@ -786,7 +786,7 @@ class Handler(BaseHTTPRequestHandler):
         if p.startswith("/icon-"):
             size = 512 if "512" in p else 192
             return self._binary(_png_icon(size), "image/png")
-        if p.startswith(apiv1.PREFIXE):
+        if p.startswith(apiv1.PREFIX):
             return self._api_v1(p, "GET")
         if p in ("/", "/index.html"):
             self._static("index.html")
@@ -1058,7 +1058,7 @@ class Handler(BaseHTTPRequestHandler):
                     % (self.path, self.headers.get("Origin") or "?"), "warn")
             return self._json({"error": "origine inattendue"}, 403)
         chemin = self.path.partition("?")[0]
-        if chemin.startswith(apiv1.PREFIXE):
+        if chemin.startswith(apiv1.PREFIX):
             return self._api_v1(chemin, "POST")
         if self.path == "/api/upload":
             return self._upload()
@@ -1541,7 +1541,7 @@ class Handler(BaseHTTPRequestHandler):
             refus = self._admin_requis()
             if refus:
                 return self._json({"error": refus}, 403)
-            trouve = profils.detecter(CFG)
+            trouve = profiles.detect(CFG)
             if trouve:
                 CFG["emulateur_paquet"] = trouve
                 config.save_config(CFG)
@@ -1662,7 +1662,7 @@ class Handler(BaseHTTPRequestHandler):
             if dossier and device.state() == "device":
                 distants = [
                     {"nom": g["name"], "chemin": g["path"], "taille": g["size"],
-                     **systems._light_entry(meta.fiche_nom(g["name"], CFG, reseau=False))}
+                     **systems._light_entry(meta.entry_for_name(g["name"], CFG, network=False))}
                     for g in device.find_games(dossier, systems.get_cfg(key, CFG)["exts"])]
             self._json({"system": key, "games": systems.scan_local(key, CFG),
                         "console": distants, "device_dir": dossier})
@@ -1740,7 +1740,7 @@ class Handler(BaseHTTPRequestHandler):
             # so than to write at random into its files.
             return self._json(
                 {"error": "Les reglages de %s ne sont pas pilotables depuis "
-                          "Romule." % profils.actif(CFG)["nom"]}, 400)
+                          "Romule." % profiles.active(CFG)["nom"]}, 400)
 
         elif p == "/api/eden-config":
             tid = (d.get("tid") or "").strip() or None
@@ -2006,9 +2006,9 @@ def _health():
             "expose": _adresse_ecoute() != "127.0.0.1",
             "auth_mode": CFG.get("auth_mode", "aucun"),
             "comptes": len(accounts.list_all()),
-            "emulateur": CFG.get("emulateur") or profils.DEFAUT,
+            "emulateur": CFG.get("emulateur") or profiles.DEFAULT,
         },
-        "profils": profils.public(),
+        "profils": profiles.public(),
     }
 
 

@@ -101,9 +101,9 @@ def test_portee():
               "/api/v1", "/api/v1x/library", "/api/../api/comptes",
               "//api/v1/library", "/API/V1/library"]
     for p in ouverts:
-        t("cle admise sur %s" % p, apiv1.dans_la_portee(p), p)
+        t("cle admise sur %s" % p, apiv1.in_scope(p), p)
     for p in fermes:
-        t("cle refusee sur %s" % p, not apiv1.dans_la_portee(p), p)
+        t("cle refusee sur %s" % p, not apiv1.in_scope(p), p)
 
 
 def test_le_fichier_est_prive():
