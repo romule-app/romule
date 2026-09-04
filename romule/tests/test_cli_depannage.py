@@ -57,9 +57,9 @@ def main():
     racine = Path(tempfile.mkdtemp(prefix="cli-"))
     sys.path.insert(0, str(RACINE))
     os.environ["ROMULE_ROOT"] = str(racine)
-    from romule import comptes
-    comptes.creer("chef@exemple.fr", "brouette-tranquille-42", "Chef")
-    comptes.creer("bob@exemple.fr", "guitare-nuageuse-77", "Bob")
+    from romule import accounts
+    accounts.create("chef@exemple.fr", "brouette-tranquille-42", "Chef")
+    accounts.create("bob@exemple.fr", "guitare-nuageuse-77", "Bob")
 
     # --- lister ----------------------------------------------------------
     code, sortie = romule(racine, "user", "list")
@@ -82,9 +82,9 @@ def main():
     d = json.loads((racine / "_romule-comptes.json").read_text())
     u = [x for x in d["comptes"] if x["email"] == "chef@exemple.fr"][0]
     t("le nouveau mot de passe est accepte",
-      comptes.verifier_mdp("clavier-orageux-99", u["hash"]))
+      accounts.verify_password("clavier-orageux-99", u["hash"]))
     t("l'ancien ne l'est plus",
-      not comptes.verifier_mdp("brouette-tranquille-42", u["hash"]))
+      not accounts.verify_password("brouette-tranquille-42", u["hash"]))
 
     # An account locked by repeated failures must start again: otherwise the
     # reset succeeds and the login fails all the same.

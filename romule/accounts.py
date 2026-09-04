@@ -35,7 +35,7 @@ import unicodedata
 
 from . import config
 
-FICHIER = config.fichier_etat("_romule-comptes.json", "_switch-comptes.json")
+FILE = config.fichier_etat("_romule-comptes.json", "_switch-comptes.json")
 PHOTOS = config.ROOT / "_comptes"
 
 # Parameters recommended by OWASP (Password Storage Cheat Sheet): N=2^17,
@@ -51,16 +51,16 @@ MDP_MIN, MDP_MAX = 12, 128
 PHOTO_MAX = 2 * 1024 * 1024
 
 # The threshold at which we start delaying, and the ceiling on that delay.
-ECHECS_AVANT_ATTENTE = 3
-ATTENTE_MAX = 15 * 60
+FAILURES_BEFORE_WAIT = 3
+MAX_WAIT = 15 * 60
 
 _LOCK = threading.RLock()
-_ECHECS_IP = {}                # {ip: (nombre, jusqu_a)} — memoire seule
+_IP_FAILURES = {}                # {ip: (nombre, jusqu_a)} — memoire seule
 
 # The passwords most common in public breaches. The list is deliberately
 # short: it stops the most obvious choices without pretending to replace a
 # service like "Have I Been Pwned".
-COURANTS = {
+COMMON_PASSWORDS = {
     "password", "motdepasse", "123456", "12345678", "123456789", "1234567890",
     "azertyuiop", "qwertyuiop", "azerty123", "qwerty123", "motdepasse1",
     "password1", "password123", "administrateur", "administrator", "iloveyou",
@@ -72,9 +72,9 @@ COURANTS = {
 
 # ------------------------------------------------------------------ stockage
 
-def _lire():
+def _read():
     try:
-        d = json.loads(FICHIER.read_text(encoding="utf-8"))
+        d = json.loads(FILE.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return {"version": 1, "comptes": []}
     if not isinstance(d, dict) or not isinstance(d.get("comptes"), list):
@@ -82,18 +82,18 @@ def _lire():
     return d
 
 
-def _ecrire(d):
+def _write(d):
     """Atomic write, 0600: the digests must only be readable by the system
     account running the server."""
-    FICHIER.parent.mkdir(parents=True, exist_ok=True)
-    tmp = FICHIER.with_suffix(".tmp")
+    FILE.parent.mkdir(parents=True, exist_ok=True)
+    tmp = FILE.with_suffix(".tmp")
     tmp.write_text(json.dumps(d, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     os.chmod(tmp, 0o600)
-    os.replace(tmp, FICHIER)
+    os.replace(tmp, FILE)
 
 
-def nombre():
-    return len(_lire()["comptes"])
+def count():
+    return len(_read()["comptes"])
 
 
 def _public(u):
@@ -104,39 +104,39 @@ def _public(u):
             "double_facteur": bool((u.get("totp") or {}).get("actif"))}
 
 
-def liste():
+def list_all():
     """The existing accounts, with nothing password-related."""
-    return [_public(u) for u in _lire()["comptes"]]
+    return [_public(u) for u in _read()["comptes"]]
 
 
-def par_id(uid):
-    for u in _lire()["comptes"]:
+def by_id(uid):
+    for u in _read()["comptes"]:
         if u["id"] == uid:
             return u
     return None
 
 
-def est_admin(uid):
-    u = par_id(uid)
+def is_admin(uid):
+    u = by_id(uid)
     return bool(u and u.get("admin"))
 
 
-def promouvoir(uid, admin=True):
+def set_admin(uid, admin=True):
     """Grant or withdraw the administrator role."""
     with _LOCK:
-        d = _lire()
+        d = _read()
         for u in d["comptes"]:
             if u["id"] == uid:
                 if not admin and not any(
                         v.get("admin") for v in d["comptes"] if v["id"] != uid):
                     raise ValueError("Il doit rester au moins un administrateur.")
                 u["admin"] = bool(admin)
-                _ecrire(d)
+                _write(d)
                 return _public(u)
     raise ValueError("Compte introuvable.")
 
 
-def reprendre_roles():
+def refresh_roles():
     """Accounts created before roles existed carry none.
 
     Without this catch-up, an existing installation would find itself with no
@@ -144,15 +144,15 @@ def reprendre_roles():
     more. The oldest account, the installer's, becomes one.
     """
     with _LOCK:
-        d = _lire()
+        d = _read()
         if not d["comptes"] or any(u.get("admin") for u in d["comptes"]):
             return
         plus_ancien = min(d["comptes"], key=lambda u: u.get("cree", 0))
         plus_ancien["admin"] = True
-        _ecrire(d)
+        _write(d)
 
 
-def _index_email(d, email):
+def _email_index(d, email):
     for i, u in enumerate(d["comptes"]):
         if u["email"] == email:
             return i
@@ -161,9 +161,9 @@ def _index_email(d, email):
 
 # ------------------------------------------------------------ mots de passe
 
-def _normaliser(mdp):
+def _normalise(password):
     """NFKC: an "e-acute" typed directly or composed yields the same digest."""
-    return unicodedata.normalize("NFKC", mdp or "")
+    return unicodedata.normalize("NFKC", password or "")
 
 
 # scrypt at N=2^17 uses about 128 MiB per computation. That is deliberate: it
@@ -172,14 +172,14 @@ def _normaliser(mdp):
 # to exhaust the server's memory, turning a protection into a lever. Two at a
 # time: enough not to slow normal use, few enough that the worst case stays
 # bounded.
-_PLACES_SCRYPT = threading.BoundedSemaphore(
+_SCRYPT_SLOTS = threading.BoundedSemaphore(
     int(config.env("SCRYPT_PARALLELE", "2")))
 
 
-def hacher(mdp):
+def hash_password(password):
     sel = secrets.token_bytes(16)
-    with _PLACES_SCRYPT:
-        dk = hashlib.scrypt(_normaliser(mdp).encode("utf-8"), salt=sel,
+    with _SCRYPT_SLOTS:
+        dk = hashlib.scrypt(_normalise(password).encode("utf-8"), salt=sel,
                             n=SCRYPT_N, r=SCRYPT_R, p=SCRYPT_P,
                             dklen=SCRYPT_LEN, maxmem=SCRYPT_MAXMEM)
     return "scrypt$%d$%d$%d$%s$%s" % (
@@ -187,16 +187,16 @@ def hacher(mdp):
         base64.b64encode(sel).decode(), base64.b64encode(dk).decode())
 
 
-def verifier_mdp(mdp, empreinte):
+def verify_password(password, digest):
     """Constant-time comparison. False for any unreadable digest."""
     try:
-        algo, n, r, p, sel, dk = str(empreinte).split("$")
+        algo, n, r, p, sel, dk = str(digest).split("$")
         if algo != "scrypt":
             return False
         attendu = base64.b64decode(dk)
-        with _PLACES_SCRYPT:
+        with _SCRYPT_SLOTS:
             calcule = hashlib.scrypt(
-                _normaliser(mdp).encode("utf-8"), salt=base64.b64decode(sel),
+                _normalise(password).encode("utf-8"), salt=base64.b64decode(sel),
                 n=int(n), r=int(r), p=int(p), dklen=len(attendu),
                 maxmem=SCRYPT_MAXMEM)
     except Exception:
@@ -206,27 +206,27 @@ def verifier_mdp(mdp, empreinte):
 
 # A throwaway digest, computed once: it keeps the processor busy for as long
 # on an unknown email as on a known one.
-_LEURRE = None
+_DECOY = None
 
 
-def _perdre_du_temps(mdp):
-    global _LEURRE
-    if _LEURRE is None:
-        _LEURRE = hacher(secrets.token_urlsafe(32))
-    verifier_mdp(mdp, _LEURRE)
+def _spend_time(password):
+    global _DECOY
+    if _DECOY is None:
+        _DECOY = hash_password(secrets.token_urlsafe(32))
+    verify_password(password, _DECOY)
 
 
-def valider_mdp(mdp, email=""):
+def check_password(password, email=""):
     """Raise ValueError with a displayable message if the password will not do."""
-    mdp = _normaliser(mdp)
-    if len(mdp) < MDP_MIN:
+    password = _normalise(password)
+    if len(password) < MDP_MIN:
         raise ValueError("Le mot de passe doit faire au moins %d caracteres."
                          % MDP_MIN)
-    if len(mdp) > MDP_MAX:
+    if len(password) > MDP_MAX:
         raise ValueError("Le mot de passe ne peut pas depasser %d caracteres."
                          % MDP_MAX)
-    bas = mdp.lower()
-    if bas in COURANTS:
+    bas = password.lower()
+    if bas in COMMON_PASSWORDS:
         raise ValueError("Ce mot de passe figure parmi les plus utilises : "
                          "choisis-en un autre.")
     # A password made of the same letter repeated passes the length rule and
@@ -236,13 +236,13 @@ def valider_mdp(mdp, email=""):
     local = (email or "").split("@")[0].lower()
     if len(local) >= 4 and local in bas:
         raise ValueError("Le mot de passe ne doit pas contenir ton adresse email.")
-    return mdp
+    return password
 
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s.]+\.[^@\s]+$")
 
 
-def valider_email(email):
+def check_email(email):
     e = (email or "").strip().lower()
     if not EMAIL_RE.match(e) or len(e) > 254:
         raise ValueError("Adresse email invalide.")
@@ -251,45 +251,45 @@ def valider_email(email):
 
 # ------------------------------------------------------------- temporisation
 
-def _attente(echecs):
+def _wait_for(failures):
     """1st, 2nd, 3rd attempt: free. Then 2 s, 4 s, 8 s... up to the ceiling."""
-    if echecs < ECHECS_AVANT_ATTENTE:
+    if failures < FAILURES_BEFORE_WAIT:
         return 0
-    return min(2 ** (echecs - ECHECS_AVANT_ATTENTE + 1), ATTENTE_MAX)
+    return min(2 ** (failures - FAILURES_BEFORE_WAIT + 1), MAX_WAIT)
 
 
-def _reste(jusqu_a):
-    return max(0, int(jusqu_a - time.time()))
+def _remaining(until):
+    return max(0, int(until - time.time()))
 
 
-def _refus_temporise(secondes):
-    if secondes >= 60:
-        duree = "%d minute(s)" % ((secondes + 59) // 60)
+def _refuse_for(seconds):
+    if seconds >= 60:
+        duree = "%d minute(s)" % ((seconds + 59) // 60)
     else:
-        duree = "%d seconde(s)" % secondes
+        duree = "%d seconde(s)" % seconds
     return ValueError("Trop de tentatives. Reessaie dans %s." % duree)
 
 
-def _verrou_ip(ip):
-    n, jusqu_a = _ECHECS_IP.get(ip or "?", (0, 0))
-    return _reste(jusqu_a)
+def _ip_lock(ip):
+    n, until = _IP_FAILURES.get(ip or "?", (0, 0))
+    return _remaining(until)
 
 
-def _echec_ip(ip):
+def _ip_failure(ip):
     ip = ip or "?"
-    n = _ECHECS_IP.get(ip, (0, 0))[0] + 1
-    _ECHECS_IP[ip] = (n, time.time() + _attente(n))
+    n = _IP_FAILURES.get(ip, (0, 0))[0] + 1
+    _IP_FAILURES[ip] = (n, time.time() + _wait_for(n))
 
 
 # ----------------------------------------------------------------- operations
 
-def creer(email, mdp, nom="", cfg=None):
+def create(email, password, name="", cfg=None):
     """Create an account. Raises ValueError if the email is taken or the password weak."""
-    email = valider_email(email)
-    valider_mdp(mdp, email)
+    email = check_email(email)
+    check_password(password, email)
     with _LOCK:
-        d = _lire()
-        if _index_email(d, email) >= 0:
+        d = _read()
+        if _email_index(d, email) >= 0:
             raise ValueError("Un compte existe deja avec cette adresse.")
         # The FIRST account is the administrator. That is the convention among
         # self-hosted tools (Jellyfin, Immich, Paperless): whoever installs it
@@ -297,16 +297,16 @@ def creer(email, mdp, nom="", cfg=None):
         # switch authentication off.
         premier = not d["comptes"]
         u = {"id": secrets.token_urlsafe(9), "email": email,
-             "nom": (nom or "").strip()[:80] or email.split("@")[0],
-             "hash": hacher(mdp), "cree": int(time.time()),
+             "nom": (name or "").strip()[:80] or email.split("@")[0],
+             "hash": hash_password(password), "cree": int(time.time()),
              "maj_mdp": int(time.time()), "echecs": 0, "bloque": 0,
              "photo": "", "derniere": 0, "admin": premier}
         d["comptes"].append(u)
-        _ecrire(d)
+        _write(d)
     return _public(u)
 
 
-class BesoinCode(ValueError):
+class CodeNeeded(ValueError):
     """Password correct, but the second factor is missing or does not match.
 
     A distinct exception: the form must then ask for the code without making
@@ -315,163 +315,163 @@ class BesoinCode(ValueError):
     """
 
 
-def totp_preparer(uid):
+def totp_prepare(uid):
     """Create a secret, not yet active: it only becomes so once a valid code
     has been supplied. Without that step, a mis-configured app would lock the
     account out."""
     from . import totp
     with _LOCK:
-        d = _lire()
+        d = _read()
         for i, u in enumerate(d["comptes"]):
             if u["id"] != uid:
                 continue
             secret = totp.new_secret()
             d["comptes"][i]["totp"] = {"secret": secret, "actif": False, "utilises": []}
-            _ecrire(d)
+            _write(d)
             return {"secret": secret, "lisible": totp.readable(secret),
                     "uri": totp.uri(secret, u["email"])}
     raise ValueError("Compte introuvable.")
 
 
-def totp_activer(uid, saisie):
+def totp_enable(uid, entered):
     from . import totp
     with _LOCK:
-        d = _lire()
+        d = _read()
         for i, u in enumerate(d["comptes"]):
             if u["id"] != uid:
                 continue
             conf = u.get("totp") or {}
             if not conf.get("secret"):
                 raise ValueError("Commence par générer un secret.")
-            bon, compteur = totp.verify(conf["secret"], saisie,
+            bon, counter = totp.verify(conf["secret"], entered,
                                         used=set(conf.get("utilises") or []))
             if not bon:
                 raise ValueError("Code incorrect. Vérifie l'heure de ton téléphone.")
-            conf.update({"actif": True, "utilises": [compteur]})
+            conf.update({"actif": True, "utilises": [counter]})
             d["comptes"][i]["totp"] = conf
-            _ecrire(d)
+            _write(d)
             return True
     raise ValueError("Compte introuvable.")
 
 
-def totp_desactiver(uid, mdp):
+def totp_disable(uid, password):
     """Requires the password: removing a factor is a weakening."""
     with _LOCK:
-        d = _lire()
+        d = _read()
         for i, u in enumerate(d["comptes"]):
             if u["id"] != uid:
                 continue
-            if not verifier_mdp(mdp, u["hash"]):
+            if not verify_password(password, u["hash"]):
                 raise ValueError("Mot de passe incorrect.")
             d["comptes"][i]["totp"] = {}
-            _ecrire(d)
+            _write(d)
             return True
     raise ValueError("Compte introuvable.")
 
 
-def totp_actif(u):
+def totp_active(u):
     return bool((u or {}).get("totp", {}).get("actif"))
 
 
-def _consommer_code(email, compteur):
+def _consume_code(email, counter):
     """Record the counter used, so the same code cannot be replayed."""
     with _LOCK:
-        d = _lire()
-        i = _index_email(d, email)
+        d = _read()
+        i = _email_index(d, email)
         if i < 0:
             return
         conf = d["comptes"][i].get("totp") or {}
-        vus = [c for c in (conf.get("utilises") or []) if c > compteur - 10]
-        vus.append(compteur)
+        vus = [c for c in (conf.get("utilises") or []) if c > counter - 10]
+        vus.append(counter)
         conf["utilises"] = vus[-10:]
         d["comptes"][i]["totp"] = conf
-        _ecrire(d)
+        _write(d)
 
 
-def connecter(email, mdp, ip="", code=""):
+def login(email, password, ip="", code=""):
     """Return the account if the credentials are right, else raise ValueError.
 
     The error message is the same for an unknown email and a wrong password:
     giving a different message amounts to publishing the list of accounts.
     """
-    reste = _verrou_ip(ip)
+    reste = _ip_lock(ip)
     if reste:
-        raise _refus_temporise(reste)
+        raise _refuse_for(reste)
     email = (email or "").strip().lower()
     with _LOCK:
-        d = _lire()
-        i = _index_email(d, email)
+        d = _read()
+        i = _email_index(d, email)
         u = d["comptes"][i] if i >= 0 else None
         if u:
-            attente = _reste(u.get("bloque", 0))
+            attente = _remaining(u.get("bloque", 0))
             if attente:
-                raise _refus_temporise(attente)
+                raise _refuse_for(attente)
 
     if not u:
-        _perdre_du_temps(mdp)          # same cost as for a real account
-        _echec_ip(ip)
+        _spend_time(password)          # same cost as for a real account
+        _ip_failure(ip)
         raise ValueError("Email ou mot de passe incorrect.")
 
-    if not verifier_mdp(mdp, u["hash"]):
-        _echec_ip(ip)
+    if not verify_password(password, u["hash"]):
+        _ip_failure(ip)
         with _LOCK:
-            d = _lire()
-            i = _index_email(d, email)
+            d = _read()
+            i = _email_index(d, email)
             if i >= 0:
                 n = d["comptes"][i].get("echecs", 0) + 1
                 d["comptes"][i]["echecs"] = n
-                d["comptes"][i]["bloque"] = time.time() + _attente(n)
-                _ecrire(d)
+                d["comptes"][i]["bloque"] = time.time() + _wait_for(n)
+                _write(d)
         raise ValueError("Email ou mot de passe incorrect.")
 
     # Password valid. If a second factor exists, it is still to be cleared:
     # the failure counters are therefore not reset yet.
-    if totp_actif(u):
+    if totp_active(u):
         from . import totp
-        bon, compteur = totp.verify(u["totp"]["secret"], code,
+        bon, counter = totp.verify(u["totp"]["secret"], code,
                                     used=set(u["totp"].get("utilises") or []))
         if not bon:
-            _echec_ip(ip)
-            raise BesoinCode("Code à usage unique requis." if not code
+            _ip_failure(ip)
+            raise CodeNeeded("Code à usage unique requis." if not code
                              else "Code incorrect ou déjà utilisé.")
-        _consommer_code(email, compteur)
+        _consume_code(email, counter)
 
     with _LOCK:
-        d = _lire()
-        i = _index_email(d, email)
+        d = _read()
+        i = _email_index(d, email)
         if i >= 0:
             d["comptes"][i]["echecs"] = 0
             d["comptes"][i]["bloque"] = 0
             d["comptes"][i]["derniere"] = int(time.time())
-            _ecrire(d)
+            _write(d)
             u = d["comptes"][i]
-    _ECHECS_IP.pop(ip or "?", None)
+    _IP_FAILURES.pop(ip or "?", None)
     return u
 
 
-def changer_mdp(uid, ancien, nouveau):
+def change_password(uid, old, new):
     """Requires the current password: a stolen cookie must not be enough to
     take the account for good."""
     with _LOCK:
-        d = _lire()
+        d = _read()
         for i, u in enumerate(d["comptes"]):
             if u["id"] != uid:
                 continue
-            if not verifier_mdp(ancien, u["hash"]):
+            if not verify_password(old, u["hash"]):
                 raise ValueError("Mot de passe actuel incorrect.")
-            valider_mdp(nouveau, u["email"])
-            if verifier_mdp(nouveau, u["hash"]):
+            check_password(new, u["email"])
+            if verify_password(new, u["hash"]):
                 raise ValueError("Le nouveau mot de passe est identique a l'ancien.")
-            d["comptes"][i]["hash"] = hacher(nouveau)
+            d["comptes"][i]["hash"] = hash_password(new)
             # Move the account's epoch: every session signed before this
             # instant stops being valid (see auth.session).
             d["comptes"][i]["maj_mdp"] = int(time.time())
-            _ecrire(d)
+            _write(d)
             return _public(d["comptes"][i])
     raise ValueError("Compte introuvable.")
 
 
-def reinitialiser_mdp(email, nouveau):
+def reset_password(email, new):
     """Reset the password WITHOUT knowing the old one. From the terminal only.
 
     This is the way back in for a locked-out administrator: no password left,
@@ -486,14 +486,14 @@ def reinitialiser_mdp(email, nouveau):
     accounts file: the command grants nothing the filesystem did not already
     grant, it merely makes it doable without mistakes.
     """
-    email = valider_email(email)
-    valider_mdp(nouveau, email)
+    email = check_email(email)
+    check_password(new, email)
     with _LOCK:
-        d = _lire()
-        i = _index_email(d, email)
+        d = _read()
+        i = _email_index(d, email)
         if i < 0:
             raise ValueError("Aucun compte avec cette adresse.")
-        d["comptes"][i]["hash"] = hacher(nouveau)
+        d["comptes"][i]["hash"] = hash_password(new)
         # Cut every open session: if the account was taken over, reclaiming it
         # must not leave the other party logged in.
         d["comptes"][i]["maj_mdp"] = int(time.time())
@@ -501,11 +501,11 @@ def reinitialiser_mdp(email, nouveau):
         # the reset succeeds and the login fails anyway.
         d["comptes"][i]["echecs"] = 0
         d["comptes"][i]["bloque"] = 0
-        _ecrire(d)
+        _write(d)
         return _public(d["comptes"][i])
 
 
-def desactiver_totp(email):
+def disable_totp(email):
     """Remove the second factor. For a lost phone, from the terminal.
 
     `totp_desactiver()` requires the password, which is right from the
@@ -513,10 +513,10 @@ def desactiver_totp(email):
     add no proof, and requiring it for an account whose second factor has just
     been lost would lock the user out for good.
     """
-    email = valider_email(email)
+    email = check_email(email)
     with _LOCK:
-        d = _lire()
-        i = _index_email(d, email)
+        d = _read()
+        i = _email_index(d, email)
         if i < 0:
             raise ValueError("Aucun compte avec cette adresse.")
         avait = bool((d["comptes"][i].get("totp") or {}).get("actif"))
@@ -524,40 +524,40 @@ def desactiver_totp(email):
         # already does, and two representations of the same state always end up
         # diverging somewhere.
         d["comptes"][i]["totp"] = {}
-        _ecrire(d)
+        _write(d)
         return avait
 
 
-def par_email(email):
+def by_email(email):
     """The account bearing this address, or None. For the command line."""
-    d = _lire()
-    i = _index_email(d, valider_email(email))
+    d = _read()
+    i = _email_index(d, check_email(email))
     return _public(d["comptes"][i]) if i >= 0 else None
 
 
-def modifier(uid, nom=None, email=None):
+def update(uid, name=None, email=None):
     with _LOCK:
-        d = _lire()
+        d = _read()
         for i, u in enumerate(d["comptes"]):
             if u["id"] != uid:
                 continue
-            if nom is not None:
-                d["comptes"][i]["nom"] = str(nom).strip()[:80] or u["email"].split("@")[0]
+            if name is not None:
+                d["comptes"][i]["nom"] = str(name).strip()[:80] or u["email"].split("@")[0]
             if email is not None:
-                e = valider_email(email)
-                j = _index_email(d, e)
+                e = check_email(email)
+                j = _email_index(d, e)
                 if j >= 0 and j != i:
                     raise ValueError("Un compte existe deja avec cette adresse.")
                 d["comptes"][i]["email"] = e
-            _ecrire(d)
+            _write(d)
             return _public(d["comptes"][i])
     raise ValueError("Compte introuvable.")
 
 
-def supprimer(uid):
+def delete(uid):
     """Refuses to delete the last account: nobody could get in any more."""
     with _LOCK:
-        d = _lire()
+        d = _read()
         if len(d["comptes"]) <= 1:
             raise ValueError("C'est le dernier compte : il doit rester quelqu'un "
                              "pour se connecter.")
@@ -571,7 +571,7 @@ def supprimer(uid):
             raise ValueError("C'est le dernier administrateur : promeus "
                              "quelqu'un d'autre avant de le supprimer.")
         d["comptes"] = reste
-        _ecrire(d)
+        _write(d)
     for ext in (".png", ".jpg", ".gif", ".webp"):
         p = PHOTOS / (uid + ext)
         if p.exists():
@@ -594,23 +594,23 @@ SIGNATURES = [
 ]
 
 
-def _type_image(octets):
+def _image_type(data):
     for magie, ext, mime in SIGNATURES:
-        if octets.startswith(magie):
+        if data.startswith(magie):
             return ext, mime
-    if octets[:4] == b"RIFF" and octets[8:12] == b"WEBP":
+    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
         return ".webp", "image/webp"
     return None, None
 
 
-def photo_ecrire(uid, octets):
-    if len(octets) > PHOTO_MAX:
+def photo_write(uid, data):
+    if len(data) > PHOTO_MAX:
         raise ValueError("Image trop lourde (maximum %d Mo)." % (PHOTO_MAX // 2 ** 20))
-    ext, mime = _type_image(octets or b"")
+    ext, mime = _image_type(data or b"")
     if not ext:
         raise ValueError("Format d'image non reconnu (PNG, JPEG, GIF ou WebP).")
     with _LOCK:
-        d = _lire()
+        d = _read()
         i = next((k for k, u in enumerate(d["comptes"]) if u["id"] == uid), -1)
         if i < 0:
             raise ValueError("Compte introuvable.")
@@ -623,19 +623,19 @@ def photo_ecrire(uid, octets):
                     p.unlink()
                 except OSError:
                     pass
-        (PHOTOS / (uid + ext)).write_bytes(octets)
+        (PHOTOS / (uid + ext)).write_bytes(data)
         d["comptes"][i]["photo"] = uid + ext
-        _ecrire(d)
+        _write(d)
     return {"photo": uid + ext, "type": mime}
 
 
-def photo_lire(uid):
+def photo_read(uid):
     """(octets, type) de la photo, ou (None, None)."""
-    u = par_id(uid)
-    nom = (u or {}).get("photo") or ""
-    if not nom:
+    u = by_id(uid)
+    name = (u or {}).get("photo") or ""
+    if not name:
         return None, None
-    p = PHOTOS / nom
+    p = PHOTOS / name
     # The name comes from the accounts file, but we check all the same that it
     # stays inside the intended folder.
     try:
@@ -644,21 +644,21 @@ def photo_lire(uid):
         return None, None
     if not p.exists():
         return None, None
-    _, mime = _type_image(p.read_bytes()[:16])
+    _, mime = _image_type(p.read_bytes()[:16])
     return p.read_bytes(), mime or "application/octet-stream"
 
 
-def photo_effacer(uid):
+def photo_delete(uid):
     with _LOCK:
-        d = _lire()
+        d = _read()
         for i, u in enumerate(d["comptes"]):
             if u["id"] == uid:
-                nom = u.get("photo") or ""
+                name = u.get("photo") or ""
                 d["comptes"][i]["photo"] = ""
-                _ecrire(d)
-                if nom:
+                _write(d)
+                if name:
                     try:
-                        (PHOTOS / nom).unlink()
+                        (PHOTOS / name).unlink()
                     except OSError:
                         pass
                 return True
