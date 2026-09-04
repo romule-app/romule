@@ -28,9 +28,9 @@ from . import matching
 TOKEN_URL = "https://id.twitch.tv/oauth2/token"
 API_URL = "https://api.igdb.com/v4"
 
-_JETON = {"valeur": "", "expire": 0.0}
+_TOKEN = {"value": "", "expire": 0.0}
 _LOCK = threading.Lock()
-_ECHECS = set()          # names searched in vain: we do not retry in a loop
+_FAILURES = set()          # names searched in vain: we do not retry in a loop
 
 
 def configure(cfg=None):
@@ -44,65 +44,65 @@ def _base(cfg):
     return (cfg.get("igdb_url") or "").strip().rstrip("/") or API_URL
 
 
-def _url_jeton(cfg):
+def _token_url(cfg):
     return (cfg.get("igdb_token_url") or "").strip() or TOKEN_URL
 
 
-def jeton(cfg=None, force=False):
+def token(cfg=None, force=False):
     """Application token, renewed only when it expires."""
     cfg = cfg or config.load_config()
     if not configure(cfg):
         return ""
     with _LOCK:
-        if not force and _JETON["valeur"] and _JETON["expire"] > time.time() + 60:
-            return _JETON["valeur"]
+        if not force and _TOKEN["value"] and _TOKEN["expire"] > time.time() + 60:
+            return _TOKEN["value"]
         donnees = urllib.parse.urlencode({
             "client_id": cfg["igdb_client_id"].strip(),
             "client_secret": cfg["igdb_client_secret"].strip(),
             "grant_type": "client_credentials",
         }).encode()
         try:
-            req = urllib.request.Request(_url_jeton(cfg), data=donnees)
+            req = urllib.request.Request(_token_url(cfg), data=donnees)
             with net.open_url(req, timeout=15) as r:
                 d = json.loads(r.read().decode("utf-8", "replace"))
         except Exception:
             return ""
-        _JETON["valeur"] = d.get("access_token", "")
-        _JETON["expire"] = time.time() + float(d.get("expires_in", 3600))
-        return _JETON["valeur"]
+        _TOKEN["value"] = d.get("access_token", "")
+        _TOKEN["expire"] = time.time() + float(d.get("expires_in", 3600))
+        return _TOKEN["value"]
 
 
 # IGDB accepts 4 requests a second. Without spacing, fetching 80 entries sends
 # 80 at once: half come back 429, and those failures were then mistaken for
 # "game not found".
-INTERVALLE = 0.26
-_DERNIERE = [0.0]
+INTERVAL = 0.26
+_LAST = [0.0]
 # A separate lock: sleeping while holding the token's would block everything else.
-_RYTHME = threading.Lock()
+_PACE = threading.Lock()
 
 
-def _attendre_son_tour():
-    with _RYTHME:
-        creux = INTERVALLE - (time.monotonic() - _DERNIERE[0])
+def _wait_turn():
+    with _PACE:
+        creux = INTERVAL - (time.monotonic() - _LAST[0])
         if creux > 0:
             time.sleep(creux)
-        _DERNIERE[0] = time.monotonic()
+        _LAST[0] = time.monotonic()
 
 
-def _requete(cfg, chemin, corps, essais=3):
+def _request(cfg, path, body, attempts=3):
     """Return the list of results, or None if the request FAILED.
 
     The distinction matters: an empty list means "IGDB does not have this game"
     and is worth remembering; None means "we could not ask" and must be
     retryable.
     """
-    t = jeton(cfg)
+    t = token(cfg)
     if not t:
         return None
-    for essai in range(essais):
-        _attendre_son_tour()
+    for essai in range(attempts):
+        _wait_turn()
         req = urllib.request.Request(
-            _base(cfg) + "/" + chemin, data=corps.encode("utf-8"),
+            _base(cfg) + "/" + path, data=body.encode("utf-8"),
             headers={"Client-ID": cfg["igdb_client_id"].strip(),
                      "Authorization": "Bearer " + t,
                      "Accept": "application/json"})
@@ -112,7 +112,7 @@ def _requete(cfg, chemin, corps, essais=3):
             return d if isinstance(d, list) else []
         except urllib.error.HTTPError as exc:
             if exc.code == 401:                 # token expired ahead of time
-                t = jeton(cfg, force=True)
+                t = token(cfg, force=True)
                 continue
             if exc.code == 429:                 # too fast: let it settle
                 time.sleep(1.0 + essai)
@@ -123,51 +123,55 @@ def _requete(cfg, chemin, corps, essais=3):
     return None
 
 
-def _echapper(s):
+def _escape(s):
     return str(s or "").replace('"', " ").replace("\\", " ")
 
 
-def chercher(nom, cfg=None):
-    """A game's details: {nom, resume, annee, editeur} or None.
+def search(name, cfg=None):
+    """A game's details, or None.
+
+    The returned keys — `nom`, `resume`, `annee`, `editeur` — are the entry's
+    field names: `meta.py` writes them into the on-disk cache and the interface
+    reads them by name. They are data, and they do not follow this rename.
 
     We ask for the short summary (`summary`) rather than the full article
     (`storyline`): on a game card, three lines beat a truncated paragraph.
     """
     cfg = cfg or config.load_config()
-    if not configure(cfg) or not (nom or "").strip():
+    if not configure(cfg) or not (name or "").strip():
         return None
-    cle = nom.strip().lower()
+    key = name.strip().lower()
     with _LOCK:
-        if cle in _ECHECS:
+        if key in _FAILURES:
             return None
-    corps = ('search "%s"; fields name,summary,category,first_release_date,'
+    body = ('search "%s"; fields name,summary,category,first_release_date,'
              'involved_companies.company.name,involved_companies.publisher; '
-             'limit 10;' % _echapper(nom))
-    jeux = _requete(cfg, "games", corps)
-    if jeux is None:
+             'limit 10;' % _escape(name))
+    games = _request(cfg, "games", body)
+    if games is None:
         return None                    # echec technique : on reessaiera
-    if not jeux:
+    if not games:
         with _LOCK:
-            _ECHECS.add(cle)           # genuinely not found
+            _FAILURES.add(key)           # genuinely not found
         return None
-    j = _meilleur(jeux, nom)
+    j = _best(games, name)
     if j is None:
         with _LOCK:
-            _ECHECS.add(cle)
+            _FAILURES.add(key)
         return None
-    editeur = ""
+    publisher = ""
     for ic in (j.get("involved_companies") or []):
         if ic.get("publisher") and (ic.get("company") or {}).get("name"):
-            editeur = ic["company"]["name"]
+            publisher = ic["company"]["name"]
             break
-    annee = ""
+    year = ""
     if j.get("first_release_date"):
         try:
-            annee = time.strftime("%Y", time.gmtime(int(j["first_release_date"])))
+            year = time.strftime("%Y", time.gmtime(int(j["first_release_date"])))
         except (ValueError, OSError):
-            annee = ""
+            year = ""
     return {"nom": j.get("name") or "", "resume": (j.get("summary") or "").strip(),
-            "annee": annee, "editeur": editeur}
+            "annee": year, "editeur": publisher}
 
 
 # `t_cover_big_2x` returns 528 x 704: the size of a card's cover, without
@@ -175,7 +179,7 @@ def chercher(nom, cfg=None):
 IMAGE = "https://images.igdb.com/igdb/image/upload/t_cover_big_2x/%s.jpg"
 
 
-def jaquette(nom, cfg=None):
+def cover_url(name, cfg=None):
     """The IGDB cover URL for a game, or None.
 
     IGDB publishes cover art, and Romule never asked for it: it only queried
@@ -189,34 +193,34 @@ def jaquette(nom, cfg=None):
     reason: a cover that is not the game's is worse than an empty sleeve.
     """
     cfg = cfg or config.load_config()
-    if not configure(cfg) or not (nom or "").strip():
+    if not configure(cfg) or not (name or "").strip():
         return None
-    cle = nom.strip().lower()
+    key = name.strip().lower()
     with _LOCK:
-        if cle in _ECHECS:
+        if key in _FAILURES:
             return None       # IGDB does not know this game: no cover either
-    corps = ('search "%s"; fields name,cover.image_id; limit 10;'
-             % _echapper(nom))
-    jeux = _requete(cfg, "games", corps)
-    if jeux is None:
+    body = ('search "%s"; fields name,cover.image_id; limit 10;'
+             % _escape(name))
+    games = _request(cfg, "games", body)
+    if games is None:
         return None                    # echec technique : on reessaiera
-    if not jeux:
+    if not games:
         with _LOCK:
-            _ECHECS.add(cle)           # genuinely not found
+            _FAILURES.add(key)           # genuinely not found
         return None
     # Games without a cover are dropped BEFORE matching, so that one without
     # an image does not deny Romule the cover of a neighbouring edition.
     #
-    # A known game that simply has no image does NOT join `_ECHECS`: it exists,
-    # and `chercher()` must still be able to get a summary out of it.
-    avec = [j for j in jeux if (j.get("cover") or {}).get("image_id")]
-    j = matching.best(avec, nom, name=lambda x: x.get("name") or "")
+    # A known game that simply has no image does NOT join `_FAILURES`: it exists,
+    # and `search()` must still be able to get a summary out of it.
+    avec = [j for j in games if (j.get("cover") or {}).get("image_id")]
+    j = matching.best(avec, name, name=lambda x: x.get("name") or "")
     return IMAGE % j["cover"]["image_id"] if j else None
 
 
 # IGDB platform names -> our keys. IGDB knows hundreds of them; we only map
 # the ones we know how to file.
-_PLATEFORMES = {
+_PLATFORMS = {
     "nintendo switch": "switch", "nintendo switch 2": "switch",
     "playstation 2": "ps2", "playstation": "psx", "playstation 3": "ps3",
     "playstation portable": "psp", "playstation vita": "psvita",
@@ -235,27 +239,27 @@ _PLATEFORMES = {
 }
 
 
-def plateformes(nom, cfg=None):
+def platforms(name, cfg=None):
     """The platforms this game was released on, according to IGDB.
 
     Used to decide when the extension is not enough: an `.iso` may be a PS2, a
     Wii or an Xbox, but "Metal Gear Solid 3" only came out on one of them.
     """
     cfg = cfg or config.load_config()
-    if not configure(cfg) or not (nom or "").strip():
+    if not configure(cfg) or not (name or "").strip():
         return []
-    jeux = _requete(cfg, "games",
+    games = _request(cfg, "games",
                     'search "%s"; fields name,platforms.name; limit 3;'
-                    % _echapper(nom))
-    if not jeux:
+                    % _escape(name))
+    if not games:
         return []
-    vues, out = set(), []
-    for j in jeux:
+    seen, out = set(), []
+    for j in games:
         for pf in (j.get("platforms") or []):
-            cle = _PLATEFORMES.get((pf.get("name") or "").strip().lower())
-            if cle and cle not in vues:
-                vues.add(cle)
-                out.append(cle)
+            key = _PLATFORMS.get((pf.get("name") or "").strip().lower())
+            if key and key not in seen:
+                seen.add(key)
+                out.append(key)
     return out
 
 
@@ -263,43 +267,43 @@ def plateformes(nom, cfg=None):
 # The first search result is often a HACK bearing almost the same name:
 # "Castlevania: Aria of Sorrow" used to return the summary of a modified
 # version. So we prefer the main game, then the closest title.
-JEU_PRINCIPAL = 0
-_MOTS = __import__("re").compile(r"[a-z0-9]+")
+MAIN_GAME = 0
+_WORDS = __import__("re").compile(r"[a-z0-9]+")
 
 
 def _tokens(t):
-    return set(_MOTS.findall((t or "").lower()))
+    return set(_WORDS.findall((t or "").lower()))
 
 
-def _meilleur(jeux, cherche):
-    vise = _tokens(cherche)
-    if not vise:
-        return jeux[0] if jeux else None
+def _best(games, wanted):
+    target = _tokens(wanted)
+    if not target:
+        return games[0] if games else None
 
     def score(j):
         t = _tokens(j.get("name"))
-        commun = len(vise & t)
+        common = len(target & t)
         # a title that piles on words ("… Randomizer", "… Hack") strays from
         # what we asked for
-        penalite = len(t - vise)
-        principal = 1 if j.get("category", JEU_PRINCIPAL) == JEU_PRINCIPAL else 0
-        avec_resume = 1 if (j.get("summary") or "").strip() else 0
-        return (principal, commun - penalite * 0.5, avec_resume,
+        penalty = len(t - target)
+        main = 1 if j.get("category", MAIN_GAME) == MAIN_GAME else 0
+        has_summary = 1 if (j.get("summary") or "").strip() else 0
+        return (main, common - penalty * 0.5, has_summary,
                 -(j.get("category") or 0))
 
-    retenu = max(jeux, key=score)
+    kept = max(games, key=score)
     # "At least one word in common" was far too permissive: "Crazy" passed for
     # "Crazy Construction". A candidate must cover the MAJORITY of distinctive
     # words — same rule as for SteamGridDB, same reason.
-    return retenu if matching.close_enough(retenu.get("name"), cherche) else None
+    return kept if matching.close_enough(kept.get("name"), wanted) else None
 
 
-def tester(cfg=None):
+def probe(cfg=None):
     """Check that the credentials work, without saving anything."""
     cfg = cfg or config.load_config()
     if not configure(cfg):
         raise ValueError("Client ID et Client Secret Twitch sont necessaires.")
-    if not jeton(cfg, force=True):
+    if not token(cfg, force=True):
         raise ValueError("Twitch a refuse ces identifiants.")
-    essai = chercher("The Legend of Zelda", cfg)
-    return {"jeton": True, "exemple": (essai or {}).get("nom") or "(aucun resultat)"}
+    essai = search("The Legend of Zelda", cfg)
+    return {"token": True, "exemple": (essai or {}).get("name") or "(aucun resultat)"}

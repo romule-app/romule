@@ -76,7 +76,7 @@ def fiche_nom(nom, cfg=None, reseau=True):
     # are independent, and the absence of one must not block the other.
     from . import igdb, wikipedia
     if igdb.configure(cfg):
-        fiche = igdb.chercher(d["nom"] or covers.search_name(nom), cfg)
+        fiche = igdb.search(d["nom"] or covers.search_name(nom), cfg)
         if fiche:
             d["nom"] = d["nom"] or fiche.get("nom") or ""
             for cle in ("resume", "annee", "editeur"):

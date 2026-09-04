@@ -186,7 +186,7 @@ def suggestions_import(cfg=None):
         propose = []
         if len(cles) > 1 and igdb.configure(cfg):
             from . import covers
-            vues = igdb.plateformes(covers.search_name(item["name"]), cfg)
+            vues = igdb.platforms(covers.search_name(item["name"]), cfg)
             propose = [k for k in vues if k in cles]
         out.append({
             "chemin": item["path"], "nom": item["name"], "taille": item["size"],
