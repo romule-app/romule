@@ -325,10 +325,10 @@ def totp_preparer(uid):
         for i, u in enumerate(d["comptes"]):
             if u["id"] != uid:
                 continue
-            secret = totp.secret_neuf()
+            secret = totp.new_secret()
             d["comptes"][i]["totp"] = {"secret": secret, "actif": False, "utilises": []}
             _ecrire(d)
-            return {"secret": secret, "lisible": totp.lisible(secret),
+            return {"secret": secret, "lisible": totp.readable(secret),
                     "uri": totp.uri(secret, u["email"])}
     raise ValueError("Compte introuvable.")
 
@@ -343,7 +343,7 @@ def totp_activer(uid, saisie):
             conf = u.get("totp") or {}
             if not conf.get("secret"):
                 raise ValueError("Commence par générer un secret.")
-            bon, compteur = totp.verifier(conf["secret"], saisie,
+            bon, compteur = totp.verify(conf["secret"], saisie,
                                           utilises=set(conf.get("utilises") or []))
             if not bon:
                 raise ValueError("Code incorrect. Vérifie l'heure de ton téléphone.")
@@ -428,7 +428,7 @@ def connecter(email, mdp, ip="", code=""):
     # the failure counters are therefore not reset yet.
     if totp_actif(u):
         from . import totp
-        bon, compteur = totp.verifier(u["totp"]["secret"], code,
+        bon, compteur = totp.verify(u["totp"]["secret"], code,
                                       utilises=set(u["totp"].get("utilises") or []))
         if not bon:
             _echec_ip(ip)
