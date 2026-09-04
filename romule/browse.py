@@ -8,7 +8,7 @@ interface is the only natural place to type.
 A file browser inside a network service is a sensitive primitive: it reveals
 the machine's directory tree. Three things hold it.
 
-1. It is administrator-only (`RESERVE_ADMIN` in server.py).
+1. It is administrator-only (`ADMIN_ONLY` in server.py).
 2. It lists FOLDERS and nothing else. File contents, and even file names, do
    not leave here — only a count of recognised games is returned, because that
    is what lets the user recognise their library.

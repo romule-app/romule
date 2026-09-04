@@ -130,13 +130,13 @@ try:
 
     # The seven routes above were chosen by hand. But the reserved set holds
     # twenty-seven, and nothing guaranteed the other twenty honoured it: a route
-    # added to `RESERVE_ADMIN` without being exercised is a reserve nobody has
+    # added to `ADMIN_ONLY` without being exercised is a reserve nobody has
     # checked. So we take them ALL, read from the server itself so the list
     # cannot drift.
     print("   -- et aucune des routes reservees, sans exception --")
     sys.path.insert(0, RACINE_PROJET)
     from romule.server import Handler                              # noqa: E402
-    reservees = sorted(Handler.RESERVE_ADMIN)
+    reservees = sorted(Handler.ADMIN_ONLY)
     t("la reserve est lue dans le serveur", len(reservees) >= 20, len(reservees))
     passees = []
     for route in reservees:

@@ -258,7 +258,7 @@ def _headers():
     if manque:
         return [_c("alerte", "En-tetes de securite manquants",
                    "Absents du serveur : %s." % ", ".join(manque),
-                   "Voir _entetes_securite() dans server.py.")]
+                   "Voir _security_headers() dans server.py.")]
     return [_c("bon", "En-tetes de securite", "Les %d en-tetes sont poses."
                % len(attendus))]
 
@@ -275,7 +275,7 @@ def _csp():
     if "Content-Security-Policy" not in src:
         return [_c("alerte", "Aucune politique de contenu",
                    "Le serveur ne pose pas de Content-Security-Policy.",
-                   "Voir _entetes_securite() dans server.py.")]
+                   "Voir _security_headers() dans server.py.")]
     inline = "script-src 'self' 'unsafe-inline'" in src
     externe = "default-src 'self'" in src
     if inline and externe:
@@ -294,9 +294,12 @@ def _csp():
 
 
 def _csrf():
+    # This check reads server.py's SOURCE, so it is coupled to two method names.
+    # Renaming either one turns the audit red rather than silent, which is the
+    # behaviour we want — but the names have to follow the rename.
     src = (config.PKG / "server.py").read_text(encoding="utf-8", errors="replace")
-    if "_meme_origine" in src and "def do_POST" in src \
-            and src.index("_meme_origine") < src.rindex("_route_post"):
+    if "_same_origin" in src and "def do_POST" in src \
+            and src.index("_same_origin") < src.rindex("_post_route"):
         return [_c("bon", "Protection CSRF",
                    "Tout POST est refuse s'il ne vient pas de cette page.")]
     return [_c("grave", "Protection CSRF absente",

@@ -80,7 +80,7 @@ def valeurs():
     sys.path.insert(0, str(RACINE / "romule" / "tests" / "navigateur"))
     import ecrans
     reserve = (RACINE / "romule" / "server.py").read_text(encoding="utf-8")
-    bloc = reserve[reserve.index("RESERVE_ADMIN = frozenset({"):]
+    bloc = reserve[reserve.index("ADMIN_ONLY = frozenset({"):]
     bloc = bloc[:bloc.index("})")]
     audit = (RACINE / "romule" / "tests" / "navigateur"
              / "audit_responsive.py").read_text(encoding="utf-8")
