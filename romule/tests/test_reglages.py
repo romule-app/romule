@@ -47,6 +47,10 @@ HORS_INTERFACE = {
     # is allowed and that it exists. Going through the generic settings would
     # bypass that check.
     "library_path",
+    # The consoles are managed by `/api/consoles`, which knows how to add, drop
+    # and select one. Letting them through the generic settings would mean a
+    # client could hand itself a console entry with fields nobody checked.
+    "devices", "active_device",
     # Written by the scheduler, never by a client: it is a record of what has
     # already happened. A client that could set it would be able to make a
     # nightly task look as if it had just run, and so keep it from running.

@@ -163,6 +163,24 @@ toi.
 | `schedule` | `{}` | Ce qui tourne tout seul : `{tâche: préréglage}`. Les tâches sont `scan`, `import`, `convert`, `push`, `meta` ; les préréglages `never`, `startup`, `hourly`, `6h` et `nightly:HH`. Se règle dans **Réglages → Entretien → Tout seul**. |
 | `schedule_state` | `{}` | La dernière exécution de chaque tâche planifiée. Écrit par Romule, jamais à la main : sans elle, un redémarrage rend chaque tâche nocturne à nouveau due. |
 
+### Plusieurs consoles
+
+Une Odin et un Retroid sont deux consoles, pas un réglage écrasé deux fois.
+
+| Clé | Défaut | Ce que ça fait |
+|---|---|---|
+| `devices` | une entrée | Les consoles que tu possèdes. Chacune porte ses propres `serial`, `wifi_addr`, `emulateur`, `emulateur_paquet`, `device_dir`, `roms_root`, `push_layout` et `auto_nand`. |
+| `active_device` | la première | Celle que Romule pilote. |
+
+Ces huit réglages restent aussi au premier niveau du fichier, en miroir de la
+console active. C'est délibéré : c'est ce qui permet à une version antérieure à
+cette fonction de relire ton appairage là où elle l'avait laissé, et c'est ce
+qui a permis aux quelque soixante-dix endroits du code qui lisent `device_dir`
+de continuer sans changer.
+
+La première console est fabriquée à partir de tes réglages existants, une fois,
+sans rien demander.
+
 Seules les tâches réversibles sont planifiables. Vider la corbeille, effacer le
 journal et révoquer une clé sont absents de la liste, et ce n'est pas un
 oubli : une action faite sans témoin doit être une action dont on peut encore

@@ -156,6 +156,22 @@ change that, and only the first is yours to set.
 | `schedule` | `{}` | What runs on its own: `{task: preset}`. The tasks are `scan`, `import`, `convert`, `push`, `meta`; the presets are `never`, `startup`, `hourly`, `6h` and `nightly:HH`. Set from **Settings → Maintenance → On its own**. |
 | `schedule_state` | `{}` | When each scheduled task last ran. Written by Romule, never by hand: without it a restart makes every nightly task due again. |
 
+### Several consoles
+
+An Odin and a Retroid are two consoles, not one setting overwritten twice.
+
+| Key | Default | What it does |
+|---|---|---|
+| `devices` | one entry | The consoles you own. Each carries its own `serial`, `wifi_addr`, `emulateur`, `emulateur_paquet`, `device_dir`, `roms_root`, `push_layout` and `auto_nand`. |
+| `active_device` | the first | Which one Romule is driving. |
+
+Those eight settings also stay at the top level of the file, mirroring the
+active console. That is deliberate: it is what lets a version that predates
+this feature read your pairing where it left it, and it is what kept the
+seventy-odd places in the code that read `device_dir` working unchanged.
+
+The first console is built from your existing settings, once, without asking.
+
 Only reversible tasks can be scheduled. Emptying the trash, clearing the log
 and revoking a key are absent from the list, and that is not an oversight: an
 unattended action must be one whose result you can still look at in the
