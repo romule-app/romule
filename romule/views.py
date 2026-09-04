@@ -29,20 +29,20 @@ import time
 
 from . import config
 
-FICHIER = config.fichier_etat("_romule-vues.json", "_romule-vues.json")
+FILE = config.fichier_etat("_romule-vues.json", "_romule-vues.json")
 
 # What we agree to store. A CLOSED list: the browser sends whatever it likes,
 # and without this barrier a future client version could grow the state file
 # with anything at all.
-CHAMPS = ("systeme", "recherche", "etat", "avances")
+FIELDS = ("systeme", "recherche", "etat", "avances")
 
-MAX_VUES = 50           # past this it is a list, not a shortcut
+MAX_VIEWS = 50           # past this it is a list, not a shortcut
 _LOCK = threading.RLock()
 
 
-def _lire():
+def _read():
     try:
-        d = json.loads(FICHIER.read_text(encoding="utf-8"))
+        d = json.loads(FILE.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return {"version": 1, "vues": []}
     if not isinstance(d, dict) or not isinstance(d.get("vues"), list):
@@ -50,18 +50,18 @@ def _lire():
     return d
 
 
-def _ecrire(d):
-    FICHIER.parent.mkdir(parents=True, exist_ok=True)
-    tmp = FICHIER.with_suffix(".tmp")
+def _write(d):
+    FILE.parent.mkdir(parents=True, exist_ok=True)
+    tmp = FILE.with_suffix(".tmp")
     tmp.write_text(json.dumps(d, indent=2, ensure_ascii=False) + "\n",
                    encoding="utf-8")
     os.chmod(tmp, 0o600)
-    os.replace(tmp, FICHIER)
+    os.replace(tmp, FILE)
 
 
-def _propre(filtres):
+def _clean(filters):
     """Keep only the known fields, and bound what can be bounded."""
-    f = filtres if isinstance(filtres, dict) else {}
+    f = filters if isinstance(filters, dict) else {}
     out = {
         "systeme": str(f.get("systeme") or "all")[:40],
         "recherche": str(f.get("recherche") or "")[:120],
@@ -72,30 +72,30 @@ def _propre(filtres):
     return out
 
 
-def liste():
-    return _lire()["vues"]
+def list_all():
+    return _read()["vues"]
 
 
-def creer(nom, filtres):
+def create(name, filters):
     """Return the created view, or None if the limit is reached."""
-    nom = (nom or "").strip()[:60] or "Sans nom"
+    name = (name or "").strip()[:60] or "Sans nom"
     with _LOCK:
-        d = _lire()
-        if len(d["vues"]) >= MAX_VUES:
+        d = _read()
+        if len(d["vues"]) >= MAX_VIEWS:
             return None
-        vue = {"id": secrets.token_hex(8), "nom": nom,
-               "filtres": _propre(filtres), "cree": int(time.time())}
+        vue = {"id": secrets.token_hex(8), "nom": name,
+               "filtres": _clean(filters), "cree": int(time.time())}
         d["vues"].append(vue)
-        _ecrire(d)
+        _write(d)
     return vue
 
 
-def supprimer(vid):
+def delete(vid):
     with _LOCK:
-        d = _lire()
+        d = _read()
         restantes = [v for v in d["vues"] if v["id"] != vid]
         if len(restantes) == len(d["vues"]):
             return False
         d["vues"] = restantes
-        _ecrire(d)
+        _write(d)
     return True
