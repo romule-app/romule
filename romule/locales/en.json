@@ -1155,5 +1155,13 @@
   "Toutes les 6 heures": "Every 6 hours",
   "Chaque nuit": "Nightly",
   "Tout seul": "On its own",
-  "Romule ne fait rien sans qu'on le lui demande. Ces réglages changent cela, tâche par tâche. Si une tâche tourne déjà à l'échéance, l'échéance est sautée : Romule fait une chose à la fois.": "Romule does nothing unless you ask it to. These settings change that, task by task. If a task is already running when another falls due, the due one is skipped: Romule does one thing at a time."
+  "Romule ne fait rien sans qu'on le lui demande. Ces réglages changent cela, tâche par tâche. Si une tâche tourne déjà à l'échéance, l'échéance est sautée : Romule fait une chose à la fois.": "Romule does nothing unless you ask it to. These settings change that, task by task. If a task is already running when another falls due, the due one is skipped: Romule does one thing at a time.",
+  "Console pilotée": "Console being driven",
+  "Les réglages ci-dessous appartiennent à celle-ci.": "The settings below belong to this one.",
+  "Ajouter une console": "Add a console",
+  "Console changée.": "Console changed.",
+  "Retirer cette console ?": "Remove this console?",
+  "Romule oublie ses réglages. Rien n'est supprimé sur la console.": "Romule forgets its settings. Nothing is deleted on the console itself.",
+  "Mes consoles": "My consoles",
+  "Une Odin et un Retroid sont deux consoles, pas un réglage écrasé deux fois. Tout ce qui suit dans cette section appartient à celle qui est choisie ici.": "An Odin and a Retroid are two consoles, not one setting overwritten twice. Everything that follows in this section belongs to the one chosen here."
 }
