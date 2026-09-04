@@ -61,7 +61,7 @@ def deep_verify(path):
         return (False, str(exc))
 
 
-def resume(files=None):
+def summary(files=None):
     """State of the register: what is covered, and since when.
 
     Without it there is no telling whether "no problem" means "everything is
@@ -73,40 +73,40 @@ def resume(files=None):
            "plus_ancienne": dates[0] if dates else None,
            "plus_recente": dates[-1] if dates else None}
     if files is not None:
-        connus = {f.get("rel") or Path(f["path"]).name for f in files}
-        couverts = connus & set(reg)
-        out["fichiers"] = len(connus)
-        out["couverts"] = len(couverts)
-        out["sans_empreinte"] = len(connus) - len(couverts)
+        known = {f.get("rel") or Path(f["path"]).name for f in files}
+        covered = known & set(reg)
+        out["fichiers"] = len(known)
+        out["covered"] = len(covered)
+        out["sans_empreinte"] = len(known) - len(covered)
     return out
 
 
-def _priorite(f, reg):
+def _priority(f, reg):
     """Order of processing: never-checked first, then the oldest."""
     e = reg.get(f.get("rel") or Path(f["path"]).name)
     return (1, e.get("checked", "")) if e else (0, "")
 
 
-def check(files, job, deep=False, budget_octets=None):
+def check(files, job, deep=False, budget_bytes=None):
     """Check a list of files ({path,rel,size}). Returns the report.
 
-    `budget_octets` allows a ROLLING check: never-verified files first, then
+    `budget_bytes` allows a ROLLING check: never-verified files first, then
     the oldest, until the budget runs out. A 160 GB library takes ten minutes
     in one go — nobody runs that often, so in practice nothing was ever
     checked. In slices, coverage grows on every pass.
     """
     reg = _load()
-    if budget_octets:
-        files = sorted(files, key=lambda f: _priorite(f, reg))
-        retenus, cumul = [], 0
+    if budget_bytes:
+        files = sorted(files, key=lambda f: _priority(f, reg))
+        kept, running = [], 0
         for f in files:
-            if cumul and cumul + f.get("size", 0) > budget_octets:
+            if running and running + f.get("size", 0) > budget_bytes:
                 break
-            retenus.append(f)
-            cumul += f.get("size", 0)
+            kept.append(f)
+            running += f.get("size", 0)
         job.log("Verification tournante : %d fichier(s) sur %d, %.1f Go."
-                % (len(retenus), len(files), cumul / 2 ** 30))
-        files = retenus
+                % (len(kept), len(files), running / 2 ** 30))
+        files = kept
     job.set_total(len(files))
     changed, missing, verified = [], [], 0
 
@@ -129,14 +129,14 @@ def check(files, job, deep=False, budget_octets=None):
             break
         old = reg.get(rel)
         mtime = int(p.stat().st_mtime)
-        remplace = old and old.get("mtime") is not None and old["mtime"] != mtime
-        if old and old.get("sha1") != digest and old.get("size") == size and not remplace:
+        replaced = old and old.get("mtime") is not None and old["mtime"] != mtime
+        if old and old.get("sha1") != digest and old.get("size") == size and not replaced:
             changed.append(rel)
             job.log("CORROMPU : contenu different, taille ET date inchangees — %s" % rel)
-        elif old and old.get("sha1") != digest and remplace:
+        elif old and old.get("sha1") != digest and replaced:
             job.log("Remplace depuis la derniere verification : %s" % rel)
         elif old and old.get("sha1") != digest:
-            job.log("Modifie (taille differente, normal si tu l'as remplace) : %s" % rel)
+            job.log("Modifie (taille differente, normal si tu l'as replaced) : %s" % rel)
         else:
             verified += 1
 
