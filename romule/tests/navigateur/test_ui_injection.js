@@ -332,7 +332,7 @@ const epreuvesVide = [
   ['emptied AFTER the await -> ignored',
    "async setSystem(key){ const r = await api(); SGAMES = []; }", false],
   ['no assignment -> ignored',
-   "async setSystem(key){ const r = await api(); appliquer(r); }", false],
+   "async setSystem(key){ const r = await api(); applyMain(r); }", false],
 ];
 for (const [nom, extrait, attendu] of epreuvesVide)
   t(nom, (videAvantAttente(extrait).length > 0) === attendu);

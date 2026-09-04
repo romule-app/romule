@@ -31,7 +31,7 @@
       <!-- Une version plus recente existe. Discret tant qu'il n'y a rien a
            dire — il reste cache — et jamais bloquant : c'est une invitation,
            pas une alerte. -->
-      <button class="majpuce" id="majpuce" data-act="voirMaj" hidden
+      <button class="majpuce" id="majpuce" data-act="showUpdate" hidden
               aria-label="Une mise à jour est disponible">
         <span class="majpoint" aria-hidden="true"></span>
         <span class="majtxt">Mise à jour</span>
@@ -74,27 +74,27 @@
       <!-- La recherche porte sur ce qui est AFFICHE : dans « toutes les
            plateformes » elle cherche partout, ailleurs dans la plateforme
            courante. Elle se combine avec les pastilles et les filtres
-           avances — `jeuxFiltres()` applique les trois ensemble. -->
+           avances — `filteredGames()` applique les trois ensemble. -->
       <div class="champ-recherche">
         <svg class="loupe" viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
           <circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.7"/>
           <path d="M10.4 10.4 L14 14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
         </svg>
-        <input type="text" id="filter" class="search" placeholder="Rechercher un jeu..." data-i18n-ph="lib.search" data-act-input="chercher">
+        <input type="text" id="filter" class="search" placeholder="Rechercher un jeu..." data-i18n-ph="lib.search" data-act-input="filterGames">
         <kbd class="raccourci" id="kbd-recherche" data-i18n-skip>/</kbd>
       </div>
       <span style="flex:1"></span>
       <button class="go" id="bulkconv" style="display:none" data-act="convertAll"></button>
-      <button class="ghost repliable" data-act="actualiser"
+      <button class="ghost repliable" data-act="refreshAll"
               title="Relire le serveur et la console">Actualiser</button>
-      <button class="ghost repliable" data-act="actualiserFiches"
+      <button class="ghost repliable" data-act="refreshEntries"
               title="Chercher les titres, résumés et jaquettes manquants, toutes plateformes">Fiches manquantes</button>
       <!-- Sur telephone, les rangees de filtre et de tri se replient derriere
            ce seul bouton : sinon on fait defiler un panneau de configuration
            avant d'atteindre le premier jeu. Il vit dans CETTE barre, qui reste
            visible — le mettre dans celle qu'il ouvre revenait a cacher la
            poignee a l'interieur du tiroir. Invisible au-dessus de 700 px. -->
-      <button class="ghost replier" id="replier" data-act="basculerFiltres"
+      <button class="ghost replier" id="replier" data-act="toggleFilters"
               aria-expanded="false" aria-controls="filters toolbar">Filtrer et trier</button>
     </div>
 
@@ -108,14 +108,14 @@
     </div>
 
     <div class="toolbar" id="toolbar">
-      <label class="tlbl">Trier par <select id="tri" data-act-change="setTri"></select></label>
-      <button class="szbtn sensbtn" id="sens" data-act="setSens" title="Inverser l'ordre">↑</button>
+      <label class="tlbl">Trier par <select id="tri" data-act-change="setSort"></select></label>
+      <button class="szbtn sensbtn" id="sens" data-act="setOrder" title="Inverser l'ordre">↑</button>
 
       <!-- « Tout effacer » remet les TROIS filtres a zero : la recherche, la
            pastille d'etat et les filtres avances. Il n'apparait que lorsqu'il
            y a quelque chose a effacer — un bouton toujours la, souvent inerte,
            finit par ne plus etre lu. -->
-      <button class="ghost effacer" id="effacefiltres" data-act="effacerFiltres"
+      <button class="ghost effacer" id="effacefiltres" data-act="clearFilters"
               hidden>Tout effacer</button>
 
       <div class="favwrap">
@@ -131,25 +131,25 @@
            d'un clic. Elles vivent sur le serveur, donc les memes sur le
            telephone et sur le poste. -->
       <div class="vues" id="vues"></div>
-      <button class="ghost" id="enregistrervue" data-act="enregistrerVue"
+      <button class="ghost" id="enregistrervue" data-act="saveView"
               hidden>Enregistrer cette vue</button>
 
       <span style="flex:1"></span>
       <!-- Densite d'affichage : icones de grille, convention partagee par les
            gestionnaires de fichiers et les bibliothèques de jeux. -->
-      <label class="tlbl">Afficher <select id="parpage" data-act-change="setParPage"></select></label>
+      <label class="tlbl">Afficher <select id="parpage" data-act-change="setPerPage"></select></label>
       <div class="sizes" id="tailles" role="group" aria-label="Taille des vignettes">
-        <button class="szbtn" data-sz="compact" data-act="setTaille" data-arg="compact"
+        <button class="szbtn" data-sz="compact" data-act="setSize" data-arg="compact"
                 title="Affichage dense" aria-label="Affichage dense">
           <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
             <g fill="currentColor"><rect x="1" y="1" width="3.4" height="3.4" rx=".7"/><rect x="6.3" y="1" width="3.4" height="3.4" rx=".7"/><rect x="11.6" y="1" width="3.4" height="3.4" rx=".7"/><rect x="1" y="6.3" width="3.4" height="3.4" rx=".7"/><rect x="6.3" y="6.3" width="3.4" height="3.4" rx=".7"/><rect x="11.6" y="6.3" width="3.4" height="3.4" rx=".7"/><rect x="1" y="11.6" width="3.4" height="3.4" rx=".7"/><rect x="6.3" y="11.6" width="3.4" height="3.4" rx=".7"/><rect x="11.6" y="11.6" width="3.4" height="3.4" rx=".7"/></g>
           </svg></button>
-        <button class="szbtn on" data-sz="moyen" data-act="setTaille" data-arg="moyen"
+        <button class="szbtn on" data-sz="moyen" data-act="setSize" data-arg="moyen"
                 title="Affichage moyen" aria-label="Affichage moyen">
           <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
             <g fill="currentColor"><rect x="1" y="1" width="6.2" height="6.2" rx="1"/><rect x="8.8" y="1" width="6.2" height="6.2" rx="1"/><rect x="1" y="8.8" width="6.2" height="6.2" rx="1"/><rect x="8.8" y="8.8" width="6.2" height="6.2" rx="1"/></g>
           </svg></button>
-        <button class="szbtn" data-sz="grand" data-act="setTaille" data-arg="grand"
+        <button class="szbtn" data-sz="grand" data-act="setSize" data-arg="grand"
                 title="Grandes vignettes" aria-label="Grandes vignettes">
           <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
             <rect x="1" y="1" width="14" height="14" rx="1.6" fill="currentColor"/>
@@ -209,7 +209,7 @@
          journal garde son role : l'historique de ce qui S'EST passe. -->
     <div class="tachewrap" id="tachewrap" role="status" aria-live="polite">
       <div class="drophead"><b>En cours</b>
-        <button class="ghost" data-act="basculerTaches" data-val="false">Fermer</button></div>
+        <button class="ghost" data-act="toggleTasks" data-val="false">Fermer</button></div>
       <div class="tache" id="tache">
         <div class="tache-tete">
           <span class="tache-nom" id="tachelbl">Tâche en cours</span>
@@ -232,7 +232,7 @@
         <p class="lead" style="margin:0">Rien en cours.</p>
       </div>
       <div class="bar" style="margin-top:12px">
-        <button class="go" data-act="taches-vers-depot">Ajouter des jeux</button>
+        <button class="go" data-act="tasks-to-drop">Ajouter des jeux</button>
       </div>
     </div>
 
@@ -246,8 +246,8 @@
            trois noeuds de texte, et la traduction ne peut plus la reconnaitre. -->
       <p class="lead" style="margin:0 0 10px">Dépose tes fichiers n'importe où sur la page, ou choisis-les :</p>
       <div class="bar" style="margin-bottom:10px">
-        <button class="ghost" data-act="choisirFichiers">Choisir des fichiers…</button>
-        <button class="ghost" id="btnclasser" hidden data-act="classerImports">À classer</button>
+        <button class="ghost" data-act="chooseFiles">Choisir des fichiers…</button>
+        <button class="ghost" id="btnclasser" hidden data-act="assignImports">À classer</button>
       </div>
       <div class="drop" id="drop"></div>
       <div class="bar" style="margin-top:12px">
@@ -295,7 +295,7 @@
         <div id="pairwrap" class="pairbox" style="display:none">
           <div class="wizhead">
             <h3>Connecter la console sans câble</h3>
-            <button class="ghost" data-act="togglePair">Fermer</button>
+            <button class="ghost" data-act="togglePairing">Fermer</button>
           </div>
           <p class="lead">Le Wi-Fi évite le câble, mais reste 2 à 5× plus lent pour
             les gros transferts. À faire une seule fois : ensuite la console est
@@ -379,8 +379,8 @@
         <!-- Ce que l'outil trouve REELLEMENT sur la console : l'utilisateur n'a
              plus a deviner quels dossiers existent ni lesquels sont vides. -->
         <div class="bar" style="margin-top:10px">
-          <button class="go" data-act="analyseGlobale">Analyser la console</button>
-          <button class="ghost" data-act="ajouterPlateforme">Ajouter une plateforme…</button>
+          <button class="go" data-act="fullAnalysis">Analyser la console</button>
+          <button class="ghost" data-act="addPlatform">Ajouter une plateforme…</button>
         </div>
         <div class="plateformes" id="plateformes"></div>
         <div id="tree" class="tree" hidden></div>
@@ -528,7 +528,7 @@
               service, et ne bougent pas avec lui.</span></div>
           <div class="setctl">
             <div class="onbchemin mono" id="s-ludo">—</div>
-            <button class="ghost" id="b-ludo" data-act="ludoOuvrir">Changer…</button>
+            <button class="ghost" id="b-ludo" data-act="libOpen">Changer…</button>
           </div>
         </div>
         <!-- L'ordre de lecture est celui de la decision : on va quelque part,
@@ -542,9 +542,9 @@
           <div id="ludoetat" class="onbnote"></div>
           <div id="ludobrowser"></div>
           <div class="bar">
-            <button class="go" data-act="ludoValider">Utiliser ce dossier</button>
-            <button class="ghost" data-act="ludoNouveau">Nouveau dossier…</button>
-            <button class="ghost" data-act="ludoFermer">Annuler</button>
+            <button class="go" data-act="libConfirm">Utiliser ce dossier</button>
+            <button class="ghost" data-act="libNewFolder">Nouveau dossier…</button>
+            <button class="ghost" data-act="libClose">Annuler</button>
           </div>
         </div>
       </div>
@@ -633,8 +633,8 @@
               quand l'article existe. « Tout retélécharger » oublie les fiches
               actuelles et les reprend de zéro.</span></div>
           <div class="setctl pile">
-            <button class="go" data-act="actualiserFiches">Compléter les fiches manquantes</button>
-            <button class="ghost" data-act="forcerFiches">Tout retélécharger</button>
+            <button class="go" data-act="refreshEntries">Compléter les fiches manquantes</button>
+            <button class="ghost" data-act="forceEntries">Tout retélécharger</button>
           </div>
         </div>
 
@@ -655,7 +655,7 @@
           <input type="text" id="s-igdbid" placeholder="Client ID" autocomplete="off">
           <input type="password" id="s-igdbsecret" placeholder="Client Secret"
                  autocomplete="new-password">
-          <button class="ghost" data-act="testerIgdb">Tester les identifiants</button>
+          <button class="ghost" data-act="testIgdb">Tester les identifiants</button>
           <div id="igdbtest"></div>
         </div>
       </div>
@@ -699,11 +699,11 @@
           qui s'est connecté.</p>
 
         <div class="entretien">
-          <button class="ghost" data-act="voirEntretien" data-arg="doublons">Doublons</button>
-          <button class="ghost" data-act="voirEntretien" data-arg="integrite">Intégrité</button>
-          <button class="ghost" data-act="voirEntretien" data-arg="sauvegardes">Sauvegardes</button>
-          <button class="ghost" data-act="voirEntretien" data-arg="acces">Connexions</button>
-          <button class="ghost" data-act="voirEntretien" data-arg="transfert">Transfert interrompu</button>
+          <button class="ghost" data-act="showMaintenance" data-arg="doublons">Doublons</button>
+          <button class="ghost" data-act="showMaintenance" data-arg="integrite">Intégrité</button>
+          <button class="ghost" data-act="showMaintenance" data-arg="sauvegardes">Sauvegardes</button>
+          <button class="ghost" data-act="showMaintenance" data-arg="acces">Connexions</button>
+          <button class="ghost" data-act="showMaintenance" data-arg="transfert">Transfert interrompu</button>
         </div>
         <div id="entretien"></div>
       </div>
@@ -714,8 +714,8 @@
           démarrage&nbsp;: ce qui cloche part dans le journal. Relance-le ici
           après avoir changé un réglage.</p>
         <div class="bar">
-          <button class="go" data-act="auditer">Lancer l'audit</button>
-          <button class="ghost" data-act="auditer" data-val="true">Sans réseau</button>
+          <button class="go" data-act="runAudit">Lancer l'audit</button>
+          <button class="ghost" data-act="runAudit" data-val="true">Sans réseau</button>
         </div>
         <div id="auditres"></div>
       </div>
@@ -757,7 +757,7 @@
                 ludothèque.</span></div>
             <div class="setctl"><div id="listecomptes"></div>
               <button class="ghost" style="margin-top:8px"
-                      data-act="ajouterCompte">Ajouter une personne</button></div>
+                      data-act="addAccount">Ajouter une personne</button></div>
           </div>
         </div>
 
@@ -807,8 +807,8 @@
             <div class="setctl"><input type="text" id="s-oidcredirect" placeholder="https://ludo.exemple.fr"></div>
           </div>
           <div class="bar">
-            <button class="go" data-act="testerAuth">Tester la connexion au fournisseur</button>
-            <button class="ghost" data-act="copierRetour">Copier l'adresse de retour</button>
+            <button class="go" data-act="testAuth">Tester la connexion au fournisseur</button>
+            <button class="ghost" data-act="copyCallback">Copier l'adresse de retour</button>
           </div>
           <div id="authtest"></div>
         </div>
@@ -835,8 +835,8 @@
             <input type="text" id="s-notifurl" style="margin-top:6px"
                    placeholder="https://discord.com/api/webhooks/…">
             <div class="bar" style="margin-top:8px">
-              <button class="ghost" data-act="ajouterNotif">Ajouter</button>
-              <button class="ghost" data-act="testerNotifSaisie">Tester sans enregistrer</button>
+              <button class="ghost" data-act="addNotification">Ajouter</button>
+              <button class="ghost" data-act="testNotificationInput">Tester sans enregistrer</button>
             </div></div>
         </div>
 
@@ -852,7 +852,7 @@
             <div id="clenouvelle" hidden></div>
             <input type="text" id="s-clenom" placeholder="À quoi elle sert">
             <button class="ghost" style="margin-top:8px"
-                    data-act="creerCle">Créer une clé</button></div>
+                    data-act="createKey">Créer une clé</button></div>
         </div>
 
         <div class="setrow">
@@ -901,9 +901,9 @@
             <span data-i18n="settings.mvt.help">Vaut pour tout le reste : arrivée des listes, ouverture des fenêtres, journal.</span></div>
           <div class="setctl">
             <div class="segment" id="s-mvt" role="group" aria-label="Mouvement">
-              <button data-val="complet" data-act="setMouvement" data-arg="complet" data-i18n="mvt.complet">Complet</button>
-              <button data-val="reduit" data-act="setMouvement" data-arg="reduit" data-i18n="mvt.reduit">Réduit</button>
-              <button data-val="aucun" data-act="setMouvement" data-arg="aucun" data-i18n="mvt.aucun">Aucun</button>
+              <button data-val="complet" data-act="setMotion" data-arg="complet" data-i18n="mvt.complet">Complet</button>
+              <button data-val="reduit" data-act="setMotion" data-arg="reduit" data-i18n="mvt.reduit">Réduit</button>
+              <button data-val="aucun" data-act="setMotion" data-arg="aucun" data-i18n="mvt.aucun">Aucun</button>
             </div>
           </div>
         </div>
@@ -1033,7 +1033,7 @@
       </div>
       <input type="text" id="jsearch" class="search" placeholder="Filtrer…" data-act-input="renderJournal">
       <div class="bar">
-        <button class="ghost on" id="jsuivi" data-act="basculerSuivi">Suivi auto</button>
+        <button class="ghost on" id="jsuivi" data-act="toggleFollow">Suivi auto</button>
         <button class="ghost" data-act="journalCopy">Copier</button>
         <button class="ghost" data-act="journalClear">Effacer</button>
       </div>

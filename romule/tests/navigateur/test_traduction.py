@@ -197,12 +197,12 @@ def main():
         n.js("app.tab('settings')")
         time.sleep(1.2)
         d = n.js("(document.getElementById('d-plateforme')||{}).textContent") or ""
-        t("phrase a variable traduite", "settings block" in d, d[:60])
+        t("a phrase with a variable is translated", "settings block" in d, d[:60])
 
         reste = parcourir(n, RESTE_FR)
         # Game titles are data: they keep their accents.
         vrais = [x for x in reste if "Pok" not in x and "™" not in x]
-        t("plus aucune phrase d'interface en francais", not vrais, vrais[:3])
+        t("no interface phrase left in French", not vrais, vrais[:3])
 
         print("   -- les donnees restent intactes --")
         n.js("app.tab('jeux')")

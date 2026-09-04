@@ -125,15 +125,15 @@ def pluriels(n):
       (async () => {
         const rendu = [];
         for (const langue of ['fr', 'en']) {
-          await chargerLangue(langue);
+          await loadLanguage(langue);
           rendu.push([langue,
-                      nb(0, '{fichier|fichiers}'),
-                      nb(1, '{fichier|fichiers}'),
-                      nb(2, '{fichier|fichiers}'),
-                      phrase('%d {jeu|jeux} au total', 1),
-                      phrase('%d {jeu|jeux} au total', 5)]);
+                      countPhrase(0, '{fichier|fichiers}'),
+                      countPhrase(1, '{fichier|fichiers}'),
+                      countPhrase(2, '{fichier|fichiers}'),
+                      tpl('%d {jeu|jeux} au total', 1),
+                      tpl('%d {jeu|jeux} au total', 5)]);
         }
-        await chargerLangue('fr');
+        await loadLanguage('fr');
         return rendu;
       })()""") or []
     attendu = {
@@ -204,14 +204,14 @@ def mobile(n):
                 filters: getComputedStyle(document.getElementById('filters')).display,
                 largeur: window.innerWidth};
       })()"""))
-    n.js("app.basculerFiltres()")
+    n.js("app.toggleFilters()")
     time.sleep(0.5)
     t("it unfolds the filters",
       bool(n.js("document.getElementById('toolbar').getClientRects().length > 0")))
     t("and announces it to screen readers",
       n.js("document.getElementById('replier').getAttribute('aria-expanded')")
       == "true")
-    n.js("app.basculerFiltres()")
+    n.js("app.toggleFilters()")
     n.cmd("Emulation.setDeviceMetricsOverride",
           {"width": 1400, "height": 1000, "deviceScaleFactor": 1, "mobile": False})
     time.sleep(1.0)
@@ -221,7 +221,7 @@ def croix(n):
     print("   -- the grid is walked with the D-pad --")
     # On a handheld, the thumb is on the D-pad. These devices emit standard
     # keyboard events: this test replays them.
-    n.js("app.effacerFiltres()")
+    n.js("app.clearFilters()")
     time.sleep(0.5)
     total = cartes(n)
     if total < 2:
@@ -269,7 +269,7 @@ def annuler(n):
     # charges every time the price of a mistake that costs nothing. But the
     # "Undo" button must really RESTORE — otherwise an annoyance has been
     # replaced by a lie.
-    n.js("app.effacerFiltres(); app.tab('jeux')")
+    n.js("app.clearFilters(); app.tab('jeux')")
     time.sleep(0.8)
     avant = cartes(n)
     cle = n.js("(document.querySelector('#lib .gcard') || {}).dataset ?"
@@ -329,9 +329,9 @@ def liste_gardee(n):
         const ancien = TRI;
         const autre = Object.keys(TRIS).find(k => k !== ancien);
         if (!autre) return true;
-        app.setTri(autre);
+        app.setSort(autre);
         const apres = jeuxUnifies();
-        app.setTri(ancien);
+        app.setSort(ancien);
         return apres !== avant;
       })()"""))
     t("a change of inventory rebuilds it", n.js("""
@@ -346,28 +346,28 @@ def recherche(n):
     print("   -- the search filters what is displayed --")
     avant = cartes(n)
     n.js("document.getElementById('filter').value = 'zzzzimprobable';"
-         " app.chercher()")
+         " app.filterGames()")
     time.sleep(0.6)
     t("a query with no result empties the grid", cartes(n) == 0, avant)
-    n.js("document.getElementById('filter').value = ''; app.chercher()")
+    n.js("document.getElementById('filter').value = ''; app.filterGames()")
     time.sleep(0.6)
     t("clearing the query fills it again", cartes(n) == avant, avant)
 
 
 def filtres(n):
     print("   -- filters: counting, clearing --")
-    n.js("app.effacerFiltres()")
+    n.js("app.clearFilters()")
     time.sleep(0.4)
     t("with no filter, \"Clear all\" is hidden",
       n.js("document.getElementById('effacefiltres').hidden"))
-    n.js("document.getElementById('filter').value = 'jeu'; app.chercher()")
+    n.js("document.getElementById('filter').value = 'jeu'; app.filterGames()")
     time.sleep(0.5)
     t("with a filter, it appears",
       not n.js("document.getElementById('effacefiltres').hidden"))
     t("the counter shows on the button",
       "1" in (n.js("document.getElementById('favbtn').textContent") or ""),
       n.js("document.getElementById('favbtn').textContent"))
-    n.js("app.effacerFiltres()")
+    n.js("app.clearFilters()")
     time.sleep(0.4)
     t("\"Clear all\" empties the search",
       n.js("document.getElementById('filter').value") == "")
@@ -378,31 +378,31 @@ def vues(n):
     print("   -- a saved view replays --")
     # The full round trip, through the server: the only way to know a view
     # survives and is read back.
-    n.js("document.getElementById('filter').value = 'jeu'; app.chercher()")
+    n.js("document.getElementById('filter').value = 'jeu'; app.filterGames()")
     time.sleep(0.4)
     n.js("""
       (async () => {
         const r = await api('/api/vue-creer',
           {nom: 'Essai', filtres: filtresCourants()});
-        VUES = r.vues || []; dessinerVues();
+        VUES = r.vues || []; renderViews();
       })()""")
     time.sleep(1.4)
     t("the view appears as a pill",
       (n.js("document.querySelectorAll('#vues .vue').length") or 0) >= 1)
-    n.js("app.effacerFiltres()")
+    n.js("app.clearFilters()")
     time.sleep(0.4)
     n.js("(function () { const v = VUES.find(x => x.nom === 'Essai');"
-         " if (v) app.appliquerVue(v.id); })()")
+         " if (v) app.applyView(v.id); })()")
     time.sleep(1.0)
     t("applying it restores the search",
       n.js("document.getElementById('filter').value") == "jeu",
       n.js("document.getElementById('filter').value"))
     n.js("(function () { const v = VUES.find(x => x.nom === 'Essai');"
-         " if (v) app.supprimerVue(v.id); })()")
+         " if (v) app.deleteView(v.id); })()")
     time.sleep(1.2)
     t("forgetting it removes it",
       not any(v.get("nom") == "Essai" for v in (n.js("VUES") or [])))
-    n.js("app.effacerFiltres()")
+    n.js("app.clearFilters()")
 
 
 def cache(n, cible):

@@ -133,7 +133,7 @@ function nomLisible(fichier) {
   return s || pretty(fichier);
 }
 
-function nomJeu(g) {
+function gameName(g) {
   const m = g && g.tid && META[String(g.tid).toLowerCase()];
   if (m && m.nom) return m.nom.replace(/^\(([^)]{2,14})\)\s*/, '').trim();
   // off-Switch: official title resolved by SteamGridDB, when it was fetched
@@ -153,10 +153,10 @@ function creditResume(g) {
     ? '<a href="' + esc(url) + '" target="_blank" rel="noopener noreferrer">' +
       esc(nom) + '</a>'
     : esc(nom);
-  return phrase('Résumé issu de %s, sous licence CC BY-SA.', lien);
+  return tpl('Résumé issu de %s, sous licence CC BY-SA.', lien);
 }
 
-function resumeJeu(g) {
+function gameSummary(g) {
   const m = g && g.tid && META[String(g.tid).toLowerCase()];
   if (m && m.resume) return m.resume;
   // Off-Switch the summary comes from IGDB and travels with the game: without
@@ -166,7 +166,7 @@ function resumeJeu(g) {
 }
 
 // Year and publisher, when the source supplies them (IGDB for non-Switch).
-function contexteJeu(g) {
+function gameContext(g) {
   const f = g && (g.files && g.files[0]) || g || {};
   return [f.annee || g.annee, f.editeur || g.editeur].filter(Boolean).join('  ·  ');
 }
@@ -242,7 +242,7 @@ async function api(path, body, discret) {
     // ("Unexpected token '<'") told nobody anything.
     j = /Unexpected token '<'|not valid JSON/.test(e.message || '')
       ? {error: 'Session expirée : reconnecte-toi.', _session: true}
-      : {error: phrase('réseau : %s', e.message)};
+      : {error: tpl('réseau : %s', e.message)};
   }
   if (j && j._session) {
     dialogue({
@@ -371,15 +371,15 @@ function accorder(texte, n) {
                                (_, sing, plur) => (i ? plur : sing));
 }
 
-// `nb(3, '{fichier|fichiers}')` -> "3 fichiers". The same notation as in
+// `countPhrase(3, '{fichier|fichiers}')` -> "3 fichiers". The same notation as in
 // sentences: one convention to remember, and one to translate.
-function nb(n, unite) {
+function countPhrase(n, unite) {
   return n + ' ' + accorder(t(unite), n);
 }
 
 // A whole sentence with the number in the middle. `%d` is replaced, in order,
 // by each value given.
-function phrase(modele, ...valeurs) {
+function tpl(modele, ...valeurs) {
   // Both markers are replaced IN ORDER, not by type: a translation may swap
   // them round, but it keeps their count. Knowing only %d left a raw "%s" on
   // screen as soon as a path or a name entered a sentence.
@@ -419,7 +419,7 @@ function appliquerAttrs(el) {
   const table = JSON.parse(el.dataset.i18nAttrs || '{}');
   for (const [attribut, [cle, ...vals]] of Object.entries(table)) {
     el.setAttribute(attribut, vals.length
-      ? phrase(cle, ...vals.map(v => t(String(v))))
+      ? tpl(cle, ...vals.map(v => t(String(v))))
       : t(cle));
   }
 }
@@ -492,7 +492,7 @@ const OBSERVATEUR = new MutationObserver(mutations => {
   }
 });
 
-async function chargerLangue(code) {
+async function loadLanguage(code) {
   LANGUE = code || 'en';
   // The page's `lang` attribute was pinned to "fr" whatever the chosen
   // language: screen readers pronounced English with French phonetics, and the
@@ -551,7 +551,7 @@ function messageLisible(chemin, err) {
 // itself before your eyes while it is still receding.
 const FERMETURE_MS = 160;
 
-function fermerVoile(el) {
+function closeOverlay(el) {
   if (!el || !el.classList.contains('open')) return;
   if (document.documentElement.dataset.mvt === 'aucun') {
     el.classList.remove('open', 'sansentree');
@@ -579,7 +579,7 @@ function fermerVoile(el) {
    including when the transition is interrupted. */
 const NOM_TRANSITION = 'jaquette';
 
-function ouvrirDepuisJaquette(cle, muter) {
+function openFromCover(cle, muter) {
   const source = document.querySelector(
     '.gcard[data-key="' + (window.CSS && CSS.escape ? CSS.escape(cle) : cle) + '"] .art img');
   if (!source || !document.startViewTransition ||
@@ -628,7 +628,7 @@ function ouvrirDepuisJaquette(cle, muter) {
    ours. */
 let JLOG_SERVEUR = 0;
 
-function fusionnerJournal(recu) {
+function mergeLog(recu) {
   if (recu.length < JLOG_SERVEUR) JLOG_SERVEUR = 0;   // nouvelle tache
   if (recu.length === JLOG_SERVEUR) return;
   JLOG = JLOG.concat(recu.slice(JLOG_SERVEUR)).slice(-800);
@@ -665,7 +665,7 @@ function renderJournal() {
         '<span class="jn" data-i18n-skip>' + e.n + '</span>' +
         '<span class="jm" data-i18n-skip>' + esc(e.m) + '</span></div>').join('')
     : '<div class="jempty">' + (q
-        ? phrase('Aucun événement pour « %s ».', esc(q))
+        ? tpl('Aucun événement pour « %s ».', esc(q))
         : t('Aucun événement.')) + '</div>';
 
   // Like a terminal: only the lines that just arrived animate. The whole block
@@ -687,13 +687,13 @@ function renderJournal() {
   // jumping as soon as you scroll up to read. Forcing the scroll made the log
   // unreadable during a task.
   if (JSUIVI) el.scrollTop = el.scrollHeight;
-  majBoutonSuivi();
+  updateFollowButton();
 }
 
 // True while the user has not scrolled the log up.
 let JSUIVI = true;
 
-function majBoutonSuivi() {
+function updateFollowButton() {
   const b = $('jsuivi');
   if (!b) return;
   R.classe(b, 'on', JSUIVI);
@@ -739,7 +739,7 @@ function dialogue({titre, niveau = 'info', message = '', detail = '', options = 
       '<pre>' + esc(detail) + '</pre></details>' : '') +
     '<div class="acts">' + boutons +
     '<button class="ghost" data-di="close">' + esc(fermer) + '</button></div></div>';
-  // Reopening cancels a closing in progress: without this, `fermerVoile`'s
+  // Reopening cancels a closing in progress: without this, `closeOverlay`'s
   // deferred cleanup would empty the dialog we just opened.
   el.classList.remove('ferme');
   el.classList.add('open');
@@ -989,7 +989,7 @@ let RECHERCHE_FICHES = false;
 // Python FUNCTION names, not displayed text: they are not translated.
 const TACHES_FICHES = ['sync_meta', 'meta_sync'];   // i18n:ok
 
-function renderTache(j) {
+function renderTask(j) {
   const el = $('tache');
   const cherche = !!j.running && TACHES_FICHES.includes(j.label);
   if (cherche !== RECHERCHE_FICHES) {
@@ -1009,7 +1009,7 @@ function renderTache(j) {
     R.texte($('tachelbl'), 'Tâche en cours');
     R.texte($('tachedetail'), '');
     majFab();
-    majPanneauTaches(j);
+    updateTaskPanel(j);
     return;
   }
   const pct = j.total ? Math.min(100, Math.round(100 * j.done / j.total)) : null;
@@ -1026,22 +1026,22 @@ function renderTache(j) {
   R.texte($('tachereste'), reste);
   R.texte($('pausebtn'), j.paused ? 'Reprendre' : 'Pause');
 
-  R.texte($('tachelbl'), nomTache(j));
+  R.texte($('tachelbl'), taskName(j));
   ACT_SERVEUR = {
-    titre: nomTache(j),
+    titre: taskName(j),
     pct: pct,
     secs: secs,
     pause: !!j.paused,
     reste: [j.total ? j.done + '/' + j.total : '', reste].filter(Boolean).join(' · '),
   };
   majFab();
-  majPanneauTaches(j);
+  updateTaskPanel(j);
 }
 
 // The "+" button's panel: what is running, how far along, and how much time is
 // left. The log, for its part, tells what HAS happened — the two do not
 // overlap.
-function majPanneauTaches(j) {
+function updateTaskPanel(j) {
   const bloc = $('tache'), vide = $('tachevide');
   if (!bloc || !vide) return;
   const enCours = !!(j && j.running);
@@ -1088,7 +1088,7 @@ const NOMS_TACHE = {
   verify_library:      'Vérification',
 };
 
-function nomTache(j) {
+function taskName(j) {
   return NOMS_TACHE[j.label] || 'Tâche en cours';
 }
 
@@ -1309,43 +1309,43 @@ function filtresCourants() {
           avances: [...FAV]};
 }
 
-function nbFiltresActifs() {
+function activeFilterCount() {
   const f = filtresCourants();
   return (f.recherche ? 1 : 0) + (f.etat !== 'all' ? 1 : 0) + f.avances.length;
 }
 
-function resumeFiltres(f) {
+function filterSummary(f) {
   const bouts = [];
-  bouts.push(phrase('Plateforme : %s',
+  bouts.push(tpl('Plateforme : %s',
                     f.systeme === 'all' ? t('toutes') : libelleSysteme(f.systeme)));
-  if (f.recherche) bouts.push(phrase('Recherche : %s', f.recherche));
-  if (f.etat !== 'all') bouts.push(phrase('État : %s', f.etat));
+  if (f.recherche) bouts.push(tpl('Recherche : %s', f.recherche));
+  if (f.etat !== 'all') bouts.push(tpl('État : %s', f.etat));
   if (f.avances.length)
-    bouts.push(phrase('Filtres avancés : %s',
+    bouts.push(tpl('Filtres avancés : %s',
                       f.avances.map(k => t((FAVANCES[k] || [k])[0])).join(', ')));
   return bouts.join('\n');
 }
 
-function dessinerVues() {
+function renderViews() {
   const boite = $('vues');
   if (boite)
     boite.innerHTML = VUES.map(v =>
-      '<span class="vue" data-act="appliquerVue" data-arg="' + esc(v.id) + '"'
+      '<span class="vue" data-act="applyView" data-arg="' + esc(v.id) + '"'
       + ' data-i18n-skip>' + esc(v.nom)
-      + '<button class="oter" data-act="supprimerVue" data-arg="' + esc(v.id)
+      + '<button class="oter" data-act="deleteView" data-arg="' + esc(v.id)
       + '" title="' + esc(t('Oublier cette vue')) + '"'
       + ' aria-label="' + esc(t('Oublier cette vue')) + '">×</button></span>').join('');
-  majBarreFiltres();
+  updateFilterBar();
 }
 
-function majBarreFiltres() {
-  const n = nbFiltresActifs();
+function updateFilterBar() {
+  const n = activeFilterCount();
   const eff = $('effacefiltres');
   if (eff) eff.hidden = n === 0;
   const enr = $('enregistrervue');
   if (enr) enr.hidden = n === 0;
   const b = $('favbtn');
-  if (b) R.texte(b, n ? phrase('Plus de filtres · %d', n) : t('Plus de filtres'));
+  if (b) R.texte(b, n ? tpl('Plus de filtres · %d', n) : t('Plus de filtres'));
 }
 
 // ------------------------------------------------------------ mise a jour
@@ -1376,11 +1376,11 @@ function notesLisibles(md) {
     .trim();
 }
 
-async function chargerVues() {
+async function loadViews() {
   const r = await api('/api/vues', null, true);
   if (!r || r.error) return;
   VUES = r.vues || [];
-  dessinerVues();
+  renderViews();
 }
 
 function renderLibBientot() {
@@ -1390,7 +1390,7 @@ function renderLibBientot() {
 
 function renderLib() {
   renderSysSelect();
-  majBarreFiltres();
+  updateFilterBar();
   // The Switch-specific status filters (updates, DLC, conversion) make no
   // sense elsewhere: we hide them, the rest of the view is shared.
   const suisse = isSwitch();
@@ -1419,27 +1419,27 @@ function renderLib() {
   if (ETATS_CONSOLE.includes(FILTER) && !consoleLue()) { FILTER = 'all'; majChips(); }
 
   const bulk = $('bulkconv');
-  if (n.convert) { bulk.style.display = ''; bulk.textContent = phrase('Convertir les %s restants', n.convert); }
+  if (n.convert) { bulk.style.display = ''; bulk.textContent = tpl('Convertir les %s restants', n.convert); }
   else bulk.style.display = 'none';
 
   const q = ($('filter').value || '').toLowerCase();
   // Grouping comes AFTER filtering: a group must only count the versions
   // actually visible, otherwise it would announce "5 versions" in a list that
   // shows one.
-  const list = regrouper(jeuxFiltres(tous));
+  const list = regrouper(filteredGames(tous));
 
   const lib = $('lib');
   if (!DATA.files.length && !tous.length) {
     lib.innerHTML = '<div class="empty">' +
       esc(t('Aucun fichier Switch dans ce dossier.')) + '<br>' +
-      phrase('Dépose des jeux avec le bouton %s, en bas à droite.', '+') +
+      tpl('Dépose des jeux avec le bouton %s, en bas à droite.', '+') +
       '</div>';
     $('pager').innerHTML = ''; renderActionBar(); return;
   }
   if (!list.length) {
     lib.innerHTML = '<div class="empty">' + (FILTER === 'all'
-      ? phrase('Aucun jeu ne correspond à « %s ».', esc($('filter').value))
-      : phrase('Rien dans « %s » — tout est en ordre de ce côté.',
+      ? tpl('Aucun jeu ne correspond à « %s ».', esc($('filter').value))
+      : tpl('Rien dans « %s » — tout est en ordre de ce côté.',
               t(ETATS[FILTER][1]))) + '</div>';
     $('pager').innerHTML = ''; renderActionBar(); return;
   }
@@ -1470,7 +1470,7 @@ function renderLib() {
     // pointing the wrong way.
     cle: ({g}) => g.key,
     creer: (x) => R.depuisHtml(carteHtml(x)),
-    majEl: (el, x) => majCarte(el, x),
+    majEl: (el, x) => updateCard(el, x),
   });
 
   renderAlphabet(list);
@@ -1483,7 +1483,7 @@ function renderLib() {
 // list IS sorted by name: with a sort by size, jumping to "M" would mean
 // nothing, so the index disappears.
 function lettreDe(g) {
-  const t = (nomJeu(g) || '').trim();
+  const t = (gameName(g) || '').trim();
   // Accents are unfolded: "Ecran" and "Écran" file in the same place.
   const c = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '')[0] || '';
   if (/[0-9]/.test(c)) return '#';
@@ -1565,7 +1565,7 @@ function majAlphabet() {
 // nothing else. The status ("Update to activate", "Problem") is already said by
 // the cover's badge; the detail — which update, why a file is incomplete —
 // belongs to the detail view, where there is room to explain it.
-function carteLigne(x) {
+function cardLine(x) {
   const resume = resumeUtile(x.g);
   return resume ? ['resume', extrait(resume, 96)] : ['', ''];
 }
@@ -1604,7 +1604,7 @@ let RESUMES_MODELES = new Set();
 function majModelesResume(tous) {
   const compte = new Map();
   for (const x of tous) {
-    const mots = motsUtiles(resumeJeu(x.g));
+    const mots = motsUtiles(gameSummary(x.g));
     if (mots.length < 2) continue;
     const debut = mots.slice(0, MODELE_MOTS).join(' ');
     compte.set(debut, (compte.get(debut) || 0) + 1);
@@ -1614,14 +1614,14 @@ function majModelesResume(tous) {
 }
 
 function resumeUtile(g) {
-  const brut = resumeJeu(g);
+  const brut = gameSummary(g);
   if (!brut) return '';
   const mots = motsUtiles(brut);
   if (!mots.length) return '';
   if (mots.length <= MODELE_LONG &&
       RESUMES_MODELES.has(mots.slice(0, MODELE_MOTS).join(' '))) return '';
   if (mots.length > RESUME_COURT) return brut;
-  const titre = new Set(motsUtiles(nomJeu(g)));
+  const titre = new Set(motsUtiles(gameName(g)));
   const repris = mots.filter(m => titre.has(m)).length;
   return repris / mots.length >= RESUME_REDONDANT ? '' : brut;
 }
@@ -1738,7 +1738,7 @@ function mediaDe(g) {
   return MEDIA_PLATEFORME[plateformeDe(g)] || '';
 }
 
-function nomPlateforme(g) {
+function platformName(g) {
   const cle = plateformeDe(g);
   const s = (SYSTEMS || []).find(x => x.key === cle);
   return (s && s.name) || g.sysNom || cle || '';
@@ -1781,7 +1781,7 @@ function carteOverlay({g, e}) {
   // Language matters for ALL games, not only for grouped versions: knowing a
   // cartridge is Japanese before launching it saves a round trip. And for three
   // versions under the same title, it is the only thing telling them apart.
-  const lg = etiquetteLangues(g);
+  const lg = languageLabels(g);
   if (lg) {
     bouts.push('<span class="ov ovlangue" title="' + esc(lg.long) +
       '" aria-label="' + esc(lg.long) + '">' + esc(lg.court) + '</span>');
@@ -1796,7 +1796,7 @@ function carteOverlay({g, e}) {
 // A game that just arrived has neither an official title nor a cover yet.
 // Rather than an empty card you cannot tell will ever fill in, we say the
 // lookup is running.
-function sansFiche(g) {
+function withoutEntry(g) {
   if (!g) return false;
   if (g.tid) return !(META[String(g.tid).toLowerCase()] || {}).nom;
   const f = (g.files && g.files[0]) || g;
@@ -1814,11 +1814,11 @@ function auPremierPlan(el) {
 
 function ligneVersion(x) {
   const {g, e} = x;
-  const lg = etiquetteLangues(g);
+  const lg = languageLabels(g);
   const etat = e && ETATS[e.etat] ? ETATS[e.etat] : null;
   return '<div class="vrow">' +
     '<span class="vcover">' + (coverImg(g) || '') + '</span>' +
-    '<span class="vnom">' + esc(nomJeu(g)) +
+    '<span class="vnom">' + esc(gameName(g)) +
       '<span class="vfichier">' + esc(extrait(g.name || '', 46)) + '</span></span>' +
     (lg ? '<span class="vlangue" title="' + esc(lg.long) + '">' +
           esc(lg.court) + '</span>' : '') +
@@ -1833,8 +1833,8 @@ function ligneVersion(x) {
 function carteHtml(x) {
   const {g, e} = x;
   const coche = dsel2.has(g.key);
-  const [cls, txt] = carteLigne(x);
-  const attente = RECHERCHE_FICHES && sansFiche(g);
+  const [cls, txt] = cardLine(x);
+  const attente = RECHERCHE_FICHES && withoutEntry(g);
   return '<div class="gcard' + (coche ? ' sel' : '') + (attente ? ' sansfiche' : '') +
     (g.groupeN ? ' groupe' : '') +
     // The medium serves as an edging in the "all platforms" view: the only one
@@ -1843,38 +1843,38 @@ function carteHtml(x) {
     '" data-media="' + esc(vueTotale() ? mediaDe(g) : '') +
     '" data-lettre="' + esc(lettreDe(g)) +
     '" data-key="' + esc(g.key) + '"' + attrsTeinte(g) +
-    ' tabindex="0" role="button" aria-label="' + esc(nomJeu(g)) + '"' +
+    ' tabindex="0" role="button" aria-label="' + esc(gameName(g)) + '"' +
     ' data-act="cardClick" data-arg="' + esc(g.key) + '">' +
     '<div class="art">' + coverImg(g) +
     // With no cover, the medium's silhouette at least says what this is. A
     // giant initial said nothing: two games in three start with the same letter
     // in a sorted library.
     '<span class="ph">' + (silhouetteHtml(g) ||
-       esc((nomJeu(g)[0] || '?').toUpperCase())) + '</span>' +
+       esc((gameName(g)[0] || '?').toUpperCase())) + '</span>' +
     '<span class="ovslot">' + carteOverlay(x) + '</span>' +
     '<span class="badge">' + carteEtiquette(x) + '</span>' +
     '<span class="pcheck' + (coche ? ' on' : '') + '">' + (coche ? '✓' : '') + '</span>' +
     (attente ? '<span class="enattente">Recherche des infos…</span>' : '') + '</div>' +
-    '<div class="cap"><div class="gname">' + esc(nomJeu(g)) + '</div>' +
+    '<div class="cap"><div class="gname">' + esc(gameName(g)) + '</div>' +
     '<div class="ligne ' + cls + '">' + esc(txt) + '</div>' +
     // The group key comes from a file name: it travels through a `data-`
     // attribute, never inside the `onclick`'s JavaScript string — an apostrophe
     // in a title would break the handler there.
     (g.groupeN ? '<button class="pgrp" data-grp="' + esc(g.groupeCle) +
-       '" data-act="voirVersions" data-arg="' + esc(g.groupeCle) + '">' +
+       '" data-act="showVersions" data-arg="' + esc(g.groupeCle) + '">' +
        g.groupeN + ' versions…</button>' : '') +
     '<button class="pinfo" data-act="openGame" data-arg="' + esc(g.key) + '">Détails</button></div></div>';
 }
 
 // Update a card already present. Every write is conditional: nothing moves if
 // nothing changed, so no transition restarts for nothing.
-function majCarte(el, x) {
+function updateCard(el, x) {
   const {g, e} = x;
   const coche = dsel2.has(g.key);
   R.classe(el, 'sel', coche);
   // As soon as the details arrive, the waiting veil disappears without
   // redrawing the card — hence without making the cover flicker.
-  const attente = RECHERCHE_FICHES && sansFiche(g);
+  const attente = RECHERCHE_FICHES && withoutEntry(g);
   R.classe(el, 'sansfiche', attente);
   const art = el.querySelector('.art');
   const voile = el.querySelector('.enattente');
@@ -1890,7 +1890,7 @@ function majCarte(el, x) {
   const c = el.querySelector('.pcheck');
   if (c) { R.classe(c, 'on', coche); R.texte(c, coche ? '✓' : ''); }
   R.html(el.querySelector('.ovslot'), carteOverlay(x));
-  const [cls, txt] = carteLigne(x);
+  const [cls, txt] = cardLine(x);
   const l = el.querySelector('.ligne');
   if (l) { l.className = 'ligne ' + cls; R.texte(l, txt); }
 }
@@ -1917,7 +1917,7 @@ function renderToolbar(tous) {
     pp.dataset.rempli = '1';
     pp.innerHTML = PAR_PAGE.map(n =>
       '<option value="' + n + '">' +
-      (n ? phrase('%s par page', n) : t('Tout afficher')) + '</option>').join('');
+      (n ? tpl('%s par page', n) : t('Tout afficher')) + '</option>').join('');
   }
   if (pp) pp.value = String(PARPAGE);
   const s = $('sens');
@@ -1933,19 +1933,19 @@ function renderToolbar(tous) {
     '<label class="favrow"><input type="checkbox" ' + (FAV.has(k) ? 'checked ' : '') +
     'data-act-change="toggleFav" data-arg="' + esc(k) + '"><span class="grow">' + esc(lib) + '</span>' +
     '<span class="mono">' + tous.filter(fn).length + '</span></label>').join('');
-  // This button's LABEL belongs to `majBarreFiltres()`, and to it alone: here
+  // This button's LABEL belongs to `updateFilterBar()`, and to it alone: here
   // it counted only the advanced filters, while the search and the status chip
   // filter just as much. Two writers on the same text means the last one wins —
   // and it was the one that counted worst.
   const b = $('favbtn');
   if (b) b.classList.toggle('on', FAV.size > 0);
-  majBarreFiltres();
+  updateFilterBar();
 }
 
 function renderPager(total, pages, parPage) {
   const el = $('pager');
   if (pages <= 1) {
-    el.innerHTML = '<span class="mono">' + nb(total, '{jeu|jeux}') + '</span>';
+    el.innerHTML = '<span class="mono">' + countPhrase(total, '{jeu|jeux}') + '</span>';
     return;
   }
   const de = PAGE * parPage + 1, a = Math.min(total, (PAGE + 1) * parPage);
@@ -1969,15 +1969,15 @@ function renderActionBar() {
     // The same action as the detail view's button: the same words. "Put on the
     // console" and "Send to the console" named the same gesture, which forces
     // you to check every time that it really is the same thing.
-    boutons.push(['go', 'appliquer', 'Envoyer vers la console',
+    boutons.push(['go', 'applyMain', 'Envoyer vers la console',
                   c.envoyer.length ? fmt(c.poids)
-                                   : nb(c.activer.length, 'MAJ/DLC')]);
+                                   : countPhrase(c.activer.length, 'MAJ/DLC')]);
   if (c.importer.length)
-    boutons.push(['go', 'appliquer', 'Copier vers le serveur', nb(c.importer.length, '{fichier|fichiers}')]);
+    boutons.push(['go', 'applyMain', 'Copier vers le serveur', countPhrase(c.importer.length, '{fichier|fichiers}')]);
   if (surConsole)
-    boutons.push(['warn', 'supprimerConsole', 'Retirer de la console', nb(surConsole, '{fichier|fichiers}')]);
+    boutons.push(['warn', 'deleteFromConsole', 'Retirer de la console', countPhrase(surConsole, '{fichier|fichiers}')]);
   if (c.local.length)
-    boutons.push(['', 'corbeilleSelection', 'Mettre à la corbeille', nb(c.local.length, '{fichier|fichiers}')]);
+    boutons.push(['', 'trashSelection', 'Mettre à la corbeille', countPhrase(c.local.length, '{fichier|fichiers}')]);
 
   // The counter is written ONCE then updated in place: rebuilding it on every
   // click would replace the <b>, and the number would jump instead of
@@ -1988,7 +1988,7 @@ function renderActionBar() {
 
   // "Select all" disappears once everything is ticked: a button that can do
   // nothing is a button that lies.
-  const visibles = jeuxFiltres(jeuxUnifies()).length;
+  const visibles = filteredGames(jeuxUnifies()).length;
   const tout = $('touscocher');
   if (tout) {
     tout.style.display = dsel2.size >= visibles ? 'none' : '';
@@ -2038,9 +2038,9 @@ function majSection(g, e) {
   // here, beside the fact that justifies it, rather than in a distant bar.
   if ((e.aActiver || []).length) {
     l.push('<div class="majrow act"><span>À activer dans Eden</span>' +
-      '<b class="p-partiel">' + nb(e.aActiver.length, '{élément|éléments}') + '</b>' +
+      '<b class="p-partiel">' + countPhrase(e.aActiver.length, '{élément|éléments}') + '</b>' +
       '<button class="go" ' + (CONN.kind ? '' : 'disabled title="Console non connectée"') +
-      ' data-act="activerJeu" data-arg="' + esc(g.key) + '">Activer</button></div>');
+      ' data-act="enableGame" data-arg="' + esc(g.key) + '">Activer</button></div>');
   }
   drapeaux.forEach(([code, txt]) => l.push(
     '<div class="majrow"><span>' +
@@ -2067,7 +2067,7 @@ function openGameHtml(g) {
   const libelles = {
     pret:     ['ok',   'Prêt à jouer sur la console'],
     activer:  ['upd',  'Sur la console — voir « Mises à jour » ci-dessous'],
-    envoyer:  ['conv', phrase('%d {fichier|fichiers} à envoyer sur la console', e.aEnvoyer.length)],
+    envoyer:  ['conv', tpl('%d {fichier|fichiers} à envoyer sur la console', e.aEnvoyer.length)],
     importer: ['conv', 'Sur la console seulement — à importer vers le serveur'],
     convert:  ['conv', 'À convertir avant envoi'],
     probleme: ['orph', e.casses.length ? 'Fichier incomplet — à remplacer'
@@ -2095,7 +2095,7 @@ function openGameHtml(g) {
   if (g.needsConvert)
     acts.push('<button class="go" data-act="convertGame" data-arg="' + esc(g.key) + '">Convertir ce jeu</button>');
   if (g.console)
-    acts.push('<button class="go" data-act="importerJeu" data-arg="' + esc(g.key) + '">Copier vers le serveur</button>');
+    acts.push('<button class="go" data-act="importGame" data-arg="' + esc(g.key) + '">Copier vers le serveur</button>');
   else if (e.aEnvoyer.length)
     acts.push('<button class="go" data-act="sendGame" data-arg="' + esc(g.key) + '">Envoyer vers la console</button>');
   acts.push('<button class="ghost" data-act="closeGame">Fermer</button>');
@@ -2108,17 +2108,17 @@ function openGameHtml(g) {
     '<div class="top">' + (coverImg(g, 'cover',
         'role="button" tabindex="0" title="' +
         esc(t('Voir la jaquette en grand')) + '"' +
-        ' data-act="loupeJaquette"') ||
+        ' data-act="zoomCover"') ||
       '<div class="cover"></div>') +
-    '<div><h3>' + esc(nomJeu(g)) + '</h3>' +
+    '<div><h3>' + esc(gameName(g)) + '</h3>' +
     // The medium, spelled out and drawn: the piece of information most missing
     // from a library that mixes twenty-three consoles.
     '<div class="supportligne">' + silhouetteHtml(g, 'support gros') +
-      '<span>' + esc(nomPlateforme(g)) + '</span>' +
+      '<span>' + esc(platformName(g)) + '</span>' +
       // Here there is room: we name the languages instead of reducing them to
       // "MULTI" as on the cover.
       (function () {
-        const l = etiquetteLangues(g);
+        const l = languageLabels(g);
         return l ? '<span class="sep">·</span><span class="langues">' +
                    esc(l.long) + '</span>' : '';
       })() +
@@ -2162,16 +2162,16 @@ function fmtDate(d) {
 // than no preview.
 // The filing button only makes sense while something is left to file: shown
 // permanently, it suggested an action was pending.
-function majBoutonClasser(n) {
+function updateAssignButton(n) {
   const b = $('btnclasser');
   if (!b) return;
   b.hidden = !n;
-  R.texte(b, phrase('À classer (%s)', n || 0));
+  R.texte(b, tpl('À classer (%s)', n || 0));
 }
 
 function renderImport(items) {
   const d = $('drop'), btn = $('importbtn'), info = $('importinfo');
-  majBoutonClasser(items.filter(i => i.type === 'AMBIGU').length);
+  updateAssignButton(items.filter(i => i.type === 'AMBIGU').length);
   if (!items.length) {
     d.innerHTML = '<div class="dropvide">' +
       '<div class="dropicone">↓</div>' +
@@ -2186,7 +2186,7 @@ function renderImport(items) {
   }
   if (btn) {
     btn.disabled = false;
-    btn.textContent = phrase('Importer %s {élément|éléments}', items.length);
+    btn.textContent = tpl('Importer %s {élément|éléments}', items.length);
   }
   if (info) info.textContent = fmt(items.reduce((s, i) => s + (i.size || 0), 0)) + ' en attente';
 
@@ -2198,7 +2198,7 @@ function renderImport(items) {
   });
   d.innerHTML = [...groupes.entries()].map(([nom, lot]) =>
     '<div class="dgroupe"><div class="dgtete">' + esc(nom) +
-      '<span class="mono">' + nb(lot.length, '{fichier|fichiers}') + ' · ' +
+      '<span class="mono">' + countPhrase(lot.length, '{fichier|fichiers}') + ' · ' +
       fmt(lot.reduce((s, i) => s + (i.size || 0), 0)) + '</span></div>' +
     lot.map(i =>
       '<div class="drow' + (i.type === 'AMBIGU' ? ' aclasser' : '') + '"><span class="tag t-' +
@@ -2294,17 +2294,17 @@ function renduIntegrite(r) {
   + '<button class="ghost" data-act="verify" data-val="false">Tout vérifier</button></div>';
 }
 
-function renduSauvegardes(r) {
+function renderBackups(r) {
   const lots = r.lots || [];
   return '<p class="mono">Réglages et comptes uniquement — jamais les jeux. '
     + 'Une sauvegarde est prise automatiquement à chaque changement, au plus '
     + 'une par heure.</p>'
     + '<div class="bar" style="margin:10px 0">'
-    + '<button class="go" data-act="sauvegarder">Sauvegarder maintenant</button></div>'
+    + '<button class="go" data-act="saveAllSettings">Sauvegarder maintenant</button></div>'
     + (lots.length ? '<ul class="entretien-l">' + lots.map(l =>
         '<li><b>' + esc(l.date || l.lot) + '</b> <span class="mono">' + esc(l.motif || '')
-        + ' · ' + nb((l.fichiers || []).length, '{fichier|fichiers}') + '</span>'
-        + ' <button class="ghost mini" data-act="restaurerSauvegarde" data-arg="' + esc(l.lot) + '">Restaurer</button></li>').join('') + '</ul>'
+        + ' · ' + countPhrase((l.fichiers || []).length, '{fichier|fichiers}') + '</span>'
+        + ' <button class="ghost mini" data-act="restoreBackup" data-arg="' + esc(l.lot) + '">Restaurer</button></li>').join('') + '</ul>'
       : '<p class="lead">Aucune sauvegarde pour l\'instant.</p>');
 }
 
@@ -2339,8 +2339,8 @@ function renduTransfert(r) {
   + '<p class="lead"><span class="beta">bêta</span> La reprise repart du dernier '
   + 'fichier confirmé. En cas de doute, abandonner puis renvoyer reste plus sûr.</p>'
   + '<div class="bar" style="margin-top:10px">'
-  + '<button class="go" data-act="reprendreTransfert">Reprendre</button>'
-  + '<button class="ghost" data-act="oublierTransfert">Abandonner</button></div>';
+  + '<button class="go" data-act="resumeTransfer">Reprendre</button>'
+  + '<button class="ghost" data-act="forgetTransfer">Abandonner</button></div>';
 }
 
 function batterieHtml(b) {
@@ -2399,7 +2399,7 @@ function renderConn(d) {
       '<span class="cvide">Aucune console</span>' +
       '<span class="cfaits">' +
         '<button class="lien" data-act="detect">Détecter</button><i>·</i>' +
-        '<button class="lien" data-act="togglePair">sans câble</button>' +
+        '<button class="lien" data-act="togglePairing">sans câble</button>' +
         (vers ? '<i>·</i>' + esc(vers) : '') +
       '</span>';
     el.title = t('Branche le câble USB, ou connecte la console sans fil.');
@@ -2408,24 +2408,24 @@ function renderConn(d) {
 
 // The offered actions depend on the state: inviting you to "Detect" a console
 // that is already connected teaches nothing and clutters.
-function renderBarreConsole(info) {
+function renderConsoleBar(info) {
   const el = $('barreconsole');
   if (!el) return;
   const ok = info && info.connected;
   el.innerHTML = ok
-    ? '<button class="ghost" data-act="actualiser">Relire les jeux</button>' +
+    ? '<button class="ghost" data-act="refreshAll">Relire les jeux</button>' +
       '<span style="flex:1"></span>' +
       '<button class="ghost" data-act="detect">Re-détecter</button>' +
       (CONN.kind === 'usb'
         ? '<button class="ghost" data-act="wifiSwitch">Passer en Wi-Fi</button>'
         : '<button class="ghost" data-act="wifiForget">Oublier ce lien</button>')
     : '<button class="go" data-act="detect">Détecter la console</button>' +
-      '<button class="ghost" data-act="togglePair">' +
+      '<button class="ghost" data-act="togglePairing">' +
         esc(t('Connecter sans câble')) + '</button>';
 }
 
 function renderDeviceCard(info, volumes) {
-  renderBarreConsole(info);
+  renderConsoleBar(info);
   const el = $('device');
   if (!info.connected) {
     el.innerHTML = '<div class="empty">' + esc(t('Aucune console prête.')) + '<br>' +
@@ -2486,7 +2486,7 @@ function htmlLudo(r) {
   const segs = ['<a data-lpath="/">' + esc(t('racine')) + '</a>'];
   parts.forEach(p => { acc += '/' + p; segs.push('<a data-lpath="' + esc(acc) +
       '" data-i18n-skip>' + esc(p) + '</a>'); });
-  const bouts = [nb(r.jeux || 0, '{jeu|jeux} {reconnu|reconnus}')];
+  const bouts = [countPhrase(r.jeux || 0, '{jeu|jeux} {reconnu|reconnus}')];
   if (!r.ecrivable) bouts.push(t('lecture seule'));
   if (r.douteux) bouts.push(t('emplacement déconseillé'));
   const up = r.parent
@@ -2528,9 +2528,9 @@ function renduLudoOnboard() {
     '<div class="onbnote">' + esc(h.etat) + '</div>' +
     h.browser +
     '<div class="bar">' +
-      '<button class="go" data-act="ludoValider">' +
+      '<button class="go" data-act="libConfirm">' +
         esc(t('Utiliser ce dossier')) + '</button>' +
-      '<button class="ghost" data-act="ludoAnnulerOnb">' +
+      '<button class="ghost" data-act="libCancelOnb">' +
         esc(t('Annuler')) + '</button>' +
     '</div></div>';
 }
@@ -2580,7 +2580,7 @@ function buildConset() {
 // the contents, the console's from the file name: when the name lies or carries
 // none, the two cannot meet. We then fall back to the file name, as
 // _console_index does server-side.
-function surLaConsole(f) {
+function onTheConsole(f) {
   return (f.tid && CONSET.has(f.tid + '|' + f.version)) || CONSET.has('n|' + baseName(f));
 }
 function consoleName(n) {
@@ -2622,7 +2622,7 @@ function groupDeviceGames(games) {
 
 // What the console really holds. Clicking a row switches the library to that
 // platform: the setting becomes a starting point, not a dead end.
-function renderPlateformes(r) {
+function renderPlatforms(r) {
   const el = $('plateformes');
   if (!el) return;
   if (!r || !r.connectee) {
@@ -2632,7 +2632,7 @@ function renderPlateformes(r) {
   }
   const p = r.plateformes || [];
   if (!p.length) {
-    el.innerHTML = '<div class="mono">' + phrase(
+    el.innerHTML = '<div class="mono">' + tpl(
       'Aucun jeu trouvé sous %s. Vérifie le dossier des ROMs juste au-dessus.',
       '<code>' + esc(r.racine || '') + '</code>') + '</div>';
     return;
@@ -2640,17 +2640,17 @@ function renderPlateformes(r) {
   PLATEFORMES = p;
   el.innerHTML = '<div class="pfgrille">' + p.map(s =>
     '<button class="pfcarte' + (s.key === PF_OUVERTE ? ' on' : '') +
-    '" data-act="ouvrirPlateforme" data-arg="' + esc(s.key) + '" ' +
-    'title="' + esc(phrase('Détail de %s', s.name)) + '">' +
+    '" data-act="openPlatform" data-arg="' + esc(s.key) + '" ' +
+    'title="' + esc(tpl('Détail de %s', s.name)) + '">' +
       '<span class="pfnom">' + esc(s.name) + '</span>' +
       '<span class="pfn">' + s.count + '</span>' +
       '<span class="pftaille">' + fmt(s.bytes) + '</span>' +
       '<span class="pfdir">' + esc(s.folder) + '/</span>' +
     '</button>').join('') + '</div>' +
     '<div class="mono" style="margin-top:8px">' +
-    phrase('%s {plateforme|plateformes} sous %s', p.length,
+    tpl('%s {plateforme|plateformes} sous %s', p.length,
            '<code>' + esc(r.racine) + '</code>') + ' · ' +
-    phrase('%d {jeu|jeux} au total', p.reduce((n, s) => n + s.count, 0)) + '</div>';
+    tpl('%d {jeu|jeux} au total', p.reduce((n, s) => n + s.count, 0)) + '</div>';
   // A platform's detail now lives in "Console and emulator": clicking a card
   // leads there, rather than opening a second editor here.
 }
@@ -2672,7 +2672,7 @@ function moteurLisible(engine) {
     || engine || '—';
 }
 
-function remplirSelecteurPlateforme() {
+function fillPlatformSelector() {
   const sel = $('s-plateforme');
   if (!sel || !SYSTEMS.length) return;
   // Platforms with settings of their own come first: they are the ones you
@@ -2689,7 +2689,7 @@ function remplirSelecteurPlateforme() {
   sel.value = PF_REGLAGES;
 }
 
-function majReglagesPlateforme() {
+function updatePlatformSettings() {
   const sys = SYSTEMS.find(x => x.key === PF_REGLAGES);
   const propre = [...document.querySelectorAll('#pf-specifique [data-plateforme]')];
   let visibles = 0;
@@ -2703,9 +2703,9 @@ function majReglagesPlateforme() {
   if (d) {
     R.texte(d, !sys ? 'Ses réglages et son dossier sur la console.'
       : visibles
-        ? phrase('%s a %s {bloc|blocs} de réglages qui lui sont propres.',
+        ? tpl('%s a %s {bloc|blocs} de réglages qui lui sont propres.',
                  sys.name, visibles)
-        : phrase("%s n'a pas de réglage propre : seul son dossier se règle ici.",
+        : tpl("%s n'a pas de réglage propre : seul son dossier se règle ici.",
                  sys.name));
   }
   renderPfCommun(sys);
@@ -2725,19 +2725,19 @@ function renderPfCommun(sys) {
     ['Dossier local', '<code>' + esc(sys.folder) + '/</code>'],
   ];
   if (vu) lignes.push(['Sur la console',
-                     nb(vu.count, '{jeu|jeux}') + '  ·  ' + fmt(vu.bytes)]);
+                     countPhrase(vu.count, '{jeu|jeux}') + '  ·  ' + fmt(vu.bytes)]);
 
   el.innerHTML =
     '<div class="majbloc">' +
       '<div class="majrow act"><span>Dossier sur la console</span>' +
         '<b><code class="pfchemin">' + esc(perso || sys.device_dir || '—') + '</code></b>' +
-        '<button class="ghost" data-act="parcourir" data-arg="' + esc(sys.key) + '" data-arg2="' + esc(sys.device_dir || '') + '">Parcourir…</button>' +
-        (perso ? '<button class="ghost" data-act="oublierDossier" data-arg="' + esc(sys.key) + '">Par défaut</button>' : '') +
+        '<button class="ghost" data-act="browseServer" data-arg="' + esc(sys.key) + '" data-arg2="' + esc(sys.device_dir || '') + '">Parcourir…</button>' +
+        (perso ? '<button class="ghost" data-act="forgetFolder" data-arg="' + esc(sys.key) + '">Par défaut</button>' : '') +
       '</div>' +
       lignes.map(([k, v]) => '<div class="majrow"><span>' + k + '</span><b>' + v + '</b></div>').join('') +
     '</div>' +
     '<div class="bar" style="margin-top:10px">' +
-      '<button class="ghost" data-act="allerSysteme" data-arg="' + esc(sys.key) + '">' +
+      '<button class="ghost" data-act="goToSystem" data-arg="' + esc(sys.key) + '">' +
         'Voir ses jeux</button>' +
       (sys.engine === 'switch'
         ? '<button class="ghost" data-act="mkTree">Créer GAMES / UPDATE / DLC</button>' +
@@ -2831,7 +2831,7 @@ function renderEcProfiles(profils) {
   el.innerHTML = '<h3 style="margin:16px 0 8px;font-size:13.5px">Profils enregistrés</h3>' +
     '<div class="card">' + profils.map(p =>
       '<div class="row"><span class="grow"><div class="fname">' + esc(p.nom) + '</div>' +
-      '<span class="mono">' + nb(p.reglages, '{réglage|réglages}') + ' · ' +
+      '<span class="mono">' + countPhrase(p.reglages, '{réglage|réglages}') + ' · ' +
       esc(p.portee) + '</span></span>' +
       '<button class="go" data-act="ecApplyProfile" data-arg="' + esc(p.nom) + '">Appliquer ici</button></div>'
     ).join('') + '</div>' +  // i18n:ok - nom de dossier
@@ -2891,16 +2891,16 @@ function erSection(g) {
   if (!ER.appareil)
     intro = 'Indique ta console dans les Réglages pour savoir lesquels te concernent.';
   else if (miens.length)
-    intro = phrase('%s {réglage|réglages} {testé|testés} sur ta %s.',
+    intro = tpl('%s {réglage|réglages} {testé|testés} sur ta %s.',
                    miens.length, esc(ER.appareil_nom));
   else
-    intro = phrase('Rien de testé sur ta %s. Voici d\'autres appareils, '
+    intro = tpl('Rien de testé sur ta %s. Voici d\'autres appareils, '
                    + 'à titre indicatif.', esc(ER.appareil_nom));
 
   // The title found is only shown when there is doubt: otherwise it is noise.
   const doute = e.confiance === 'incertain'
     ? '<p class="erdit alerte">' +
-      phrase('Le titre trouvé est « %s » : vérifie qu\'il s\'agit bien de ton jeu.',
+      tpl('Le titre trouvé est « %s » : vérifie qu\'il s\'agit bien de ton jeu.',
              esc(e.titre || '')) + '</p>'
     : '';
 
@@ -2958,7 +2958,7 @@ const ETATS_CONSOLE = ['envoyer', 'activer', 'importer'];
 // way, that no game is on the console: everything would show as "to send".
 function consoleLue() { return CONSET.size > 0; }
 
-function etatDuJeu(g, nmap) {
+function gameState(g, nmap) {
   nmap = nmap || nandParChemin();
   if (g.console) {   // present sur la console, absent de la bibliotheque
     return {etat: 'importer', txt: ETATS.importer[1], aEnvoyer: [], aActiver: [],
@@ -2968,7 +2968,7 @@ function etatDuJeu(g, nmap) {
   const jouables = g.files.filter(f => ['nsp', 'xci'].includes(f.ext));
   const extras = g.files.filter(f => ['UPDATE', 'DLC'].includes(f.type));
 
-  const aEnvoyer = consoleLue() ? jouables.filter(f => !surLaConsole(f)) : [];
+  const aEnvoyer = consoleLue() ? jouables.filter(f => !onTheConsole(f)) : [];
 
   // incomplete files: either flagged by the server, or seen in the NAND
   const casses = g.files.filter(f => f.broken);
@@ -2990,13 +2990,13 @@ function etatDuJeu(g, nmap) {
   let etat, raison = '', note = '';
   if (cassesExtra.length) {
     note = cassesExtra.length === 1
-      ? phrase('Mise à jour incomplète (%s) — le jeu reste jouable',
+      ? tpl('Mise à jour incomplète (%s) — le jeu reste jouable',
                  pretty(cassesExtra[0].name))
       : cassesExtra.length + ' MAJ/DLC incomplets — le jeu reste jouable';
   }
   if (cassesBase.length) {
     etat = 'probleme';
-    raison = phrase('%s est incomplet — à remplacer', pretty(cassesBase[0].name));
+    raison = tpl('%s est incomplet — à remplacer', pretty(cassesBase[0].name));
   } else if (!jouables.length) {
     etat = g.needsConvert ? 'convert' : 'probleme';
     if (etat === 'probleme') raison = 'Aucun fichier jouable (.nsp ou .xci)';
@@ -3024,7 +3024,7 @@ function etatDuJeu(g, nmap) {
 
 // Games present on the console but absent from the library: they join the same
 // list instead of having a section of their own.
-function jeuxConsoleSeuls() {
+function consoleOnlyGames() {
   if (!DGAMES.length) return [];
   const connus = new Set(GAMES.map(g => g.key));
   // The file name decides when the title ID is missing or lying: without it, a
@@ -3075,7 +3075,7 @@ function jeuxConsoleSeuls() {
 // Sorting: each criterion answers a concrete question you ask in front of your
 // library ("which is the biggest?", "what is stuck?"). The year comes from IGDB:
 // it did not exist before, hence the absence of that sort.
-function anneeJeu(g) {
+function gameYear(g) {
   if (!g) return 0;
   // Switch: the year comes from nlib, through META. Other platforms: from
   // IGDB, and it travels with the game. Without both paths, the sort by year
@@ -3087,14 +3087,14 @@ function anneeJeu(g) {
 }
 
 const TRIS = {
-  nom:     ['Nom (A → Z)',        (a, b) => nomJeu(a.g).localeCompare(nomJeu(b.g))],
+  nom:     ['Nom (A → Z)',        (a, b) => gameName(a.g).localeCompare(gameName(b.g))],
   annee:   ['Année (récent → ancien)',
-            (a, b) => (anneeJeu(b.g) - anneeJeu(a.g))
-                   || nomJeu(a.g).localeCompare(nomJeu(b.g))],
+            (a, b) => (gameYear(b.g) - gameYear(a.g))
+                   || gameName(a.g).localeCompare(gameName(b.g))],
   taille:  ['Taille (gros → petit)', (a, b) => b.g.size - a.g.size],
   etat:    ['État (à traiter d\'abord)',
             (a, b) => (ORDRE_ETAT[a.e.etat] - ORDRE_ETAT[b.e.etat])
-                   || nomJeu(a.g).localeCompare(nomJeu(b.g))],
+                   || gameName(a.g).localeCompare(gameName(b.g))],
   contenu: ['Nombre de MAJ / DLC',
             (a, b) => ((b.g.updCount || 0) + (b.g.dlcCount || 0))
                     - ((a.g.updCount || 0) + (a.g.dlcCount || 0))],
@@ -3133,10 +3133,10 @@ const FAVANCES = {
   // Now that the year and the summary are known, two questions become
   // possible: "what is recent?" and "what is missing its details?". The second
   // is the more useful: it shows the work left to do.
-  recent:   ['Sorti après 2015',  x => anneeJeu(x.g) >= 2015],
-  retro:    ['Sorti avant 2000',  x => { const a = anneeJeu(x.g); return a && a < 2000; }],
-  sansfiche: ['Sans description', x => !resumeJeu(x.g)],
-  sansjaq:  ['Sans jaquette',     x => sansFiche(x.g)],
+  recent:   ['Sorti après 2015',  x => gameYear(x.g) >= 2015],
+  retro:    ['Sorti avant 2000',  x => { const a = gameYear(x.g); return a && a < 2000; }],
+  sansfiche: ['Sans description', x => !gameSummary(x.g)],
+  sansjaq:  ['Sans jaquette',     x => withoutEntry(x.g)],
 };
 let FAV = new Set(JSON.parse(localStorage.getItem('fav') || '[]'));
 
@@ -3193,7 +3193,7 @@ function etatSysteme(g) {
 
 // A game's status, whatever its platform.
 function etatDe(g) {
-  return (g.systeme && g.systeme !== 'switch') ? etatSysteme(g) : etatDuJeu(g, nandParChemin());
+  return (g.systeme && g.systeme !== 'switch') ? etatSysteme(g) : gameState(g, nandParChemin());
 }
 
 // In the overview, SCONSOLE is empty: console membership is carried by the game
@@ -3206,9 +3206,9 @@ function consoleLuePour(g) {
 // a list of 200 mixed titles would be unreadable.
 function jeuxTous() {
   const out = [];
-  GAMES.concat(jeuxConsoleSeuls()).forEach(g => {
+  GAMES.concat(consoleOnlyGames()).forEach(g => {
     if (g.console || g.files.length) out.push({g: Object.assign({}, g, {sysNom: 'Switch'}),
-                                               e: etatDuJeu(g, nandParChemin())});
+                                               e: gameState(g, nandParChemin())});
   });
   SALL.forEach(sys => {
     const surConsole = new Set(sys.console.map(x => String(x.nom).toLowerCase()));
@@ -3247,7 +3247,7 @@ function jeuxTous() {
 //
 // Yet none of that depends on the SEARCH: the unified list only changes when
 // the data, the platform or the sort order change. So we keep it, and
-// `jeuxFiltres()` only has to filter — which is on the order of a tenth of a
+// `filteredGames()` only has to filter — which is on the order of a tenth of a
 // millisecond.
 //
 // The signature includes `DONNEES_V`, incremented everywhere the inventory is
@@ -3255,9 +3255,9 @@ function jeuxTous() {
 // risk with any cache, and it is why there is only ONE place that increments,
 // called from the three assignment sites.
 let DONNEES_V = 0;
-let _uniCle = null, _uniListe = null;
+let _unifiedKey = null, _uniListe = null;
 
-function inventaireChange() { DONNEES_V++; _uniCle = null; }
+function inventaireChange() { DONNEES_V++; _unifiedKey = null; }
 
 function jeuxUnifiesBrut() {
   const cmp = (TRIS[TRI] || TRIS.nom)[1];
@@ -3265,15 +3265,15 @@ function jeuxUnifiesBrut() {
   if (!isSwitch())
     return jeuxSysteme().map(g => ({g, e: etatSysteme(g)})).sort((a, b) => cmp(a, b) * SENS);
   const nmap = nandParChemin();
-  return GAMES.concat(jeuxConsoleSeuls())
+  return GAMES.concat(consoleOnlyGames())
     .filter(g => g.console || g.files.length)
-    .map(g => ({g: Object.assign({}, g, {sysNom: 'Switch'}), e: etatDuJeu(g, nmap)}))
+    .map(g => ({g: Object.assign({}, g, {sysNom: 'Switch'}), e: gameState(g, nmap)}))
     .sort((a, b) => cmp(a, b) * SENS);
 }
 
 function jeuxUnifies() {
   const cle = SYS + '\u0000' + TRI + '\u0000' + SENS + '\u0000' + DONNEES_V;
-  if (cle !== _uniCle) { _uniCle = cle; _uniListe = jeuxUnifiesBrut(); }
+  if (cle !== _unifiedKey) { _unifiedKey = cle; _uniListe = jeuxUnifiesBrut(); }
   return _uniListe;
 }
 
@@ -3357,7 +3357,7 @@ const NOM_CODE = {
 };
 const GROUPES_NOM = /[([][^)\]]{1,40}[)\]]/g;
 
-function languesJeu(g) {
+function gameLanguages(g) {
   const vues = [];
   for (const groupe of String((g && g.name) || '').match(GROUPES_NOM) || []) {
     const dedans = groupe.slice(1, -1).trim();
@@ -3380,8 +3380,8 @@ function languesJeu(g) {
 // One language: its code, short and unambiguous. Several: "MULTI", because
 // lining up five codes on a 158 px cover would make it unreadable — the detail
 // goes in the tooltip and in the detail view.
-function etiquetteLangues(g) {
-  const codes = languesJeu(g);
+function languageLabels(g) {
+  const codes = gameLanguages(g);
   if (!codes.length) return null;
   const noms = codes.map(c => NOM_CODE[c] || c.toUpperCase()).join(', ');
   return codes.length === 1
@@ -3447,11 +3447,11 @@ function regrouper(liste) {
 }
 
 // Liste effectivement affichee : recherche + etat + filtres avances cumules.
-function jeuxFiltres(tous) {
+function filteredGames(tous) {
   const q = ($('filter').value || '').toLowerCase();
   // the search covers BOTH names: the file name and the official title
   let l = tous.filter(({g}) => !q || g.name.toLowerCase().includes(q)
-                            || nomJeu(g).toLowerCase().includes(q));
+                            || gameName(g).toLowerCase().includes(q));
   if (FILTER !== 'all') l = l.filter(({e}) => e.etat === FILTER);
   FAV.forEach(k => { if (FAVANCES[k]) l = l.filter(FAVANCES[k][1]); });
   return l;
@@ -3486,13 +3486,13 @@ function deployCibles() {
   const nomsConsole = {};
   DGAMES.forEach(d => { nomsConsole[String(d.name || '').toLowerCase()] = d.path; });
 
-  GAMES.concat(jeuxConsoleSeuls()).forEach(g => {
+  GAMES.concat(consoleOnlyGames()).forEach(g => {
     if (!dsel2.has(g.key)) return;
     if (g.console) {
       (g.paths || []).forEach(p => { importer.push(p); supprConsole.push(p); });
       return;
     }
-    const e = etatDuJeu(g, nmap);
+    const e = gameState(g, nmap);
     e.aEnvoyer.forEach(f => { envoyer.push(f.path); poids += f.size; });
     e.aActiver.forEach(f => activer.push(f.path));
     g.files.forEach(f => {
@@ -3552,9 +3552,9 @@ function majBlocAuth() {
         : 'La connexion est déléguée au fournisseur, y compris depuis cette machine.';
     R.classe(d, 'avert', sansFournisseur || sansCompte);
   }
-  if (mode === 'interne') chargerComptes();
-  chargerCles();
-  chargerNotifs();
+  if (mode === 'interne') loadAccounts();
+  loadKeys();
+  loadNotifications();
 }
 
 // -------------------------------------------------------------- API keys
@@ -3564,14 +3564,14 @@ function majBlocAuth() {
 // with a copy button, and the user is warned it will not come back.
 let CLES = [];
 
-async function chargerCles() {
+async function loadKeys() {
   const r = await api('/api/cles', null, true);
   if (!r || r.error) return;
   CLES = r.cles || [];
-  dessinerCles();
+  renderKeys();
 }
 
-function dessinerCles() {
+function renderKeys() {
   const boite = $('listecles');
   if (!boite) return;
   const vivantes = CLES.filter(k => !k.revoquee);
@@ -3585,13 +3585,13 @@ function dessinerCles() {
     '<div class="compte-ligne">'
     + '<span class="compte-nom" data-i18n-skip>' + esc(k.nom) + '</span>'
     + '<span class="compte-mail tid" data-i18n-skip>' + esc(k.prefixe) + '…</span>'
-    + '<span class="mono" data-i18n-skip>' + esc(dateCle(k.dernier_usage)) + '</span>'
-    + '<button class="ghost mini" data-act="revoquerCle" data-arg="'
+    + '<span class="mono" data-i18n-skip>' + esc(dateKey(k.dernier_usage)) + '</span>'
+    + '<button class="ghost mini" data-act="revokeKey" data-arg="'
     + esc(k.id) + '">' + esc(t('Révoquer')) + '</button>'
     + '</div>').join('');
 }
 
-function dateCle(t0) {
+function dateKey(t0) {
   // "never" is a fact worth reporting, not an absence to hide: a key created
   // for a trial and never used still opens the API.
   if (!t0) return t('jamais utilisée');
@@ -3601,7 +3601,7 @@ function dateCle(t0) {
   return new Date(t0 * 1000).toLocaleDateString(etiquette);
 }
 
-async function creerCle() {
+async function createKey() {
   const champ = $('s-clenom');
   const nom = (champ && champ.value || '').trim();
   if (!nom) {
@@ -3613,7 +3613,7 @@ async function creerCle() {
   const r = await api('/api/cle-creer', {nom});
   if (!r || r.error) return;
   if (champ) champ.value = '';
-  await chargerCles();
+  await loadKeys();
   dialogue({
     titre: t('Clé créée'),
     niveau: 'ok',
@@ -3632,18 +3632,18 @@ async function creerCle() {
   });
 }
 
-async function revoquerCle(id) {
+async function revokeKey(id) {
   const k = CLES.find(x => x.id === id) || {};
   dialogue({
     titre: t('Révoquer cette clé ?'),
     niveau: 'avert',
-    message: phrase('%s cessera de fonctionner immédiatement. C\'est '
+    message: tpl('%s cessera de fonctionner immédiatement. C\'est '
                     + 'irréversible : il faudra en créer une autre.',
                     k.nom || id),
     actions: [{libelle: t('Révoquer'), principal: true, faire: async () => {
       const r = await api('/api/cle-revoquer', {id});
       if (r && r.ok) toast(t('Clé révoquée.'), 'ok');
-      chargerCles();
+      loadKeys();
     }}],
   });
 }
@@ -3656,15 +3656,15 @@ async function revoquerCle(id) {
 // which is which.
 let NOTIFS = [], NOTIF_EVTS = {};
 
-async function chargerNotifs() {
+async function loadNotifications() {
   const r = await api('/api/notifs', null, true);
   if (!r || r.error) return;
   NOTIFS = r.destinations || [];
   NOTIF_EVTS = r.evenements || {};
-  dessinerNotifs();
+  renderNotifications();
 }
 
-function dessinerNotifs() {
+function renderNotifications() {
   const boite = $('listenotifs');
   if (!boite) return;
   if (!NOTIFS.length) {
@@ -3678,14 +3678,14 @@ function dessinerNotifs() {
     + '<span class="compte-nom" data-i18n-skip>' + esc(d.nom || d.service) + '</span>'
     + '<span class="compte-mail tid" data-i18n-skip>' + esc(d.service) + '</span>'
     + '<span class="mono" data-i18n-skip>' + esc(d.apercu) + '</span>'
-    + '<button class="ghost mini" data-act="testerNotif" data-arg="'
+    + '<button class="ghost mini" data-act="testNotification" data-arg="'
     + esc(d.id) + '">' + esc(t('Tester')) + '</button>'
-    + '<button class="ghost mini" data-act="supprimerNotif" data-arg="'
+    + '<button class="ghost mini" data-act="deleteNotification" data-arg="'
     + esc(d.id) + '">' + esc(t('Retirer')) + '</button>'
     + '</div>').join('');
 }
 
-async function ajouterNotif() {
+async function addNotification() {
   const cn = $('s-notifnom'), cu = $('s-notifurl');
   const url = (cu && cu.value || '').trim();
   if (!url) {
@@ -3699,50 +3699,50 @@ async function ajouterNotif() {
   if (cn) cn.value = '';
   if (cu) cu.value = '';
   NOTIFS = r.destinations || [];
-  dessinerNotifs();
+  renderNotifications();
   toast(t('Destination ajoutée.'), 'ok');
 }
 
-async function supprimerNotif(id) {
+async function deleteNotification(id) {
   const r = await api('/api/notif-supprimer', {id});
   if (!r || r.error) return;
   NOTIFS = r.destinations || [];
-  dessinerNotifs();
+  renderNotifications();
   toastAction(t('Destination retirée.'), '', null, 'ok');
 }
 
-function _direResultatNotif(r) {
+function _reportNotificationResult(r) {
   if (!r) return;
   if (r.ok) toast(t('Envoyé. Regarde ton salon.'), 'ok');
   // The detail carries the HTTP code or the error's name: without it, "failed"
   // does not say whether the address is wrong or the service is down.
-  else toast(phrase('Échec : %s', r.detail || r.error || '?'), 'warn');
+  else toast(tpl('Échec : %s', r.detail || r.error || '?'), 'warn');
 }
 
-async function testerNotif(id) {
-  _direResultatNotif(await api('/api/notif-tester', {id}));
+async function testNotification(id) {
+  _reportNotificationResult(await api('/api/notif-tester', {id}));
 }
 
-async function testerNotifSaisie() {
+async function testNotificationInput() {
   const cu = $('s-notifurl');
   const url = (cu && cu.value || '').trim();
   if (!url) { toast(t('Colle l\'adresse du webhook.'), 'warn'); return; }
-  _direResultatNotif(await api('/api/notif-tester', {url}));
+  _reportNotificationResult(await api('/api/notif-tester', {url}));
 }
 
 // ------------------------------------------------------------ comptes internes
 let COMPTES = [], MOI = '', MDP_MIN = 12;
 
-async function chargerComptes() {
+async function loadAccounts() {
   const r = await api('/api/comptes', {}, true);
   if (!r || r.error) return;
   COMPTES = r.comptes || [];
   MOI = r.moi || '';
   MDP_MIN = r.mdp_min || 12;
-  dessinerComptes();
+  renderAccounts();
 }
 
-function dessinerComptes() {
+function renderAccounts() {
   const boite = $('listecomptes');
   if (boite) {
     const remplir = (el, c) => {
@@ -3753,7 +3753,7 @@ function dessinerComptes() {
       // We do not offer to remove the last account: nobody could get in any
       // more.
       b.hidden = COMPTES.length < 2;
-      b.onclick = () => supprimerCompte(c);
+      b.onclick = () => deleteAccount(c);
     };
     R.liste(boite, COMPTES, {
       cle: c => c.id,
@@ -3796,7 +3796,7 @@ function dessinerComptes() {
   }
   R.texte(carte.querySelector('.compte-nom'), moi.nom);
   R.texte(carte.querySelector('.compte-mail'), moi.email);
-  const actions = {photo: choisirPhoto, nom: renommerCompte,
+  const actions = {photo: choisirPhoto, nom: renameAccount,
                    mdp: changerMotDePasse,
                    totp: () => moi.double_facteur ? retirerDoubleFacteur()
                                                   : activerDoubleFacteur(),
@@ -3807,7 +3807,7 @@ function dessinerComptes() {
 // The account routes return their refusals in plain words (password too short,
 // email already taken...): we show them as-is rather than letting the generic
 // error dialog come up.
-async function envoiCompte(chemin, corps, apres) {
+async function accountUpload(chemin, corps, apres) {
   const r = await api(chemin, corps, true);
   if (!r) return false;
   if (r.error) { toast(r.error, 'warn'); return false; }
@@ -3817,40 +3817,40 @@ async function envoiCompte(chemin, corps, apres) {
   return true;
 }
 
-function ajouterCompte() {
+function addAccount() {
   dialogue({
     titre: 'Ajouter une personne',
     message: 'Elle pourra ouvrir la ludothèque avec ces identifiants.',
     champs: [{id: 'nom', libelle: 'Nom affiché', exemple: 'Prénom'},
              {id: 'email', libelle: 'Adresse email', exemple: 'nom@exemple.fr'},
              {id: 'mdp',
-              libelle: phrase('Mot de passe (%s caractères minimum)', MDP_MIN),
+              libelle: tpl('Mot de passe (%s caractères minimum)', MDP_MIN),
               type: 'password', auto: 'new-password'}],
     actions: [{libelle: 'Créer le compte', principal: true, faire: v =>
-      envoiCompte('/api/compte-creer', v, () => { dessinerComptes(); majBlocAuth(); })}],
+      accountUpload('/api/compte-creer', v, () => { renderAccounts(); majBlocAuth(); })}],
     fermer: 'Annuler',
   });
 }
 
-function supprimerCompte(c) {
+function deleteAccount(c) {
   dialogue({
     titre: 'Retirer ' + c.email + ' ?',
     niveau: 'warn',
     message: 'Cette personne ne pourra plus ouvrir la ludothèque.',
     actions: [{libelle: 'Retirer', principal: true, faire: () =>
-      envoiCompte('/api/compte-supprimer', {id: c.id}, dessinerComptes)}],
+      accountUpload('/api/compte-supprimer', {id: c.id}, renderAccounts)}],
     fermer: 'Annuler',
   });
 }
 
-function renommerCompte() {
+function renameAccount() {
   const moi = COMPTES.find(c => c.id === MOI) || {};
   dialogue({
     titre: 'Mon profil',
     champs: [{id: 'nom', libelle: 'Nom affiché', valeur: moi.nom},
              {id: 'email', libelle: 'Adresse email', valeur: moi.email}],
     actions: [{libelle: 'Enregistrer', principal: true, faire: v =>
-      envoiCompte('/api/compte-modifier', v, chargerComptes)}],
+      accountUpload('/api/compte-modifier', v, loadAccounts)}],
     fermer: 'Annuler',
   });
 }
@@ -3862,14 +3862,14 @@ function changerMotDePasse() {
     champs: [{id: 'ancien', libelle: 'Mot de passe actuel', type: 'password',
               auto: 'current-password'},
              {id: 'nouveau',
-              libelle: phrase('Nouveau mot de passe (%s caractères minimum)',
+              libelle: tpl('Nouveau mot de passe (%s caractères minimum)',
                               MDP_MIN), type: 'password',
               auto: 'new-password'},
              {id: 'confirme', libelle: 'Répéter le nouveau', type: 'password',
               auto: 'new-password'}],
     actions: [{libelle: 'Changer', principal: true, faire: v => {
       if (v.nouveau !== v.confirme) return toast('Les deux saisies diffèrent.', 'warn');
-      envoiCompte('/api/compte-mdp', {ancien: v.ancien, nouveau: v.nouveau});
+      accountUpload('/api/compte-mdp', {ancien: v.ancien, nouveau: v.nouveau});
     }}],
     fermer: 'Annuler',
   });
@@ -3885,11 +3885,11 @@ async function activerDoubleFacteur() {
     message: "Ajoute ce compte dans ton application d'authentification "
            + '(Aegis, Ente, Bitwarden, Google Authenticator…), puis saisis le '
            + "code qu'elle affiche.",
-    detail: phrase('Clé à saisir manuellement :\n%s\n\nAdresse otpauth :\n%s',
+    detail: tpl('Clé à saisir manuellement :\n%s\n\nAdresse otpauth :\n%s',
                    p.lisible, p.uri),
     champs: [{id: 'code', libelle: 'Code à 6 chiffres', exemple: '123456'}],
     actions: [{libelle: 'Activer', principal: true, faire: v =>
-      envoiCompte('/api/compte-totp-activer', {code: v.code}, chargerComptes)}],
+      accountUpload('/api/compte-totp-activer', {code: v.code}, loadAccounts)}],
     fermer: 'Annuler',
   });
 }
@@ -3902,14 +3902,14 @@ function retirerDoubleFacteur() {
     champs: [{id: 'mdp', libelle: 'Mot de passe actuel', type: 'password',
               auto: 'current-password'}],
     actions: [{libelle: 'Retirer', principal: true, faire: v =>
-      envoiCompte('/api/compte-totp-desactiver', {mdp: v.mdp}, chargerComptes)}],
+      accountUpload('/api/compte-totp-desactiver', {mdp: v.mdp}, loadAccounts)}],
     fermer: 'Annuler',
   });
 }
 
 // One dialog for ALL the files to file: opening one per file would be
 // unbearable as soon as ten are dropped.
-function ouvrirChoixPlateforme(items) {
+function openPlatformChoice(items) {
   const el = $('dialog');
   const ligne = it => {
     const opts = it.candidats.map(c =>
@@ -3917,8 +3917,8 @@ function ouvrirChoixPlateforme(items) {
       + (c.key === it.suggestion ? ' selected' : '') + '>'
       + esc(c.name) + (c.key === it.suggestion ? '  ✓ proposé' : '') + '</option>').join('');
     const pourquoi = it.proposes && it.proposes.length
-      ? phrase('Sorti sur %s de ces plateformes d\'après IGDB.', it.proposes.length)
-      : phrase('Aucune information : %s plateformes utilisent ',
+      ? tpl('Sorti sur %s de ces plateformes d\'après IGDB.', it.proposes.length)
+      : tpl('Aucune information : %s plateformes utilisent ',
                  it.candidats.length)
         + esc(it.extension) + '.';
     return '<div class="classer-l">'
@@ -3930,14 +3930,14 @@ function ouvrirChoixPlateforme(items) {
   el.innerHTML = '<div class="sheet dlg d-info" data-interieur>'
     + '<div class="dhead"><span class="dico">📦</span><div>'
     + '<h3>Sur quelle plateforme ?</h3>'
-    + '<p class="dmsg">' + phrase('%d {fichier|fichiers} portent une extension que ', items.length)
+    + '<p class="dmsg">' + tpl('%d {fichier|fichiers} portent une extension que ', items.length)
     + 'plusieurs plateformes utilisent. Choisis, ou laisse-les dans le dépôt.</p>'
     + '</div></div>'
     + '<div class="classer">' + items.map(ligne).join('') + '</div>'
     + '<div class="acts"><button class="go" data-di="ok">Ranger</button>'
     + '<button class="ghost" data-di="close">Plus tard</button></div></div>';
   // Reopening cancels a closing already under way: without this, the deferred
-  // cleanup in `fermerVoile` would empty the dialog we have just opened.
+  // cleanup in `closeOverlay` would empty the dialog we have just opened.
   el.classList.remove('ferme');
   el.classList.add('open');
   el.querySelectorAll('[data-di]').forEach(b => b.addEventListener('click', async () => {
@@ -3968,7 +3968,7 @@ function choisirPhoto() {
       r = await (await fetch('/api/compte-photo', {method: 'POST', body: fichier})).json();
     } catch (e) { return toast('Envoi impossible.', 'warn'); }
     if (r.error) return toast(r.error, 'warn');
-    await chargerComptes();
+    await loadAccounts();
     toast(r.message || 'Photo mise à jour.', 'ok');
   };
   f.click();
@@ -4002,7 +4002,7 @@ function syncSetDesc() {
       note.textContent = actif ? ''
         // `quand` is itself a label: leaving it raw showed "— used only with
         // “URL personnalisée”", half translated.
-        : phrase('— utilisée seulement avec « %s »', t(quand));
+        : tpl('— utilisée seulement avec « %s »', t(quand));
     }
   };
   marquer('row-sgkey', prov === 'steamgriddb', 'SteamGridDB');
@@ -4071,7 +4071,7 @@ function renderChoixEmulateur() {
   // separated there from its "not verified" note. So the sentence is assembled
   // ALREADY translated, otherwise the DOM walk looks for "Eden — not verified"
   // as a single key, which no catalogue will ever hold.
-  el.innerHTML = '<select id="selemulateur" data-act-change="choisirEmulateur">' +
+  el.innerHTML = '<select id="selemulateur" data-act-change="chooseEmulator">' +
     profils.map(x => {
       const nom = t(x.nom);
       return '<option value="' + esc(x.cle) + '"' +
@@ -4098,7 +4098,7 @@ const app = {
       $('panel-' + name).classList.add('active');
       // The previews' sample cover only exists once the library has been read:
       // on the first visit to the settings, it is finally known.
-      if (name === 'settings') majApercuJaquette();
+      if (name === 'settings') updateCoverPreview();
       // Restored after the panel change: before it, the page height is still
       // that of the old tab and the browser clamps the requested position.
       const y = DEFILEMENT['panel-' + name];
@@ -4122,7 +4122,7 @@ const app = {
   // The console is queried once, at startup: the game list depends on it, and
   // it is no longer behind a tab you would have to open.
   _consoleReady: false,
-  async reveilConsole() {
+  async wakeConsole() {
     if (this._consoleReady) return;
     this._consoleReady = true;
     // `detect()` already chains into reading the files and the NAND: doing it
@@ -4150,10 +4150,10 @@ const app = {
   },
   async openGame(k) {
     const g = this.gameByKey(k); if (!g) return;
-    ouvrirDepuisJaquette(k, () => {
+    openFromCover(k, () => {
       $('modal').innerHTML = openGameHtml(g);
       // Reopening cancels a closing already under way: without this, the
-      // deferred cleanup in `fermerVoile` would empty the dialog we just opened.
+      // deferred cleanup in `closeOverlay` would empty the dialog we just opened.
       $('modal').classList.remove('ferme');
       $('modal').classList.add('open');
       auPremierPlan($('modal'));
@@ -4162,12 +4162,12 @@ const app = {
 
     // What we already know, straight away: the detail view must never stay
     // stuck on "loading…" when no remote entry exists.
-    const resume = resumeJeu(g);
+    const resume = gameSummary(g);
     if (desc && resume) desc.textContent = resume;
     if (!g.tid) {
       const sys = SYSTEMS.find(x => x.key === (g.systeme || SYS));
       const bits = [sys && sys.name,
-                    nb(g.files.length, '{fichier|fichiers}'),
+                    countPhrase(g.files.length, '{fichier|fichiers}'),
                     ((g.files[0] || {}).ext || '').toUpperCase()].filter(Boolean);
       if (info) info.textContent = bits.join('  ·  ');
       return;
@@ -4182,26 +4182,26 @@ const app = {
     if (desc && m.description) desc.textContent = m.description;
   },
   closeDialog(e) {
-    if (!e || e.target === $('dialog')) fermerVoile($('dialog'));
+    if (!e || e.target === $('dialog')) closeOverlay($('dialog'));
   },
-  closeGame(e) { if (!e || e.target === $('modal')) fermerVoile($('modal')); },
+  closeGame(e) { if (!e || e.target === $('modal')) closeOverlay($('modal')); },
   // Activate ONE game's updates and DLC in Eden, from its detail view. The same
   // treatment in bulk stays available through the selection.
-  async activerJeu(k) {
+  async enableGame(k) {
     const g = this.gameByKey(k);
     if (!g) return;
     if (!CONN.kind) return toast('Connecte d\'abord la console.', 'warn');
-    const e = etatDuJeu(g, nandParChemin());
+    const e = gameState(g, nandParChemin());
     if (!e.aActiver.length) return toast('Rien à activer pour ce jeu.', 'warn');
     const r = await api('/api/deploy', {envoyer: [], activer: e.aActiver.map(f => f.path), configs: []});
     if (!r.error) {
-      toast(phrase('Activation de %s {élément|éléments} lancée.', e.aActiver.length), 'ok');
+      toast(tpl('Activation de %s {élément|éléments} lancée.', e.aActiver.length), 'ok');
       this.closeGame();
       this.poll();
     }
   },
   // Bring back a game that exists only on the console, from its detail view.
-  async importerJeu(k) {
+  async importGame(k) {
     const g = this.gameByKey(k);
     if (!g || !g.paths || !g.paths.length) return;
     const r = await api('/api/device-import',
@@ -4220,7 +4220,7 @@ const app = {
     const paths = DATA.files.filter(f => f.needs_convert).map(f => f.path);
     if (!paths.length) return toast('Rien à convertir.', 'warn');
     const r = await api('/api/convert', {paths});
-    r.error || (toast(phrase('Conversion de %d {fichier|fichiers} lancée.', paths.length), 'ok'), this.poll());
+    r.error || (toast(tpl('Conversion de %d {fichier|fichiers} lancée.', paths.length), 'ok'), this.poll());
   },
   // Sending depends on the platform: the Switch goes through the
   // GAMES/UPDATE/DLC filing and only accepts decompressed containers; the other
@@ -4235,15 +4235,15 @@ const app = {
     if (sys !== 'switch') {
       const paths = locaux.map(f => f.path);
       if (!paths.length) {
-        return toast(phrase('« %s » n\'est pas sur le serveur : rien à envoyer.',
-                            nomJeu(g)),
+        return toast(tpl('« %s » n\'est pas sur le serveur : rien à envoyer.',
+                            gameName(g)),
                      'warn');
       }
       this.closeGame();
-      this.basculerTaches(true);
+      this.toggleTasks(true);
       const r = await api('/api/system-push', {system: sys, paths});
       if (!r || r.error) return;
-      toast(phrase('Envoi de « %s » lancé.', nomJeu(g)), 'ok');
+      toast(tpl('Envoi de « %s » lancé.', gameName(g)), 'ok');
       return this.poll();
     }
 
@@ -4251,16 +4251,16 @@ const app = {
     if (!paths.length) {
       const compresses = locaux.filter(f => ['nsz', 'xcz'].includes(f.ext));
       return toast(compresses.length
-        ? phrase('Ce jeu est compressé (.%s) : convertis-le d\'abord, '
+        ? tpl('Ce jeu est compressé (.%s) : convertis-le d\'abord, '
                  + 'Eden ne lit pas ce format.', compresses[0].ext)
-        : phrase('« %s » n\'est pas sur le serveur : rien à envoyer.',
-                 nomJeu(g)), 'warn');
+        : tpl('« %s » n\'est pas sur le serveur : rien à envoyer.',
+                 gameName(g)), 'warn');
     }
     this.closeGame();
-    this.basculerTaches(true);
+    this.toggleTasks(true);
     const r = await api('/api/push', {paths});
     if (!r || r.error) return;
-    toast(phrase('Envoi de « %s » lancé.', nomJeu(g)), 'ok');
+    toast(tpl('Envoi de « %s » lancé.', gameName(g)), 'ok');
     this.poll();
   },
   async trashFile(path) {
@@ -4271,7 +4271,7 @@ const app = {
     if (!r || r.error) return;
     this.closeGame();
     await this.scan();
-    toastAction(phrase('%d {fichier|fichiers} à la corbeille.', r.n),
+    toastAction(tpl('%d {fichier|fichiers} à la corbeille.', r.n),
                 t('Annuler'), () => this.restore(r.lot), 'ok');
   },
 
@@ -4285,10 +4285,10 @@ const app = {
         const r = await api('/api/systems');
         SYSTEMS = r.systems || [];
         if (r.extensions && r.extensions.length) EXTS_ACCEPTEES = r.extensions;
-        majZoneDepot();
+        updateDropZone();
         renderSysSelect();
-        remplirSelecteurPlateforme();
-        majReglagesPlateforme();
+        fillPlatformSelector();
+        updatePlatformSettings();
       } finally {
         this._chargeSystems = null;
       }
@@ -4366,7 +4366,7 @@ const app = {
           + '\nAnnuler = empreintes seulement (rapide).')
       : !!approfondie;
     const r = await api('/api/verify', {deep, system: SYS, budget_go: budgetGo || null});
-    r.error || (toast(budgetGo ? phrase('Vérification de %s Go lancée.', budgetGo)
+    r.error || (toast(budgetGo ? tpl('Vérification de %s Go lancée.', budgetGo)
                                : t('Vérification lancée.'), 'ok'), this.poll());
   },
   async backupSaves() {
@@ -4380,7 +4380,7 @@ const app = {
         (r.dirs || []).map(esc).join('<br>') + '</div>' : '';
     $('saves').innerHTML = dirs + ((r.items || []).length
       ? '<div class="card">' + r.items.map(i => '<div class="row"><span class="grow">' +
-          esc(i.name) + '</span><span class="mono">' + nb(i.count, '{fichier|fichiers}') + '</span>' +
+          esc(i.name) + '</span><span class="mono">' + countPhrase(i.count, '{fichier|fichiers}') + '</span>' +
           '<span class="size">' + fmt(i.size) + '</span></div>').join('') + '</div>'
       : '<div class="empty">Aucune sauvegarde enregistrée pour l\'instant.</div>');
   },
@@ -4407,7 +4407,7 @@ const app = {
   },
   async versions(force) { say('Vérification des versions...'); DATA = await api('/api/versions', {force: !!force}); render(); toast('Mises à jour vérifiées.', 'ok'); },
   async doImport() { const r = await api('/api/import', {convert: true}); r.error || (toast('Import lancé.', 'ok'), this.poll()); },
-  async reloadImport() { const r = await api('/api/import-list'); renderImport(r.items); toast(phrase('%d {élément|éléments} dans le dépôt.', r.items.length)); },
+  async reloadImport() { const r = await api('/api/import-list'); renderImport(r.items); toast(tpl('%d {élément|éléments} dans le dépôt.', r.items.length)); },
   copyShop() {
     navigator.clipboard.writeText(DATA.shop_text || '')
       .then(() => toast('Liste copiee.', 'ok')).catch(() => toast('Copie impossible, selectionne le texte.', 'warn'));
@@ -4419,9 +4419,9 @@ const app = {
   // a tablet and in dark on the console, and a device preference has no
   // business travelling.
   setTheme(v) { poserApparence('theme', v, ['sombre', 'clair', 'auto']); },
-  setCarte(v) { poserApparence('carte', v, ['aucune', '0', '1', '2', '3', '4', '5']); },
+  setCardEffect(v) { poserApparence('carte', v, ['aucune', '0', '1', '2', '3', '4', '5']); },
   // The setting's three allowed values, not labels.
-  setMouvement(v) { poserApparence('mvt', v, ['complet', 'reduit', 'aucun']); },  // i18n:ok
+  setMotion(v) { poserApparence('mvt', v, ['complet', 'reduit', 'aucun']); },  // i18n:ok
 
   // ---- interface language
   async langLoad() {
@@ -4432,7 +4432,7 @@ const app = {
         '<option value="' + l.code + '">' + esc(l.nom) + '</option>').join('');
       sel.value = r.courante || 'fr';
     }
-    await chargerLangue(r.courante || 'fr');
+    await loadLanguage(r.courante || 'fr');
   },
   async setLang(code) {
     if (code === LANGUE) return;
@@ -4455,8 +4455,8 @@ const app = {
       ? 'Active EmuReady pour analyser ta ludothèque.'
       : !Object.keys(ER.jeux).length
         ? 'Jamais analysé — clique « Actualiser » pour interroger EmuReady.'
-        : phrase('%d {jeu|jeux} reconnus', n)
-          + (absents ? phrase(', %d {absent|absents} de leur base', absents) : '')
+        : tpl('%d {jeu|jeux} reconnus', n)
+          + (absents ? tpl(', %d {absent|absents} de leur base', absents) : '')
           + t('. Les badges apparaissent sur les jaquettes.');
     renderLib();
   },
@@ -4472,13 +4472,13 @@ const app = {
     const h = $('erdev-help');
     if (!h) return;
     if (sug.length && r.modele_detecte) {
-      h.textContent = phrase('Détecté : « %s » — choisis ta variante (%s).',
+      h.textContent = tpl('Détecté : « %s » — choisis ta variante (%s).',
                              r.modele_detecte, sug.map(d => d.nom).join(', '));
     } else if (!ER.appareil) {
       h.textContent = 'Facultatif. Sans modèle, les notes affichées viennent d\'autres ' +
         'appareils et sont marquées d\'une astérisque.';
     } else {
-      h.textContent = phrase('Notes calculées pour %s.', ER.appareil_nom);
+      h.textContent = tpl('Notes calculées pour %s.', ER.appareil_nom);
     }
   },
   async erPickDevice(saisie) {
@@ -4524,7 +4524,7 @@ const app = {
     dialogue({
       titre: 'Configuration proposée',
       niveau: 'info',
-      message: phrase('Testée sur %s · %s {section|sections}, %s {réglage|réglages} '
+      message: tpl('Testée sur %s · %s {section|sections}, %s {réglage|réglages} '
                       + '{spécifique|spécifiques}. Le reste suit tes réglages globaux.',
                       appareil, r.sections, r.surcharges),
       detail: (imposes.length ? 'RÉGLAGES IMPOSÉS PAR CE RAPPORT\n' + imposes.join('\n') +
@@ -4546,8 +4546,8 @@ const app = {
       items.slice(0, 4).map(b =>
         '<div class="errow"><span class="grow">' + esc(b.quand) + ' · ' +
         (b.vide ? t('aucune configuration')
-                : nb(b.sections, '{section|sections}') + ', '
-                  + nb(b.surcharges, '{réglage|réglages}')) +
+                : countPhrase(b.sections, '{section|sections}') + ', '
+                  + countPhrase(b.surcharges, '{réglage|réglages}')) +
         '</span><button class="ghost" data-act="edenRestore" data-arg="' + esc(tid) + '" data-arg2="' + esc(b.fichier) + '">Restaurer</button></div>').join('');
   },
   async edenRestore(tid, fichier) {
@@ -4573,7 +4573,7 @@ const app = {
   ecFillScope(jeux) {
     const sel = $('ec-scope');
     const avant = sel.value;
-    const connus = new Map(GAMES.filter(g => g.tid).map(g => [g.tid.toUpperCase(), nomJeu(g)]));
+    const connus = new Map(GAMES.filter(g => g.tid).map(g => [g.tid.toUpperCase(), gameName(g)]));
     (jeux || []).forEach(t => { if (!connus.has(t.toUpperCase())) connus.set(t.toUpperCase(), t); });
     sel.innerHTML = '<option value="">Réglages globaux</option>' +
       [...connus.entries()].sort((a, b) => a[1].localeCompare(b[1]))
@@ -4606,7 +4606,7 @@ const app = {
     const n = Object.values(ch).reduce((s, o) => s + Object.keys(o).length, 0);
     if (!n) return toast('Aucune modification à appliquer.', 'warn');
     if (!CONN.kind) return toast('Connecte d\'abord la console.', 'warn');
-    if (!confirm(phrase(
+    if (!confirm(tpl(
           'Appliquer %s {réglage|réglages} %s ?\n\n'
           + 'L\'ancienne version est sauvegardée dans _eden-backup.',
           n, t(ECTID ? 'à ce jeu' : 'à la configuration globale')))) return;
@@ -4619,12 +4619,12 @@ const app = {
     const r = await api('/api/eden-profile-save',
       {nom, tid: ECTID, portee: ECTID ? 'jeu' : 'global',
        sections: EC_CLES.map(c => c[0]).filter((v, i, a) => a.indexOf(v) === i)});
-    toast(phrase('Profil « %s » enregistré.', r.nom), 'ok');
+    toast(tpl('Profil « %s » enregistré.', r.nom), 'ok');
     renderEcProfiles(r.profils || []);
   },
   async ecApplyProfile(nom) {
     if (!CONN.kind) return toast('Connecte d\'abord la console.', 'warn');
-    if (!confirm(phrase('Appliquer le profil « %s » %s ?',
+    if (!confirm(tpl('Appliquer le profil « %s » %s ?',
                         nom, t(ECTID ? 'à ce jeu' : 'globalement')))) return;
     const r = await api('/api/eden-profile-apply', {nom, tid: ECTID});
     r.error || (toast('Profil appliqué.', 'ok'), this.poll());
@@ -4632,7 +4632,7 @@ const app = {
 
   async loadNand() {
     const r = await api('/api/nand-status', {});
-    // The NAND state feeds `etatDuJeu()`: it is therefore part of what the
+    // The NAND state feeds `gameState()`: it is therefore part of what the
     // unified list reflects.
     NANDST = r.items || []; NANDCONN = !!r.connectee; inventaireChange();
     renderLib();          // the NAND state feeds the unified view
@@ -4643,7 +4643,7 @@ const app = {
 
   // ---- console
   // ---- wireless connection
-  togglePair() {
+  togglePairing() {
     // pairing lives in the settings: we take the user there rather than open
     // a block they would not see from the game list
     this.tab('settings');
@@ -4674,7 +4674,7 @@ const app = {
     const okCode = /^\d{6}$/.test(code);
     const msgs = [];
     if (addr && !okAddr) {
-      msgs.push(phrase('L\'adresse doit ressembler à %s, port compris.',
+      msgs.push(tpl('L\'adresse doit ressembler à %s, port compris.',
                        '<code>192.168.1.42:37105</code>'));
     }
     if (code && !okCode) msgs.push('Le code fait exactement 6 chiffres.');
@@ -4688,7 +4688,7 @@ const app = {
     say('Bascule en Wi-Fi…');
     const r = await api('/api/wifi-switch', {});
     if (r.ok) {
-      toast(phrase('Wi-Fi activé (%s). Tu peux retirer le câble.', r.addr), 'ok');
+      toast(tpl('Wi-Fi activé (%s). Tu peux retirer le câble.', r.addr), 'ok');
       this.detect();
     }
     else toast(r.message || 'Bascule impossible.', 'err');
@@ -4744,7 +4744,7 @@ const app = {
       ? 'Active « Accès depuis le téléphone » dans les Réglages pour piloter l\'outil depuis la console.'
       : !r.url
         ? 'Adresse réseau introuvable : vérifie la connexion Wi-Fi du serveur.'
-        : phrase('Ouvrir cette interface sur l\'écran de la console (%s)', r.url);
+        : tpl('Ouvrir cette interface sur l\'écran de la console (%s)', r.url);
   },
   // ---- premier lancement
   async checkHealth(force) {
@@ -4761,16 +4761,16 @@ const app = {
   },
   // From the wizard: take the user where an account is created, rather than
   // describe the path to them.
-  allerComptes() {
+  goToAccounts() {
     this.closeOnboard();
     this.tab('settings');
-    voirSectionReglages('sec-acces');
+    showSettingsSection('sec-acces');
   },
 
   // The emulator profile dictates every path on the console: changing it from
   // the wizard avoids having to hunt for it in the settings before even having
   // understood what it is for.
-  async choisirEmulateur(cle) {
+  async chooseEmulator(cle) {
     await this.saveField('emulateur', cle);
     // The Android package name differs between versions: we ask the console
     // which one is actually installed, rather than guess.
@@ -4779,14 +4779,14 @@ const app = {
   },
 
   // ---- assistant de premier demarrage ------------------------------------
-  onbPrec() { onbAller(ONB.i - 1); },
-  onbSuiv() { onbAller(ONB.i + 1); },
-  onbAller(i) { onbAller(i); },
+  onbPrev() { onbGo(ONB.i - 1); },
+  onbNext() { onbGo(ONB.i + 1); },
+  onbGo(i) { onbGo(i); },
 
   // Counting games per platform is the only way to know whether the folder
   // given is the right one. A path accepted with nothing inside is a wrong path
   // you only discover an hour later.
-  async onbScanner() {
+  async onbScan() {
     ONB.occupe = true; renderOnboard();
     let lib = {}, sys = {};
     try {
@@ -4814,7 +4814,7 @@ const app = {
     renderOnboard();
   },
 
-  async onbCreerCompte() {
+  async onbCreateAccount() {
     const mail = ($('onb-mail').value || '').trim();
     const mdp = $('onb-mdp').value || '';
     const msg = $('onb-mdp-msg');
@@ -4831,7 +4831,7 @@ const app = {
   // Saving without checking means letting the user find out in a month that
   // their key was pasted wrong. So we ask for a cover straight away, on a game
   // they have just scanned.
-  async onbTesterFiches() {
+  async onbTestEntries() {
     const sgdb = ($('onb-sgdb').value || '').trim();
     const cid = ($('onb-igdb-id').value || '').trim();
     const sec = ($('onb-igdb-secret').value || '').trim();
@@ -4862,7 +4862,7 @@ const app = {
   // rebuilding it here in miniature would only mean two of them to maintain.
   // "What the console already holds" is the first question you ask once
   // plugged in, and the only one that avoids re-importing what is already there.
-  async onbScannerConsole() {
+  async onbScanConsole() {
     ONB.occupe = true; renderOnboard();
     try {
       ONB.consoleScan = await api('/api/device-games', {});
@@ -4872,7 +4872,7 @@ const app = {
     renderOnboard();
   },
 
-  async onbChercherConsole() {
+  async onbFindConsole() {
     ONB.occupe = true; renderOnboard();
     let etat = {};
     try {
@@ -4891,8 +4891,8 @@ const app = {
     else {
       this.closeOnboard();
       this.tab('settings');
-      voirSectionReglages('sec-console');
-      this.togglePair();
+      showSettingsSection('sec-console');
+      this.togglePairing();
       return;
     }
     await this.checkHealth(true);
@@ -4934,14 +4934,14 @@ const app = {
   // The detail view's cover opens full size. We go through the element rather
   // than a hard-coded URL: it is the SAME image, already loaded, so the
   // enlargement is instant.
-  loupeJaquette(img) {
+  zoomCover(img) {
     if (!img || !img.src) return;
     const feuille = img.closest('.sheet');
     const titre = feuille ? (feuille.querySelector('h3') || {}).textContent : '';
     ouvrirLoupe(img.src, titre || '');
   },
 
-  coverVue(img) {
+  coverForView(img) {
     img.classList.remove('vide');
     const hote = img.closest('.gcard') || img.closest('.sheet');
     if (!hote) return;
@@ -4974,18 +4974,18 @@ const app = {
     renderConn(d); this.refreshInstall();
     renderDeviceCard(d.info || {}, d.volumes || []);
     if (d.info && d.info.connected) {
-      annonce(phrase('Console détectée : %s', d.info.name), 'ok');
-      await this.chargerConsole();
+      annonce(tpl('Console détectée : %s', d.info.name), 'ok');
+      await this.loadConsole();
     } else {
       // Assembled, the sentence was translatable by no catalogue.
-      annonce(phrase('Aucune console prête (%s).', d.state || t('non connectée')), 'warn');
+      annonce(tpl('Aucune console prête (%s).', d.state || t('non connectée')), 'warn');
     }
   },
 
   // Reading what the console carries ALWAYS goes through here. Two overlapping
   // calls share the same promise instead of starting the read again: that is
   // what produced "148 file(s)…" three times in a row.
-  chargerConsole() {
+  loadConsole() {
     if (this._lectureConsole) return this._lectureConsole;
     this._lectureConsole = (async () => {
       try {
@@ -5005,7 +5005,7 @@ const app = {
       DATA.config = r.config;
       fillSettings();
       renderLib();
-      majReglagesPlateforme();     // the folder shown comes from the configuration
+      updatePlatformSettings();     // the folder shown comes from the configuration
     }
     return r.config;
   },
@@ -5021,7 +5021,7 @@ const app = {
         titre: 'Changer le dossier des jeux ?',
         niveau: 'warn',
         message: 'La détection propose un autre dossier que celui enregistré.',
-        detail: phrase('actuel : %s\ntrouvé : %s', actuel, r.dir),
+        detail: tpl('actuel : %s\ntrouvé : %s', actuel, r.dir),
         fermer: 'Garder l\'actuel',
         actions: [{libelle: 'Utiliser celui trouvé', principal: true, faire: async () => {
           await this.saveConfig({device_dir: r.dir});
@@ -5031,12 +5031,12 @@ const app = {
     }
     await this.saveConfig({device_dir: r.dir});
     BROWSE_PATH = r.dir;
-    toast(phrase('Dossier des jeux trouvé : %s', r.dir), 'ok');
+    toast(tpl('Dossier des jeux trouvé : %s', r.dir), 'ok');
     this.explore();
   },
   // The same browser picks the ROM root, the Switch folder or any platform's:
   // only the TARGET changes.
-  parcourir(cible, depart) {
+  browseServer(cible, depart) {
     CIBLE_PARCOURS = cible || 'roms';
     const w = $('browserwrap');
     w.style.display = '';
@@ -5044,7 +5044,7 @@ const app = {
       roms: 'Choisir la racine des ROMs',
       switch: 'Choisir le dossier des jeux Switch',
     }[CIBLE_PARCOURS] ||
-      phrase('Choisir le dossier de %s', libelleSysteme(CIBLE_PARCOURS)));
+      tpl('Choisir le dossier de %s', libelleSysteme(CIBLE_PARCOURS)));
     this.browse(depart || BROWSE_PATH || (DATA.config || {}).roms_root
                 || (DATA.config || {}).device_dir);
     w.scrollIntoView({block: 'center', behavior: 'smooth'});
@@ -5053,7 +5053,7 @@ const app = {
   async browse(path) {
     path = (path || BROWSE_PATH || (DATA.config && DATA.config.device_dir) || '/storage/emulated/0');
     BROWSE_PATH = path.replace(/\/+$/, '') || '/';
-    say(phrase('Lecture de %s…', BROWSE_PATH));
+    say(tpl('Lecture de %s…', BROWSE_PATH));
     const r = await api('/api/device-browse', {path: BROWSE_PATH});
     if (!r.error) renderBrowser(BROWSE_PATH, r.items || []);
   },
@@ -5062,10 +5062,10 @@ const app = {
     if (!BROWSE_PATH) return toast('Ouvre d\'abord un dossier.', 'warn');
     if (CIBLE_PARCOURS === 'roms') {
       await this.saveField('roms_root', BROWSE_PATH);
-      toast(phrase('Racine des ROMs : %s', BROWSE_PATH), 'ok');
+      toast(tpl('Racine des ROMs : %s', BROWSE_PATH), 'ok');
     } else if (CIBLE_PARCOURS === 'switch') {
       await this.saveConfig({device_dir: BROWSE_PATH});
-      toast(phrase('Dossier Switch : %s', BROWSE_PATH), 'ok');
+      toast(tpl('Dossier Switch : %s', BROWSE_PATH), 'ok');
       this.explore();
     } else {
       // an absolute path: it wins over the sub-folder name deduced from the root
@@ -5075,13 +5075,13 @@ const app = {
       toast(libelleSysteme(CIBLE_PARCOURS) + ' : ' + BROWSE_PATH, 'ok');
     }
     $('browserwrap').style.display = 'none';
-    majReglagesPlateforme();       // the path shown follows immediately
-    this.detecterPlateformes();
+    updatePlatformSettings();       // the path shown follows immediately
+    this.detectPlatforms();
   },
   setDpath(p) { BROWSE_PATH = p; this.tab('settings'); $('browserwrap').style.display = ''; this.browse(p); },
 
   // ---- where the games are, on the machine hosting the service
-  ludoOuvrir(depart) {
+  libOpen(depart) {
     if (HEALTH && HEALTH.ludotheque_imposee) {
       return toast(t('Imposé par la variable ROMULE_LIBRARY.'), 'warn');
     }
@@ -5091,9 +5091,9 @@ const app = {
     this.ludoAller(depart || (HEALTH && HEALTH.ludotheque) || '');
     w.scrollIntoView({block: 'center', behavior: 'smooth'});
   },
-  ludoFermer() { $('ludowrap').hidden = true; },
+  libClose() { $('ludowrap').hidden = true; },
   async ludoAller(chemin) {
-    const r = await api('/api/parcourir', {chemin: chemin || ''}, true);
+    const r = await api('/api/browseServer', {chemin: chemin || ''}, true);
     if (r.error) {
       // Deliberately quiet: running into a forbidden folder while browsing is
       // ordinary, and opening an error dialog on every click would be worse
@@ -5108,18 +5108,18 @@ const app = {
     }
     renderLudo(r);
   },
-  onbChoisirDossier() {
+  onbChooseFolder() {
     LUDO.cible = 'onb';
     this.ludoAller((HEALTH && HEALTH.ludotheque) || '');
   },
-  ludoAnnulerOnb() { LUDO.cible = 'set'; LUDO.etat = null; renderOnboard(); },
-  async ludoValider(creer) {
+  libCancelOnb() { LUDO.cible = 'set'; LUDO.etat = null; renderOnboard(); },
+  async libConfirm(creer) {
     if (!LUDO.chemin) return toast(t('Ouvre d\'abord un dossier.'), 'warn');
     const r = await api('/api/ludotheque', {chemin: LUDO.chemin, creer: !!creer});
     if (r.error) return;
     HEALTH = await api('/api/health', {});
     majLudotheque();
-    this.ludoFermer();
+    this.libClose();
     // The answer already CARRIES the new folder's inventory: calling
     // `/api/scan` here means walking twice over a tree that can be several
     // terabytes.
@@ -5127,7 +5127,7 @@ const app = {
     render();
     this.loadTrash();
     await this.loadSystems();
-    annonce(phrase('Ludothèque : %s — %d {jeu|jeux}.', LUDO.chemin,
+    annonce(tpl('Ludothèque : %s — %d {jeu|jeux}.', LUDO.chemin,
                    (r.files || []).length), 'ok');
     if (LUDO.cible === 'onb') {
       // The scan result was about the OLD folder: keeping it would validate
@@ -5136,7 +5136,7 @@ const app = {
       renderOnboard();
     }
   },
-  async ludoNouveau() {
+  async libNewFolder() {
     if (!LUDO.chemin) return toast(t('Ouvre d\'abord un dossier.'), 'warn');
     const nom = prompt(t('Nom du nouveau dossier :'), 'Romule');
     if (!nom) return;
@@ -5145,7 +5145,7 @@ const app = {
     const propre = String(nom).replace(/[\\/]/g, '').trim();
     if (!propre) return;
     LUDO.chemin = LUDO.chemin.replace(/\/+$/, '') + '/' + propre;
-    await this.ludoValider(true);
+    await this.libConfirm(true);
   },
   async explore() {
     const root = (DATA.config && DATA.config.device_dir) || '';
@@ -5155,7 +5155,7 @@ const app = {
     if (r.error) return;
     DGAMES = r.games || []; buildConset(); inventaireChange();
     renderLib(); this.checkTree();
-    annonce(phrase('%d {fichier|fichiers} sur la console, %d {absent|absents} du serveur.',
+    annonce(tpl('%d {fichier|fichiers} sur la console, %d {absent|absents} du serveur.',
                r.total, r.new),
             r.total ? 'ok' : 'warn');
   },
@@ -5204,9 +5204,9 @@ const app = {
     renderLib();
   },
   page(d) { PAGE = Math.max(0, PAGE + d); renderLib(); window.scrollTo({top: 0, behavior: 'smooth'}); },
-  setTri(v) { TRI = v; localStorage.setItem('tri', v); PAGE = 0; renderLib(); },
-  setTaille(v) { TAILLE = v; localStorage.setItem('taille', v); PAGE = 0; renderLib(); },
-  setParPage(v) {
+  setSort(v) { TRI = v; localStorage.setItem('tri', v); PAGE = 0; renderLib(); },
+  setSize(v) { TAILLE = v; localStorage.setItem('taille', v); PAGE = 0; renderLib(); },
+  setPerPage(v) {
     PARPAGE = parseInt(v, 10) || 0;
     localStorage.setItem('parpage', String(PARPAGE));
     PAGE = 0; renderLib();
@@ -5214,16 +5214,16 @@ const app = {
 
   // Removing files from the console: a destructive action, so we show exactly
   // what is leaving before asking for confirmation.
-  async supprimerConsole() {
+  async deleteFromConsole() {
     const {supprConsole} = deployCibles();
     if (!supprConsole.length) return toast('Rien à retirer de la console.', 'warn');
     dialogue({
-      titre: phrase('Retirer %d {fichier|fichiers} de la console ?', supprConsole.length),
+      titre: tpl('Retirer %d {fichier|fichiers} de la console ?', supprConsole.length),
       niveau: 'warn',
       message: 'Ces fichiers seront supprimés de la console. Tes copies sur le serveur ne sont pas touchées.',
       detail: supprConsole.slice(0, 20).map(p => p.split('/').pop()).join('\n') +
               (supprConsole.length > 20
-               ? '\n' + phrase('… et %d {autre|autres}', supprConsole.length - 20)
+               ? '\n' + tpl('… et %d {autre|autres}', supprConsole.length - 20)
                : ''),
       fermer: 'Annuler',
       actions: [{libelle: 'Retirer', principal: true, faire: async () => {
@@ -5237,14 +5237,14 @@ const app = {
   // No more confirmation dialog. The trash IS the undo: asking "are you sure?"
   // before putting a file in it charges every time the price of a mistake that
   // costs nothing. We act, and the toast offers to go back for eight seconds.
-  async corbeilleSelection() {
+  async trashSelection() {
     const {local} = deployCibles();
     if (!local.length) return toast('Rien à mettre à la corbeille.', 'warn');
     const r = await api('/api/trash', {paths: local});
     if (!r || r.error) return;
     dsel2.clear();
     await this.scan();
-    toastAction(phrase('%d {fichier|fichiers} à la corbeille.', r.n),
+    toastAction(tpl('%d {fichier|fichiers} à la corbeille.', r.n),
                 t('Annuler'), () => this.restore(r.lot), 'ok');
   },
   // "Tick all" covers the whole filtered result set, not just the visible
@@ -5252,11 +5252,11 @@ const app = {
   // A game's versions get their own dialog. It goes through `#dialog` and not
   // `#modal`: opening a version's detail view from the list must be able to
   // sit ON TOP, and Esc must close one then the other.
-  voirVersions(cle) {
+  showVersions(cle) {
     const membres = GROUPES.get(cle);
     if (!membres || !membres.length) return;
     const el = $('dialog');
-    const titre = nomJeu(representantGroupe(membres).g);
+    const titre = gameName(representantGroupe(membres).g);
     el.innerHTML =
       '<div class="sheet dlg d-info" data-interieur>' +
         '<div class="dlghead"><h3>' + esc(titre) + '</h3>' +
@@ -5275,10 +5275,10 @@ const app = {
   deployPick(all) {
     dsel2.clear();
     DERNIER_CLIC = null;
-    if (all) jeuxFiltres(jeuxUnifies()).forEach(({g}) => dsel2.add(g.key));
+    if (all) filteredGames(jeuxUnifies()).forEach(({g}) => dsel2.add(g.key));
     renderLib();
   },
-  setSens() { SENS = -SENS; localStorage.setItem('sens', String(SENS)); PAGE = 0; renderLib(); },
+  setOrder() { SENS = -SENS; localStorage.setItem('sens', String(SENS)); PAGE = 0; renderLib(); },
   toggleFav(k) {
     FAV.has(k) ? FAV.delete(k) : FAV.add(k);
     localStorage.setItem('fav', JSON.stringify([...FAV]));
@@ -5295,10 +5295,10 @@ const app = {
   // The release-notes dialog. Two buttons: read the full release, or close.
   // Romule does NOT update itself — it runs in a container or under a package
   // manager, and deciding in the operator's place would be out of line.
-  voirMaj() {
+  showUpdate() {
     if (!MAJ) return;
     dialogue({
-      titre: phrase('Version %s disponible', MAJ.version || '?'),
+      titre: tpl('Version %s disponible', MAJ.version || '?'),
       niveau: 'ok',
       message: MAJ.titre && MAJ.titre !== MAJ.version ? MAJ.titre : '',
       detail: notesLisibles(MAJ.notes) || t('Aucune note de version publiée.'),
@@ -5309,7 +5309,7 @@ const app = {
     });
   },
 
-  effacerFiltres() {
+  clearFilters() {
     const champ = $('filter');
     if (champ) champ.value = '';
     FILTER = 'all';
@@ -5319,14 +5319,14 @@ const app = {
     renderLib();
   },
 
-  async enregistrerVue() {
+  async saveView() {
     const f = filtresCourants();
     dialogue({
       titre: t('Enregistrer cette vue'),
       niveau: 'info',
       // We SHOW what will be saved: nobody should blindly store a combination
       // they cannot read back afterwards.
-      message: resumeFiltres(f),
+      message: filterSummary(f),
       champs: [{id: 'nom', libelle: t('Nom de la vue'),
                 exemple: t('À convertir sur Switch')}],
       actions: [{libelle: t('Enregistrer'), principal: true,
@@ -5334,13 +5334,13 @@ const app = {
         const r = await api('/api/vue-creer', {nom: saisies.nom, filtres: f});
         if (!r || r.error) return;
         VUES = r.vues || [];
-        dessinerVues();
+        renderViews();
         toast(t('Vue enregistrée.'), 'ok');
       }}],
     });
   },
 
-  appliquerVue(id) {
+  applyView(id) {
     const v = VUES.find(x => x.id === id);
     if (!v) return;
     const f = v.filtres || {};
@@ -5357,21 +5357,21 @@ const app = {
     else renderLib();
   },
 
-  async supprimerVue(id) {
+  async deleteView(id) {
     const r = await api('/api/vue-supprimer', {id});
     if (!r || r.error) return;
     VUES = r.vues || [];
-    dessinerVues();
+    renderViews();
   },
   // A keystroke in the search: we return to the first page, otherwise
   // searching from page 3 shows nothing although there are results.
-  chercher() { PAGE = 0; renderLibBientot(); },
+  filterGames() { PAGE = 0; renderLibBientot(); },
 
   // Folds or unfolds the filter and sort rows, on phones only.
   // The `aria-expanded` attribute carries the state: that is what a screen
   // reader reads, and also what the CSS uses to tint the button — one single
   // source, not an extra class to keep in step.
-  basculerFiltres() {
+  toggleFilters() {
     const b = $('replier');
     const ouvert = document.body.classList.toggle('filtres-ouverts');
     if (b) b.setAttribute('aria-expanded', ouvert ? 'true' : 'false');
@@ -5385,7 +5385,7 @@ const app = {
   // "Refresh" used to read only the Switch library: on another platform, or in
   // the "all platforms" view, the button looked like it did nothing. It now
   // re-reads what is REALLY on screen.
-  async actualiser() {
+  async refreshAll() {
     oublierCacheSysteme();                        // this is the gesture that says "read again"
     await this.scan();                            // the server's files
     if (CONN.kind) {
@@ -5399,7 +5399,7 @@ const app = {
 
   // Refresh the ENTRIES: titles, summaries, covers. This is a network
   // operation, distinct from re-reading the files.
-  async actualiserFiches(force) {
+  async refreshEntries(force) {
     if (force) {
       const r = await api('/api/meta-oublier', {}, true);
       if (r && r.error) return toast(r.error, 'warn');
@@ -5408,12 +5408,12 @@ const app = {
     if (r && r.error) return;
     toast(force ? 'Toutes les fiches vont être retéléchargées.'
                 : 'Recherche des fiches manquantes…', 'ok');
-    this.basculerTaches(true);
+    this.toggleTasks(true);
     this.poll();
   },
   // One main action, whichever way the transfer goes: the tool deduces from
   // the selection what needs doing, and shows it before starting.
-  async appliquer() { return isSwitch() ? this.deploy() : this.sendSystem(); },
+  async applyMain() { return isSwitch() ? this.deploy() : this.sendSystem(); },
 
   async deploy() {
     if (!dsel2.size) return toast('Coche au moins un jeu.', 'warn');
@@ -5427,11 +5427,11 @@ const app = {
         if (!dsel2.has(g.key) || !g.tid) return;
         const e = ER.jeux[g.tid.toLowerCase()];
         if (e && e.meilleur) configs.push({tid: g.tid, listing_id: e.meilleur.id,
-                                           jeu: nomJeu(g), note: e.meilleur.note});
+                                           jeu: gameName(g), note: e.meilleur.note});
       });
     }
     const poids = GAMES.filter(g => dsel2.has(g.key))
-      .reduce((s, g) => s + etatDuJeu(g, nandParChemin()).taille, 0);
+      .reduce((s, g) => s + gameState(g, nandParChemin()).taille, 0);
 
     if (!envoyer.length && !activer.length && !configs.length && !importer.length)
       return toast('Ces jeux sont déjà complets sur la console.', 'warn');
@@ -5440,24 +5440,24 @@ const app = {
     const options = [];
     if (importer.length) options.push({id: 'importer', coche: true,
       libelle: 'Copier vers le serveur les jeux qui n\'y sont pas',
-      detail: phrase('%d {fichier|fichiers} depuis la console', importer.length)});
+      detail: tpl('%d {fichier|fichiers} depuis la console', importer.length)});
     if (envoyer.length) options.push({id: 'fichiers', coche: true,
       libelle: 'Copier les fichiers de jeu',
-      detail: nb(envoyer.length, '{fichier|fichiers}') + ' · ' + fmt(poids)});
+      detail: countPhrase(envoyer.length, '{fichier|fichiers}') + ' · ' + fmt(poids)});
     if (activer.length) options.push({id: 'activer', coche: true,
       libelle: 'Activer les mises à jour et DLC dans Eden',
-      detail: phrase('%s {élément|éléments} — sans ça ils resteraient inactifs',
+      detail: tpl('%s {élément|éléments} — sans ça ils resteraient inactifs',
                      activer.length)});
     if (configs.length) options.push({id: 'config', coche: false,
       libelle: 'Appliquer les réglages recommandés (EmuReady)',
-      detail: phrase('%d {jeu|jeux} :', configs.length) + ' '
+      detail: tpl('%d {jeu|jeux} :', configs.length) + ' '
               + configs.slice(0, 2).map(c => c.jeu + ' (' + c.note + ')').join(', ')
               + (configs.length > 2 ? '…' : '')
               + t(' — remplace leur configuration actuelle')});
     if (!options.length) return toast('Rien à faire sur ces jeux.', 'warn');
 
     dialogue({
-      titre: phrase('Traiter %d {jeu|jeux}', dsel2.size),
+      titre: tpl('Traiter %d {jeu|jeux}', dsel2.size),
       niveau: 'info',
       message: 'Choisis ce que l\'outil doit faire. Tout est sauvegardé avant écriture.',
       options,
@@ -5495,7 +5495,7 @@ const app = {
       await api('/api/covers-clear', {});
       GAMES = groupGames(); renderLib();
     }
-    if (cle === 'device_dir') { majReglagesPlateforme(); this.checkTree(); }
+    if (cle === 'device_dir') { updatePlatformSettings(); this.checkTree(); }
     if (cle === 'push_layout' || cle === 'device_dir') { renderTree(); renderLib(); }
     if (cle === 'lan_access') this.refreshInstall();
     if (cle === 'emuready') { ER.actif = !!valeur; this.erLoad(); this.erDevices(); }
@@ -5568,12 +5568,12 @@ const app = {
   // A detected platform leads to ITS settings, further up the page. It used to
   // open a second folder editor: the same setting in two places, so two values
   // that could differ on screen.
-  ouvrirPlateforme(key) {
+  openPlatform(key) {
     if (!key) return;
     PF_OUVERTE = key;
     document.querySelectorAll('.pfcarte').forEach(b =>
       R.classe(b, 'on', b.getAttribute('onclick').includes("'" + key + "'")));
-    this.choisirPlateformeReglages(key);
+    this.choosePlatformSettings(key);
     const sel = $('s-plateforme');
     if (sel) sel.value = key;
     if (key === 'switch') this.checkTree();
@@ -5581,30 +5581,30 @@ const app = {
     if (cible) cible.scrollIntoView({behavior: 'smooth', block: 'start'});
   },
   // Go back to the folder deduced from the ROM root.
-  async oublierDossier(key) {
+  async forgetFolder(key) {
     const dirs = Object.assign({}, (DATA.config || {}).system_dirs || {});
     delete dirs[key];
     await this.saveField('system_dirs', dirs);
     toast('Dossier par défaut rétabli.', 'ok');
-    this.detecterPlateformes();
+    this.detectPlatforms();
   },
-  allerSysteme(key) {
+  goToSystem(key) {
     this.tab('jeux');
     $('sysel').value = key;
     this.setSystem(key);
   },
   // A full analysis: it goes through the task system, so a progress bar and a
   // detailed log — you see WHAT was searched for, and where.
-  async analyseGlobale() {
+  async fullAnalysis() {
     const r = await api('/api/console-analyse', {});
     if (r.error) return;
     toast('Analyse lancée.', 'ok');
     await this.poll();
-    this.detecterPlateformes(true);
+    this.detectPlatforms(true);
   },
 
   // Declare a platform missing from the shipped table.
-  ajouterPlateforme() {
+  addPlatform() {
     dialogue({
       titre: 'Ajouter une plateforme',
       niveau: 'info',
@@ -5628,28 +5628,28 @@ const app = {
         if (liste.some(x => x.key === cle)) return toast('Cette plateforme existe déjà.', 'warn');
         liste.push({key: cle, name: nom, folder: dossier, exts});
         await this.saveField('systemes_perso', liste);
-        toast(phrase('%s ajoutée.', nom), 'ok');
+        toast(tpl('%s ajoutée.', nom), 'ok');
         await this.loadSystems();
-        this.detecterPlateformes();
+        this.detectPlatforms();
       }}],
     });
   },
 
-  async detecterPlateformes(silencieux) {
+  async detectPlatforms(silencieux) {
     if (!silencieux) say('Lecture des plateformes de la console…');
     const r = await api('/api/systems-detect', {});
     if (r.error) return;
-    renderPlateformes(r);
+    renderPlatforms(r);
     renderSysSelect();                 // the counters depend on it
     if (silencieux) return;
     if (r.plateformes && r.plateformes.length)
-      annonce(phrase('%s {plateforme|plateformes} {trouvée|trouvées}.', r.plateformes.length), 'ok');
+      annonce(tpl('%s {plateforme|plateformes} {trouvée|trouvées}.', r.plateformes.length), 'ok');
     else annonce('Aucune plateforme trouvée sous ce dossier.', 'warn');
     this.loadSystems();
   },
   // The audit says what protects the installation AND what does not: both
   // matter, so the successful checks are shown too.
-  async auditer(horsLigne) {
+  async runAudit(horsLigne) {
     const boite = $('auditres');
     R.texte(boite, 'Audit en cours...');
     const r = await api('/api/audit', {hors_ligne: !!horsLigne}, true);
@@ -5666,7 +5666,7 @@ const app = {
         + '</div></div>').join('')
       + '</div>';
     const n = r.resume.grave + r.resume.alerte;
-    toast(n ? phrase('%d {point|points} à regarder.', n) : t('Rien à signaler.'),
+    toast(n ? tpl('%d {point|points} à regarder.', n) : t('Rien à signaler.'),
           n ? 'warn' : 'ok');
   },
 
@@ -5674,7 +5674,7 @@ const app = {
   // of the authentication logic.
   // IGDB: we check BEFORE starting an entry fetch, otherwise the failure only
   // shows up in the middle of a long task.
-  async testerIgdb() {
+  async testIgdb() {
     const b = $('igdbtest');
     R.texte(b, 'Vérification…');
     const r = await api('/api/igdb-test', {}, true);
@@ -5684,20 +5684,20 @@ const app = {
       return;
     }
     R.classe(b, 'avert', false);
-    R.texte(b, phrase('Identifiants valides — exemple retrouvé : %s',
+    R.texte(b, tpl('Identifiants valides — exemple retrouvé : %s',
                       r.infos.exemple));
   },
 
   // Maintenance: each panel answers ONE question, and never acts on its own.
   // Seeing is not deciding.
-  async voirEntretien(quoi) {
+  async showMaintenance(quoi) {
     const b = $('entretien');
     document.querySelectorAll('.entretien button').forEach(x =>
       R.classe(x, 'on', x.getAttribute('onclick').includes("'" + quoi + "'")));
     R.texte(b, 'Lecture…');
     const rendus = {
       doublons: renduDoublons, integrite: renduIntegrite,
-      sauvegardes: renduSauvegardes, acces: renduAcces, transfert: renduTransfert,
+      sauvegardes: renderBackups, acces: renduAcces, transfert: renduTransfert,
     };
     const routes = {
       doublons: '/api/doublons', integrite: '/api/integrite',
@@ -5709,14 +5709,14 @@ const app = {
     b.innerHTML = rendus[quoi](r);
   },
 
-  async sauvegarder() {
+  async saveAllSettings() {
     const r = await api('/api/sauvegarde-creer', {}, true);
     if (r && r.error) return toast(r.error, 'warn');
     toast((r && r.message) || 'Sauvegardé.', 'ok');
-    this.voirEntretien('sauvegardes');
+    this.showMaintenance('sauvegardes');
   },
 
-  restaurerSauvegarde(lot) {
+  restoreBackup(lot) {
     dialogue({
       titre: 'Restaurer ' + lot + ' ?',
       niveau: 'warn',
@@ -5727,40 +5727,40 @@ const app = {
         if (r && r.error) return toast(r.error, 'warn');
         toast(r.message, 'ok');
         await app.scan();
-        app.voirEntretien('sauvegardes');
+        app.showMaintenance('sauvegardes');
       }}],
       fermer: 'Annuler',
     });
   },
 
-  async reprendreTransfert() {
+  async resumeTransfer() {
     const r = await api('/api/transfert-reprendre', {}, true);
     if (r && r.error) return toast(r.error, 'warn');
     toast('Reprise lancée.', 'ok');
     this.poll();
   },
 
-  async oublierTransfert() {
+  async forgetTransfer() {
     await api('/api/transfert-oublier', {}, true);
-    this.voirEntretien('transfert');
+    this.showMaintenance('transfert');
   },
 
   // Some extensions do not name a platform (.iso: PS2, Wii, Xbox…). Rather
   // than let those files sleep in the drop folder, we ask — once, for every
   // file concerned.
-  async classerImports(silencieux) {
+  async assignImports(silencieux) {
     const r = await api('/api/import-suggestions', {}, true);
     const items = (r && r.items) || [];
     if (!items.length) {
       if (!silencieux) toast('Rien à classer : tout a trouvé sa plateforme.', 'ok');
       return;
     }
-    ouvrirChoixPlateforme(items);
+    openPlatformChoice(items);
   },
 
   // Pick in the file chooser: drag and drop does not suit everyone, and on a
   // phone it does not exist.
-  choisirFichiers() {
+  chooseFiles() {
     const f = document.createElement('input');
     f.type = 'file';
     f.multiple = true;
@@ -5769,14 +5769,14 @@ const app = {
     f.click();
   },
 
-  basculerSuivi() {
+  toggleFollow() {
     JSUIVI = !JSUIVI;
-    majBoutonSuivi();
+    updateFollowButton();
     if (JSUIVI) { const el = $('log'); el.scrollTop = el.scrollHeight; }
   },
 
   // Starting over is destructive for the cache: we say so first.
-  forcerFiches() {
+  forceEntries() {
     dialogue({
       titre: 'Tout retélécharger ?',
       niveau: 'warn',
@@ -5784,7 +5784,7 @@ const app = {
              + 'Utile si les descriptions sont dans la mauvaise langue ou fausses ; '
              + 'compter quelques minutes pour une grande ludothèque.',
       actions: [{libelle: 'Tout retélécharger', principal: true,
-                 faire: () => app.actualiserFiches(true)}],
+                 faire: () => app.refreshEntries(true)}],
       fermer: 'Annuler',
     });
   },
@@ -5827,31 +5827,31 @@ const app = {
     else bouger();
   },
 
-  ajouterCompte,
-  creerCle, revoquerCle,
-  ajouterNotif, supprimerNotif, testerNotif, testerNotifSaisie,
-  chargerComptes,
+  addAccount,
+  createKey, revokeKey,
+  addNotification, deleteNotification, testNotification, testNotificationInput,
+  loadAccounts,
 
   // Picking the platform whose options are being set.
-  choisirPlateformeReglages(key) {
+  choosePlatformSettings(key) {
     PF_REGLAGES = key;
     localStorage.setItem('pf-reglages', key);
     // The selector must always show the displayed platform: called from
     // elsewhere (a platform card), it stayed on the old one.
     const sel = $('s-plateforme');
     if (sel && sel.value !== key) sel.value = key;
-    majReglagesPlateforme();
+    updatePlatformSettings();
   },
 
   // Checks the provider answers BEFORE enabling SSO: locking yourself out with
   // a mistyped address would be the worst outcome.
-  async testerAuth() {
+  async testAuth() {
     const el = $('authtest');
     el.innerHTML = '<p class="erdit">Interrogation du fournisseur…</p>';
     const r = await api('/api/auth-test', {});
     if (!r.ok) {
       el.innerHTML = '<p class="erdit alerte">' +
-        phrase('Échec : %s', esc(r.message || t('inconnu'))) + '</p>' +
+        tpl('Échec : %s', esc(r.message || t('inconnu'))) + '</p>' +
         '<p class="erdit petit">Adresse de retour à déclarer chez le fournisseur : <code>' +
         esc(r.retour || '') + '</code></p>';
       return;
@@ -5869,7 +5869,7 @@ const app = {
       'puis passe le mode sur « SSO ». Une adresse qui ne correspond pas au caractère ' +
       'près sera refusée.</p>';
   },
-  copierRetour() {
+  copyCallback() {
     const c = ($('authtest').textContent.match(/https?:\/\/\S+\/auth\/callback/) || [])[0];
     if (!c) return toast('Lance d\'abord le test.', 'warn');
     navigator.clipboard.writeText(c).then(() => toast('Adresse copiée.', 'ok')).catch(() => {});
@@ -5896,13 +5896,13 @@ const app = {
         + '</b> ' + t('{fichier|fichiers}') + ' &middot; <b>' + fmt(r.octets) + '</b> '
         + t('récupérables')
         + (r.plus_vieux ? ' <span class="mono">'
-           + phrase('— le plus ancien a %d {jour|jours}', r.plus_vieux) + '</span>' : '')
+           + tpl('— le plus ancien a %d {jour|jours}', r.plus_vieux) + '</span>' : '')
       : '<span class="mono">Corbeille vide.</span>';
     const sel = $('s-trashdays');
     if (sel && t.jours != null) sel.value = String(t.jours);
     $('trash').innerHTML = t.items.length
       ? '<div class="card">' + t.items.map(i => '<div class="row"><span class="grow">' +
-          esc(i.name) + '</span><span class="mono">' + nb(i.count, '{fichier|fichiers}') + ' · ' +
+          esc(i.name) + '</span><span class="mono">' + countPhrase(i.count, '{fichier|fichiers}') + ' · ' +
           fmt(i.size || 0) + '</span>' +
           '<button data-act="restore" data-arg="' + esc(i.name) + '">Restaurer</button></div>').join('') + '</div>'
       : '<div class="empty">Rien en corbeille.</div>';
@@ -5920,7 +5920,7 @@ const app = {
       titre: 'Vider la corbeille ?',
       niveau: 'warn',
       message: jours
-        ? phrase('Les lots de plus de %d {jour|jours} seront supprimés définitivement.', jours)
+        ? tpl('Les lots de plus de %d {jour|jours} seront supprimés définitivement.', jours)
         : 'Aucun délai n\'est configuré : choisis d\'abord « Vider automatiquement », '
           + 'ou confirme pour tout supprimer maintenant.',
       detail: 'C\'est la seule opération de l\'outil qui efface réellement des fichiers.',
@@ -5934,12 +5934,12 @@ const app = {
   toggleDrop(force) {
     const w = $('dropwrap');
     const ouvert = force === undefined ? !w.classList.contains('on') : !!force;
-    if (ouvert) this.basculerTaches(false);      // un seul panneau a la fois
+    if (ouvert) this.toggleTasks(false);      // un seul panneau a la fois
     R.classe(w, 'on', ouvert);
     R.classe($('fab'), 'on', ouvert && !activite());
   },
 
-  basculerTaches(force) {
+  toggleTasks(force) {
     const w = $('tachewrap');
     const ouvert = force === undefined ? !w.classList.contains('on') : !!force;
     if (ouvert) R.classe($('dropwrap'), 'on', false);
@@ -5952,7 +5952,7 @@ const app = {
   // running, it opens the detail of what is running; otherwise it adds games.
   // That is where the user is already looking, since the ring spins there.
   actionFab() {
-    if (activite()) this.basculerTaches();
+    if (activite()) this.toggleTasks();
     else this.toggleDrop();
   },
   async restore(nom) {
@@ -5990,11 +5990,11 @@ const app = {
 
   async poll() {
     const j = await api('/api/job');
-    if (Array.isArray(j.log)) { fusionnerJournal(j.log); renderJournal(); }
+    if (Array.isArray(j.log)) { mergeLog(j.log); renderJournal(); }
     const dernier = j.log && j.log.length ? j.log[j.log.length - 1] : null;
     if (dernier) say(j.detail || dernier.m || dernier);
     this._paused = j.paused;
-    renderTache(j);
+    renderTask(j);
     if (j.running) setTimeout(() => this.poll(), 900);
     else {
       // A task that finishes has almost always moved, converted or deleted
@@ -6006,7 +6006,7 @@ const app = {
         dialogue({
           titre: 'Tâche terminée avec des erreurs',
           niveau: 'error',
-          message: phrase('%s {erreur|erreurs} et %s {alerte|alertes}. Le reste s\'est bien '
+          message: tpl('%s {erreur|erreurs} et %s {alerte|alertes}. Le reste s\'est bien '
                           + 'déroulé.', soucis.length, alertes.length),
           detail: soucis.slice(-12).map(e => e.t + '  ' + e.m).join('\n'),
           actions: [{libelle: 'Voir le journal', principal: true,
@@ -6029,7 +6029,7 @@ function renderManifest(r) {
     const items = groups[folder].map(it => {
       if (it.broken) return '<div class="mfitem bad"><span>&#9888; ' + esc(it.name) +
         '<br><span class="mono">' +
-        phrase('fichier incomplet : %s — à remplacer', esc(it.broken)) +
+        tpl('fichier incomplet : %s — à remplacer', esc(it.broken)) +
         '</span></span><span>' + t('non envoyé') + '</span></div>';
       return '<div class="mfitem"><span>' + (it.skip ? '&check; ' : '') + esc(it.name) + '</span><span>' +
         (it.skip ? 'déjà sur la console' : fmt(it.size)) + '</span></div>';
@@ -6039,11 +6039,11 @@ function renderManifest(r) {
   }).join('');
   $('manifest').innerHTML = '<div class="manifest"><div class="mfhead">' +
     '<span><b>' + fmt(r.to_send) + '</b> ' +
-    phrase('à envoyer vers %s', esc(r.device_dir)) +
+    tpl('à envoyer vers %s', esc(r.device_dir)) +
     (r.skipped ? ' <span class="mono">('
-      + phrase('%d déjà sur la console', r.skipped) + ')</span>' : '') +
+      + tpl('%d déjà sur la console', r.skipped) + ')</span>' : '') +
     (r.broken ? ' <span class="bad">'
-      + phrase('— %d {fichier|fichiers} {incomplet|incomplets} {bloqué|bloqués}', r.broken) + '</span>' : '') + '</span>' +
+      + tpl('— %d {fichier|fichiers} {incomplet|incomplets} {bloqué|bloqués}', r.broken) + '</span>' : '') + '</span>' +
     '<span class="' + (tight ? 'bad' : '') + '">' +
     (r.free != null ? 'libre : ' + fmt(r.free) + (tight ? ' — insuffisant !' : '') : 'espace inconnu') +
     '</span></div>' + body + '</div>';
@@ -6104,12 +6104,12 @@ function onbEtapes(h) {
           (h.ludotheque_imposee
             ? '<p class="onbnote">Il est fixé par le déploiement (variable ' +
               'ROMULE_LIBRARY) : pour en changer, modifie ton fichier compose.</p>'
-            : '<button class="ghost" data-act="onbChoisirDossier">' +
+            : '<button class="ghost" data-act="onbChooseFolder">' +
               'Choisir un autre dossier…</button>') +
           '<p class="onbnote">Le dossier reste à toi : Romule n\'y écrit que ses ' +
           'propres fichiers, tous préfixés d\'un tiret bas. Sa configuration et ' +
           'tes comptes, eux, vivent ailleurs et ne suivent pas ce dossier.</p>' +
-          '<button class="go" data-act="onbScanner"' + (ONB.occupe ? ' disabled' : '') +
+          '<button class="go" data-act="onbScan"' + (ONB.occupe ? ' disabled' : '') +
           '>' + (ONB.occupe ? 'Lecture…' : 'Analyser le dossier') + '</button>' +
           (r ? renduScanOnboard(r) : '');
       },
@@ -6131,7 +6131,7 @@ function onbEtapes(h) {
           '<label>Mot de passe<input type="password" id="onb-mdp" ' +
             'autocomplete="new-password" placeholder="12 caractères minimum"></label>' +
           '</div>' +
-          '<button class="go" data-act="onbCreerCompte">Créer le compte</button>' +
+          '<button class="go" data-act="onbCreateAccount">Créer le compte</button>' +
           '<p class="onbnote" id="onb-mdp-msg"></p>',
       valide: () => !c.expose || c.comptes > 0,
       manque: 'Crée un compte : sans lui, n\'importe quel appareil du réseau peut tout faire.',
@@ -6152,7 +6152,7 @@ function onbEtapes(h) {
         '<label>IGDB — Client Secret' +
           '<input type="password" id="onb-igdb-secret" autocomplete="off"></label>' +
         '</div>' +
-        '<button class="go" data-act="onbTesterFiches">Enregistrer et tester</button>' +
+        '<button class="go" data-act="onbTestEntries">Enregistrer et tester</button>' +
         '<p class="onbnote" id="onb-fiches-msg">' + esc(ONB.testJaquettes) + '</p>',
     },
     {
@@ -6163,10 +6163,10 @@ function onbEtapes(h) {
             .replace('%s', c.device === 'wifi' ? 'Wi-Fi' : 'USB') + '</p>' +
           '<p class="onbnote">Le dossier de jeux repéré sur la console :</p>' +
           '<div class="onbchemin" data-i18n-skip>' + esc(c.device_dir || '') + '</div>' +
-          '<button class="ghost" data-act="onbScannerConsole"' +
+          '<button class="ghost" data-act="onbScanConsole"' +
             (ONB.occupe ? ' disabled' : '') + '>' +
             (ONB.occupe ? 'Lecture…' : 'Recenser les jeux de la console') + '</button>' +
-          (ONB.consoleScan ? renduScanConsole(ONB.consoleScan) : '')
+          (ONB.consoleScan ? renderConsoleScan(ONB.consoleScan) : '')
         : '<p class="onbp">Romule transfère les jeux vers une console Android par ' +
           'adb. Branche-la en USB, ou active le débogage sans fil et indique son ' +
           'adresse.</p>' +
@@ -6174,7 +6174,7 @@ function onbEtapes(h) {
              'machine. Pour l\'ajouter :</p>' +
              '<div class="onbchemin" data-i18n-skip>' + esc(c.remede_adb || '') +
              '</div>') +
-          '<button class="ghost" data-act="onbChercherConsole"' +
+          '<button class="ghost" data-act="onbFindConsole"' +
             (c.adb ? '' : ' disabled') + '>Chercher une console</button>',
     },
     {
@@ -6214,7 +6214,7 @@ function renduScanOnboard(r) {
     '</div></div>';
 }
 
-function renduScanConsole(r) {
+function renderConsoleScan(r) {
   if (!r.total) {
     return '<div class="onbresultat vide"><b>Aucun jeu sur la console.</b></div>';
   }
@@ -6225,7 +6225,7 @@ function renduScanConsole(r) {
       : 'Tous sont déjà dans ta bibliothèque.') + '</p></div>';
 }
 
-function onbAller(i) {
+function onbGo(i) {
   const etapes = onbEtapes(HEALTH);
   const cible = Math.max(0, Math.min(etapes.length - 1, i));
   ONB.sens = cible >= ONB.i ? 1 : -1;
@@ -6259,16 +6259,16 @@ function renderOnboard() {
     '<div class="onbcorps" data-sens="' + ONB.sens + '">' + e.corps() + '</div>' +
     (bloque ? '<p class="onbmanque">' + esc(e.manque || '') + '</p>' : '') +
     '<div class="onbpied">' +
-      '<button class="ghost" data-act="onbPrec"' +
+      '<button class="ghost" data-act="onbPrev"' +
         (ONB.i === 0 ? ' disabled' : '') + '>Précédent</button>' +
       '<div class="onbpoints">' + etapes.map((x, i) =>
         '<button class="onbpoint' + (i === ONB.i ? ' on' : '') +
           (i < ONB.i ? ' fait' : '') + '" title="' + esc(x.titre) +
-          '" aria-label="' + esc(x.titre) + '" data-act="onbAller" data-arg=" + i + ">' +
+          '" aria-label="' + esc(x.titre) + '" data-act="onbGo" data-arg=" + i + ">' +
         '</button>').join('') + '</div>' +
       (dernier
         ? '<button class="go" data-act="closeOnboard">Terminer</button>'
-        : '<button class="go" data-act="onbSuiv"' + (bloque ? ' disabled' : '') +
+        : '<button class="go" data-act="onbNext"' + (bloque ? ' disabled' : '') +
           '>Suivant</button>') +
     '</div>' +
     '<button class="onbpasser" data-act="closeOnboard">Passer l\'assistant</button>' +
@@ -6344,7 +6344,7 @@ let EXTS_ACCEPTEES = ['.nsz', '.xcz', '.nsp', '.xci', '.zip', '.7z', '.rar'];
 // The drop overlay and the "Add games" field announce the SAME list as the one
 // actually accepted: a list frozen in the HTML lied as soon as the user added a
 // platform.
-function majZoneDepot() {
+function updateDropZone() {
   const t = $('dropexts');
   if (!t) return;
   // An alphabetical list (".3ds .bin .cci…") teaches nothing. What the user
@@ -6371,10 +6371,10 @@ function uploadFiles(files) {
   const rejetes = [...files].length - list.length;
   if (!list.length) {
     return toast(t('Aucun fichier reconnu.') + ' ' +
-                 phrase('%s formats acceptés — voir « Ajouter des jeux ».',
+                 tpl('%s formats acceptés — voir « Ajouter des jeux ».',
                         EXTS_ACCEPTEES.length), 'warn');
   }
-  if (rejetes) journal(phrase('%d {fichier|fichiers} {ignoré|ignorés} : type non géré.', rejetes), 'warn');
+  if (rejetes) journal(tpl('%d {fichier|fichiers} {ignoré|ignorés} : type non géré.', rejetes), 'warn');
 
   // The ceiling is checked HERE, before opening a single connection. The
   // server does it too — it is the authority — but it can only answer after the
@@ -6386,7 +6386,7 @@ function uploadFiles(files) {
     if (trop.length) {
       trop.forEach(f => journal('Trop volumineux : ' + f.name + ' (' + fmt(f.size)
                                 + ', maximum ' + fmt(plafond) + ')', 'error'));
-      toast(phrase('%d {fichier|fichiers} dépassent %s.', trop.length)
+      toast(tpl('%d {fichier|fichiers} dépassent %s.', trop.length)
         .replace('%s', fmt(plafond)), 'warn');
       list = list.filter(f => f.size <= plafond);
       if (!list.length) return;
@@ -6423,28 +6423,28 @@ function uploadFiles(files) {
       ACT_ENVOI = null;
       majFab();
       $('bar').style.width = '0';
-      toast(phrase('%d {fichier|fichiers} {déposé|déposés}.', list.length), 'ok');
+      toast(tpl('%d {fichier|fichiers} {déposé|déposés}.', list.length), 'ok');
       // Since dropping is now possible anywhere, the user does not necessarily
       // have the panel in sight: we open it on the fresh list, so the next step
       // is where they are looking.
       app.toggleDrop(true);
       app.reloadImport();
-      app.classerImports(true);        // if ambiguous extensions remain
+      app.assignImports(true);        // if ambiguous extensions remain
       return;
     }
     const file = list[i++];
-    say(phrase('Envoi de %s…', file.name));
+    say(tpl('Envoi de %s…', file.name));
     avancer(0, file.name);
     const xhr = new XMLHttpRequest();
     xhr.open('POST', '/api/upload');
     xhr.setRequestHeader('X-Filename', encodeURIComponent(file.name));
     xhr.upload.onprogress = e => { if (e.lengthComputable) avancer(e.loaded, file.name); };
     xhr.onload = () => {
-      envoyes += file.size; journal(phrase('Reçu : %s', file.name), 'ok'); next();
+      envoyes += file.size; journal(tpl('Reçu : %s', file.name), 'ok'); next();
     };
     xhr.onerror = () => {
       envoyes += file.size;
-      toast(phrase('Échec de l\'envoi : %s', file.name), 'warn');
+      toast(tpl('Échec de l\'envoi : %s', file.name), 'warn');
       next();
     };
     xhr.send(file);
@@ -6494,7 +6494,7 @@ $('panel-settings').addEventListener('input', syncSetDesc);
 $('panel-settings').addEventListener('change', majBlocAuth);
 $('s-erdevice').addEventListener('change', e => app.erPickDevice(e.target.value));
 $('s-uilang').addEventListener('change', e => app.setLang(e.target.value));
-$('s-plateforme').addEventListener('change', e => app.choisirPlateformeReglages(e.target.value));
+$('s-plateforme').addEventListener('change', e => app.choosePlatformSettings(e.target.value));
 
 // The real height of the header and of the table of contents: they change with
 // the width (the tabs wrap) and in landscape, where the header is no longer
@@ -6549,7 +6549,7 @@ if ('ResizeObserver' in window) {
 const SECTIONS_REGLAGES = [];
 let SECTION_ACTIVE = '';
 
-function voirSectionReglages(id, memoriser) {
+function showSettingsSection(id, memoriser) {
   if (!SECTIONS_REGLAGES.length) return;
   const cible = SECTIONS_REGLAGES.find(s => s.sec.id === id) || SECTIONS_REGLAGES[0];
   SECTION_ACTIVE = cible.sec.id;
@@ -6586,7 +6586,7 @@ function voirSectionReglages(id, memoriser) {
       // The anchor stays in the HTML: without JavaScript it still leads to
       // the section, which is then simply displayed one after the other.
       ev.preventDefault();
-      voirSectionReglages(sec.id);
+      showSettingsSection(sec.id);
       scrollTo({top: 0, behavior: 'instant'});
     });
   }
@@ -6598,13 +6598,13 @@ function voirSectionReglages(id, memoriser) {
     ev.preventDefault();
     const i = liens.findIndex(l => l.sec.id === SECTION_ACTIVE);
     const suivant = liens[(i + pas + liens.length) % liens.length];
-    voirSectionReglages(suivant.sec.id);
+    showSettingsSection(suivant.sec.id);
     suivant.a.focus();
   });
 
   let depart = '';
   try { depart = localStorage.getItem('reglages-section') || ''; } catch (e) {}
-  voirSectionReglages(depart, false);
+  showSettingsSection(depart, false);
   addEventListener('resize', mesurerBarres);
   mesurerBarres();
 })();
@@ -6630,37 +6630,37 @@ const voile = $('dropzone');
 // another: without a counter, the overlay would flicker throughout the hover.
 let profondeur = 0;
 
-function transporteDesFichiers(e) {
+function carriesFiles(e) {
   const t = e.dataTransfer && e.dataTransfer.types;
   return !!t && [...t].includes('Files');
 }
 
-function montrerVoile(oui) {
+function showOverlay(oui) {
   if (!voile) return;
   R.classe(voile, 'on', oui);
   voile.setAttribute('aria-hidden', oui ? 'false' : 'true');
 }
 
 window.addEventListener('dragenter', e => {
-  if (!transporteDesFichiers(e)) return;
+  if (!carriesFiles(e)) return;
   profondeur++;
-  montrerVoile(true);
+  showOverlay(true);
 });
 window.addEventListener('dragover', e => {
-  if (!transporteDesFichiers(e)) return;
+  if (!carriesFiles(e)) return;
   e.preventDefault();                       // without this the browser opens the file
   e.dataTransfer.dropEffect = 'copy';
 });
 window.addEventListener('dragleave', e => {
-  if (!transporteDesFichiers(e)) return;
+  if (!carriesFiles(e)) return;
   profondeur = Math.max(0, profondeur - 1);
-  if (!profondeur) montrerVoile(false);
+  if (!profondeur) showOverlay(false);
 });
 window.addEventListener('drop', e => {
-  if (!transporteDesFichiers(e)) return;
+  if (!carriesFiles(e)) return;
   e.preventDefault();
   profondeur = 0;
-  montrerVoile(false);
+  showOverlay(false);
   drop.classList.remove('over');
   uploadFiles(e.dataTransfer.files);
 });
@@ -6674,7 +6674,7 @@ window.addEventListener('drop', e => {
 $('log').addEventListener('scroll', () => {
   const el = $('log');
   const enBas = el.scrollHeight - el.scrollTop - el.clientHeight < 24;
-  if (enBas !== JSUIVI) { JSUIVI = enBas; majBoutonSuivi(); }
+  if (enBas !== JSUIVI) { JSUIVI = enBas; updateFollowButton(); }
 }, {passive: true});
 
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { app.closeGame(); app.closeDialog(); } });
@@ -6785,34 +6785,34 @@ document.addEventListener('keydown', e => {
 const ACTES = new Set([
   // The first three appear in NO attribute of the source: they are set at
   // runtime from `renderActions`'s `boutons` list.
-  'appliquer', 'corbeilleSelection', 'supprimerConsole',
-  'actionFab', 'activerJeu', 'actualiser', 'actualiserFiches',
-  'ajouterCompte', 'ajouterPlateforme', 'allerSysteme', 'analyseGlobale',
-  'auditer', 'backupSaves', 'basculerSuivi', 'basculerTaches', 'browse',
-  'cancelJob', 'choisirEmulateur', 'choisirFichiers', 'classerImports',
+  'applyMain', 'trashSelection', 'deleteFromConsole',
+  'actionFab', 'enableGame', 'refreshAll', 'refreshEntries',
+  'addAccount', 'addPlatform', 'goToSystem', 'fullAnalysis',
+  'runAudit', 'backupSaves', 'toggleFollow', 'toggleTasks', 'browse',
+  'cancelJob', 'chooseEmulator', 'chooseFiles', 'assignImports',
   'clearCovers', 'clearFav', 'closeOnboard', 'convertAll', 'convertGame',
-  'copierRetour', 'deployPick', 'detect', 'dismissA2HS', 'doImport',
+  'copyCallback', 'deployPick', 'detect', 'dismissA2HS', 'doImport',
   'ecApply', 'ecApplyProfile', 'ecLoad', 'ecSaveProfile', 'edenRestore',
-  'erApply', 'erPreview', 'erSync', 'forcerFiches', 'importerJeu',
-  'ajouterNotif', 'appliquerVue', 'basculerFiltres', 'chercher', 'creerCle',
-  'effacerFiltres', 'supprimerNotif', 'testerNotif', 'testerNotifSaisie',
-  'voirMaj',
-  'enregistrerVue', 'installApp', 'journalClear', 'journalCopy',
-  'supprimerVue',
+  'erApply', 'erPreview', 'erSync', 'forceEntries', 'importGame',
+  'addNotification', 'applyView', 'toggleFilters', 'filterGames', 'createKey',
+  'clearFilters', 'deleteNotification', 'testNotification', 'testNotificationInput',
+  'showUpdate',
+  'saveView', 'installApp', 'journalClear', 'journalCopy',
+  'deleteView',
   'loadSaves',
-  'loadTrash', 'revoquerCle',
-  'ludoAnnulerOnb', 'ludoFermer', 'ludoNouveau', 'ludoOuvrir',
-  'ludoValider', 'mkTree', 'onbAller', 'onbChercherConsole',
-  'onbChoisirDossier', 'onbCreerCompte', 'onbPrec', 'onbScanner',
-  'onbScannerConsole', 'onbSuiv', 'onbTesterFiches', 'openGame',
-  'openOnConsole', 'organize', 'oublierDossier', 'oublierTransfert',
-  'ouvrirPlateforme', 'page', 'parcourir', 'purgeTrash', 'reloadImport',
-  'renderJournal', 'renderLib', 'reorganizeLocal', 'reprendreTransfert',
-  'restaurerSauvegarde', 'restore', 'sauvegarder', 'sendGame', 'setDpath',
-  'setMouvement', 'setParPage', 'setSens', 'setSystem', 'setTaille',
-  'setTheme', 'setTri', 'showOnboard', 'testerAuth', 'testerIgdb',
-  'toggleDrop', 'toggleFav', 'toggleJournal', 'togglePair', 'togglePause',
-  'trashFile', 'useDir', 'verify', 'voirEntretien', 'voirVersions',
+  'loadTrash', 'revokeKey',
+  'libCancelOnb', 'libClose', 'libNewFolder', 'libOpen',
+  'libConfirm', 'mkTree', 'onbGo', 'onbFindConsole',
+  'onbChooseFolder', 'onbCreateAccount', 'onbPrev', 'onbScan',
+  'onbScanConsole', 'onbNext', 'onbTestEntries', 'openGame',
+  'openOnConsole', 'organize', 'forgetFolder', 'forgetTransfer',
+  'openPlatform', 'page', 'browseServer', 'purgeTrash', 'reloadImport',
+  'renderJournal', 'renderLib', 'reorganizeLocal', 'resumeTransfer',
+  'restoreBackup', 'restore', 'saveAllSettings', 'sendGame', 'setDpath',
+  'setMotion', 'setPerPage', 'setOrder', 'setSystem', 'setSize',
+  'setTheme', 'setSort', 'showOnboard', 'testAuth', 'testIgdb',
+  'toggleDrop', 'toggleFav', 'toggleJournal', 'togglePairing', 'togglePause',
+  'trashFile', 'useDir', 'verify', 'showMaintenance', 'showVersions',
   'wifiConnect', 'wifiDiscover', 'wifiForget', 'wifiPair', 'wifiSwitch',
   'wizCheck', 'wizStep',
 ]);
@@ -6835,9 +6835,9 @@ const ACTES_SPECIAUX = {
   // the card without having to stop propagation.
   'cardClick': (el, ev) => app.cardClick(ev, el.dataset.arg),
   // Takes the element itself: it is its image we want enlarged.
-  'loupeJaquette': el => app.loupeJaquette(el),
+  'zoomCover': el => app.zoomCover(el),
   // Close the task panel AND open the drop area: two calls, one gesture.
-  'taches-vers-depot': () => { app.basculerTaches(false); app.toggleDrop(true); },
+  'tasks-to-drop': () => { app.toggleTasks(false); app.toggleDrop(true); },
 };
 
 function argumentDe(el) {
@@ -6892,7 +6892,7 @@ for (const geste of ['load', 'error']) {
   document.addEventListener(geste, ev => {
     const img = ev.target;
     if (img.tagName !== 'IMG' || img.dataset.cover === undefined) return;
-    if (geste === 'load') app.coverVue(img); else app.coverRate(img);
+    if (geste === 'load') app.coverForView(img); else app.coverRate(img);
   }, true);
 }
 
@@ -6974,7 +6974,7 @@ function majApparence() {
   if (meta) meta.setAttribute('content', TEINTE_BARRE[themeEffectif()]);
 }
 
-function construireChoixCartes() {
+function buildCardChoices() {
   const hote = $('s-carte');
   if (!hote || hote.childElementCount) return;
   for (const [cle, nom, aide] of ANIMATIONS) {
@@ -7021,11 +7021,11 @@ function construireChoixCartes() {
     // tests' simplified DOM provides, and it is enough here.
     b.appendChild(vue);
     b.appendChild(lab);
-    b.onclick = () => app.setCarte(cle);
+    b.onclick = () => app.setCardEffect(cle);
     hote.appendChild(b);
   }
   traduireDOM(hote);
-  majApercuJaquette();
+  updateCoverPreview();
   majApparence();
 }
 
@@ -7063,14 +7063,14 @@ function jaquetteExemple() {
   for (const x of liste) {
     const g = (x && x.g) || x;
     if (!g || (!g.tid && !g.name)) continue;
-    if (sansFiche(g)) continue;             // fiche absente : jaquette probable­ment vide
+    if (withoutEntry(g)) continue;             // fiche absente : jaquette probable­ment vide
     return '/cover/' + (g.tid || '') + '?v=' + v +
            '&name=' + encodeURIComponent(g.name || '');
   }
   return JAQUETTE_EXEMPLE;
 }
 
-function majApercuJaquette() {
+function updateCoverPreview() {
   const hote = $('s-carte');
   if (!hote) return;
   const src = jaquetteExemple();
@@ -7229,8 +7229,8 @@ function commandesDisponibles() {
     // the labels are.
     ['Aller à la bibliothèque', 'jeux grille', () => app.tab('jeux')],  // i18n:ok - 2nd field: a search keyword
     ['Ouvrir les réglages', 'settings options', () => app.tab('settings')],  // i18n:ok - 2e champ : mot-cle de recherche
-    ['Actualiser la bibliothèque', 'refresh relire', () => app.actualiser()],  // i18n:ok - 2e champ : mot-cle de recherche
-    ['Chercher les fiches manquantes', 'jaquettes resume metadata', () => app.actualiserFiches()],  // i18n:ok - 2e champ : mot-cle de recherche
+    ['Actualiser la bibliothèque', 'refresh relire', () => app.refreshAll()],  // i18n:ok - 2e champ : mot-cle de recherche
+    ['Chercher les fiches manquantes', 'jaquettes resume metadata', () => app.refreshEntries()],  // i18n:ok - 2e champ : mot-cle de recherche
     ['Importer des jeux', 'ajouter deposer fichiers', () => app.toggleDrop(true)],  // i18n:ok - 2e champ : mot-cle de recherche
     ['Ouvrir le journal', 'log evenements terminal', () => app.toggleJournal()],  // i18n:ok - 2e champ : mot-cle de recherche
     ['Tout cocher', 'selection tous', () => app.deployPick(1)],  // i18n:ok - 2e champ : mot-cle de recherche
@@ -7238,8 +7238,8 @@ function commandesDisponibles() {
     ['Thème sombre', 'apparence nuit', () => app.setTheme('sombre')],  // i18n:ok - 2e champ : mot-cle de recherche
     ['Thème clair', 'apparence jour blanc', () => app.setTheme('clair')],  // i18n:ok - 2e champ : mot-cle de recherche
     ['Thème automatique', 'apparence systeme', () => app.setTheme('auto')],  // i18n:ok - 2e champ : mot-cle de recherche
-    ['Couper les animations', 'mouvement aucun repos', () => app.setMouvement('aucun')],  // i18n:ok - 2e champ : mot-cle de recherche
-    ['Rétablir les animations', 'mouvement complet', () => app.setMouvement('complet')],  // i18n:ok - 2e champ : mot-cle de recherche
+    ['Couper les animations', 'mouvement aucun repos', () => app.setMotion('aucun')],  // i18n:ok - 2e champ : mot-cle de recherche
+    ['Rétablir les animations', 'mouvement complet', () => app.setMotion('complet')],  // i18n:ok - 2e champ : mot-cle de recherche
     ['Voir l\'état de l\'installation', 'diagnostic sante', () => app.showOnboard()],  // i18n:ok - 2e champ : mot-cle de recherche
   ];
   // Every platform becomes a destination: it is the menu opened most often,
@@ -7284,7 +7284,7 @@ function paletteEl() {
         ' placeholder="Aller à un jeu, lancer une action…"' +
         ' data-i18n-ph="palette.placeholder" aria-label="Rechercher">' +
       '<div class="palliste" id="palliste" role="listbox"></div>' +
-      '<div class="palpied"><span><b>↑</b><b>↓</b> parcourir</span>' +
+      '<div class="palpied"><span><b>↑</b><b>↓</b> browseServer</span>' +
         '<span><b>↵</b> ouvrir</span><span><b>Échap</b> fermer</span></div>' +
     '</div>';
   document.body.appendChild(el);
@@ -7307,7 +7307,7 @@ function remplirPalette(q) {
   let jeux = [];
   try { jeux = jeuxUnifies(); } catch (e) { jeux = []; }
   for (const x of jeux) {
-    const nom = nomJeu(x.g);
+    const nom = gameName(x.g);
     const s = cherche ? scoreFlou(nom, cherche) : 0;
     if (s < 0) continue;
     candidats.push({
@@ -7455,7 +7455,7 @@ addEventListener('keydown', ev => {
     if (loupeOuverte()) return fermerLoupe();
     if ($('modal').classList.contains('open')) return app.closeGame();
     if ($('dialog').classList.contains('open')) return app.closeDialog();
-    cacherApercu();
+    hidePreview();
     // In the search, Esc clears first, then hands control back.
     if (ev.target === $('filter')) {
       if ($('filter').value) { $('filter').value = ''; app.renderLib(); }
@@ -7546,14 +7546,14 @@ function apercuEl() {
   return el;
 }
 
-function cacherApercu() {
+function hidePreview() {
   clearTimeout(APERCU_MINUTEUR);
   APERCU_CARTE = null;
   const el = $('apercujeu');
   if (el) el.classList.remove('on');
 }
 
-function contenuApercu(g, e) {
+function previewContent(g, e) {
   const bouts = [];
   const pousser = (etiq, val) => bouts.push(
     '<div class="apl"><span>' + esc(etiq) + '</span><b>' + esc(val) + '</b></div>');
@@ -7565,19 +7565,19 @@ function contenuApercu(g, e) {
   const p = (e && e.presence) || {};
   if (p.console) pousser('Console', TITRE_PRESENCE[p.console] || '—');
   const resume = resumeUtile(g);
-  return '<div class="aptitre">' + esc(nomJeu(g)) + '</div>' +
+  return '<div class="aptitre">' + esc(gameName(g)) + '</div>' +
     (e ? '<div class="apetat ' + ETATS[e.etat][0] + '">' + esc(e.txt) + '</div>' : '') +
     '<div class="apgrille">' + bouts.join('') + '</div>' +
     (resume ? '<p class="apresume">' + esc(extrait(resume, 190)) + '</p>' : '');
 }
 
-function poserApercu(carte) {
+function placePreview(carte) {
   const g = app.gameByKey(carte.dataset.key);
   if (!g) return;
   let e = null;
   try { e = etatDe(g); } catch (err) { e = null; }
   const el = apercuEl();
-  el.innerHTML = contenuApercu(g, e);
+  el.innerHTML = previewContent(g, e);
   traduireDOM(el);
   el.classList.add('on');
 
@@ -7606,15 +7606,15 @@ document.addEventListener('mousemove', ev => {
   if (document.documentElement.dataset.mvt === 'aucun') return;
   const carte = ev.target.closest && ev.target.closest('#lib .gcard');
   if (carte === APERCU_CARTE) return;
-  cacherApercu();
+  hidePreview();
   if (!carte) return;
   // No preview on top of an open dialog: it would cover it.
   if ($('modal').classList.contains('open')) return;
   APERCU_CARTE = carte;
-  APERCU_MINUTEUR = setTimeout(() => poserApercu(carte), APERCU_MS);
+  APERCU_MINUTEUR = setTimeout(() => placePreview(carte), APERCU_MS);
 });
-addEventListener('scroll', cacherApercu, {passive: true});
-document.addEventListener('click', cacherApercu);
+addEventListener('scroll', hidePreview, {passive: true});
+document.addEventListener('click', hidePreview);
 
 // Twelve silhouettes: enough to fill the first screen height without claiming
 // to announce the real number of games, which we do not know yet.
@@ -7631,7 +7631,7 @@ function poserSquelettes(combien) {
 }
 
 poserSquelettes(12);
-construireChoixCartes();
+buildCardChoices();
 majApparence();
 
 // A loading state rather than zeroed counters and an "absent" console:
@@ -7665,7 +7665,7 @@ majApparence();
     // the console's messages as notifications — "Console détectée", "152
     // fichiers sur la console" — which nobody asked for and which are already
     // in the log.
-    await app.reveilConsole();     // the console's state, then its files
+    await app.wakeConsole();     // the console's state, then its files
     // The console is now known: `systems.all_platforms()` can read its tree, which it
     // could not do on the first call. So we redo the overview ONCE, otherwise
     // the files present only on the console would never appear there.
@@ -7677,7 +7677,7 @@ majApparence();
   }
   // the rest can come later: nothing depends on it for a first paint
   app.checkHealth();
-  chargerVues();                   // the saved views, served by the server
+  loadViews();                   // the saved views, served by the server
   chargerMaj();                    // is there a newer version?
   app.erLoad();
   app.erDevices();
@@ -7685,7 +7685,7 @@ majApparence();
   // here read it twice on every launch.
   // The selector's counters depend on what the console carries: we read it
   // once, in the background, rather than show misleading zeros.
-  if (CONN.kind) app.detecterPlateformes(true);
+  if (CONN.kind) app.detectPlatforms(true);
 })();
 
 /* ---------------------------------------------------- mobile log button

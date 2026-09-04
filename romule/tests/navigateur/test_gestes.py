@@ -117,7 +117,7 @@ MOUCHARD = r"""
 #      saving — the element is not inert, it simply needs no code.
 #
 # Point 4 is the only one that could lie: `document` carries a click listener
-# (`cacherApercu`), so "an ancestor listens" is true for the WHOLE tree. That is
+# (`hidePreview`), so "an ancestor listens" is true for the WHOLE tree. That is
 # why the key is required, and why it is drawn from a CLOSED list. The keys other
 # than `data-act` are the delegations that existed before phase 4; this list must
 # shrink, never grow.
