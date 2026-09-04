@@ -26,7 +26,7 @@ from pathlib import Path
 from html import escape as html_escape
 from urllib.parse import parse_qs, unquote
 
-from . import (actions, apikeys, apiv1, audit, auth, backup, comptes, config,
+from . import (accounts, actions, apikeys, apiv1, audit, auth, backup, config,
                console, covers, device, duplicates, edenconf, emuready, igdb,
                integrity, journal_acces, meta, nand, net, notify, nsztool,
                parcourir, profils, saves, scan, systems, titleid, transferts,
@@ -731,7 +731,7 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"actif": auth.actif(CFG),
                         "mode": auth.mode(CFG),
                         "demande": CFG.get("auth_mode", "aucun"),
-                        "comptes": comptes.nombre(),
+                        "comptes": accounts.count(),
                         "incomplet": auth.incomplet(CFG),
                         "session": auth.session(self.headers.get("Cookie"))})
             return True
@@ -745,10 +745,10 @@ class Handler(BaseHTTPRequestHandler):
         champs = parse_qs(self.rfile.read(n).decode("utf-8", "replace"))
         email = (champs.get("email") or [""])[0]
         try:
-            u = comptes.connecter(email, (champs.get("mdp") or [""])[0],
+            u = accounts.login(email, (champs.get("mdp") or [""])[0],
                                   self.client_address[0],
                                   (champs.get("code") or [""])[0])
-        except comptes.BesoinCode as exc:
+        except accounts.CodeNeeded as exc:
             # The password is right: we only ask for the code again.
             journal_acces.noter("refus", self.client_address[0], email, str(exc))
             return self._page_connexion(str(exc), 401, email, second=True)
@@ -874,7 +874,7 @@ class Handler(BaseHTTPRequestHandler):
                         "batterie": device.batterie(),
                         "wifi_addr": CFG.get("wifi_addr", "")})
         elif p.startswith("/photo/"):
-            octets, mime = comptes.photo_lire(p[len("/photo/"):])
+            octets, mime = accounts.photo_read(p[len("/photo/"):])
             if not octets:
                 self.send_response(404)
                 self.end_headers()
@@ -996,7 +996,7 @@ class Handler(BaseHTTPRequestHandler):
         sources.
         """
         s = auth.session(self.headers.get("Cookie"))
-        return comptes.par_id(s.get("sub")) if s and s.get("src") == "interne" else None
+        return accounts.by_id(s.get("sub")) if s and s.get("src") == "interne" else None
 
     def _moi(self):
         """Who is looking, and with what role.
@@ -1026,19 +1026,19 @@ class Handler(BaseHTTPRequestHandler):
             return False
         if s.get("src") == "oidc":
             return bool(s.get("admin"))
-        u = comptes.par_id(s.get("sub")) if s.get("src") == "interne" else None
-        return bool(u and comptes.est_admin(u["id"]))
+        u = accounts.by_id(s.get("sub")) if s.get("src") == "interne" else None
+        return bool(u and accounts.is_admin(u["id"]))
 
     def _photo_envoi(self):
         u = self._qui()
         if not u:
             return self._json({"error": "Aucun compte connecte."}, 401)
         taille = int(self.headers.get("Content-Length", 0) or 0)
-        if taille > comptes.PHOTO_MAX:
+        if taille > accounts.PHOTO_MAX:
             return self._json({"error": "Image trop lourde (maximum %d Mo)."
-                               % (comptes.PHOTO_MAX // 2 ** 20)}, 413)
+                               % (accounts.PHOTO_MAX // 2 ** 20)}, 413)
         try:
-            d = comptes.photo_ecrire(u["id"], self.rfile.read(taille))
+            d = accounts.photo_write(u["id"], self.rfile.read(taille))
         except ValueError as exc:
             return self._json({"error": str(exc)}, 400)
         self._json({"message": "Photo mise a jour.", **d})
@@ -1243,12 +1243,12 @@ class Handler(BaseHTTPRequestHandler):
 
         # ---- comptes internes
         elif p == "/api/comptes":
-            self._json({"comptes": comptes.liste(),
+            self._json({"comptes": accounts.list_all(),
                         "moi": (self._qui() or {}).get("id", ""),
-                        "mdp_min": comptes.MDP_MIN})
+                        "mdp_min": accounts.MDP_MIN})
 
         elif p == "/api/compte-creer":
-            if not comptes.liste():
+            if not accounts.list_all():
                 # The very first account: it becomes the administrator, so its
                 # creation cannot be open to the network. Otherwise "the first
                 # account governs" would mean "the first device on the network
@@ -1263,21 +1263,21 @@ class Handler(BaseHTTPRequestHandler):
                 if refus:
                     return self._json({"error": refus}, 403)
             try:
-                u = comptes.creer(d.get("email", ""), d.get("mdp", ""), d.get("nom", ""))
+                u = accounts.create(d.get("email", ""), d.get("mdp", ""), d.get("nom", ""))
             except ValueError as exc:
                 return self._json({"error": str(exc)}, 400)
             backup.auto("comptes")
             JOB.log("Compte cree : %s" % u["email"])
             journal_acces.noter("compte", self.client_address[0], u["email"], "creation")
             self._json({"message": "Compte cree pour %s." % u["email"],
-                        "compte": u, "comptes": comptes.liste()})
+                        "compte": u, "comptes": accounts.list_all()})
 
         elif p == "/api/compte-modifier":
             u = self._qui()
             if not u:
                 return self._json({"error": "Aucun compte connecte."}, 401)
             try:
-                v = comptes.modifier(u["id"], d.get("nom"), d.get("email"))
+                v = accounts.update(u["id"], d.get("nom"), d.get("email"))
             except ValueError as exc:
                 return self._json({"error": str(exc)}, 400)
             self._json({"message": "Profil enregistre.", "compte": v})
@@ -1287,7 +1287,7 @@ class Handler(BaseHTTPRequestHandler):
             if not u:
                 return self._json({"error": "Aucun compte connecte."}, 401)
             try:
-                comptes.changer_mdp(u["id"], d.get("ancien", ""), d.get("nouveau", ""))
+                accounts.change_password(u["id"], d.get("ancien", ""), d.get("nouveau", ""))
             except ValueError as exc:
                 return self._json({"error": str(exc)}, 400)
             JOB.log("Mot de passe change : %s" % u["email"])
@@ -1298,7 +1298,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_header("Set-Cookie", auth.entete_cookie(
-                auth.session_interne(comptes.par_id(u["id"])), self._secure()))
+                auth.session_interne(accounts.by_id(u["id"])), self._secure()))
             corps = json.dumps({"message": "Mot de passe change. Les autres "
                                            "appareils ont ete deconnectes."}).encode()
             self.send_header("Content-Length", str(len(corps)))
@@ -1310,24 +1310,24 @@ class Handler(BaseHTTPRequestHandler):
             if refus:
                 return self._json({"error": refus}, 403)
             try:
-                comptes.supprimer(d.get("id", ""))
+                accounts.delete(d.get("id", ""))
             except ValueError as exc:
                 return self._json({"error": str(exc)}, 400)
             JOB.log("Compte supprime.")
-            self._json({"message": "Compte supprime.", "comptes": comptes.liste()})
+            self._json({"message": "Compte supprime.", "comptes": accounts.list_all()})
 
         elif p == "/api/compte-totp-preparer":
             u = self._qui()
             if not u:
                 return self._json({"error": "Aucun compte connecte."}, 401)
-            self._json(comptes.totp_preparer(u["id"]))
+            self._json(accounts.totp_prepare(u["id"]))
 
         elif p == "/api/compte-totp-activer":
             u = self._qui()
             if not u:
                 return self._json({"error": "Aucun compte connecte."}, 401)
             try:
-                comptes.totp_activer(u["id"], d.get("code", ""))
+                accounts.totp_enable(u["id"], d.get("code", ""))
             except ValueError as exc:
                 return self._json({"error": str(exc)}, 400)
             journal_acces.noter("compte", self.client_address[0], u["email"],
@@ -1339,7 +1339,7 @@ class Handler(BaseHTTPRequestHandler):
             if not u:
                 return self._json({"error": "Aucun compte connecte."}, 401)
             try:
-                comptes.totp_desactiver(u["id"], d.get("mdp", ""))
+                accounts.totp_disable(u["id"], d.get("mdp", ""))
             except ValueError as exc:
                 return self._json({"error": str(exc)}, 400)
             journal_acces.noter("compte", self.client_address[0], u["email"],
@@ -1350,7 +1350,7 @@ class Handler(BaseHTTPRequestHandler):
             u = self._qui()
             if not u:
                 return self._json({"error": "Aucun compte connecte."}, 401)
-            comptes.photo_effacer(u["id"])
+            accounts.photo_delete(u["id"])
             self._json({"message": "Photo retiree."})
 
         elif p == "/api/sgdb-test":
@@ -1870,8 +1870,8 @@ class Handler(BaseHTTPRequestHandler):
                     and not auth.session(self.headers.get("Cookie"))):
                 u = None
                 if CFG.get("auth_mode") == "interne":
-                    liste = comptes.liste()
-                    u = comptes.par_id(liste[0]["id"]) if liste else None
+                    liste = accounts.list_all()
+                    u = accounts.by_id(liste[0]["id"]) if liste else None
                 # This token is tied to no account: it is a bridge, just long
                 # enough to finish configuring and log in properly. Giving it
                 # the twelve hours of a real session made it an anonymous
@@ -2005,7 +2005,7 @@ def _health():
             "ecoute": _adresse_ecoute(),
             "expose": _adresse_ecoute() != "127.0.0.1",
             "auth_mode": CFG.get("auth_mode", "aucun"),
-            "comptes": len(comptes.liste()),
+            "comptes": len(accounts.list_all()),
             "emulateur": CFG.get("emulateur") or profils.DEFAUT,
         },
         "profils": profils.public(),
@@ -2183,7 +2183,7 @@ def _faits_de_demarrage(url, ip, jeton_auto):
         ("Acces", modes.get(CFG.get("auth_mode"), CFG.get("auth_mode"))
          + (" + jeton" if config.TOKEN and not jeton_auto else "")
          + (" + jeton engendre" if jeton_auto else "")),
-        ("Comptes", "%d" % comptes.nombre()),
+        ("Comptes", "%d" % accounts.count()),
         ("Ludotheque", "%s   (%s)"
          % (config.LUDO, "imposee par ROMULE_LIBRARY" if config.LUDO_IMPOSEE
             else "modifiable depuis l'interface")),
@@ -2218,7 +2218,7 @@ def serve(open_browser=True):
     # Accounts created before roles existed carry none: without this catch-up,
     # an existing installation would find itself with no administrator after
     # the upgrade.
-    comptes.reprendre_roles()
+    accounts.refresh_roles()
     JOB.notify_end = bool(CFG.get("notify", True))
     jeton_auto = _jeton_de_premier_demarrage()
     url = "http://127.0.0.1:%d" % config.PORT

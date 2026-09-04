@@ -43,7 +43,7 @@ def _c(niveau, titre, constat, remede=""):
 
 def _acces(cfg):
     """Who can open the library, and with what."""
-    from . import auth, comptes
+    from . import auth, accounts
     out = []
     mode = cfg.get("auth_mode", "aucun")
     actif = auth.actif(cfg)
@@ -88,11 +88,11 @@ def _acces(cfg):
                           "Passe le fournisseur en https://."))
 
     if mode == "interne" and actif:
-        n = comptes.nombre()
+        n = accounts.count()
         out.append(_c("bon", "Comptes internes",
                       "%d compte(s). Empreintes scrypt (N=2^%d, r=%d, p=%d)."
-                      % (n, comptes.SCRYPT_N.bit_length() - 1,
-                         comptes.SCRYPT_R, comptes.SCRYPT_P)))
+                      % (n, accounts.SCRYPT_N.bit_length() - 1,
+                         accounts.SCRYPT_R, accounts.SCRYPT_P)))
         if ouvert and not _https_probable(cfg):
             out.append(_c("alerte", "Mots de passe transmis en clair",
                           "La ludotheque est jointe en HTTP sur le reseau : le "
@@ -135,9 +135,9 @@ def _secrets(cfg):
 
 def _permissions():
     """The sensitive files must not be readable by everybody."""
-    from . import comptes
+    from . import accounts
     out = []
-    for chemin, exige in ((config.CONFIG_FILE, 0o077), (comptes.FICHIER, 0o077)):
+    for chemin, exige in ((config.CONFIG_FILE, 0o077), (accounts.FILE, 0o077)):
         if not Path(chemin).exists():
             continue
         m = os.stat(chemin).st_mode

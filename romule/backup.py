@@ -22,8 +22,8 @@ KEEP = 20                       # nombre de copies conservees
 
 
 def _sources():
-    from . import comptes
-    return [config.CONFIG_FILE, comptes.FICHIER]
+    from . import accounts
+    return [config.CONFIG_FILE, accounts.FILE]
 
 
 _LAST_AUTO = [0.0]

@@ -15,7 +15,7 @@ a configuration file or a public repository. It is what lets a reader — human
 or machine — say "this is a secret" without knowing Romule. GitHub and Stripe
 do it for that reason.
 
-**SHA-256, and above all not `comptes.hacher()`.** The project hashes passwords
+**SHA-256, and above all not `accounts.hash_password()`.** The project hashes passwords
 with scrypt N=2^17, about 128 MiB of memory per computation. That is deliberate
 and correct: a password is chosen by a human, therefore guessable, and every
 attempt must be made expensive.
