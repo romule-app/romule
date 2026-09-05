@@ -4914,7 +4914,10 @@ const app = {
     wrap.title = !r.lan
       ? 'Active « Accès depuis le téléphone » dans les Réglages pour piloter l\'outil depuis la console.'
       : !r.url
-        ? 'Adresse réseau introuvable : vérifie la connexion Wi-Fi du serveur.'
+        // The reason comes from the server: in a container the address is not
+        // missing, it is unknowable, and blaming the Wi-Fi sends the reader to
+        // look at a network that works.
+        ? (r.raison || 'Adresse réseau introuvable.')
         : tpl('Ouvrir cette interface sur l\'écran de la console (%s)', r.url);
   },
   // ---- premier lancement

@@ -25,6 +25,7 @@ seul dossier continue donc de fonctionner exactement comme avant.
 | `ROMULE_BASES` | — | Dossiers que l'interface a le droit de parcourir, séparés comme un `PATH`. Non renseigné : tout ce que le processus peut voir. |
 | `ROMULE_WEB_PORT` | `8787` | Port d'écoute |
 | `ROMULE_BIND` | voir plus bas | Interface sur laquelle écouter |
+| `ROMULE_PUBLIC_HOST` | — | L'adresse sous laquelle les **autres machines** atteignent Romule, avec un port si le port publié diffère (`192.168.1.20`, `nas.local:9000`). Un conteneur ne peut pas deviner l'adresse de son hôte — il ne voit que la sienne sur le réseau de Docker, que rien ne route — donc sans cette variable il ne propose aucune adresse réseau plutôt qu'une adresse injoignable. Voir [Dans un conteneur](#dans-un-conteneur). |
 | `ROMULE_TOKEN` | — | Jeton d'accès ; remplace celui qui est engendré |
 | `ROMULE_LAN` | — | `1` ouvre l'accès réseau **sans mot de passe** |
 | `ROMULE_KEYS` | `~/.romule/prod.keys` | Chemin du fichier de clés de déchiffrement |
@@ -56,6 +57,31 @@ n'est pas un moyen de le contourner.
 !!! info "Les anciens noms fonctionnent encore"
     Les variables `SWITCH_*` sont toujours lues, et Romule affiche leur
     remplaçante au démarrage. Elles disparaîtront dans une version ultérieure.
+
+## Dans un conteneur
+
+Un conteneur ne peut pas découvrir l'adresse sous laquelle on atteint son hôte.
+La socket qu'il ouvre répond avec sa propre adresse sur le réseau de Docker —
+`172.18.0.2` — juste pour le conteneur, et routée depuis nulle part ailleurs :
+ni depuis la machine qui le fait tourner sous Docker Desktop ou Colima, ni
+depuis ta console.
+
+Romule affichait cette adresse comme celle à ouvrir au premier démarrage. La
+première chose que voyait une installation en conteneur était donc une adresse
+qui ne répond pas.
+
+Il ne devine plus. Sans `ROMULE_PUBLIC_HOST`, il annonce le port publié et s'en
+tient là, et le bouton qui ouvre l'interface sur l'écran de la console reste
+éteint en disant pourquoi. Depuis la machine qui héberge le conteneur,
+`http://localhost:8787` fonctionne : c'est le port publié.
+
+Pour que Romule connaisse l'adresse, déclare-la :
+
+```yaml
+environment:
+  ROMULE_PUBLIC_HOST: "192.168.1.20"     # ta machine, pas le conteneur
+  # ROMULE_PUBLIC_HOST: "nas.local:9000" # avec un port s'il differe
+```
 
 ## Lire les journaux
 

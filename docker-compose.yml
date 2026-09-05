@@ -37,6 +37,18 @@ services:
       # jeux et interdire d'en changer depuis l'interface.
       # ROMULE_LIBRARY: /library
       ROMULE_WEB_PORT: "8787"
+      # Sous quelle adresse on atteint Romule depuis les AUTRES machines.
+      #
+      # Un conteneur ne peut pas la deviner : il ne voit que son adresse sur
+      # le reseau de Docker (172.x.x.x), qui n'est routee de nulle part. Sans
+      # cette ligne, Romule ne propose plus d'adresse reseau plutot que d'en
+      # inventer une — et le bouton « ouvrir sur la console » reste eteint.
+      #
+      # L'adresse de ta machine, pas celle du conteneur. Avec un port si le
+      # port publie n'est pas 8787 :
+      #     ROMULE_PUBLIC_HOST: "192.168.1.20"
+      #     ROMULE_PUBLIC_HOST: "nas.local:9000"
+      # ROMULE_PUBLIC_HOST: ""
 
       # RIEN N'EST A REGLER ICI POUR DEMARRER.
       #

@@ -91,6 +91,26 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Fixed
 
+- **In a container, the address to open did not answer.** `_lan_ip()` opens a
+  socket and reads its own end: on a laptop that is the LAN address, in a
+  container it is the bridge address — `172.18.0.2` — correct for the container
+  and routed from nowhere else. It was the first thing a container install
+  showed, on the line carrying the access token.
+
+  The same address fed two more places: the network address in the settings,
+  and the button that opens the interface **on the console's screen**, which
+  was pushing an address the console cannot reach. And when there was no
+  address at all, the interface blamed the Wi-Fi, sending the reader to look at
+  a network that works.
+
+  Romule no longer guesses. A container prints the published port and
+  `http://localhost:8787`, which does answer from the machine hosting it, and
+  says what to declare. `ROMULE_PUBLIC_HOST` states the address — with a port
+  when the published one differs from the internal one, as `9000:8787` makes it.
+  `test_adresse_publique.py` substitutes the container detection, so the defect
+  is caught on a laptop: the machine where it cannot happen, and therefore
+  where nobody would have looked.
+
 - **The IGDB credentials test said "(aucun resultat)" with valid credentials.**
   The rename of `igdb.py` turned `essai.get("nom")` into `essai.get("name")` —
   but `nom` is an ENTRY field, data written to the cache and read by the

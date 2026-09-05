@@ -974,7 +974,7 @@
   "Connexion impossible.": "Could not connect.",
   "Oublier la connexion sans fil ?": "Forget the wireless connection?",
   "Active « Accès depuis le téléphone » dans les Réglages pour piloter l'outil depuis la console.": "Turn on “Access from the phone” in Settings to drive Romule from the console.",
-  "Adresse réseau introuvable : vérifie la connexion Wi-Fi du serveur.": "No network address found: check the server's Wi-Fi connection.",
+  "Adresse réseau introuvable.": "Network address not found.",
   "Ouverture impossible.": "Could not open.",
   "Le dossier des jeux n'est pas defini (bouton « changer le dossier »).": "The games folder is not set (use the “change the folder” button).",
   "Dossiers GAMES / UPDATE / DLC créés sur la console.": "GAMES / UPDATE / DLC folders created on the console.",
