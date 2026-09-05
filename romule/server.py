@@ -1641,20 +1641,23 @@ class Handler(BaseHTTPRequestHandler):
         elif p == "/api/console-url":
             ip = _lan_ip()
             self._json({"ip": ip, "port": config.PORT,
-                        "url": "http://%s:%d" % (ip, config.PORT) if ip else None,
+                        "url": _public_url(ip),
+                        # Why there is none, so the interface stops blaming the
+                        # Wi-Fi of a container whose network is fine.
+                        "raison": None if ip else _no_address_reason(),
                         "lan": bool(CFG.get("lan_access")),
                         "connected": device.connection()["kind"]})
 
         elif p == "/api/console-open":
             ip = _lan_ip()
             if not ip:
-                self._json({"ok": False, "message": "Adresse reseau du serveur introuvable."})
+                self._json({"ok": False, "message": _no_address_reason()})
             elif not CFG.get("lan_access"):
                 self._json({"ok": False, "message": "Active d'abord l'acces reseau (Reglages)."})
             elif device.connection()["kind"] is None:
                 self._json({"ok": False, "message": "Connecte d'abord la console."})
             else:
-                url = "http://%s:%d" % (ip, config.PORT)
+                url = _public_url(ip)
                 ok, msg = device.open_url(url)
                 if ok:
                     JOB.log("Interface ouverte sur la console : %s" % url)
@@ -2179,6 +2182,27 @@ def adb_hint():
 
 
 def _lan_ip():
+    """The address OTHER machines can reach this service at, or None.
+
+    The socket trick answers the address of the interface that would carry a
+    packet outwards. On a laptop that is the LAN address. In a container it is
+    the bridge address — `172.18.0.2` — which is correct for the container and
+    useless for everyone else: it is not routed from the host under Docker
+    Desktop or Colima, and the console cannot reach it at all.
+
+    It was printed as the address to open at first start. The very first thing
+    a container install showed was therefore an address that does not answer.
+
+    A container cannot discover its host's address: the mapping between the
+    published port and the host's interfaces lives outside it. So it does not
+    guess. `ROMULE_PUBLIC_HOST` is how the operator states it — a name or an
+    address, with a port when the published one differs from the internal one.
+    """
+    declaree = config.env("PUBLIC_HOST", "").strip()
+    if declaree:
+        return declaree.rstrip("/")
+    if config.in_container():
+        return None
     import socket
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
@@ -2188,6 +2212,34 @@ def _lan_ip():
         return None
     finally:
         s.close()
+
+
+def _public_url(ip):
+    """The address to show, from what `_lan_ip()` found.
+
+    `ROMULE_PUBLIC_HOST` may carry a port — `nas.local:9000` — because the
+    published port is not always the internal one. Splitting on the last colon
+    would break an IPv6 literal, so the port is only read when the rest holds
+    no colon.
+    """
+    if not ip:
+        return None
+    hote = ip.split("://", 1)[-1]
+    if hote.count(":") == 1:
+        return "http://%s" % hote
+    return "http://%s:%d" % (hote, config.PORT)
+
+
+def _no_address_reason():
+    """Why there is no address to give. Shown, so it must be true.
+
+    The interface used to blame the Wi-Fi whichever the cause, which in a
+    container sends the reader looking at a network that works.
+    """
+    if config.in_container():
+        return ("Dans un conteneur, l'adresse de la machine hote n'est pas "
+                "connue : declare-la avec ROMULE_PUBLIC_HOST.")
+    return "Adresse reseau introuvable : verifie la connexion du serveur."
 
 
 def _reconnect_wifi():
@@ -2306,8 +2358,14 @@ def _startup_facts(url, ip, auto_token):
         faits.append(("Reseau", "cette machine seulement — ROMULE_BIND=0.0.0.0, "
                                 "ROMULE_LAN=1 ou un jeton, puis redemarrer"))
     else:
-        faits.append(("Reseau", "http://%s:%d   (telephone, console, tablette)"
-                      % (ip or "<adresse-du-serveur>", config.PORT)))
+        # In a container without ROMULE_PUBLIC_HOST there is no address to
+        # give. Saying so beats printing the bridge address, which is what
+        # sent people to an address that does not answer.
+        faits.append(("Reseau", _public_url(ip) + "   (telephone, console, tablette)"
+                      if ip else
+                      "port %d publie — declare ROMULE_PUBLIC_HOST pour que "
+                      "Romule sache sous quelle adresse on l'atteint"
+                      % config.PORT))
     faits += [
         ("Acces", modes.get(CFG.get("auth_mode"), CFG.get("auth_mode"))
          + (" + jeton" if config.TOKEN and not auto_token else "")
@@ -2372,9 +2430,16 @@ def serve(open_browser=True):
         console.say("Ce service est joignable par le reseau et n'a pas encore "
                     "de compte. Ouvre cette adresse, puis cree ton compte :",
                     "warn", "acces")
-        console.say("  http://%s:%d/?token=%s"
-                    % (ip or "<adresse-du-serveur>", config.PORT, auto_token),
-                    "warn", "acces")
+        console.say("  %s/?token=%s"
+                    % (_public_url(ip) or "http://localhost:%d" % config.PORT,
+                       auto_token), "warn", "acces")
+        if not ip:
+            # The one address that works from the machine running the
+            # container. From anywhere else it is the host's, which only the
+            # operator knows.
+            console.say("  (depuis la machine qui heberge le conteneur ; "
+                        "d'ailleurs, declare ROMULE_PUBLIC_HOST)",
+                        "warn", "acces")
     if not adb_hint():
         console.say("adb absent — la console ne pourra pas etre pilotee",
                     "warn", "device")

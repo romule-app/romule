@@ -24,6 +24,7 @@ working exactly as before.
 | `ROMULE_BASES` | — | Folders the interface may browse, separated like a `PATH`. Unset means everything the process can see. |
 | `ROMULE_WEB_PORT` | `8787` | Port to listen on |
 | `ROMULE_BIND` | see below | Interface to bind to |
+| `ROMULE_PUBLIC_HOST` | — | The address **other machines** reach Romule at, with a port when the published one differs (`192.168.1.20`, `nas.local:9000`). A container cannot discover its host's address — it only sees its own on Docker's network, which nothing routes — so without this it offers no network address rather than an unreachable one. See [In a container](#in-a-container). |
 | `ROMULE_TOKEN` | — | Access token; overrides the generated one |
 | `ROMULE_LAN` | — | `1` opens network access **without a password** |
 | `ROMULE_KEYS` | `~/.romule/prod.keys` | Path to the decryption keys |
@@ -54,6 +55,29 @@ around it.
 !!! info "Old names still work"
     `SWITCH_*` variables are still read, and Romule prints their replacement at
     startup. They will be dropped in a later release.
+
+## In a container
+
+A container cannot discover the address its host is reached at. The socket it
+opens answers with its own address on Docker's network — `172.18.0.2` — which
+is correct for the container and routed from nowhere else: not from the machine
+running it under Docker Desktop or Colima, and not from your console.
+
+Romule used to print that address as the one to open at first start. The first
+thing a container install showed was therefore an address that does not answer.
+
+It no longer guesses. Without `ROMULE_PUBLIC_HOST` it says the published port
+and stops there, and the button that opens the interface on the console's
+screen stays off with the reason given. From the machine hosting the container,
+`http://localhost:8787` works — it is the published port.
+
+To have Romule know the address, state it:
+
+```yaml
+environment:
+  ROMULE_PUBLIC_HOST: "192.168.1.20"     # your machine, not the container
+  # ROMULE_PUBLIC_HOST: "nas.local:9000" # with a port when it differs
+```
 
 ## Reading the logs
 
