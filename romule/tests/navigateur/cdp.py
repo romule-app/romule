@@ -112,7 +112,8 @@ class WS:
 
 
 class Navigateur:
-    def __init__(self, port=9333, largeur=430, hauteur=932, dpr=3):
+    def __init__(self, port=9333, largeur=430, hauteur=932, dpr=3,
+                 assistant=False):
         args = [trouver_chrome(), "--headless=new",
                 "--remote-debugging-port=%d" % port,
                 "--no-first-run", "--no-default-browser-check", "--disable-gpu",
@@ -175,6 +176,18 @@ class Navigateur:
         self.cmd("Network.enable")
         self.cmd("Network.clearBrowserCache")
         self.cmd("Network.setCacheDisabled", {"cacheDisabled": True})
+        # The setup wizard opens over everything on an installation where
+        # nothing is set up yet — which the fixture is, since it has no account.
+        # These suites measure the library screens, from the position of someone
+        # who has already been through it once; their browser carries the same
+        # mark this sets. Injected BEFORE the page's own scripts, otherwise the
+        # wizard has already decided by the time we could speak.
+        #
+        # `assistant=True` for a suite that wants to see it.
+        if not assistant:
+            self.cmd("Page.addScriptToEvaluateOnNewDocument",
+                     {"source": "try { localStorage.setItem('onboard-vu', '1'); }"
+                                " catch (e) {}"})
 
     def cmd(self, methode, params=None, timeout=30):
         self.n += 1

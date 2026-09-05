@@ -84,6 +84,7 @@ def unitaires():
                 "romule.tests.test_report",
                 "romule.tests.test_events",
                 "romule.tests.test_adresse_publique",
+                "romule.tests.test_premier_lancement",
                 "romule.tests.test_updates",
                 "romule.tests.test_covers",
                 "romule.tests.test_console",
