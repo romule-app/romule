@@ -115,7 +115,7 @@ def main():
         # The double now returns the title SEARCHED FOR: that is what the real
         # IGDB does, and what the anti-mismatch filter requires.
         t("test des identifiants",
-          r["jeton"] and r["exemple"] == "The Legend of Zelda", r)
+          r["token"] and r["exemple"] == "The Legend of Zelda", r)
     finally:
         srv.terminate()
     print("   ------------------------------------------------")

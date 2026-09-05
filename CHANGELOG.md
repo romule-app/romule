@@ -91,6 +91,38 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Fixed
 
+- **The IGDB credentials test said "(aucun resultat)" with valid credentials.**
+  The rename of `igdb.py` turned `essai.get("nom")` into `essai.get("name")` —
+  but `nom` is an ENTRY field, data written to the cache and read by the
+  interface, and it deliberately did not follow the rename. The probe therefore
+  found the game and reported nothing, which reads as "your key is wrong".
+
+  The commit that introduced it was titled "entry keys unchanged". `test_igdb.py`
+  did catch it — it asserts on the value, not just the shape — but it lives in
+  the `serveur` family, which this machine could not run for the whole of the
+  rename: `connect()` failed with EADDRNOTAVAIL under 83 436 sockets in
+  TIME_WAIT. The net existed and was blindfolded, which is the more useful half
+  of this story.
+
+- **A displayed sentence carried an English word.** The same rename turned
+  `cle` into `key` inside a French string: the covers screen answered "Aucune
+  key renseignee." In `app.js` the catalogue catches this by itself — a damaged
+  sentence is no longer a key and `verifier-traduction.py` says so — but Python
+  strings go through no catalogue, and nothing was watching them.
+
+  `verifier-anglais.py` now checks the mirror direction as well as its own: an
+  English word wedged into a French sentence in the shipped Python. It ignores
+  what is legitimately English there — `master key` is the Switch's own
+  vocabulary, `title.keys` is a file name, `GAMES/UPDATE/DLC` are the console's
+  folders — and it is self-tested on the shape it must catch and the three it
+  must ignore.
+
+- **The reason an address was refused had been translated.** `net.check()`
+  hands its message to the interface, which shows it as it arrives. Displayed
+  sentences are French — that is the source language, and the catalogue's keys
+  are built on it — so the message came back to French while the identifiers
+  around it stayed English.
+
 - **Three of the five notifiable events were never sent.** The settings offered
   *the console connected*, *a version is available* and *the drop folder was
   filed*; only `tache_ok` and `tache_echec` had an emitter. You could tick the

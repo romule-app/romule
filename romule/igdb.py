@@ -306,4 +306,8 @@ def probe(cfg=None):
     if not token(cfg, force=True):
         raise ValueError("Twitch a refuse ces identifiants.")
     essai = search("The Legend of Zelda", cfg)
-    return {"token": True, "exemple": (essai or {}).get("name") or "(aucun resultat)"}
+    # `nom`, not `name`: `search()` returns an ENTRY, whose field names are
+    # data — written to the cache and read by the interface. The rename walked
+    # into this read and the settings screen answered "(aucun resultat)" with
+    # perfectly valid credentials, which reads as "your key is wrong".
+    return {"token": True, "exemple": (essai or {}).get("nom") or "(aucun resultat)"}
