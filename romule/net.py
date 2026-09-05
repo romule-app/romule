@@ -35,8 +35,12 @@ def check(url):
     scheme = urllib.parse.urlparse(str(url or "")).scheme.lower()
     if scheme not in SCHEMES:
         raise SchemeRefused(
-            "scheme refused: %r (only %s are accepted)"
-            % (scheme or "none", " and ".join(SCHEMES)))
+            # The sentence stays in French: it is handed to the interface as
+            # the reason a destination was refused, and shown as it arrives.
+            # The identifiers around it are English; the phrase people read is
+            # not an identifier.
+            "schema refuse : %r (seuls %s sont acceptes)"
+            % (scheme or "aucun", " et ".join(SCHEMES)))
     return url
 
 

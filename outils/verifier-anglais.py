@@ -186,6 +186,27 @@ NAME = "x"
 '''
 
 
+
+# A rename that walked into a sentence people read. The identifier around it is
+# rightly English; the sentence is not an identifier.
+ABIME_PY = '''def probe(cfg):
+    return (False, "Aucune key renseignee.")
+'''
+
+# The same sentence, intact. And an English sentence in an English string, which
+# is not this check's business at all.
+SAIN_PY = '''def probe(cfg):
+    if not cfg:
+        return (False, "Aucune cle renseignee.")
+    return (True, "the key was accepted by the provider")
+'''
+
+# Markup: `class="lead"` and `data-act="refreshAll"` are English on purpose and
+# have nothing to do with the sentence they surround.
+BALISE_PY = '''HTML = "<p class=\'lead\'>Aucun doublon repere pour le moment.</p>"
+'''
+
+
 def epreuve():
     """Does the detector see French, and keep quiet about English?
 
@@ -215,7 +236,104 @@ def epreuve():
     if any(francais(t) for _, t in blocs(prose_python(IDENTIFIANT_PY))):
         print("   SELF-TEST FAILED: an identifier between backticks is reported")
         return False
+    # The mirror half, on the shape it must catch AND the two it must ignore.
+    if not any(anglicismes(t) for _, t in chaines_python(ABIME_PY)):
+        print("   SELF-TEST FAILED: an English word wedged into a French"
+              " sentence gets through")
+        return False
+    if any(anglicismes(t) for _, t in chaines_python(SAIN_PY)):
+        print("   SELF-TEST FAILED: an intact sentence is reported")
+        return False
+    if any(anglicismes(t) for _, t in chaines_python(BALISE_PY)):
+        print("   SELF-TEST FAILED: a class name inside markup is reported")
+        return False
     return True
+
+
+
+# ---------------------------------------------------------------------------
+# The mirror defect: an English word inside a sentence people READ
+# ---------------------------------------------------------------------------
+#
+# Renaming `cle` to `key` across covers.py turned a displayed sentence into
+# "Aucune key renseignee." — a French sentence with an English word wedged into
+# it, shown as-is in the interface. Nothing saw it: ruff reads syntax, this
+# tool's other half reads comments, and the sentence was not a comment.
+#
+# In app.js the catalogue catches this shape by itself: a damaged sentence is no
+# longer a key, and `verifier-traduction.py` says so. Python strings go through
+# no catalogue, so this is the only thing between them and the screen.
+#
+# The vocabulary is the ENGLISH SIDE of the renames actually carried out. It is
+# frozen by hand rather than derived: a list computed from the diff would grow a
+# new word every time a variable is renamed, and would report the sentences that
+# legitimately quote one.
+ANGLICISMES = {
+    "key", "keys", "name", "file", "files", "path", "size", "list", "folder",
+    "settings", "cover", "duplicates", "views", "backup", "accounts", "trash",
+    "transfers", "browse", "updates", "matching", "notify", "game", "games",
+    "push", "send", "device", "report", "scheduler", "consoles",
+}
+
+# What sits inside a tag is markup: `class="lead"`, `data-act="refreshAll"`.
+# Those names are English on purpose and have nothing to do with the sentence.
+_BALISE = re.compile(r"<[^>]*>")
+
+# A string literal, and not the apostrophe of `l'interface`: a French
+# apostrophe is always preceded by a letter, an opening quote never is.
+_CHAINE = re.compile(r"""(?<![A-Za-zÀ-ÿ0-9_])(["'])((?:\\.|(?!\1).)*)\1""")
+
+
+# A displayed sentence is short, and `MARQUEURS` was drawn for paragraphs of
+# comment: "Aucune cle renseignee." carries none of its words. This wider set is
+# only ever consulted together with `ANGLICISMES`, so a false positive needs to
+# be wrong TWICE — which is what lets it include short words safely.
+MARQUEURS_COURTS = MARQUEURS | {
+    "aucun", "aucune", "un", "une", "la", "le", "du", "de", "des", "sur",
+    "vers", "ton", "ta", "tes", "cette", "ces", "trop", "plus", "moins",
+    "impossible", "introuvable", "inconnu", "inconnue", "invalide",
+    "manquant", "manquante", "renseignee", "active", "activee",
+}
+
+
+# Three shapes where an English word inside a French sentence is right:
+#
+#   `master key`  the Switch's own vocabulary — there is no French for it, and
+#                 the interface has always said it;
+#   `title.keys`  a file name, and a name is not a word;
+#   `GAMES/DLC`   the folders the console itself creates, in capitals.
+_TERMES = re.compile(r"\bmaster\s+keys?\b|\b[\w-]+\.[a-z]+\b|\b[A-Z]{3,}\b")
+
+
+def anglicismes(texte):
+    """The English words wedged into this French sentence, or an empty set."""
+    prose = _TERMES.sub(" ", _CODE.sub(" ", _BALISE.sub(" ", texte)))
+    mots = {m.lower() for m in MOT.findall(prose)}
+    if not (mots & MARQUEURS_COURTS or ELISION.search(prose)):
+        return set()          # an English sentence is not the subject here
+    return mots & ANGLICISMES
+
+
+def chaines_python(source):
+    """The (line number, content) pairs of the string literals.
+
+    Comments are left out on purpose: they are the other half of this tool, and
+    an English word in an English comment is the point.
+    """
+    out = []
+    for i, ligne in enumerate(source.splitlines(), 1):
+        nu = ligne.strip()
+        # A docstring is prose, and prose is the other half of this tool. A line
+        # that OPENS with a quote is a docstring or the continuation of one;
+        # a sentence shown to somebody is always the argument of something.
+        if nu.startswith("#") or nu[:1] in ('"', "'") or nu[:2] in ('r"', "f'"):
+            continue
+        for _, contenu in _CHAINE.findall(ligne):
+            # Fewer than three words is a key, a format or a fragment, not a
+            # sentence anybody reads.
+            if len(contenu.split()) >= 3:
+                out.append((i, contenu))
+    return out
 
 
 def prose_html(source):
@@ -272,11 +390,29 @@ def main(argv):
                 montres += 1
                 rel = p.relative_to(RACINE)
                 print("   %s:%d  %s" % (rel, num, " ".join(texte.split())[:88]))
+    # The mirror half. Shipped Python only: the tests speak to whoever runs
+    # them, and app.js is already covered by the catalogue.
+    abimees = 0
+    for p in sorted((RACINE / "romule").glob("*.py")):
+        try:
+            src = p.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        for num, contenu in chaines_python(src):
+            intrus = anglicismes(contenu)
+            if intrus:
+                abimees += 1
+                print("   %s:%d  %s\n        -> %s"
+                      % (p.relative_to(RACINE), num, contenu[:80],
+                         ", ".join(sorted(intrus))))
+    if abimees:
+        print("   %d displayed sentence(s) carry an English word: a rename"
+              " walked into a string." % abimees)
     if total > montres:
         print("   ... and %d more (`--tout` for the full list)"
               % (total - montres))
     print("   %d line(s) of prose still in French." % total)
-    return 1 if total else 0
+    return 1 if (total or abimees) else 0
 
 
 if __name__ == "__main__":
