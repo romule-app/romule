@@ -241,7 +241,7 @@ def test_key(cfg):
     """
     key = (cfg.get("steamgriddb_key") or "").strip()
     if not key:
-        return (False, "Aucune key renseignee.")
+        return (False, "Aucune cle renseignee.")
     url = ("https://www.steamgriddb.com/api/v2/search/autocomplete/"
            + urllib.parse.quote("zelda"))
     try:
