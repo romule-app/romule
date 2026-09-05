@@ -91,6 +91,19 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Fixed
 
+- **The setup wizard never appeared in a container.** `first_run` meant "the
+  configuration file does not exist" — a different question, and one that
+  stopped being true the moment the service began writing that file before
+  anyone connected. `_first_run_token()` generates the access token at startup
+  and saves it there, so one second after `docker compose up` the file existed
+  and the wizard was skipped on the main installation path.
+
+  Nothing failed: no error, no log line. The interface opened on an empty
+  library, with no account, no library folder chosen and nothing said about
+  either. The question is now asked directly — is there a way in yet — and
+  `auth.enabled()` decides it, so a half-configured mode that lets nobody in
+  still counts as a first run.
+
 - **In a container, the address to open did not answer.** `_lan_ip()` opens a
   socket and reads its own end: on a laptop that is the LAN address, in a
   container it is the bridge address — `172.18.0.2` — correct for the container

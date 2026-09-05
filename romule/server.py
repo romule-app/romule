@@ -2092,6 +2092,29 @@ def _context_v1():
     }
 
 
+def _first_run():
+    """Has anybody set this installation up yet?
+
+    It used to be "the configuration file does not exist". That answer stopped
+    being true the moment the service began writing that file before anyone
+    connected: `_first_run_token()` generates the access token at startup and
+    saves it right there. In a container — the MAIN installation path — the
+    file therefore exists a second after `docker compose up`, and the wizard
+    could never appear. What arrived instead was an empty library, with no
+    account, no library folder chosen and nothing said about either.
+
+    Worse, it was invisible from the outside: nothing failed. The file's
+    presence answered a question nobody had asked it — "has the service run
+    once" — in place of the one that matters.
+
+    So the question is asked directly, and it is the one the wizard exists for:
+    is there a way in yet. `auth.enabled()` is what decides, because a
+    half-configured authentication — an `interne` mode with no account, an
+    `oidc` mode with no provider — is not one.
+    """
+    return accounts.count() == 0 and not auth.enabled(CFG)
+
+
 def _health():
     """Etat de preparation : sert a la sonde Docker et au parcours de demarrage."""
     keyfile = LIB.keyfile
@@ -2104,7 +2127,7 @@ def _health():
         "version": __version__,
         "licence": LICENCE,
         "source": SOURCE_URL,
-        "first_run": not config.CONFIG_FILE.exists(),
+        "first_run": _first_run(),
         "root": str(config.ROOT),
         # The library is distinct from the service root: it is the one the
         # wizard and the settings offer to choose.
