@@ -38,11 +38,12 @@ volumes:
 
 ```sh
 docker compose up -d
-docker compose logs romule      # prints your access token, once
+docker compose logs romule      # prints the address to open
 ```
 
-Open the address it prints, paste the token in the field it shows, then create
-your account in the wizard and point Romule at your games. The image ships `adb`, `nsz`, `unar` and `7z`, so nothing else
+Open it and answer the wizard: an account, or no password. Until you do, the
+installation answers everybody — that is what makes this screen reachable from
+your phone rather than only from the machine running the container. The image ships `adb`, `nsz`, `unar` and `7z`, so nothing else
 needs installing.
 
 ### The same file, with every option
@@ -71,13 +72,13 @@ services:
       ROMULE_WEB_PORT: "8787"
       TZ: Europe/Paris
 
-      # Nothing else is required. On first start Romule generates an access
-      # token and prints it ONCE:
-      #     docker compose logs romule
-      # Paste it in the field the interface shows. To see it again, or to
-      # replace it:
-      #     docker compose exec romule python3 -m romule token show
-      #     docker compose exec romule python3 -m romule token reset
+      # Nothing else is required. On first start the installation is
+      # unclaimed: it answers everybody and opens on its wizard, whose access
+      # step settles the question. From the terminal:
+      #     docker compose exec romule python3 -m romule access status
+      #     docker compose exec romule python3 -m romule user create you@ex.com
+      #
+      # Prefer a shared secret instead of an account?
       #
       # To pin your own instead:
       #     python3 -c "import secrets; print(secrets.token_urlsafe(32))"
@@ -175,7 +176,7 @@ docker run -d --name romule --restart unless-stopped \
   -v /mnt/games:/library \
   ghcr.io/romule-app/romule:latest
 
-docker logs romule              # your access token, once
+docker logs romule              # the address to open
 ```
 
 !!! tip "Available tags"

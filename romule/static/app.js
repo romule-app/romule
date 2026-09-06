@@ -293,6 +293,18 @@ let LANG = 'en';
 // five screens of it beats discovering the setting afterwards.
 let LANGUES = [];
 
+// The published documentation. mkdocs-static-i18n serves the French pages
+// under `/fr/`, so the link follows the interface: sending a French reader to
+// an English page to explain a setting they are looking at in French is a
+// small thing that says the translation stops at the door.
+//
+// The anchor follows the HEADING. Renaming one breaks this link in silence,
+// which is what `verifier-reglages-doc.py` now checks.
+const DOC = 'https://romule-app.github.io/romule/';
+const docLien = (page, ancreFr, ancreEn) =>
+  DOC + (LANG === 'fr' ? 'fr/' + page + '/#' + ancreFr
+                       : page + '/#' + ancreEn);
+
 // What we NEVER translate: code, paths, and above all the user's data (game
 // names, email addresses, file paths).
 const NON_TRADUIT = new Set(['CODE', 'PRE', 'SCRIPT', 'STYLE', 'TEXTAREA']);
@@ -4995,6 +5007,13 @@ const app = {
     renderOnboard();
   },
 
+  async onbOpenAccess() {
+    const r = await api('/api/acces-ouvert', {ouvert: true}, true);
+    if (r.error) { toast(r.error, 'warn'); return; }
+    toast('Accès ouvert sans mot de passe.', 'warn');
+    await this.checkHealth(true);
+  },
+
   async onbCreateAccount() {
     const mail = ($('onb-mail').value || '').trim();
     const mdp = $('onb-mdp').value || '';
@@ -5012,30 +5031,34 @@ const app = {
   // Saving without checking means letting the user find out in a month that
   // their key was pasted wrong. So we ask for a cover straight away, on a game
   // they have just scanned.
-  async onbTestEntries() {
-    const sgdb = ($('onb-sgdb').value || '').trim();
+  async onbTestSgdb() {
+    const cle = ($('onb-sgdb').value || '').trim();
+    if (!cle) return toast(t('Renseigne la clé d\'abord.'), 'warn');
+    ONB.sgdb = {etat: 'attente'}; renderOnboard();
+    await this.saveField('steamgriddb_key', cle);
+    await this.saveField('cover_provider', 'steamgriddb');
+    const r = await api('/api/sgdb-test', {}, true);
+    ONB.sgdb = r && r.ok
+      ? {etat: 'ok', message: r.message || t('Clé acceptée.')}
+      : {etat: 'ko', message: (r && r.message) || t('Clé refusée.')};
+    renderOnboard();
+  },
+
+  async onbTestIgdb() {
     const cid = ($('onb-igdb-id').value || '').trim();
     const sec = ($('onb-igdb-secret').value || '').trim();
-    ONB.testJaquettes = t('Vérification…');
-    const msg = $('onb-fiches-msg');
-    if (msg) msg.textContent = ONB.testJaquettes;
-    if (sgdb) {
-      await this.saveField('steamgriddb_key', sgdb);
-      await this.saveField('cover_provider', 'steamgriddb');
-    }
-    if (cid) await this.saveField('igdb_client_id', cid);
-    if (sec) await this.saveField('igdb_client_secret', sec);
-    const dits = [];
-    if (sgdb) {
-      const r = await api('/api/sgdb-test', {}, true);
-      dits.push('SteamGridDB : ' + (r.message || (r.ok ? t('clé acceptée') : t('refusée'))));
-    }
-    if (cid && sec) {
-      const r = await api('/api/igdb-test', {}, true);
-      dits.push('IGDB : ' + (r.ok ? t('accès accepté') : (r.message || t('refusé'))));
-    }
-    ONB.testJaquettes = dits.length ? dits.join(' — ')
-      : t('Rien à vérifier : les deux champs sont vides.');
+    if (!cid || !sec) return toast(t('Client ID et Client Secret sont requis.'), 'warn');
+    ONB.igdb = {etat: 'attente'}; renderOnboard();
+    await this.saveField('igdb_client_id', cid);
+    await this.saveField('igdb_client_secret', sec);
+    const r = await api('/api/igdb-test', {}, true);
+    ONB.igdb = r && r.ok
+      // The probe returns the game it found: naming it is what proves the
+      // credentials reach the real service and not a polite error page.
+      ? {etat: 'ok', message: r.infos && r.infos.exemple
+          ? tpl('Connexion établie — exemple retrouvé : %s', r.infos.exemple)
+          : t('Connexion établie.')}
+      : {etat: 'ko', message: (r && r.message) || t('Identifiants refusés.')};
     renderOnboard();
   },
 
@@ -5080,8 +5103,26 @@ const app = {
   },
 
   closeOnboard() {
+    // Until the access question is answered the installation is OPEN — that is
+    // what makes this wizard reachable from the device you are holding. Letting
+    // it be skipped would leave an unprotected library behind a screen somebody
+    // dismissed once, which is the state this whole design exists to avoid.
+    if (onbSansReponse()) {
+      toast(t('Choisis d\'abord comment protéger l\'accès.'), 'warn');
+      onbGo(onbEtapes(HEALTH).findIndex(x => x.cle === 'compte'));
+      return;
+    }
     localStorage.setItem('onboard-vu', '1');
-    $('onboard').classList.remove('open');
+    const el = $('onboard');
+    // A wizard that vanishes leaves you wondering whether anything was kept.
+    // One short mark, then the library — the same amount of ceremony the work
+    // deserves, and no more.
+    const fini = document.createElement('div');
+    fini.className = 'onbfini';
+    fini.textContent = '✓';
+    document.body.appendChild(fini);
+    setTimeout(() => fini.remove(), 1100);
+    el.classList.remove('open');
   },
   async showOnboard() { await this.checkHealth(true); },
 
@@ -6361,7 +6402,10 @@ let HEALTH = null;
    what will fill the covers.
    ========================================================================== */
 let ONB = {i: 0, sens: 1, occupe: false, resultatScan: null,
-           consoleScan: null, testJaquettes: ''};
+           consoleScan: null,
+           // One verdict per provider: a single line for both said nothing
+           // about WHICH of the two had answered.
+           sgdb: null, igdb: null};
 
 function onbEtapes(h) {
   const c = (h && h.checks) || {};
@@ -6426,43 +6470,72 @@ function onbEtapes(h) {
       manque: 'Analyse le dossier pour confirmer que c\'est le bon.',
     },
     {
-      cle: 'compte', titre: 'Ton accès', requis: !!c.expose,
-      sous: c.expose
-        ? 'Ce serveur écoute sur le réseau : il lui faut un compte.'
-        : 'Un compte protège l\'accès si tu ouvres un jour Romule au réseau.',
+      // The one step nobody may skip. Until it is answered the installation
+      // answers EVERYBODY — that is what makes this screen reachable from the
+      // phone you are holding rather than only from the machine running the
+      // container. So the question has to be settled here, and settled once.
+      cle: 'compte', titre: 'Ton accès', requis: true,
+      sous: 'Qui a le droit d\'ouvrir cette page. À décider maintenant.',
       corps: () => c.comptes
-        ? '<p class="onbok">Un compte administrateur existe déjà.</p>'
-        : '<p class="onbp">Le premier compte créé devient administrateur : lui ' +
-          'seul pourra changer les réglages et gérer les autres comptes.</p>' +
-          '<div class="onbchamps">' +
-          '<label>Adresse e-mail<input type="email" id="onb-mail" ' +
-            'autocomplete="username" placeholder="toi@exemple.fr"></label>' +
-          '<label>Mot de passe<input type="password" id="onb-mdp" ' +
-            'autocomplete="new-password" placeholder="12 caractères minimum"></label>' +
-          '</div>' +
-          '<button class="go" data-act="onbCreateAccount">Créer le compte</button>' +
-          '<p class="onbnote" id="onb-mdp-msg"></p>',
-      valide: () => !c.expose || c.comptes > 0,
-      manque: 'Crée un compte : sans lui, n\'importe quel appareil du réseau peut tout faire.',
+        ? '<p class="onbok">Un compte administrateur existe : l\'accès est ' +
+          'protégé par mot de passe.</p>'
+        : c.acces_choisi
+          ? '<p class="onbok">Accès ouvert sans mot de passe.</p>' +
+            '<p class="onbnote">Toute personne qui atteint cette adresse a tous ' +
+            'les droits. Tu peux revenir dessus dans Réglages &gt; Accès, ou ' +
+            'depuis le terminal avec <code>romule access close</code>.</p>' +
+            '<button class="ghost" data-act="onbCreateAccount">Créer un compte ' +
+            'finalement</button>'
+          : '<p class="onbp">Le premier compte créé devient administrateur : lui ' +
+            'seul pourra changer les réglages et gérer les autres comptes.</p>' +
+            '<div class="onbchamps">' +
+            '<label>Adresse e-mail<input type="email" id="onb-mail" ' +
+              'autocomplete="username" placeholder="toi@exemple.fr"></label>' +
+            '<label>Mot de passe<input type="password" id="onb-mdp" ' +
+              'autocomplete="new-password" placeholder="12 caractères minimum"></label>' +
+            '</div>' +
+            '<button class="go" data-act="onbCreateAccount">Créer le compte</button>' +
+            '<p class="onbnote" id="onb-mdp-msg"></p>' +
+            // The other answer, offered plainly rather than hidden in the
+            // settings: on a trusted network it is a legitimate choice, and
+            // pretending otherwise only teaches people to look for the way round.
+            '<div class="onbsans"><b>Ou aucun mot de passe</b>' +
+            '<p class="onbnote">Sur un réseau de confiance, c\'est un choix ' +
+            'valable — et c\'est celui de la plupart des outils auto-hébergés. ' +
+            'Mais il vaut pour TOUT LE MONDE : derrière un proxy inverse ou un ' +
+            'nom de domaine, ta ludothèque est ouverte à qui trouve l\'adresse.</p>' +
+            '<button class="ghost" data-act="onbOpenAccess">Continuer sans mot ' +
+            'de passe</button></div>',
+      valide: () => c.comptes > 0 || !!c.acces_choisi,
+      manque: 'Choisis : un compte, ou aucun mot de passe. Tant que rien n\'est ' +
+              'décidé, l\'installation répond à tout le monde.',
     },
     {
       cle: 'fiches', titre: 'Jaquettes et fiches', requis: false,
-      sous: 'Deux services gratuits remplissent les pochettes et les résumés.',
+      sous: 'Deux services gratuits, indépendants l\'un de l\'autre.',
+      // Two providers, two blocks. Piled into one list of fields they read as
+      // one thing to fill in, and a single « save and test » said nothing
+      // about WHICH of the two had answered. Each one now carries its own
+      // credentials, its own test and its own verdict.
       corps: () =>
         '<p class="onbp">Sans eux, la bibliothèque fonctionne, mais elle ' +
-        'n\'affiche que des noms de fichiers.</p>' +
-        '<div class="onbchamps">' +
-        '<label>Clé SteamGridDB <span class="onbaide">jaquettes — ' +
-          'steamgriddb.com/profile/preferences/api</span>' +
-          '<input type="text" id="onb-sgdb" autocomplete="off"></label>' +
-        '<label>IGDB — Client ID <span class="onbaide">résumés, année, éditeur — ' +
-          'dev.twitch.tv/console/apps</span>' +
-          '<input type="text" id="onb-igdb-id" autocomplete="off"></label>' +
-        '<label>IGDB — Client Secret' +
-          '<input type="password" id="onb-igdb-secret" autocomplete="off"></label>' +
-        '</div>' +
-        '<button class="go" data-act="onbTestEntries">Enregistrer et tester</button>' +
-        '<p class="onbnote" id="onb-fiches-msg">' + esc(ONB.testJaquettes) + '</p>',
+        'n\'affiche que des noms de fichiers. L\'un ou l\'autre suffit.</p>' +
+        renderOnbService({
+          cle: 'sgdb', nom: 'SteamGridDB', role: 'Les jaquettes',
+          ou: 'steamgriddb.com/profile/preferences/api',  // i18n:ok - an address, not a sentence
+          champs: '<label>Clé d\'API<input type="text" id="onb-sgdb" ' +
+                  'autocomplete="off"></label>',
+          acte: 'onbTestSgdb', etat: ONB.sgdb,
+        }) +
+        renderOnbService({
+          cle: 'igdb', nom: 'IGDB', role: 'Résumés, année, éditeur',
+          ou: 'dev.twitch.tv/console/apps',  // i18n:ok - an address, not a sentence
+          champs: '<label>Client ID<input type="text" id="onb-igdb-id" ' +
+                  'autocomplete="off"></label>' +
+                  '<label>Client Secret<input type="password" ' +
+                  'id="onb-igdb-secret" autocomplete="off"></label>',
+          acte: 'onbTestIgdb', etat: ONB.igdb,
+        }),
     },
     {
       cle: 'console', titre: 'Ta console', requis: false,
@@ -6507,6 +6580,34 @@ function onbEtapes(h) {
   ];
 }
 
+// One provider's block: what it is for, where its key comes from, its fields,
+// its own test and its own verdict. The documentation link points at the
+// section that explains BOTH — the two are chosen together, and the page says
+// why there are two.
+function renderOnbService(s) {
+  const e = s.etat || {};
+  const etat = e.etat === 'ok'
+    ? '<p class="onbverdict ok">' + esc(e.message || t('Connexion établie.')) + '</p>'
+    : e.etat === 'ko'
+      ? '<p class="onbverdict ko">' + esc(e.message || t('Refusé.')) + '</p>'
+      : e.etat === 'attente'
+        ? '<p class="onbverdict attente">' + esc(t('Vérification…')) + '</p>'
+        : '';
+  return '<div class="onbservice">' +
+    '<div class="onbservice-t"><b>' + esc(s.nom) + '</b>' +
+      '<span>' + esc(s.role) + '</span>' +
+      '<a class="lien" target="_blank" rel="noopener noreferrer" href="' +
+      esc(docLien('configuration', 'jaquettes-et-fiches',
+                  'covers-and-details')) + '">' + esc(t('Guide')) + '</a></div>' +
+    '<p class="onbaide" data-i18n-skip>' + esc(s.ou) + '</p>' +
+    '<div class="onbchamps">' + s.champs + '</div>' +
+    '<button class="ghost" data-act="' + esc(s.acte) + '"' +
+      (e.etat === 'attente' ? ' disabled' : '') + '>' +
+      esc(t('Tester la connexion')) + '</button>' +
+    etat + '</div>';
+}
+
+
 function renderScanOnboard(r) {
   if (!r.total) {
     return '<div class="onbresultat empty"><b>Aucun jeu trouvé.</b>' +
@@ -6534,6 +6635,14 @@ function renderConsoleScan(r) {
       ? t('%d ne sont pas encore dans ta bibliothèque.').replace('%d', r.new)
       : 'Tous sont déjà dans ta bibliothèque.') + '</p></div>';
 }
+
+// Has nobody answered the access question yet? While that is true the
+// installation answers everybody, and the wizard cannot be walked away from.
+function onbSansReponse() {
+  const c = (HEALTH && HEALTH.checks) || {};
+  return !c.comptes && !c.acces_choisi;
+}
+
 
 function onbGo(i) {
   const etapes = onbEtapes(HEALTH);
@@ -6574,14 +6683,27 @@ function renderOnboard() {
       '<div class="onbpoints">' + etapes.map((x, i) =>
         '<button class="onbpoint' + (i === ONB.i ? ' on' : '') +
           (i < ONB.i ? ' fait' : '') + '" title="' + esc(x.titre) +
-          '" aria-label="' + esc(x.titre) + '" data-act="onbGo" data-arg=" + i + ">' +
+          // The concatenation was INSIDE the string: every dot carried the
+          // literal ` + i + `, `onbGo` got NaN, and the six of them did
+          // nothing at all.
+          // `esc(i)` although `i` is a loop index: the invariant is that EVERY
+          // interpolated value goes through it, and an exception for the
+          // obviously-safe ones is how a net stops being one.
+          '" aria-label="' + esc(x.titre) + '" data-act="onbGo" data-arg="' +
+          esc(i) + '">' +
         '</button>').join('') + '</div>' +
       (dernier
         ? '<button class="go" data-act="closeOnboard">Terminer</button>'
         : '<button class="go" data-act="onbNext"' + (bloque ? ' disabled' : '') +
           '>Suivant</button>') +
     '</div>' +
-    '<button class="onbpasser" data-act="closeOnboard">Passer l\'assistant</button>' +
+    (onbSansReponse()
+      // Its own class: `.onbpasser` underlines a button, and an underlined
+      // sentence that cannot be clicked is a small lie.
+      ? '<p class="onbverrou">L\'accès n\'est pas encore protégé : ' +
+        'réponds à l\'étape « Ton accès » pour terminer.</p>'
+      : '<button class="onbpasser" data-act="closeOnboard">Passer ' +
+        'l\'assistant</button>') +
     '</div>';
   translateDOM(el);
   el.classList.add('open');
@@ -7113,8 +7235,9 @@ const ACTES = new Set([
   'loadTrash', 'revokeKey',
   'libCancelOnb', 'libClose', 'libNewFolder', 'libOpen',
   'libConfirm', 'mkTree', 'onbGo', 'onbFindConsole',
-  'onbChooseFolder', 'onbCreateAccount', 'onbPrev', 'onbScan', 'setLang',
-  'onbScanConsole', 'onbNext', 'onbTestEntries', 'openGame',
+  'onbChooseFolder', 'onbCreateAccount', 'onbOpenAccess', 'onbPrev',
+  'onbScan', 'onbTestSgdb', 'onbTestIgdb', 'setLang',
+  'onbScanConsole', 'onbNext', 'openGame',
   'openOnConsole', 'organize', 'forgetFolder', 'forgetTransfer',
   'openPlatform', 'page', 'browseServer', 'purgeTrash', 'reloadImport',
   'renderJournal', 'renderLib', 'reorganizeLocal', 'resumeTransfer',

@@ -1,18 +1,31 @@
-"""An exposed service must be reachable — and only by whoever holds the token.
+"""An exposed service must be usable on the first try — and claimable once.
 
-The defect these checks stop from coming back: a container binds to 0.0.0.0,
-otherwise it would be unreachable from the host. But with no account, no token
-and no `lan_access`, every non-local request was refused — with a message
-inviting you to "enable access in the settings", settings you could precisely not
-reach. `docker compose up` therefore led to a dead-end 403, on the main
-installation path.
+The defect this file was written for: a container binds to 0.0.0.0, otherwise
+it would be unreachable from the host. With no account, no token and no
+`lan_access`, every remote request was refused — with a message inviting you to
+"enable access in the settings", settings you could precisely not reach.
 
-Three properties, and the third matters as much as the first two:
+The first answer was a generated token, printed in the logs. It broke the
+deadlock and built a worse one: it had to be copied onto every device, and the
+FIRST ACCOUNT still could not be created, because that was refused unless the
+request came from 127.0.0.1 — which under Docker is nobody. `romule user` had
+no `create` either. The main installation path ended in a wall no token opened.
 
-  1. an EXPOSED service with no way in generates a token and prints it;
-  2. that token, and it alone, opens access;
-  3. a LOCAL service generates none — otherwise a token would be forced on
-     whoever never asked to be reachable.
+So the deadlock is broken where it belongs. An installation nobody has claimed
+answers everybody, and the wizard's access step — an account, or no password —
+is what claims it. Jellyfin, Home Assistant and the *arr stack all work this
+way, and it needs no secret at all.
+
+Five properties:
+
+  1. an unclaimed installation answers, from anywhere, so the wizard is
+     reachable from the device you are actually holding;
+  2. it SAYS SO in the terminal, loudly, rather than leaving it to be found;
+  3. creating the first account claims it — and switches the authentication on,
+     because an account that guards nothing is not an answer;
+  4. choosing "no password" claims it too, deliberately;
+  5. the terminal can always reopen and reclose the door, because the day the
+     interface is unreachable is the day you need it.
 """
 import json
 import os
@@ -109,6 +122,17 @@ def arreter(srv):
         return srv.communicate()[0] or ""
 
 
+def conf_de(racine):
+    """The configuration on disk, or {} when there is none.
+
+    There often is none now: nothing is written at startup any more. The token
+    generation was what created the file, and its absence is itself a small
+    proof that no secret is being invented.
+    """
+    f = Path(racine) / "_romule-config.json"
+    return json.loads(f.read_text()) if f.exists() else {}
+
+
 def code(url):
     try:
         with urllib.request.urlopen(url, timeout=20) as r:
@@ -119,79 +143,130 @@ def code(url):
         return 0
 
 
-print("   -- 1. service expose, aucun moyen d'entrer --")
+print("   -- 1. une installation que personne n'a revendiquee --")
 racine = tempfile.mkdtemp(prefix="ludo-acces-")
 port = libre()
 srv, base = demarrer(racine, port, ROMULE_BIND="0.0.0.0")
 reseau = adresse_reseau()
 distant = "http://%s:%s" % (reseau, port) if reseau else None
 sans = code(distant + "/") if distant else None
+sante = json.loads(urllib.request.urlopen(base + "/api/health", timeout=20).read())
 sortie = arreter(srv)
-jeton = jeton_de(sortie)
 
-t("un jeton est engendre et affiche", bool(jeton), sortie[-300:])
-t("l'adresse a ouvrir est donnee avec", "http://" in sortie, sortie[-300:])
-t("et ce qu'il faut faire du jeton", "colle ce jeton" in sortie.lower(),
-  sortie[-300:])
-# The one thing that must NOT be there: a link carrying the secret, which is
-# what made it end up in shared logs and in browser history.
-t("le jeton ne voyage plus dans l'adresse", "?token=" not in sortie)
 if distant:
-    # 401 and a FIELD, not a 403 and a sentence: the refusal is now a door.
-    t("depuis le reseau, sans jeton : un champ est propose", sans == 401,
+    # THE property. Under Docker the person installing it is never 127.0.0.1,
+    # so anything stricter than this is a wall with nobody behind it.
+    t("depuis le reseau, sans rien : la page repond", sans == 200,
       "recu %s" % sans)
 else:
-    print("      (pas d'adresse reseau sur cette machine : refus non verifiable)")
+    print("      (pas d'adresse reseau sur cette machine : non verifiable)")
+t("l'assistant est ce qu'il faut remplir", sante.get("first_run") is True, sante)
+t("et l'acces n'est pas encore choisi",
+  sante["checks"].get("acces_choisi") is False, sante["checks"])
 
-# It must be stored outside the public configuration: /api/scan returns the
-# configuration to the browser, and a token found there is no longer one.
-conf = json.loads((Path(racine) / "_romule-config.json").read_text())
-t("le jeton est bien conserve sur disque", conf.get("jeton_auto") == jeton)
+# Said out loud: an open installation that says nothing is a trap.
+t("le terminal previent que rien n'est protege",
+  "PERSONNE N'A ENCORE CHOISI" in sortie, sortie[-400:])
+t("et dit ou repondre", "assistant" in sortie.lower(), sortie[-400:])
+# No secret is invented any more.
+t("aucun jeton n'est engendre", not jeton_de(sortie) and "?token=" not in sortie)
+conf = conf_de(racine)
+t("ni conserve sur disque", not (conf.get("jeton_auto") or "").strip())
 
-print("   -- 2. le jeton ouvre, et reste le meme --")
+print("   -- 2. creer le premier compte revendique l'installation --")
 port2 = libre()
-srv, base = demarrer(racine, port2, ROMULE_BIND="0.0.0.0")
-distant2 = "http://%s:%s" % (reseau, port2) if reseau else base
-avec = code("%s/?token=%s" % (distant2, jeton))
-faux = code("%s/?token=%s" % (distant2, "x" * len(jeton)))
-try:
-    pub = json.loads(urllib.request.urlopen(
-        "%s/api/scan?token=%s" % (base, jeton), timeout=30).read())
-except Exception:
-    pub = {}
-sortie2 = arreter(srv)
-jeton2 = jeton_de(sortie2)
+srv, base2 = demarrer(racine, port2, ROMULE_BIND="0.0.0.0")
+distant2 = "http://%s:%s" % (reseau, port2) if reseau else base2
 
-t("avec le jeton, l'acces est accorde", avec == 200, "recu %s" % avec)
-if reseau:
-    t("un jeton faux reste refuse", faux == 401, "recu %s" % faux)
-else:
-    print("      (pas d'adresse reseau : jeton faux non verifiable)")
-# ANNOUNCED once, not generated once: the second start must not reprint it.
-t("le jeton n'est pas reaffiche au redemarrage", not jeton2, sortie2[-300:])
-t("mais il est rappele qu'il en existe un",
-  "romule token show" in sortie2, sortie2[-300:])
-conf2 = json.loads((Path(racine) / "_romule-config.json").read_text())
-t("le jeton ne change pas au redemarrage", conf2.get("jeton_auto") == jeton)
-t("le jeton n'est pas envoye au navigateur",
-  "jeton_auto" not in (pub.get("config") or {}))
 
-print("   -- 3. service local : rien ne doit etre impose --")
-racine3 = tempfile.mkdtemp(prefix="ludo-acces-local-")
+def poster(url, charge, entetes=None):
+    """(code, body) for a JSON POST, without following the redirect."""
+    e = {"Content-Type": "application/json", "Origin": url.rsplit("/api", 1)[0]}
+    e.update(entetes or {})
+    req = urllib.request.Request(url, data=json.dumps(charge).encode(), headers=e)
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            return r.status, r.read().decode("utf-8", "replace")
+    except urllib.error.HTTPError as x:
+        return x.code, x.read().decode("utf-8", "replace")
+    except Exception as exc:
+        return 0, str(exc)
+
+
+# The wall this whole redesign is about: from the Docker bridge, not localhost.
+c, corps = poster(distant2 + "/api/compte-creer",
+                  {"email": "toi@exemple.fr", "mdp": "UnMotDePasseAssezLong9"})
+t("le premier compte se cree depuis le reseau", c == 200, "%s %s" % (c, corps[:120]))
+conf2 = conf_de(racine)
+# An account that guards nothing is not an answer.
+t("l'authentification est activee du meme geste",
+  conf2.get("auth_mode") == "interne", conf2.get("auth_mode"))
+t("et l'acces est marque comme choisi", conf2.get("acces_choisi") is True)
+t("l'acces sans mot de passe est referme", conf2.get("lan_access") is False)
+apres = code(distant2 + "/") if distant else None
+if distant:
+    t("il faut desormais se connecter", apres == 401, "recu %s" % apres)
+# A second one cannot be claimed from outside.
+c2, _ = poster(distant2 + "/api/compte-creer",
+               {"email": "autre@exemple.fr", "mdp": "UnMotDePasseAssezLong9"})
+# 401 rather than 403: the request is not authenticated at all now, so it is
+# turned away before the administrator check is even reached. Either code says
+# the same thing — it is no longer open to whoever asks.
+t("un second compte n'est plus ouvert a tous", c2 in (401, 403), "recu %s" % c2)
+arreter(srv)
+
+print("   -- 3. l'autre reponse : aucun mot de passe --")
+racine3 = tempfile.mkdtemp(prefix="ludo-acces-ouvert-")
 port3 = libre()
-srv, base = demarrer(racine3, port3)
-local = code(base + "/")
-sortie3 = arreter(srv)
-f3 = Path(racine3) / "_romule-config.json"
-conf3 = json.loads(f3.read_text()) if f3.exists() else {}
+srv, base3 = demarrer(racine3, port3, ROMULE_BIND="0.0.0.0")
+distant3 = "http://%s:%s" % (reseau, port3) if reseau else base3
+c, _ = poster(distant3 + "/api/acces-ouvert", {"ouvert": True})
+t("le choix « sans mot de passe » est accepte", c == 200, "recu %s" % c)
+conf3 = conf_de(racine3)
+t("il est enregistre comme un choix", conf3.get("acces_choisi") is True
+  and conf3.get("lan_access") is True, conf3)
+if distant:
+    t("et l'acces reste ouvert", code(distant3 + "/") == 200)
+arreter(srv)
 
-t("aucun jeton engendre pour une ecoute locale",
-  not jeton_de(sortie3) and not conf3.get("jeton_auto"))
-t("l'acces local reste direct", local == 200, "recu %s" % local)
+print("   -- 4. le terminal peut toujours rouvrir et refermer --")
 
-print("   -- 4. le champ ou coller le jeton --")
+
+def cli(racine, *args):
+    return subprocess.run([sys.executable, "-m", "romule", *args],
+                          cwd=RACINE_PROJET,
+                          env=dict(os.environ, ROMULE_ROOT=racine),
+                          capture_output=True, text=True)
+
+
+# `close` with no way in left would lock out the person typing it.
+r = cli(racine3, "access", "close")
+t("fermer sans compte est refuse", r.returncode == 1 and "Refuse" in r.stdout,
+  r.stdout[:120])
+r = cli(racine3, "user", "create", "secours@exemple.fr",
+        "--mdp", "UnMotDePasseAssezLong9")
+t("un compte se cree depuis le terminal", "Compte cree" in r.stdout, r.stdout[:120])
+t("et il active l'authentification",
+  conf_de(racine3)
+  .get("auth_mode") == "interne")
+# `lan_access` alone reopens nothing while an authentication is active: the
+# server consults the session first. An escape hatch that lies is worse than
+# none, so `open` must switch it off too.
+cli(racine3, "access", "open")
+conf4 = conf_de(racine3)
+t("rouvrir desactive vraiment l'authentification",
+  conf4.get("auth_mode") == "aucun" and conf4.get("lan_access") is True, conf4)
+cli(racine3, "access", "close")
+conf5 = conf_de(racine3)
+t("refermer la remet en service",
+  conf5.get("auth_mode") == "interne" and conf5.get("lan_access") is False, conf5)
+
+print("   -- 5. un jeton pose a la main protege toujours --")
+# Nothing generates one any more, but `romule token reset` and ROMULE_TOKEN
+# still do — and then the field that takes it must still be there.
 racine4 = tempfile.mkdtemp(prefix="ludo-acces-champ-")
 port4 = libre()
+cli(racine4, "token", "reset")
 srv, base4 = demarrer(racine4, port4, ROMULE_BIND="0.0.0.0")
 distant4 = "http://%s:%s" % (reseau, port4) if reseau else base4
 
@@ -222,7 +297,8 @@ t("la feuille de style est joignable sans jeton",
 t("et rien d'autre ne l'est", code(distant4 + "/app.js") == 401,
   "recu %s" % code(distant4 + "/app.js"))
 
-jeton4 = jeton_de(arreter(srv))
+arreter(srv)
+jeton4 = conf_de(racine4)["jeton_auto"]
 srv, base4 = demarrer(racine4, port4, ROMULE_BIND="0.0.0.0")
 entetes = {"Content-Type": "application/x-www-form-urlencoded",
            "Origin": distant4}
@@ -254,20 +330,15 @@ c_ailleurs, _ = page(distant4 + "/auth/jeton", "jeton=" + jeton4,
 t("une origine etrangere est rejetee", c_ailleurs == 403, "recu %s" % c_ailleurs)
 arreter(srv)
 
-print("   -- 5. renouveler le jeton depuis le terminal --")
-avant = json.loads((Path(racine4) / "_romule-config.json").read_text())["jeton_auto"]
-subprocess.run([sys.executable, "-m", "romule", "token", "reset"],
-               cwd=RACINE_PROJET, env=dict(os.environ, ROMULE_ROOT=racine4),
-               capture_output=True, text=True)
-apres = json.loads((Path(racine4) / "_romule-config.json").read_text())
+print("   -- 6. renouveler le jeton depuis le terminal --")
+avant = conf_de(racine4)["jeton_auto"]
+cli(racine4, "token", "reset")
+apres = conf_de(racine4)
 t("le jeton change", apres["jeton_auto"] != avant and apres["jeton_auto"])
 # Otherwise a new token nobody has been told about is a lock-out.
 t("et il sera annonce au prochain demarrage",
   apres.get("jeton_annonce") is False, apres.get("jeton_annonce"))
-montre = subprocess.run([sys.executable, "-m", "romule", "token", "show"],
-                        cwd=RACINE_PROJET,
-                        env=dict(os.environ, ROMULE_ROOT=racine4),
-                        capture_output=True, text=True).stdout
+montre = cli(racine4, "token", "show").stdout
 t("`token show` redonne le nouveau", apres["jeton_auto"] in montre, montre[:120])
 
 print("      ------------------------------------------------")

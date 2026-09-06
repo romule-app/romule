@@ -35,7 +35,36 @@ change it. Breaking changes are always listed under **Changed** with the reason.
   a server-side i18n Romule does not have. That limit is written in
   `docs/beta.md`.
 
+### Changed
+
+- **No bootstrap token any more. The first access is a choice, not a secret.**
+  An installation nobody has claimed answers everybody and opens on its wizard,
+  whose access step — an account, or no password — is what claims it. That is
+  what Jellyfin, Home Assistant and the *arr stack do, and it needs no secret at
+  all.
+
+  What it replaces did not work. Romule generated a token, printed it in the
+  logs, and refused everything else: it had to be copied onto every device, and
+  **the first account still could not be created**, because that was refused
+  unless the request came from `127.0.0.1` — under Docker, nobody. `romule user`
+  had no `create` either. The main installation path ended in a wall no token
+  opened.
+
+  The window this accepts is the one every tool in this family lives with:
+  between `docker compose up` and your answer, whoever reaches the address can
+  claim it. The terminal says so in capitals at every start until you answer,
+  the wizard is the first thing shown, and it cannot be dismissed.
+
+  `ROMULE_TOKEN` still works, and `romule token reset` sets one deliberately.
+  Neither is imposed.
+
 ### Added
+
+- **`romule access status | open | close`**, and **`romule user create`.** The
+  escape hatch, for the day the interface is the thing that is broken. `open`
+  switches the authentication off as well as opening the network — it has to:
+  the server consults the session before the setting, so `lan_access` alone
+  would have reopened nothing while answering "opened".
 
 - **A token field on the refusal page.** A protected installation with no
   account used to answer with a sentence telling you to add `?token=` to the
@@ -47,6 +76,13 @@ change it. Breaking changes are always listed under **Changed** with the reason.
   so there has to be a way to see it again — otherwise "announced once" is just
   "lost", and the answer becomes wiping the volume. `reset` invalidates the old
   one at once and marks the new one to be announced at the next start.
+
+- **The two cover providers, each in its own block.** SteamGridDB and IGDB were
+  piled into one list of fields with a single "save and test" — which said
+  nothing about WHICH of the two had answered. Each now carries its own
+  credentials, its own test, its own verdict and a link to the documentation
+  section that explains why there are two. `verifier-reglages-doc.py` checks
+  that link lands on a heading that exists, in both languages.
 
 - **The interface language, on the wizard's first step.** Everything after it is
   read in the language chosen there; finding the setting once the wizard is over
@@ -110,6 +146,17 @@ change it. Breaking changes are always listed under **Changed** with the reason.
   renamed in another). All three run in `lancer_tests.py` and in CI.
 
 ### Fixed
+
+- **The wizard's step dots did nothing.** They carried
+  `data-arg=" + i + "` — the concatenation was inside the string — so `onbGo`
+  received `NaN` and all six were inert.
+
+- **The first account created its own lock-out.** Switching the authentication
+  on at that moment signed the browser out immediately: the session was built
+  from the PUBLIC account record, which carries no `maj_mdp`, so it encoded 0
+  where the account holds a timestamp and `auth.session()` refused it. A valid
+  signature, and no way in — the login page would have landed in the middle of
+  step 3.
 
 - **"Choose another folder" did nothing.** The rename to English translated
   `'/api/parcourir'` into `'/api/browseServer'` inside `app.js` — a string, not

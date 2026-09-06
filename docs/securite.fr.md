@@ -45,43 +45,75 @@ Dans cet ordre :
 3. **Un jeton est posé ?** Il doit correspondre, comparé en temps constant.
 4. **Sinon** — autorisée seulement si `lan_access` est actif.
 
-## Le jeton de premier accès
+## Le premier accès
 
-Un service joignable mais sans compte, sans jeton et sans accès réseau
-refuserait toutes les requêtes — y compris celle qui permettrait d'atteindre
-les réglages pour corriger cela. Plutôt que d'ouvrir la porte, Romule engendre
-un jeton au premier démarrage et l'affiche, **une seule fois** :
+Une installation que personne n'a revendiquée **répond à tout le monde**. C'est
+délibéré, et c'est ce que fait tout outil comparable : Jellyfin, Home Assistant
+et la pile *arr s'ouvrent tous sur leur écran de mise en route.
 
-```
-Acces : ce service est joignable par le reseau et n'a pas encore de compte.
-        Ouvre http://192.0.2.20:8787, colle ce jeton, puis cree ton compte :
-        Kzrmfve7Qh2pX0cLd9WmTn4sBv1jRyAo
-```
+L'alternative a été essayée et ne marche pas. Romule engendrait un jeton,
+l'affichait dans les journaux, et refusait tout le reste. Il fallait le recopier
+depuis un terminal sur chaque appareil — téléphone, tablette, portable — et le
+premier compte restait impossible à créer, parce que c'était refusé sauf si la
+requête venait de `127.0.0.1`. Sous Docker, c'est personne : une requête passant
+par le port publié arrive par le pont. Le chemin d'installation principal
+s'achevait sur un mur qu'aucun jeton n'ouvrait.
 
-Une fois, et pas dans un lien. Un secret réimprimé à chaque redémarrage finit
-dans tous les journaux qu'un utilisateur joint à un rapport de bug ; porté par
-l'adresse, il finit aussi dans l'historique du navigateur et dans les journaux
-de tout relais sur le chemin. Ce qui remplace le lien est un champ : la page de
-refus en porte un, le jeton s'y colle, et un cookie s'en souvient pour ce
-navigateur.
+C'est donc **l'étape « Ton accès »** de l'assistant qui revendique
+l'installation, et elle ne peut pas être sautée :
 
-Les démarrages suivants disent seulement qu'un jeton protège l'installation, et
-où le retrouver :
+- **un compte** — le premier devient administrateur, l'authentification interne
+  est activée du même geste, et ce navigateur est connecté sur-le-champ ;
+- **aucun mot de passe** — un choix valable sur un réseau de confiance, et celui
+  que fait la plupart des outils auto-hébergés.
+
+Tant qu'aucune des deux réponses n'est donnée, le terminal le dit à chaque
+démarrage, en capitales, et l'audit le signale.
+
+### La fenêtre que cela accepte
+
+Entre `docker compose up` et ta réponse, quiconque atteint l'adresse peut
+revendiquer l'installation. C'est la même fenêtre de confiance au premier accès
+que celle avec laquelle vit toute cette famille d'outils. Deux choses la
+raccourcissent : l'assistant est la première chose affichée, et il ne peut pas
+être écarté.
+
+### « Aucun mot de passe » vaut pour tout le monde
+
+Le choix n'est pas restreint aux adresses privées. Derrière un proxy inverse ou
+un nom de domaine, une installation ouverte l'est pour qui trouve l'adresse.
+Romule le dit à côté du bouton plutôt que de décider à ta place — mais c'est ton
+choix et ton exposition.
+
+### Depuis le terminal
+
+Le jour où c'est l'interface qui est en panne — un mot de passe oublié sans
+second compte, un SSO dont le fournisseur ne répond plus, un `close` regretté
+depuis le mauvais réseau — l'accès se règle là où sont les données :
 
 ```sh
-python3 -m romule token show     # le réafficher
-python3 -m romule token reset    # le remplacer
+romule access status    # ce qui protège cette installation
+romule access open      # aucun mot de passe (DÉSACTIVE l'authentification)
+romule access close     # exiger de nouveau une connexion
+romule user create toi@exemple.fr
 ```
 
-`reset` invalide l'ancien immédiatement — les navigateurs qui l'avaient retenu
-redemandent le nouveau au chargement suivant — et le marque pour qu'il soit
-annoncé au prochain démarrage : un jeton dont personne n'a été informé est un
-enfermement dehors.
+`open` désactive l'authentification en plus d'ouvrir le réseau. Il le faut : le
+serveur consulte la session avant le réglage, donc `lan_access` seul n'aurait
+rien rouvert tout en répondant « ouvert ». `close` la remet en service — les
+comptes n'ont jamais été touchés.
 
-Il est conservé dans le dossier de données du service — sous `jeton_auto` dans
-`_romule-config.json` —, survit aux redémarrages, et n'est jamais envoyé au
-navigateur avec le reste de la configuration. Rien n'est engendré quand Romule
-n'écoute que sur `127.0.0.1`.
+## Un jeton, si tu en veux un
+
+Plus rien n'en engendre, mais `ROMULE_TOKEN` fonctionne toujours et
+`romule token reset` en pose un délibérément. Quand un jeton protège
+l'installation, la page de refus porte un champ où le coller et un cookie s'en
+souvient pour ce navigateur, pendant un an.
+
+```sh
+romule token show     # le réafficher
+romule token reset    # le remplacer
+```
 
 La feuille de style, et elle seule, est servie à un client qui n'est pas encore
 entré : la page de refus la référence, et sans elle la page arrivait sans

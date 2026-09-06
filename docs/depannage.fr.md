@@ -2,27 +2,53 @@
 
 ## `docker compose up` fonctionne mais la page est refusée
 
-Normal au premier démarrage. Le conteneur est joignable mais n'a pas encore de
-compte : Romule engendre un jeton et l'affiche **une seule fois** :
+Seulement si quelque chose la protège déjà. Sur une installation neuve, la page
+s'ouvre : tant que tu n'as pas répondu à l'étape « Ton accès » de l'assistant,
+le service répond à tout le monde — c'est ce qui rend l'assistant atteignable
+depuis ton téléphone.
+
+Si elle refuse, demande ce qui la garde :
 
 ```sh
-docker compose logs romule
+docker compose exec romule python3 -m romule access status
 ```
 
-Ouvre l'adresse affichée, et colle le jeton dans le champ que propose la page.
-Voir [le jeton de premier accès](securite.fr.md#le-jeton-de-premier-acces).
+Un compte ou un SSO : connecte-toi. Un jeton : colle-le dans le champ que
+propose la page (`romule token show` le réaffiche). Enfermé dehors dans les
+trois cas :
+
+```sh
+docker compose exec romule python3 -m romule access open
+docker compose restart
+```
 
 ## J'ai perdu le jeton d'accès
 
-Il n'est pas perdu, seulement plus affiché :
+Plus rien n'en engendre, mais si tu en as posé un :
 
 ```sh
 docker compose exec romule python3 -m romule token show
 python3 -m romule token show            # sans Docker
 ```
 
-`token reset` le remplace si tu préfères qu'il change — tout navigateur qui
-avait retenu l'ancien redemande le nouveau au chargement suivant.
+`token reset` le remplace — tout navigateur qui avait retenu l'ancien redemande
+le nouveau au chargement suivant.
+
+## J'ai oublié mon mot de passe et il n'y a pas de second compte
+
+```sh
+docker compose exec romule python3 -m romule user passwd toi@exemple.fr
+```
+
+Ou rouvre la porte et règle cela depuis l'interface :
+
+```sh
+docker compose exec romule python3 -m romule access open
+docker compose restart
+```
+
+`open` désactive aussi l'authentification — les comptes ne sont pas touchés, et
+`access close` la remet en service.
 
 ## L'adresse affichée au premier démarrage ne répond pas
 
