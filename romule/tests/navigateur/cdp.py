@@ -185,9 +185,26 @@ class Navigateur:
         #
         # `assistant=True` for a suite that wants to see it.
         if not assistant:
-            self.cmd("Page.addScriptToEvaluateOnNewDocument",
-                     {"source": "try { localStorage.setItem('onboard-vu', '1'); }"
-                                " catch (e) {}"})
+            # The wizard is remembered on the SERVER now, not in `localStorage`
+            # — it records a fact about the installation, not about a browser.
+            # So the fixture answers its two questions the way a person does,
+            # before the page has a chance to open on it: the access is settled
+            # and the wizard is marked as seen.
+            #
+            # `fetch` rather than `api()`: this runs before app.js exists.
+            self.cmd("Page.addScriptToEvaluateOnNewDocument", {"source": """
+              (function () {
+                var poste = function (u, c) {
+                  try {
+                    fetch(u, {method: 'POST',
+                              headers: {'Content-Type': 'application/json'},
+                              body: JSON.stringify(c)});
+                  } catch (e) { /* the suite will say so itself */ }
+                };
+                poste('/api/acces-ouvert', {ouvert: true});
+                poste('/api/assistant-vu', {vu: true});
+              })();
+            """})
 
     def cmd(self, methode, params=None, timeout=30):
         self.n += 1

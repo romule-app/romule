@@ -510,6 +510,17 @@ img.empty{visibility:hidden}
 .setgt{font-family:var(--disp);text-transform:uppercase;letter-spacing:.13em;font-size:11.5px;
   color:var(--amber);padding:13px 18px;background:var(--panel2);
   border-bottom:1px solid var(--rule)}
+/* A settings block indents its rows (18 px) and nothing else. Everything that
+   is not a row — an intro, a button bar, an empty state, the pairing panel —
+   sat flush against the frame, so the buttons looked stuck to the edge while
+   the rows above them were inset.
+   Margin rather than padding: several of these are containers whose own
+   children are rows, and padding would indent those twice. */
+.setgroup > p,.setgroup > .bar,.setgroup > .empty,.setgroup > .pairbox,
+.setgroup > .ecbloc,.setgroup > .upkeep,
+#consoles > .bar,#device,#barreconsole,#choixemulateur{
+  margin-left:18px;margin-right:18px}
+
 .setrow{display:flex;align-items:center;gap:24px;padding:15px 18px;
   border-top:1px solid var(--rule);transition:background .15s}
 .setgroup>.setrow:first-of-type,.setgt+.setrow{border-top:0}
@@ -521,8 +532,24 @@ img.empty{visibility:hidden}
 .setlab > b{display:block;font-size:13.5px;font-weight:600;margin-bottom:3px}
 .setlab span b{font-weight:600;color:var(--ink)}
 .setlab span{display:block;font-size:12px;color:var(--mute);line-height:1.55}
-.setctl{flex:0 0 auto;display:flex;justify-content:flex-end;align-items:center;
-  gap:8px;width:300px;max-width:45%}
+/* A row whose "control" is a whole panel: the destinations of the
+   notifications, the API keys. Stacked instead of side by side, and the panel
+   takes the full width — crammed into the 300 px column, its sentences broke
+   onto six lines and its fields shrank to eight characters. */
+.setrow.pleine{flex-direction:column;align-items:stretch;gap:12px}
+.setrow.pleine .setctl{width:100%;max-width:none;justify-content:flex-start}
+.setrow.pleine .setctl > *{width:100%}
+.setrow.pleine .setctl .bar{width:auto}
+
+/* 300 px is right for a control — a select, a switch, a field. It is wrong for
+   a control PLUS a sentence: the "no destination" line broke onto six lines
+   beside a text field squeezed to eight characters. So the column may wrap and may grow when its content needs it,
+   and a field inside keeps a floor of its own. */
+.setctl{flex:0 1 auto;display:flex;justify-content:flex-end;align-items:center;
+  gap:8px;flex-wrap:wrap;width:300px;max-width:45%}
+.setctl .lead,.setctl .mono{flex:1 1 100%;text-align:right;margin:0}
+.setctl input[type=text],.setctl input[type=password],.setctl input[type=email],
+.setctl input[type=url]{min-width:160px}
 .setctl input[type=text],.setctl input[type=password],.setctl input[type=email],
 .setctl input[type=url],.setctl select,.setctl textarea{width:100%}
 .setctl input[type=number]{width:88px;text-align:center}
@@ -3204,6 +3231,18 @@ body.compact .filters{margin-bottom:2px}
   border-radius:12px;background:var(--puits)}
 .ecbloc .ecactions{margin-top:14px;padding-top:12px;
   border-top:1px solid var(--rule)}
+
+/* Who is signed in, in the header. Small, quiet, and present on every screen:
+   it answers "whose session is this" without being asked, and carries the way
+   out — which used to exist only at the bottom of the settings. */
+.moichip{display:flex;align-items:center;gap:8px}
+.moiav{width:24px;height:24px;border-radius:50%;flex:0 0 auto;
+  background:var(--panel2);background-size:cover;background-position:center;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;color:var(--mute)}
+.moinom{font-size:12.5px;color:var(--mute);max-width:14ch;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:700px){.moinom{display:none}}
 
 /* The access decision, read back rather than offered as a switch. */
 #etatacces{display:flex;align-items:center;gap:10px;flex-wrap:wrap}

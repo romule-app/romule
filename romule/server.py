@@ -633,10 +633,19 @@ class Handler(BaseHTTPRequestHandler):
             if self.path.partition("?")[0].startswith("/api/"):
                 return self._json({"error": "Acces protege : jeton requis."}, 403)
             return self._token_page()
-        # No token and no account: nothing to type, so nothing to offer. The
-        # refusal says what to switch on rather than showing an empty field.
-        msg = ("Acces reseau desactive.\n\nActive-le dans Reglages > "
-               "Acces depuis le telephone.")
+        # No token and no account: nothing to type, so nothing to offer.
+        #
+        # The message used to point at a switch in the settings — one that no
+        # longer exists, in a screen this very refusal stops you reaching. It
+        # now names the one thing that works from here: the terminal, where the
+        # data is.
+        msg = ("Acces reseau desactive.\n\n"
+               "Personne ne peut entrer : ni compte, ni jeton, ni acces "
+               "ouvert.\n\nDepuis la machine qui heberge Romule :\n"
+               "    romule access open        (ouvrir sans mot de passe)\n"
+               "    romule user create <mail> (creer un compte)\n\n"
+               "Sous Docker, prefixe par :\n"
+               "    docker compose exec romule python3 -m romule ...")
         self._write_body(msg.encode(), "text/plain; charset=utf-8", 403)
 
     def _set_token_cookie(self):
@@ -1361,6 +1370,19 @@ class Handler(BaseHTTPRequestHandler):
                     % (d.get("nom") or notify.guess(url)))
             self._json({"destinations": [_notif_public(x)
                                          for x in notify.destinations(CFG)]})
+
+        elif p == "/api/assistant-vu":
+            # The wizard used to be remembered in `localStorage`, per browser:
+            # finish it on the laptop, open Romule on the phone, and it started
+            # over on an installation that was already set up. What it records
+            # is a fact about the INSTALLATION.
+            #
+            # Not reserved to administrators: dismissing a wizard is not an
+            # administrative act, and while nothing is decided there is no
+            # administrator to be.
+            CFG["assistant_vu"] = bool(d.get("vu", True))
+            config.save_config(CFG)
+            self._json({"ok": True, "assistant_vu": CFG["assistant_vu"]})
 
         elif p == "/api/acces-ouvert":
             # The other half of the wizard's access question: "no password on my
@@ -2135,6 +2157,22 @@ class Handler(BaseHTTPRequestHandler):
                       "maj_check", "schedule"):
                 if k in d:
                     CFG[k] = d[k]
+            # Switching the authentication OFF is a decision about ACCESS, and
+            # half of it locked people out. `auth_mode` went to "aucun",
+            # `lan_access` stayed false, and a service listening on 0.0.0.0 then
+            # refused every request — including the one needed to undo it. The
+            # refusal even pointed at a setting that no longer exists.
+            #
+            # So the two halves move together, the way `romule access open`
+            # does. Opening a service without saying so would be worse, hence
+            # the log line and the audit that reports it at every start.
+            if "auth_mode" in d and not auth.enabled(CFG) \
+                    and _listen_address() != "127.0.0.1" \
+                    and not CFG.get("lan_access") and not config.TOKEN:
+                CFG["lan_access"] = True
+                JOB.log("Authentification desactivee : l'acces reseau est "
+                        "ouvert SANS MOT DE PASSE, sinon plus personne "
+                        "n'entrerait.", "warn")
             # The schedule is sanitised ON WRITE: only known tasks and known
             # presets reach the file. An unknown preset stored here would be
             # read back as `never`, which is a setting that shows one thing and
@@ -2375,6 +2413,7 @@ def _health():
             # its access step until it has — and until then the installation
             # answers everybody, which is what makes that step reachable at all.
             "acces_choisi": bool(CFG.get("acces_choisi")),
+            "assistant_vu": bool(CFG.get("assistant_vu")),
             "lan_access": bool(CFG.get("lan_access")),
             "comptes": len(accounts.list_all()),
             "emulateur": CFG.get("emulateur") or profiles.DEFAULT,
