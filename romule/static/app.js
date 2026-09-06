@@ -4613,13 +4613,12 @@ const app = {
   // ---- interface language
   async langLoad() {
     const r = await api('/api/langues');
-    // Kept for the wizard: its first step offers the choice, and it is drawn
-    // from a template rather than from a static element in index.html.
+    // Kept for the wizard: its first step offers the same choice, and it is
+    // drawn from a template rather than from a static element in index.html.
     LANGUES = r.langues || [];
     const sel = $('s-uilang');
     if (sel) {
-      sel.innerHTML = (r.langues || []).map(l =>
-        '<option value="' + l.code + '">' + esc(l.nom) + '</option>').join('');
+      sel.innerHTML = optionsLangues(r.courante || 'fr');
       sel.value = r.courante || 'fr';
     }
     await loadLanguage(r.courante || 'fr');
@@ -6433,10 +6432,7 @@ function onbEtapes(h) {
           ? '<div class="onblangue"><label for="onb-langue">' +
             esc(t('Langue de l\'interface')) + '</label>' +
             '<select id="onb-langue" data-act-change="setLang">' +
-            LANGUES.map(l => '<option value="' + esc(l.code) + '"' +
-              (l.code === LANG ? ' selected' : '') + '>' +
-              esc(l.nom) + '</option>').join('') +
-            '</select></div>'
+            optionsLangues(LANG) + '</select></div>'
           : ''),
     },
     {
@@ -6635,6 +6631,22 @@ function renderConsoleScan(r) {
       ? t('%d ne sont pas encore dans ta bibliothèque.').replace('%d', r.new)
       : 'Tous sont déjà dans ta bibliothèque.') + '</p></div>';
 }
+
+// The language options, built ONCE for both places that offer the choice: the
+// settings and the wizard's first step. Two copies of this markup is how they
+// drift — one gains a `selected`, the other keeps escaping a name the first no
+// longer does, and nobody compares them.
+function optionsLangues(courante) {
+  // `data-i18n-skip`: a language is named in ITS OWN language, always. The
+  // catalogue holds "Français" as a key, so the DOM translator turned the
+  // option into "French" — and somebody whose interface is stuck in a language
+  // they cannot read then has nothing to look for.
+  return LANGUES.map(l =>
+    '<option value="' + esc(l.code) + '" data-i18n-skip' +
+    (l.code === courante ? ' selected' : '') + '>' +
+    esc(l.nom) + '</option>').join('');
+}
+
 
 // Has nobody answered the access question yet? While that is true the
 // installation answers everybody, and the wizard cannot be walked away from.

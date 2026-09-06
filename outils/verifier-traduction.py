@@ -523,12 +523,52 @@ def autotest():
 
 # --------------------------------------------------------------------- main
 
+def entetes():
+    """Does each catalogue announce ITSELF?
+
+    `_meta` is what `/api/langues` reads to fill the language selector — in the
+    settings and, since the wizard, on its first step. A catalogue whose `code`
+    names another language makes the selector offer the same one twice, and the
+    other becomes unreachable: the interface stays in a language nobody can
+    leave.
+
+    It happened by copy: `fr.json` was rebuilt from `en.json` and took its
+    `_meta` along. Nothing failed — the file parsed, every sentence was there,
+    and the only symptom was a dropdown offering "English, English".
+    """
+    soucis, vus = [], {}
+    for f in sorted((RACINE / "romule" / "locales").glob("*.json")):
+        try:
+            meta = json.loads(f.read_text(encoding="utf-8")).get("_meta") or {}
+        except (ValueError, OSError) as exc:
+            soucis.append("%s : illisible (%s)" % (f.name, exc))
+            continue
+        code, nom = meta.get("code"), meta.get("langue") or meta.get("nom")
+        if code != f.stem:
+            soucis.append("%s : _meta.code vaut %r au lieu de %r"
+                          % (f.name, code, f.stem))
+        if not nom:
+            soucis.append("%s : _meta ne donne aucun nom lisible" % f.name)
+        elif nom in vus:
+            soucis.append("%s : porte le meme nom que %s (%r)"
+                          % (f.name, vus[nom], nom))
+        else:
+            vus[nom] = f.name
+    return soucis
+
+
 def main(argv):
     if "--autotest" in argv:
         print("-- autotest du detecteur --")
         return autotest()
     trous = manquantes()
     paresse = pluriels_paresseux()
+    # Checked FIRST, and outside the "are all the sentences there" question: a
+    # catalogue can be complete to the last entry and still announce itself as
+    # another language, which is how "English, English" reached the selector.
+    soucis = entetes()
+    for souci in soucis:
+        print("  ENTETE   %s" % souci)
     if paresse:
         for fichier, ligne, forme in paresse:
             print("  PLURIEL  %s:%d  %s  ->  {%s|%s%s}"
@@ -539,7 +579,7 @@ def main(argv):
         print(json.dumps([{"fichier": f, "ligne": n, "texte": t}
                           for f, n, t in trous], ensure_ascii=False, indent=2))
         return 1 if trous else 0
-    if not trous and not paresse:
+    if not trous and not paresse and not soucis:
         print("Toutes les phrases du code sont au catalogue.")
         return 0
     if not trous:

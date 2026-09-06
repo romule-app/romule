@@ -1,8 +1,8 @@
 {
   "_meta": {
-    "langue": "English",
-    "code": "en",
-    "note": "Le texte francais est la cle. Une entree absente reste en francais."
+    "langue": "Français",
+    "code": "fr",
+    "note": "Le francais est la langue source : ce fichier sert de catalogue des chaines traduisibles, pas de traduction."
   },
   "Ma": "Ma",
   "ludothèque": "ludothèque",
