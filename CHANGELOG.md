@@ -147,6 +147,19 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Fixed
 
+- **The language selector offered English twice.** `fr.json` was rebuilt from
+  `en.json` during the catalogue work and took its `_meta` along, so the French
+  catalogue announced itself as English. `/api/langues` listed the same
+  language twice and French became unreachable — in the settings as well as in
+  the wizard. Nothing failed: the file parsed and every sentence was there.
+
+  `verifier-traduction.py` now checks that each catalogue announces itself —
+  its `_meta.code` matches its file name, and no two carry the same readable
+  name. Both menus are built by one function, and each language is named in its
+  own language: the DOM translator was turning "Français" into "French", which
+  leaves somebody whose interface is stuck in a language they cannot read with
+  nothing to look for.
+
 - **The wizard's step dots did nothing.** They carried
   `data-arg=" + i + "` — the concatenation was inside the string — so `onbGo`
   received `NaN` and all six were inert.
