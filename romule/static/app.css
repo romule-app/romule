@@ -639,7 +639,11 @@ img.empty{visibility:hidden}
 /* A notification informs, it is not operated: it must never catch a tap. On a
    phone, the stack covered the cards and the "Details" button stopped answering
    for several seconds. */
-.toasts{position:fixed;right:18px;bottom:64px;z-index:40;display:flex;flex-direction:column;
+/* Above EVERY overlay. At z-index 40 a toast slid under the wizard's blurred
+   curtain (60) and under the modals (50): a refused IGDB key, a folder that
+   could not be read, a save that failed — all of it announced to a layer
+   nobody could see. A message that cannot be read has not been sent. */
+.toasts{position:fixed;right:18px;bottom:64px;z-index:80;display:flex;flex-direction:column;
   gap:9px;max-width:340px;pointer-events:none}
 .toast{pointer-events:none}
 /* A toast that carries an action must be clickable: the others are
@@ -3131,8 +3135,11 @@ body.compact .filters{margin-bottom:2px}
 }
 @media(prefers-reduced-motion:reduce){.onbfini{animation:none;opacity:0}}
 
-.onbservice{margin:16px 0 0;padding:14px;border:1px solid var(--bord);
+.onbservice{margin:18px 0 0;padding:16px;border:1px solid var(--bord);
   border-radius:12px;background:var(--puits)}
+/* A button flush against the field above it reads as part of it. The gap is
+   what says "you have finished filling in, now act". */
+.onbservice > button{margin-top:14px}
 .onbservice-t{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
 .onbservice-t b{font-size:13.5px;color:var(--text)}
 .onbservice-t span{font-size:12px;color:var(--mute);flex:1 1 auto}
@@ -3200,6 +3207,11 @@ body.compact .filters{margin-bottom:2px}
   direction:rtl;text-align:left}
 
 .onbchamps{display:flex;flex-direction:column;gap:12px;margin:0 0 14px}
+/* Any action button following a field group, a path or a result: it must read
+   as a step of its own, not as the bottom edge of what is above it. */
+.onbcorps > button,
+.onbchemin + button,
+.onbresultat + button{margin-top:14px}
 .onbchamps label{display:flex;flex-direction:column;gap:5px;font-size:12.5px;
   color:var(--text)}
 /* The global rule gives text fields `flex:1 1 260px`, designed for a horizontal
@@ -3285,9 +3297,12 @@ body.compact .filters{margin-bottom:2px}
    wizard's "your library" step. In the wizard the card has a limited height,
    hence the list scrolling inside it rather than pushing the buttons off the
    screen. */
-.ludopick{margin-top:10px}
+.ludopick{margin-top:14px}
 .ludopick .crumb{margin:8px 0}
 .ludopick .card{max-height:min(38vh,300px);overflow:auto}
+/* The confirm button sat flush against the folder list, reading as its last
+   row rather than as the act that closes the choice. */
+.ludopick .card + .bar{margin-top:14px}
 #ludowrap #ludobrowser .card{max-height:min(46vh,420px);overflow:auto}
 /* A folder we are not allowed to read stays visible — hiding it would suggest
    it does not exist — but it says it leads nowhere. */
