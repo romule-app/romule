@@ -3,14 +3,40 @@
 ## `docker compose up` works but the page is refused
 
 Expected on first start. The container is reachable but has no account yet, so
-Romule generates a token:
+Romule generates a token and prints it **once**:
 
 ```sh
 docker compose logs romule
 ```
 
-Open the address it prints, token included. See
-[the first-access token](securite.md#the-first-access-token).
+Open the address it prints, and paste the token in the field the page shows.
+See [the first-access token](securite.md#the-first-access-token).
+
+## I have lost the access token
+
+It is not lost, only no longer printed:
+
+```sh
+docker compose exec romule python3 -m romule token show
+python3 -m romule token show            # without Docker
+```
+
+`token reset` replaces it when you would rather it changed — every browser that
+had remembered the old one is asked for the new one on its next load.
+
+## The address printed at first start does not answer
+
+If it starts with `172.` you read the container's own address on Docker's
+network, which nothing routes. Romule no longer prints it, but an older version
+did. From the machine hosting the container, `http://localhost:8787` works; for
+every other machine, declare yours:
+
+```yaml
+environment:
+  ROMULE_PUBLIC_HOST: "192.168.1.20"     # your machine, not the container
+```
+
+See [In a container](configuration.md#in-a-container).
 
 ## Romule refuses the folder I picked
 

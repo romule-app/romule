@@ -31,8 +31,11 @@ lines — "Kirby et le Labyrinthe des Miroirs" does not fit on the one that woul
 carry the marker — and demanding one marker per line would push towards twisting
 the sentence to please the tool, which is the opposite of the point.
 """
+import ast
+import io
 import re
 import sys
+import tokenize
 from pathlib import Path
 
 RACINE = Path(__file__).resolve().parent.parent
@@ -106,30 +109,43 @@ def blocs(lignes):
 
 
 def prose_python(source):
-    """The (line number, text) pairs of the comments and docstrings."""
-    lignes = source.splitlines()
-    sorties, dans_doc, delim = [], False, ""
-    for i, ligne in enumerate(lignes, 1):
-        nu = ligne.strip()
-        if dans_doc:
-            sorties.append((i, ligne))
-            if delim in nu:
-                dans_doc = False
+    """The (line number, text) pairs of the comments and docstrings.
+
+    Read with Python's own tokeniser and parser rather than by hand. The
+    hand-written version tracked triple quotes from the START of a line, so
+    `BON = \'\'\'` opened nothing and the closing `\'\'\'` opened a docstring that
+    was never there: everything up to the next one was read as prose, and real
+    prose in between was skipped. It went unnoticed for one reason — this file
+    is the one place that shape appears, and this file skips itself.
+
+    A docstring is a string in statement position, which is exactly what `ast`
+    can tell and a regular expression cannot.
+    """
+    try:
+        arbre = ast.parse(source)
+    except SyntaxError:
+        return []                       # `verifier-syntaxe` is what says so
+    sorties = []
+    for n in ast.walk(arbre):
+        corps = getattr(n, "body", None)
+        if not isinstance(corps, list):
             continue
-        # A `#` inside a string is not a comment. So we cut on the first `#`
-        # that is not preceded by an odd number of quotes.
-        if "#" in ligne:
-            avant = ligne.split("#", 1)[0]
-            if avant.count('"') % 2 == 0 and avant.count("'") % 2 == 0:
-                sorties.append((i, ligne.split("#", 1)[1]))
-        for d in ('"""', "'''"):
-            if nu.startswith(d) or nu.startswith("r" + d) or nu.startswith("f" + d):
-                reste = nu.split(d, 1)[1]
-                sorties.append((i, reste))
-                if d not in reste:
-                    dans_doc, delim = True, d
-                break
-    return sorties
+        for element in corps:
+            if (isinstance(element, ast.Expr)
+                    and isinstance(element.value, ast.Constant)
+                    and isinstance(element.value.value, str)):
+                texte = element.value.value
+                depart = element.lineno
+                for i, ligne in enumerate(texte.splitlines()):
+                    sorties.append((depart + i, ligne))
+    try:
+        jetons = tokenize.generate_tokens(io.StringIO(source).readline)
+        for jeton in jetons:
+            if jeton.type == tokenize.COMMENT:
+                sorties.append((jeton.start[0], jeton.string.lstrip("#")))
+    except (tokenize.TokenError, IndentationError):
+        pass
+    return sorted(sorties)
 
 
 def prose_js(source):
@@ -207,6 +223,24 @@ BALISE_PY = '''HTML = "<p class=\'lead\'>Aucun doublon repere pour le moment.</p
 '''
 
 
+# A French docstring: prose, and the half of it a comment-only reader misses.
+DOCSTRING_PY = '''def f():
+    """Rend le chemin si le dossier existe, sinon rien."""
+    return 1
+'''
+
+# The shape that broke the hand-written reader: a triple-quoted string ASSIGNED
+# to a name. Its closing delimiter opened a docstring that was never there, and
+# what followed was read as prose until the next one.
+AFFECTATION_PY = '''GABARIT = """Copie de %s vers la console."""
+
+
+def f():
+    """Return the path when the folder exists."""
+    return 1
+'''
+
+
 def epreuve():
     """Does the detector see French, and keep quiet about English?
 
@@ -235,6 +269,13 @@ def epreuve():
     # prose one.
     if any(francais(t) for _, t in blocs(prose_python(IDENTIFIANT_PY))):
         print("   SELF-TEST FAILED: an identifier between backticks is reported")
+        return False
+    if not any(francais(t) for _, t in blocs(prose_python(DOCSTRING_PY))):
+        print("   SELF-TEST FAILED: a French docstring gets through")
+        return False
+    if any(francais(t) for _, t in blocs(prose_python(AFFECTATION_PY))):
+        print("   SELF-TEST FAILED: a triple-quoted string ASSIGNED to a name is"
+              " read as prose")
         return False
     # The mirror half, on the shape it must catch AND the two it must ignore.
     if not any(anglicismes(t) for _, t in chaines_python(ABIME_PY)):

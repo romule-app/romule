@@ -175,6 +175,19 @@ jobs:
           python3 outils/verifier-classes.py --autotest
           python3 outils/verifier-classes.py --strict
 
+      # Une route est une chaine d'un cote et une comparaison de l'autre : le
+      # couplage n'existe qu'a l'execution, et seulement quand quelqu'un clique.
+      # Le renommage en anglais a traduit '/api/parcourir' en '/api/browseServer'
+      # dans app.js et le bouton est reste muet.
+      - name: Les routes appelees existent-elles ?
+        run: python3 outils/verifier-routes.py
+
+      # Les phrases que le SERVEUR journalise s'affichent dans le panneau
+      # Journal, a cote de celles d'app.js. Elles ne passaient par aucun
+      # catalogue : une interface en anglais montrait des lignes en francais.
+      - name: Les phrases journalisees sont-elles au catalogue ?
+        run: python3 outils/verifier-journal.py
+
       - name: La specification OpenAPI est-elle a jour ?
         run: |
           python -m romule.apiv1 > /tmp/openapi-attendu.json

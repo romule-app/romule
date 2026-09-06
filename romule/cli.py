@@ -124,6 +124,54 @@ def cmd_device(args):
         print("  %-8s %-9s %-12s %s" % (g["type"], _human(g["size"]), tag, g["name"]))
 
 
+def cmd_token(args):
+    """Show or replace the access token, from the terminal.
+
+    The token is announced ONCE, at first start: a secret reprinted at every
+    restart ends up in every log a user attaches to a bug report. Which means
+    there has to be a way to see it again — otherwise "announced once" is just
+    "lost", and the answer becomes wiping the volume.
+
+    Unlike an API key, the token is stored in clear: it is not a credential
+    identifying somebody, it is the shared way in for an installation that has
+    no account yet. So it CAN be shown again, and that is the point of `show`.
+    """
+    from . import config
+    action = getattr(args, "action", None) or "show"
+    cfg = config.load_config()
+
+    if action == "reset":
+        import secrets
+        jeton = secrets.token_urlsafe(24)
+        cfg["jeton_auto"] = jeton
+        # Announced again at the next start: a new token nobody has been told
+        # about is a lock-out.
+        cfg["jeton_annonce"] = False
+        config.save_config(cfg)
+        print("Nouveau jeton d'acces :")
+        print()
+        print("  %s" % jeton)
+        print()
+        print("L'ancien ne fonctionne plus. Les navigateurs qui l'avaient")
+        print("retenu redemanderont celui-ci au prochain chargement.")
+        print("Redemarre le service pour qu'il le prenne en compte.")
+        return
+
+    jeton = (cfg.get("jeton_auto") or "").strip() or config.env("TOKEN", "").strip()
+    if not jeton:
+        print("Aucun jeton d'acces.")
+        print()
+        print("Il n'en est engendre un que lorsque le service ecoute sur le")
+        print("reseau sans compte ni SSO — sur cette machine seulement, il n'y")
+        print("a rien a proteger. `romule token reset` en pose un quand meme.")
+        return
+    print("Jeton d'acces :")
+    print()
+    print("  %s" % jeton)
+    print()
+    print("Colle-le dans l'ecran d'accueil de l'interface.")
+
+
 def cmd_apikey(args):
     """Manage API keys without a browser.
 
@@ -613,6 +661,11 @@ def main(argv):
     kr = ka.add_parser("revoke", help="revoquer une cle")
     kr.add_argument("id", help="identifiant montre par `apikey list`")
 
+    pj = sub.add_parser("token", help="jeton d'acces : afficher ou renouveler")
+    ja = pj.add_subparsers(dest="action")
+    ja.add_parser("show", help="reafficher le jeton (defaut)")
+    ja.add_parser("reset", help="en engendrer un nouveau")
+
     pu = sub.add_parser("user", help="comptes : lister, reinitialiser, promouvoir")
     ua = pu.add_subparsers(dest="action")
     ua.add_parser("list", help="lister les comptes")
@@ -649,6 +702,6 @@ def main(argv):
     return {
         None: cmd_serve, "serve": cmd_serve, "scan": cmd_scan,
         "convert": cmd_convert, "push": cmd_push, "device": cmd_device,
-        "test": cmd_test, "apikey": cmd_apikey,
+        "test": cmd_test, "apikey": cmd_apikey, "token": cmd_token,
         "user": cmd_user, "config": cmd_config, "doctor": cmd_doctor,
     }[args.cmd](args) or 0

@@ -37,6 +37,26 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Added
 
+- **A token field on the refusal page.** A protected installation with no
+  account used to answer with a sentence telling you to add `?token=` to the
+  address — which meant copying a link out of a terminal, unusable from a
+  phone. It now shows a page with a field. The token is typed once and a cookie
+  remembers it.
+
+- **`romule token show` and `romule token reset`.** The token is announced once,
+  so there has to be a way to see it again — otherwise "announced once" is just
+  "lost", and the answer becomes wiping the volume. `reset` invalidates the old
+  one at once and marks the new one to be announced at the next start.
+
+- **The interface language, on the wizard's first step.** Everything after it is
+  read in the language chosen there; finding the setting once the wizard is over
+  means having read six screens in the wrong one.
+
+- **`ROMULE_PUBLIC_HOST`.** The address other machines reach Romule at, with a
+  port when the published one differs. A container cannot discover its host's
+  address; without this it now offers none rather than one that does not answer.
+
+
 - **A scheduler** (`romule/scheduler.py`). Five presets — never, at startup,
   hourly, every six hours, nightly at a chosen hour — on the five reversible
   tasks. No cron field: a syntax where a misplaced star means "every minute"
@@ -90,6 +110,53 @@ change it. Breaking changes are always listed under **Changed** with the reason.
   renamed in another). All three run in `lancer_tests.py` and in CI.
 
 ### Fixed
+
+- **"Choose another folder" did nothing.** The rename to English translated
+  `'/api/parcourir'` into `'/api/browseServer'` inside `app.js` — a string, not
+  an identifier — while the server kept the route it always had. The button
+  called a route that does not exist. On screen: nothing, because a refusal
+  while browsing is deliberately quiet.
+
+  Under it sat a second cause: the picker opened on the CURRENT library, which
+  in a container is `/data` while browsing is bounded to `ROMULE_BASES=/library`.
+  It now falls back to the first allowed folder rather than showing nothing.
+
+  `outils/verifier-routes.py` compares every route `app.js` calls with every
+  route `server.py` answers. A route is a string on one side and a comparison
+  on the other: the coupling only exists at run time, and only when somebody
+  clicks.
+
+- **An empty library was a dead end in the wizard.** Step 2 of 6 required the
+  scan to find at least one game before "Next" would light up. Someone setting
+  Romule up before copying their games in — the ordinary order — was walled in
+  with no way forward and no explanation. What is required is having LOOKED at
+  the folder, not having found something in it.
+
+- **The login and token pages arrived unstyled.** The CSS class rename
+  translated `.chargeur` into `.spinner` in the stylesheet and left
+  `class='chargeur'` in `server.py`: both gate pages came out as black text on
+  white, pinned to the top left, reading as a broken server rather than as a
+  door. And the stylesheet was behind the access check anyway, so it could not
+  have loaded. `verifier-classes.py` now reads `server.py` too — it compared
+  `app.css` with `app.js` and `index.html`, and the server writes HTML as well.
+
+- **French leaked into an English interface.** The sentences the SERVER logs —
+  `Console non connectee.` and fifty others — land in the Log panel beside
+  everything `app.js` writes, and went through no catalogue. They need no `t()`
+  call: the MutationObserver translates any text node whose sentence is a key.
+  Only the keys were missing. `outils/verifier-journal.py` keeps them there.
+
+- **The token was reprinted at every restart, inside a link.** A secret on the
+  first line of every log a user attaches to a bug report, and in the browser
+  history of everyone who opened the link. It is now announced once, on its own
+  line, and pasted into a field on the refusal page.
+
+- **`verifier-anglais.py` had a blind spot, and hid it by skipping itself.** Its
+  reader tracked triple quotes from the start of a line, so `BON = \'\'\'` opened
+  nothing while the closing delimiter opened a docstring that was never there:
+  everything up to the next one was read as prose, and real prose in between was
+  skipped. The one file carrying that shape was the tool itself, which it
+  excludes. It now reads with `ast` and `tokenize`.
 
 - **The setup wizard never appeared in a container.** `first_run` meant "the
   configuration file does not exist" — a different question, and one that

@@ -39,11 +39,11 @@ volumes:
 
 ```sh
 docker compose up -d
-docker compose logs romule      # affiche l'adresse avec ton jeton d'accès
+docker compose logs romule      # affiche ton jeton d'accès, une seule fois
 ```
 
-Ouvre l'adresse affichée, crée ton compte dans l'assistant, et indique à Romule
-où sont tes jeux. L'image embarque `adb`, `nsz`, `unar` et `7z` : il n'y a rien
+Ouvre l'adresse affichée, colle le jeton dans le champ proposé, puis crée ton
+compte dans l'assistant et indique à Romule où sont tes jeux. L'image embarque `adb`, `nsz`, `unar` et `7z` : il n'y a rien
 d'autre à installer.
 
 ### Le même fichier, avec toutes les options
@@ -74,8 +74,12 @@ services:
       TZ: Europe/Paris
 
       # Rien d'autre n'est nécessaire. Au premier démarrage, Romule engendre un
-      # jeton d'accès et l'affiche avec l'adresse complète :
+      # jeton d'accès et l'affiche UNE SEULE FOIS :
       #     docker compose logs romule
+      # Colle-le dans le champ que propose l'interface. Pour le revoir, ou
+      # pour le remplacer :
+      #     docker compose exec romule python3 -m romule token show
+      #     docker compose exec romule python3 -m romule token reset
       #
       # Pour imposer le tien plutôt que celui engendré :
       #     python3 -c "import secrets; print(secrets.token_urlsafe(32))"
@@ -175,7 +179,7 @@ docker run -d --name romule --restart unless-stopped \
   -v /mnt/jeux:/library \
   ghcr.io/romule-app/romule:latest
 
-docker logs romule              # l'adresse avec ton jeton d'accès
+docker logs romule              # ton jeton d'accès, une seule fois
 ```
 
 !!! tip "Les étiquettes disponibles"
