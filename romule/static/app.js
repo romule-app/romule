@@ -5081,7 +5081,11 @@ const app = {
     try {
       etat = await api('/api/device');
       if (etat.state !== 'ok') {
-        const dec = await api('/api/wifi-discover');
+        // `{}` and not nothing: `api()` sends a GET when it has no body, and
+        // this route only answers POST. The call came back "route inconnue"
+        // and the wizard's « chercher la console » raised a dialog saying the
+        // server was out of date.
+        const dec = await api('/api/wifi-discover', {});
         const trouve = (dec.found || [])[0];
         if (trouve) await api('/api/wifi-connect', {addr: trouve});
       }
@@ -6401,7 +6405,7 @@ let HEALTH = null;
    what will fill the covers.
    ========================================================================== */
 let ONB = {i: 0, sens: 1, occupe: false, resultatScan: null,
-           consoleScan: null,
+           consoleScan: null, champs: {},
            // One verdict per provider: a single line for both said nothing
            // about WHICH of the two had answered.
            sgdb: null, igdb: null};
@@ -6486,7 +6490,8 @@ function onbEtapes(h) {
             'seul pourra changer les réglages et gérer les autres comptes.</p>' +
             '<div class="onbchamps">' +
             '<label>Adresse e-mail<input type="email" id="onb-mail" ' +
-              'autocomplete="username" placeholder="toi@exemple.fr"></label>' +
+              'autocomplete="username" placeholder="toi@exemple.fr" value="' +
+              onbValeur('onb-mail') + '"></label>' +
             '<label>Mot de passe<input type="password" id="onb-mdp" ' +
               'autocomplete="new-password" placeholder="12 caractères minimum"></label>' +
             '</div>' +
@@ -6520,16 +6525,17 @@ function onbEtapes(h) {
           cle: 'sgdb', nom: 'SteamGridDB', role: 'Les jaquettes',
           ou: 'steamgriddb.com/profile/preferences/api',  // i18n:ok - an address, not a sentence
           champs: '<label>Clé d\'API<input type="text" id="onb-sgdb" ' +
-                  'autocomplete="off"></label>',
+                  'autocomplete="off" value="' + onbValeur('onb-sgdb') + '"></label>',
           acte: 'onbTestSgdb', etat: ONB.sgdb,
         }) +
         renderOnbService({
           cle: 'igdb', nom: 'IGDB', role: 'Résumés, année, éditeur',
           ou: 'dev.twitch.tv/console/apps',  // i18n:ok - an address, not a sentence
           champs: '<label>Client ID<input type="text" id="onb-igdb-id" ' +
-                  'autocomplete="off"></label>' +
+                  'autocomplete="off" value="' + onbValeur('onb-igdb-id') + '"></label>' +
                   '<label>Client Secret<input type="password" ' +
-                  'id="onb-igdb-secret" autocomplete="off"></label>',
+                  'id="onb-igdb-secret" autocomplete="off" value="' +
+                  onbValeur('onb-igdb-secret') + '"></label>',
           acte: 'onbTestIgdb', etat: ONB.igdb,
         }),
     },
@@ -6664,9 +6670,27 @@ function onbGo(i) {
   renderOnboard();
 }
 
+// What has been typed, kept across re-renders. Each step is rebuilt from its
+// template — on a test, on a step change, on a health refresh — and the inputs
+// came back empty every time: you pasted a key, pressed « Tester », and watched
+// it vanish. The value belongs to the wizard's state, not to the DOM node that
+// happens to be showing it.
+function onbRetenir() {
+  const el = $('onboard');
+  if (!el) return;
+  el.querySelectorAll('input[id]').forEach(i => { ONB.champs[i.id] = i.value; });
+}
+
+// The `value=` of a remembered field. Empty when nothing was typed.
+function onbValeur(id) {
+  return esc(ONB.champs[id] || '');
+}
+
+
 function renderOnboard() {
   const el = $('onboard');
   if (!HEALTH) { el.classList.remove('open'); return; }
+  onbRetenir();
   const etapes = onbEtapes(HEALTH);
   ONB.i = Math.max(0, Math.min(etapes.length - 1, ONB.i));
   const e = etapes[ONB.i];
