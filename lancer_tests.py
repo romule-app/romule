@@ -291,7 +291,8 @@ def coherence_doc():
     for outil in ("verifier-reglages-doc.py", "verifier-chiffres.py",
                   "verifier-traduction.py", "verifier-anglais.py",
                   "verifier-imports.py", "verifier-classes.py",
-                  "verifier-routes.py", "verifier-journal.py"):
+                  "verifier-routes.py", "verifier-journal.py",
+                  "verifier-actions.py"):
         args = ["--strict"] if outil == "verifier-classes.py" else []
         r = subprocess.run([sys.executable, str(RACINE / "outils" / outil), *args],
                            cwd=str(RACINE), capture_output=True, text=True)

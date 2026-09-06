@@ -278,11 +278,46 @@ def pair(addr, code):
     try:
         p = subprocess.run([binaire, "pair", addr, str(code)],
                            capture_output=True, text=True, timeout=60)
-        msg = (p.stdout + p.stderr).strip().splitlines()
-        msg = msg[-1] if msg else ""
-        return ("successfully" in msg.lower() or p.returncode == 0, msg)
+        brut = (p.stdout + p.stderr).strip().splitlines()
+        brut = brut[-1] if brut else ""
+        # `adb pair` exits 0 on failures too. Trusting the return code alone
+        # announced "paired" and then refused every connection — the interface
+        # said both things in a row and the user had to guess which was true.
+        # Only adb's own word for success counts.
+        ok = "successfully" in brut.lower()
+        return (ok, brut if ok else _pair_reason(brut))
     except (OSError, subprocess.SubprocessError) as exc:
         return (False, str(exc))
+
+
+# What adb says, and what it means. Its wording is aimed at whoever wrote adb:
+# handing it over untouched — "protocol fault (couldn't read status message):
+# Success" — tells the reader nothing, least of all that the word "Success" at
+# the end means nothing here.
+_RAISONS = (
+    ("protocol fault",
+     "La console a coupé la conversation. Le code d'appairage n'est valable "
+     "qu'une fois et quelques minutes : rouvre « Débogage sans fil » sur la "
+     "console pour en obtenir un nouveau, avec SON port — il change à chaque "
+     "fois."),
+    ("failed to authenticate",
+     "La console a refusé l'appairage : le code ne correspond pas."),
+    ("connection refused",
+     "Rien n'écoute à cette adresse. Verifie le port : celui de l'appairage "
+     "n'est pas celui de la connexion."),
+    ("no route to host",
+     "Cette adresse n'est pas joignable depuis le serveur. La console et "
+     "Romule sont-ils sur le même réseau ?"),
+)
+
+
+def _pair_reason(brut):
+    """A sentence somebody can act on, keeping adb's own line behind it."""
+    bas = (brut or "").lower()
+    for motif, phrase in _RAISONS:
+        if motif in bas:
+            return "%s (adb : %s)" % (phrase, brut)
+    return brut or "L'appairage a échoué sans que adb dise pourquoi."
 
 
 def switch_to_wifi(port=5555):
@@ -535,7 +570,12 @@ def organize(device_dir, job, types=None):
     """Tidy the console: every file goes to GAMES/UPDATE/DLC by type (even if
     it sat in a per-game folder), then empty folders are removed."""
     if state() != "device":
-        job.log("Console non prete.")
+        # `warn`, and a sentence that says what to do. At `info` the line does
+        # not reach the terminal in normal mode, and « Console non prete. »
+        # alone reads as a status rather than as the reason nothing happened —
+        # the action looked like it had done nothing at all, in silence.
+        job.log("Rien n'a été rangé : la console n'est pas connectée. "
+                "Branche-la, ou connecte-la sans fil, puis relance.", "warn")
         return
     make_tree(device_dir)
     base = device_dir.rstrip("/")
@@ -565,7 +605,11 @@ def organize(device_dir, job, types=None):
     keep = " ".join("-not -name %s" % _q(tf) for tf in sorted(set(reels.values())))
     _shell("find %s -mindepth 1 -type d -empty %s -delete 2>/dev/null" % (_q(base), keep))
     _shell("find %s -mindepth 1 -type d -empty %s -delete 2>/dev/null" % (_q(base), keep))
-    job.log("%d fichier(s) range(s) en GAMES / UPDATE / DLC sur la console." % moved)
+    # Say it even when nothing moved: "already tidy" is an answer, and the
+    # absence of one is what makes people click again.
+    job.log("Console deja rangee : rien a deplacer." if not moved
+            else "%d fichier(s) range(s) en GAMES / UPDATE / DLC sur la console."
+                 % moved, "ok")
 
 
     _invalidate_cache()

@@ -1851,7 +1851,12 @@ function cardHtml(x) {
   const coche = dsel2.has(g.key);
   const [cls, txt] = cardLine(x);
   const attente = SEARCHING_ENTRIES && withoutEntry(g);
-  return '<div class="gcard' + (coche ? ' sel' : '') + (attente ? ' sansfiche' : '') +
+  // `noentry`, the class the stylesheet carries — `sansfiche` was styled
+  // nowhere. The UPDATE path a few lines below already sets the right one, so
+  // only a card CREATED while the lookup runs was affected: exactly the cards
+  // you are looking at just after an import. They showed no shimmer, no
+  // caption, nothing at all while their titles and covers were being fetched.
+  return '<div class="gcard' + (coche ? ' sel' : '') + (attente ? ' noentry' : '') +
     (g.groupeN ? ' groupe' : '') +
     // The medium serves as an edging in the "all platforms" view: the only one
     // where it teaches anything. In a Switch view, thirty-four identical
@@ -2705,8 +2710,10 @@ function fillPlatformSelector() {
   if (!ordre.some(x => x.key === PF_SETTINGS)) PF_SETTINGS = ordre[0].key;
   sel.innerHTML = ordre.map(x =>
     '<option value="' + esc(x.key) + '"' + (x.key === PF_SETTINGS ? ' selected' : '') + '>' +
-    esc(x.name) + (propres.has(x.key) ? ' — ' + esc(moteurLisible(x.engine)) : '') +
-    '</option>').join('');
+    // The emulator used to be appended here — « Switch — Eden ». This list
+    // chooses a PLATFORM; which emulator drives it is a setting of that
+    // platform, shown once it is chosen, not a second name for it.
+    esc(x.name) + '</option>').join('');
   sel.value = PF_SETTINGS;
 }
 
@@ -3746,11 +3753,12 @@ function renderConsoles() {
       + countPhrase(h.fichiers, '{fichier|fichiers}')
       + (h.vieux ? ' ' + esc(t('(lecture ancienne)')) : '');
   }).filter(Boolean).join(' · ');
+  // One block, not three. « Mes consoles », « Console pilotée » and « Ma
+  // console » were three headings for one idea, stacked, each repeating what
+  // the one above had just said.
   boite.innerHTML =
     '<div class="setrow">'
-    + '<div class="setlab"><b>' + esc(t('Console pilotée')) + '</b>'
-    + '<span>' + esc(t('Les réglages ci-dessous appartiennent à celle-ci.'))
-    + '</span></div>'
+    + '<div class="setlab"><b>' + esc(t('Console pilotée')) + '</b></div>'
     + '<div class="setctl">'
     + '<select data-act-change="chooseConsole">' + options + '</select>'
     + '</div></div>'
@@ -3813,6 +3821,26 @@ function renderSchedule() {
   }).join('');
 }
 
+// Where each service's own instructions live. Romule cannot explain six
+// products; it can say which one it thinks you are using and hand you the page
+// that does. The `webhook` case falls back to Romule's own section, because
+// there is no vendor to point at.
+const NOTIF_GUIDES = {
+  discord: 'https://support.discord.com/hc/articles/228383668',
+  slack: 'https://api.slack.com/messaging/webhooks',
+  telegram: 'https://core.telegram.org/bots#how-do-i-create-a-bot',
+  ntfy: 'https://docs.ntfy.sh/publish/',
+  gotify: 'https://gotify.net/docs/pushmsg',
+};
+
+// One destination, one block — the same shape as the two providers of the
+// wizard's fourth step, and for the same reason. Piled into rows, a channel's
+// name, its address, its ticked events and its two buttons ran together, and
+// the events of one destination sat directly above the name of the next.
+//
+// An empty event list means EVERY event on the server side — what someone who
+// pastes an address without ticking anything expects. So a destination with
+// nothing ticked is drawn with everything ticked, which is what it will do.
 function renderNotifications() {
   const boite = $('listenotifs');
   if (!boite) return;
@@ -3822,32 +3850,63 @@ function renderNotifications() {
       + '</p>';
     return;
   }
-  // The event boxes live UNDER each destination, not in a dialog: which events
-  // a channel wants is the thing you come back to change, and a setting you
-  // change often should not be two clicks and a modal away.
-  //
-  // An empty list means EVERY event on the server side — that is what someone
-  // who pastes an address without ticking anything expects. So a destination
-  // with nothing ticked is drawn with everything ticked, which is what it will
-  // actually do.
   boite.innerHTML = NOTIFS.map(d => {
+    const actif = d.actif !== false;
     const coches = (d.evenements && d.evenements.length)
       ? d.evenements : Object.keys(NOTIF_EVTS);
     const cases = Object.keys(NOTIF_EVTS).map(cle =>
       '<label class="dopt"><input type="checkbox" data-act-change="setNotificationEvents"'
       + ' data-arg="' + esc(d.id) + '" data-evt="' + esc(cle) + '"'
-      + (coches.includes(cle) ? ' checked' : '') + '>'
+      + (coches.includes(cle) ? ' checked' : '')
+      + (actif ? '' : ' disabled') + '>'
       + '<span>' + esc(t(NOTIF_EVTS[cle])) + '</span></label>').join('');
-    return '<div class="account-row">'
-      + '<span class="account-name" data-i18n-skip>' + esc(d.nom || d.service) + '</span>'
-      + '<span class="account-mail tid" data-i18n-skip>' + esc(d.service) + '</span>'
-      + '<span class="mono" data-i18n-skip>' + esc(d.apercu) + '</span>'
-      + '<button class="ghost mini" data-act="testNotification" data-arg="'
-      + esc(d.id) + '">' + esc(t('Tester')) + '</button>'
-      + '<button class="ghost mini" data-act="deleteNotification" data-arg="'
-      + esc(d.id) + '">' + esc(t('Retirer')) + '</button>'
-      + '</div><div class="dopts notifevts">' + cases + '</div>';
+    const guide = NOTIF_GUIDES[d.service]
+      || docLien('configuration', 'notifications', 'notifications');
+    const etat = NOTIF_ETATS[d.id];
+    // Two whole literals rather than a concatenated tail: a class that only
+    // appears after a `?` is invisible to `verifier-classes.py`, which reads
+    // the literal head and stops — it cannot name what an expression builds.
+    return (actif ? '<div class="onbservice notifdest">'
+                  : '<div class="onbservice notifdest eteinte">')
+      + '<div class="onbservice-t">'
+        + '<b data-i18n-skip>' + esc(d.nom || d.service) + '</b>'
+        + '<span data-i18n-skip>' + esc(d.service) + '</span>'
+        + '<a class="lien" target="_blank" rel="noopener noreferrer" href="'
+        + esc(guide) + '">' + esc(t('Guide')) + '</a>'
+      + '</div>'
+      + '<p class="onbaide" data-i18n-skip>' + esc(d.apercu) + '</p>'
+      + '<label class="dopt notifon"><input type="checkbox"'
+        + ' data-act-change="toggleNotification" data-arg="' + esc(d.id) + '"'
+        + (actif ? ' checked' : '') + '>'
+        + '<span>' + esc(t('Prévenir cette destination')) + '</span></label>'
+      + '<div class="dopts notifevts">' + cases + '</div>'
+      + '<div class="bar">'
+        + '<button class="ghost mini" data-act="testNotification" data-arg="'
+        + esc(d.id) + '">' + esc(t('Tester la connexion')) + '</button>'
+        + '<button class="ghost mini" data-act="deleteNotification" data-arg="'
+        + esc(d.id) + '">' + esc(t('Retirer')) + '</button>'
+      + '</div>'
+      + (etat ? '<p class="onbverdict ' + esc(etat.etat) + '">'
+                + esc(etat.message) + '</p>' : '')
+      + '</div>';
   }).join('');
+}
+
+// One verdict per destination, kept between renders — the same idea as the
+// wizard's, and for the same reason: a toast that has already faded cannot be
+// read a second time, and « which of my four channels answered? » is exactly
+// the question a single line at the bottom could not answer.
+let NOTIF_ETATS = {};
+
+async function toggleNotification(id) {
+  const boite = $('listenotifs');
+  const c = boite && boite.querySelector(
+    '[data-act-change="toggleNotification"][data-arg="' + esc(id) + '"]');
+  if (!c) return;
+  const r = await api('/api/notif-evenements', {id, actif: c.checked});
+  if (!r || r.error) return;
+  NOTIFS = r.destinations || NOTIFS;
+  renderNotifications();
 }
 
 // Ticking one box sends the WHOLE list for that destination: the route writes a
@@ -3901,7 +3960,14 @@ function _reportNotificationResult(r) {
 }
 
 async function testNotification(id) {
-  _reportNotificationResult(await api('/api/notif-tester', {id}));
+  NOTIF_ETATS[id] = {etat: 'attente', message: t('Vérification…')};
+  renderNotifications();
+  const r = await api('/api/notif-tester', {id});
+  NOTIF_ETATS[id] = (r && r.ok)
+    ? {etat: 'ok', message: t('Message envoyé. Regarde ton salon.')}
+    : {etat: 'ko', message: tpl('Échec : %s',
+                                (r && (r.detail || r.error)) || '?')};
+  renderNotifications();
 }
 
 async function testNotificationInput() {
@@ -3922,6 +3988,32 @@ async function loadAccounts() {
   MDP_MIN = r.mdp_min || 12;
   renderAccounts();
 }
+
+// What decides who gets in, said rather than offered as a switch.
+//
+// The setting it replaces was a checkbox that opened the service without
+// a password. It predates the access step of the wizard, which now settles the
+// question once and for all — and having two places decide the same thing, one
+// of them a switch nobody explains, is how an installation ends up open by
+// accident. So this reads the decision back, and points at where to change it.
+function renderAccessState() {
+  const el = $('etatacces');
+  if (!el) return;
+  const c = (HEALTH && HEALTH.checks) || {};
+  const compte = (c.auth_mode === 'interne' && c.comptes) || c.auth_mode === 'oidc';
+  const texte = compte
+    ? t('Par compte : il faut se connecter.')
+    : c.lan_access
+      ? t('Ouvert : aucun mot de passe n\'est demandé.')
+      : c.acces_choisi
+        ? t('Cette machine seulement.')
+        : t('Personne n\'a encore choisi.');
+  el.innerHTML = '<span class="etatacces' + (compte ? ' ok' : ' avert') + '">'
+    + esc(texte) + '</span>'
+    + '<button class="ghost mini" data-act="showOnboard">'
+    + esc(t('Changer')) + '</button>';
+}
+
 
 function renderAccounts() {
   const boite = $('listecomptes');
@@ -4214,7 +4306,7 @@ function fillSettings() {
   if (c.meta_lang) $('s-lang').value = c.meta_lang;
   if (document.activeElement !== $('s-mirrors')) $('s-mirrors').value = (c.versions_urls || []).join('\n');
   $('s-incr').checked = c.incremental !== false;
-  $('s-lan').checked = !!c.lan_access;
+  renderAccessState();
   $('s-emuready').checked = !!c.emuready;
   $('s-autonand').checked = !!c.auto_nand;
   $('s-notify').checked = c.notify !== false;
@@ -5744,7 +5836,15 @@ const app = {
     forgetSystemCache();
     SCONSOLE = []; SCONSOLE_PATHS = [];
     toast(t('Console changée.'), 'ok');
-    await this.reveilConsole();
+    // `wakeConsole` — this called `reveilConsole`, the name it carried before
+    // the rename to English. The method did not exist, the call threw, and
+    // everything after it (the library redraw) never ran.
+    //
+    // And the guard has to be lowered first: `wakeConsole` reads the console
+    // ONCE per page, which is right at startup and wrong here — the whole
+    // point is that we are now driving a different one.
+    this._consoleReady = false;
+    await this.wakeConsole();
     renderLib();
   },
 
@@ -5859,7 +5959,6 @@ const app = {
       incremental: $('s-incr').checked,
       cover_url: $('s-cover').value.trim(),
       versions_urls: $('s-mirrors').value.split('\n').map(s => s.trim()).filter(Boolean),
-      lan_access: $('s-lan').checked,
       notify: $('s-notify').checked,
       roms_root: $('s-romsroot').value.trim(),
       saves_dir: $('s-savesdir').value.trim(),
@@ -6166,6 +6265,7 @@ const app = {
   addAccount,
   createKey, revokeKey,
   addNotification, deleteNotification, testNotification, testNotificationInput,
+  toggleNotification,
   setNotificationEvents,
   loadAccounts,
 
@@ -6935,7 +7035,7 @@ const SET_FIELDS = {
   's-layout': ['push_layout', 'val'], 's-local': ['local_layout', 'val'],
   's-verify': ['verify_mode', 'val'], 's-coverprov': ['cover_provider', 'val'],
   's-lang': ['meta_lang', 'val'], 's-incr': ['incremental', 'bool'],
-  's-lan': ['lan_access', 'bool'], 's-notify': ['notify', 'bool'],
+  's-notify': ['notify', 'bool'],
   's-mirrors': ['versions_urls', 'lines'],
   's-emuready': ['emuready', 'bool'],
   's-autonand': ['auto_nand', 'bool'],
@@ -7272,7 +7372,7 @@ const ACTES = new Set([
   'libCancelOnb', 'libClose', 'libNewFolder', 'libOpen',
   'libConfirm', 'mkTree', 'onbGo', 'onbFindConsole',
   'onbChooseFolder', 'onbCreateAccount', 'onbOpenAccess', 'onbPrev',
-  'onbScan', 'onbTestSgdb', 'onbTestIgdb', 'setLang',
+  'onbScan', 'onbTestSgdb', 'onbTestIgdb', 'setLang', 'toggleNotification',
   'onbScanConsole', 'onbNext', 'openGame',
   'openOnConsole', 'organize', 'forgetFolder', 'forgetTransfer',
   'openPlatform', 'page', 'browseServer', 'purgeTrash', 'reloadImport',
@@ -7312,7 +7412,18 @@ const ACTES_SPECIAUX = {
 };
 
 function argumentDe(el) {
-  if (el.dataset.val !== undefined) return [JSON.parse(el.dataset.val)];
+  if (el.dataset.val !== undefined) {
+    // `JSON.parse` on a value that is not JSON THROWS, and the throw happens
+    // before the action is called: the button does nothing, in silence. Six of
+    // them were in that state — the three theme buttons and the three motion
+    // ones carried `data-val="sombre"` as a highlight marker, which is not
+    // JSON. They now carry `data-etat`, and this no longer bets on it.
+    try {
+      return [JSON.parse(el.dataset.val)];
+    } catch (e) {
+      return [el.dataset.val];
+    }
+  }
   if (el.dataset.arg !== undefined) {
     const a = [el.dataset.arg];
     if (el.dataset.arg2 !== undefined) a.push(el.dataset.arg2);
@@ -7434,7 +7545,7 @@ function updateAppearance() {
     const bloc = $(id);
     if (!bloc) continue;
     bloc.querySelectorAll('button').forEach(b => {
-      const on = b.dataset.val === actif;
+      const on = b.dataset.etat === actif;
       b.classList.toggle('on', on);
       b.setAttribute('aria-pressed', String(on));
     });
@@ -7510,18 +7621,39 @@ function buildCardChoices() {
 // sleeve. It represents no game, which is exactly what we want here — and it is
 // a `data:`, so served by the page itself, with no request and no CSP
 // exception.
+// A stand-in cover, drawn rather than shipped.
+//
+// It used to be a cartridge OUTLINE — the same drawing a card shows when it has
+// no cover. Which was exactly the problem: the panel offers six effects to
+// compare on a sleeve, and it showed the absence of one. The effects tilt,
+// raise and light a rectangle, and there was nothing in the rectangle to see it
+// happen on.
+//
+// So: something that reads as artwork at thumbnail size. Deliberately abstract
+// — a shape, a horizon, a title band — because it must not pass for a real
+// game: Romule ships no cover art, and this file ships no image either. It is
+// an inline SVG, which also keeps it inside `img-src 'self' data:`.
 const SAMPLE_COVER = 'data:image/svg+xml,' + encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 450">' +
-    '<defs><linearGradient id="f" x1="0" y1="0" x2="0.4" y2="1">' +
-      '<stop offset="0" stop-color="#33344180"/>' +
-      '<stop offset="1" stop-color="#15161d"/></linearGradient></defs>' +
-    '<rect width="300" height="450" fill="#1b1c24"/>' +
-    '<rect width="300" height="450" fill="url(#f)"/>' +
-    // A cartridge's silhouette, the same as on a card without a cover: the
-    // preview must look like what the user will really see.
-    '<rect x="110" y="146" width="80" height="126" rx="13" fill="#40425200"' +
-      ' stroke="#5a5d70" stroke-width="3"/>' +
-    '<rect x="132" y="240" width="36" height="13" rx="4" fill="#5a5d70"/>' +
+    '<defs>' +
+      '<linearGradient id="ciel" x1="0" y1="0" x2="0.3" y2="1">' +
+        '<stop offset="0" stop-color="#3b2f57"/>' +
+        '<stop offset="0.55" stop-color="#7b4a63"/>' +
+        '<stop offset="1" stop-color="#d98f4e"/></linearGradient>' +
+      '<linearGradient id="sol" x1="0" y1="0" x2="0" y2="1">' +
+        '<stop offset="0" stop-color="#241d33"/>' +
+        '<stop offset="1" stop-color="#14111d"/></linearGradient>' +
+    '</defs>' +
+    '<rect width="300" height="450" fill="url(#ciel)"/>' +
+    '<circle cx="196" cy="150" r="46" fill="#f4d9a8" opacity="0.92"/>' +
+    // Two ridges: enough depth for the tilt effect to have something to move.
+    '<path d="M0 300 L84 214 L152 300 Z" fill="#2c2340" opacity="0.85"/>' +
+    '<path d="M96 300 L188 196 L300 300 Z" fill="#1f1a2e"/>' +
+    '<rect y="298" width="300" height="152" fill="url(#sol)"/>' +
+    // The title band a sleeve almost always carries, without a word on it:
+    // a name here would be a game's name, and there is none to give.
+    '<rect x="30" y="344" width="176" height="15" rx="7" fill="#efe6d8" opacity="0.86"/>' +
+    '<rect x="30" y="371" width="104" height="9" rx="4" fill="#efe6d8" opacity="0.44"/>' +
   '</svg>');
 
 function sampleCover() {

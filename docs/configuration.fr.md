@@ -248,6 +248,17 @@ Si une tâche tourne déjà quand une autre arrive à échéance, l'échéance e
 | `ui_lang` | `en` | `en` ou `fr`. Ajouter une langue est un fichier JSON — voir [Contribuer](contribuer.md). |
 | `notify` | `true` | Prévenir quand une tâche se termine |
 
+### Qui peut ouvrir cette page
+
+Le réglage `lan_access` n'est plus un interrupteur dans l'interface. L'accès se
+décide une fois, à l'étape « Ton accès » de l'assistant — un compte, ou aucun
+mot de passe — et l'écran des réglages **relit** cette décision au lieu d'offrir
+un second endroit où la changer. Deux endroits qui décident de la même chose,
+c'est ainsi qu'une installation finit ouverte par accident.
+
+Pour en changer ensuite : l'assistant se rouvre depuis la même ligne, et le
+terminal fonctionne toujours — voir [Le premier accès](securite.fr.md#le-premier-acces).
+
 ## Notifications
 
 Romule savait déjà prévenir qu'une tâche était finie — mais seulement la
@@ -266,6 +277,12 @@ un nom, c'est fait. Le service est deviné à partir de l'adresse :
 | ntfy | `https://ntfy.sh/ton-sujet`, ou ta propre instance |
 | Gotify | `https://gotify.exemple.fr/message?token=…` |
 | N'importe quoi d'autre | Une URL quelconque — Romule y poste un objet JSON simple |
+
+Chaque destination a son bloc : le service reconnu par Romule, un interrupteur
+pour la **taire sans la retirer**, ses événements, un bouton **Tester la
+connexion** dont la réponse reste dans ce bloc, et un lien vers les
+instructions du service. Un verdict en toast ne pouvait pas dire *lequel* de
+quatre salons avait répondu — et il s'effaçait avant qu'on l'ait lu.
 
 Chaque destination se teste avant ou après enregistrement, et le résultat dit
 quel côté a refusé : une adresse fausse et un service en panne ne se ressemblent

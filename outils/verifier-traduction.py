@@ -523,6 +523,23 @@ def autotest():
 
 # --------------------------------------------------------------------- main
 
+# A literal handed to `t()` is an EXPLICIT request to translate. No heuristic
+# is needed there and none should apply: the length rules that keep this tool
+# from reporting identifiers also let "Nom" and "Renommer" through, and both
+# were shown untranslated on the console buttons.
+_APPEL_T = re.compile(r"""\bt\(\s*(['"])((?:\\.|(?!\1).)*)\1\s*\)""")
+
+
+def appels_t(source):
+    """The literals passed to `t()`, unescaped."""
+    out = set()
+    for _, brut in _APPEL_T.findall(re.sub(r"//[^\n]*", "", source)):
+        texte = brut.replace("\\'", "'").replace('\\"', '"')
+        if texte:
+            out.add(texte)
+    return out
+
+
 def entetes():
     """Does each catalogue announce ITSELF?
 
@@ -567,6 +584,12 @@ def main(argv):
     # catalogue can be complete to the last entry and still announce itself as
     # another language, which is how "English, English" reached the selector.
     soucis = entetes()
+    catalogue = json.loads((RACINE / "romule" / "locales" / "fr.json")
+                           .read_text(encoding="utf-8"))
+    for texte in sorted(appels_t(
+            (RACINE / "romule" / "static" / "app.js").read_text(encoding="utf-8"))):
+        if texte not in catalogue:
+            soucis.append("t(%r) n'est pas au catalogue" % texte)
     for souci in soucis:
         print("  ENTETE   %s" % souci)
     if paresse:

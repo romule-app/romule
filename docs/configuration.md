@@ -236,6 +236,17 @@ and said so in the log — it is not queued. Romule does one thing at a time.
 | `ui_lang` | `en` | `en` or `fr`. Adding a language is a JSON file — see [Contributing](contribuer.md). |
 | `notify` | `true` | Notify when a job finishes |
 
+### Who can open this page
+
+The setting `lan_access` is no longer a switch in the interface. Access is
+settled once, on the wizard's access step — an account, or no password — and
+the settings screen now READS that decision back rather than offering a second
+place to change it. Two places deciding the same thing is how an installation
+ends up open by accident.
+
+To change it afterwards: the wizard reopens from the same row, and the terminal
+always works — see [The first access](securite.md#the-first-access).
+
 ## Notifications
 
 Romule could already tell you a task had finished — but only the person sitting
@@ -254,6 +265,12 @@ done. The service is worked out from the address:
 | ntfy | `https://ntfy.sh/your-topic`, or your own instance |
 | Gotify | `https://gotify.example.com/message?token=…` |
 | Anything else | Any URL — Romule POSTs a plain JSON object |
+
+Each destination gets its own block: the service Romule recognised, a switch to
+**silence it without removing it**, its events, a **Test the connection**
+button whose answer stays in that block, and a link to that service's own
+instructions. A verdict shown as a toast could not say *which* of four channels
+had answered — and it faded before you had read it.
 
 Each destination can be tested before or after saving, and the result says
 which side refused: a wrong address and a service that is down do not look the
