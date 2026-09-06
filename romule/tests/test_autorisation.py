@@ -75,15 +75,27 @@ def t(n, c, d=""):
 
 try:
     print("   -- creation du premier compte --")
+    # It used to be refused unless the request came from 127.0.0.1. Under
+    # Docker that is nobody — a request through the published port arrives from
+    # the bridge — so the wizard asked for an account the server would never
+    # accept. The rule was a wall with nothing behind it.
+    #
+    # What guards it now is the CLAIM: while nobody has answered the access
+    # question the installation is open by design, and creating this account is
+    # precisely how that stops being true.
     c, b = appel(patron, "/api/compte-creer",
                  {"email": "chef@exemple.fr", "mdp": "un mot de passe long"},
                  {"X-Forwarded-For": "203.0.113.9"})
-    t("refusee depuis le reseau", c == 403, (c, js(b)))
-    c, b = appel(patron, "/api/compte-creer",
-                 {"email": "chef@exemple.fr", "mdp": "un mot de passe long"})
     chef = js(b).get("compte", {})
-    t("acceptee depuis la machine", c == 200, js(b))
+    t("le premier compte se cree depuis le reseau", c == 200, (c, js(b)))
     t("le premier compte est administrateur", chef.get("admin") is True, chef)
+    # And the door closes behind it. Asked from ANOTHER browser — `patron` now
+    # carries the session it was handed on creation, and an administrator is of
+    # course allowed to add accounts.
+    c, b = appel(navigateur(), "/api/compte-creer",
+                 {"email": "second@exemple.fr", "mdp": "un mot de passe long"},
+                 {"X-Forwarded-For": "203.0.113.9"})
+    t("le suivant ne l'est plus", c in (401, 403), (c, js(b)))
 
     c, b = appel(patron, "/api/compte-creer",
                  {"email": "simple@exemple.fr", "mdp": "encore un mot long"})

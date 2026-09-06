@@ -295,9 +295,9 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def _json(self, obj, code=200):
+    def _json(self, obj, code=200, headers=()):
         self._write_body(json.dumps(obj).encode(),
-                     "application/json; charset=utf-8", code)
+                     "application/json; charset=utf-8", code, headers)
 
     def _json_revalide(self, obj, volatiles=()):
         """JSON with an ETag: the tool's heaviest response (the inventory,
@@ -606,6 +606,18 @@ class Handler(BaseHTTPRequestHandler):
             return True
         if config.TOKEN:
             return self._token_ok()
+        # Nobody has answered the access question yet: the installation is
+        # UNCLAIMED and answers everybody, so the wizard can be reached from the
+        # phone or the laptop. Under Docker there is no other way — a request
+        # coming through the published port arrives from the bridge, never from
+        # 127.0.0.1, so `_local()` is false for the very person who installed it.
+        #
+        # This is the window every comparable tool lives with: Jellyfin, Home
+        # Assistant and the *arr stack all open on their setup screen. It closes
+        # the moment the choice is made, and the audit says so out loud until
+        # then.
+        if not _claimed():
+            return True
         return bool(CFG.get("lan_access"))
 
     def _deny(self):
@@ -1335,6 +1347,26 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"destinations": [_notif_public(x)
                                          for x in notify.destinations(CFG)]})
 
+        elif p == "/api/acces-ouvert":
+            # The other half of the wizard's access question: "no password on my
+            # network". It is a DECISION, so it is recorded as one — the setting
+            # and the claim together, in one place, rather than left to whoever
+            # remembers to write both.
+            #
+            # Not reserved to administrators: while nothing is decided there is
+            # no administrator to be. Once the claim is made, `_allowed()` and
+            # the settings govern, and this route can no longer loosen anything
+            # — which is what the refusal below says.
+            if _claimed() and not self._is_admin():
+                return self._json({"error": "Reserve a l'administrateur."}, 403)
+            ouvert = bool(d.get("ouvert", True))
+            CFG["lan_access"] = ouvert
+            CFG["acces_choisi"] = True
+            config.save_config(CFG)
+            JOB.log("Accessible SANS MOT DE PASSE par tout appareil du reseau."
+                    if ouvert else "Acces reseau desactive.", "warn")
+            self._json({"ok": True, "lan_access": ouvert, "acces_choisi": True})
+
         elif p == "/api/notif-evenements":
             # Which events one destination wants. The whole list is sent, not a
             # patch: a half-list would be indistinguishable from "none", and
@@ -1421,16 +1453,23 @@ class Handler(BaseHTTPRequestHandler):
                         "mdp_min": accounts.MDP_MIN})
 
         elif p == "/api/compte-creer":
-            if not accounts.list_all():
-                # The very first account: it becomes the administrator, so its
-                # creation cannot be open to the network. Otherwise "the first
-                # account governs" would mean "the first device on the network
-                # governs" — and passwordless network access is a mode the tool
-                # offers.
-                if not self._local():
+            premier = not accounts.list_all()
+            if premier:
+                # The first account used to be refused unless the request came
+                # from 127.0.0.1. Under Docker that is nobody: a request through
+                # the published port arrives from the bridge. The wizard asked
+                # for an account and the server refused it, with no way round —
+                # `romule user` had no `create` either. The main installation
+                # path ended in a wall.
+                #
+                # What guards it now is the claim: while nothing has been
+                # decided the installation is open BY DESIGN, and creating the
+                # first account is precisely how it stops being. Afterwards this
+                # branch is not reached at all.
+                if _claimed():
                     return self._json(
-                        {"error": "Le premier compte se cree depuis la machine "
-                                  "qui heberge la ludotheque."}, 403)
+                        {"error": "Cette installation a deja un acces defini."},
+                        403)
             else:
                 refus = self._admin_required()
                 if refus:
@@ -1440,10 +1479,35 @@ class Handler(BaseHTTPRequestHandler):
             except ValueError as exc:
                 return self._json({"error": str(exc)}, 400)
             backup.auto("comptes")
+            entetes = ()
+            if premier:
+                # Creating the first account IS the answer to the access
+                # question — and it has to switch the mode on, otherwise the
+                # account exists and guards nothing. It used to be left on
+                # "aucun" until somebody found the dropdown in the settings.
+                CFG["auth_mode"] = "interne"
+                CFG["lan_access"] = False
+                CFG["acces_choisi"] = True
+                config.save_config(CFG)
+                # And this browser is signed in ON THE SPOT. Without it the
+                # authentication we just switched on locks out the very person
+                # who set it up: the next call of the wizard would come back
+                # 401 and the login page would land in the middle of step 3.
+                # `by_id`, not `u`: `accounts.create()` returns the PUBLIC
+                # record, which carries no `maj_mdp`. A session signed from it
+                # encodes 0 where the account holds a timestamp, and
+                # `auth.session()` refuses it — a valid signature, and no way
+                # in. The wizard would have shown the login page one call later.
+                entetes = [("Set-Cookie",
+                            auth.cookie_header_for(
+                                auth.internal_session(accounts.by_id(u["id"])),
+                                self._secure()))]
+                JOB.log("Authentification activée : ce navigateur reste connecté.")
             JOB.log("Compte cree : %s" % u["email"])
             access_log.record("compte", self.client_address[0], u["email"], "creation")
             self._json({"message": "Compte cree pour %s." % u["email"],
-                        "compte": u, "comptes": accounts.list_all()})
+                        "compte": u, "comptes": accounts.list_all()},
+                       headers=entetes)
 
         elif p == "/api/compte-modifier":
             u = self._who()
@@ -2188,6 +2252,20 @@ def _context_v1():
     }
 
 
+def _claimed():
+    """Has anybody answered the access question on this installation?
+
+    Answered means: an account was created, an SSO was configured, or "no
+    password on my network" was chosen deliberately. A token set by the
+    operator through `ROMULE_TOKEN` counts too — that IS an answer.
+
+    Until one of those, the service is open, which is what makes the wizard
+    reachable from the device you actually hold.
+    """
+    return bool(CFG.get("acces_choisi") or config.TOKEN
+                or accounts.count() or auth.enabled(CFG))
+
+
 def _first_run():
     """Has anybody set this installation up yet?
 
@@ -2208,7 +2286,7 @@ def _first_run():
     half-configured authentication — an `interne` mode with no account, an
     `oidc` mode with no provider — is not one.
     """
-    return accounts.count() == 0 and not auth.enabled(CFG)
+    return not _claimed()
 
 
 def _health():
@@ -2256,6 +2334,11 @@ def _health():
             "ecoute": _listen_address(),
             "expose": _listen_address() != "127.0.0.1",
             "auth_mode": CFG.get("auth_mode", "aucun"),
+            # Has the access question been answered? The wizard lets nobody past
+            # its access step until it has — and until then the installation
+            # answers everybody, which is what makes that step reachable at all.
+            "acces_choisi": bool(CFG.get("acces_choisi")),
+            "lan_access": bool(CFG.get("lan_access")),
             "comptes": len(accounts.list_all()),
             "emulateur": CFG.get("emulateur") or profiles.DEFAULT,
         },
@@ -2413,39 +2496,34 @@ def _notif_public(d):
 
 
 def _first_run_token():
-    """Make an exposed service reachable when it has no way in yet.
+    """No token is generated any more. Returns the one the OPERATOR set, if any.
 
-    The problem, found while writing the image's smoke test: a container binds
-    to 0.0.0.0 (otherwise it would be unreachable from the host), but with no
-    account, no token and no `lan_access`, `_autorise()` refuses every non-local
-    client. `docker compose up` therefore returned a 403 saying "enable access
-    in the settings" — settings that could not be reached. A complete deadlock,
-    on the main installation path.
+    Romule used to generate one when it listened on the network with no way in:
+    a container binds to 0.0.0.0, and without an account every remote request
+    was refused — including the one needed to create that account.
 
-    Opening access by default would have solved the deadlock by handing a
-    passwordless service to the whole network. So we generate a token, once, and
-    print it: that is what comparable self-hosted tools do, and it leaves the
-    installation safe by default AND usable.
+    The token solved the deadlock and created a worse one. It had to be copied
+    out of a terminal onto every device — a phone, a tablet, the laptop — and
+    the first account could still not be created, because that was refused
+    unless the request came from 127.0.0.1, which under Docker is nobody. The
+    main installation path ended in a wall the token could not open.
 
-    Nothing is generated when the operator has already decided — an account, an
-    SSO, an environment token or network access taken on knowingly: their
-    decision always wins.
+    So the deadlock is broken where it belongs: an installation nobody has
+    claimed is OPEN, and the wizard's access step — an account, or no password
+    — is what claims it. That is what Jellyfin, Home Assistant and the *arr
+    stack do, and it needs no secret at all.
+
+    `ROMULE_TOKEN` still works for whoever wants one, and `romule token reset`
+    sets one deliberately. Neither is imposed.
     """
-    if _listen_address() == "127.0.0.1":
-        return None
-    if config.TOKEN or auth.enabled(CFG) or CFG.get("lan_access"):
-        return None
     jeton = (CFG.get("jeton_auto") or "").strip()
-    if not jeton:
-        jeton = secrets.token_urlsafe(24)
-        CFG["jeton_auto"] = jeton
-        CFG["jeton_annonce"] = False
-        config.save_config(CFG)
-        JOB.log("Jeton d'acces engendre au premier demarrage.")
-    # `config.TOKEN` is read everywhere else: setting it here avoids
-    # duplicating every authorisation check.
-    config.TOKEN = jeton
-    return jeton
+    if jeton:
+        # `_token_ok()` compares against `config.TOKEN`, which is read from the
+        # environment. A token set through `romule token reset` lives in the
+        # configuration instead, and without this line it guarded nothing —
+        # the field accepted it and the server had never heard of it.
+        config.TOKEN = jeton
+    return jeton or None
 
 
 def _startup_facts(url, ip, auto_token):
@@ -2545,33 +2623,25 @@ def serve(open_browser=True):
         console.say("Accessible SANS MOT DE PASSE par tout appareil du reseau.",
                     "warn", "acces")
     if auto_token:
-        adresse = _public_url(ip) or "http://localhost:%d" % config.PORT
-        # ONCE. A token reprinted at every restart is a secret pasted into
-        # every log a user ever sends with a bug report, and read by anyone
-        # walking past the screen. The interface has a field for it now, so
-        # what has to survive is the string, not a whole address the service
-        # cannot know anyway (see `_lan_ip`).
-        if not CFG.get("jeton_annonce"):
-            console.say("Ce service est joignable par le reseau et n'a pas "
-                        "encore de compte. Ouvre %s, colle ce jeton, puis cree "
-                        "ton compte :" % adresse, "warn", "acces")
-            console.say("  %s" % auto_token, "warn", "acces")
-            console.say("Ce jeton ne sera plus affiche. "
-                        "`romule token show` le redonne, "
-                        "`romule token reset` en engendre un autre.",
-                        "warn", "acces")
-            if not ip:
-                # The one address that works from the machine running the
-                # container. From anywhere else it is the host's, which only
-                # the operator knows.
-                console.say("  (adresse valable depuis la machine qui heberge "
-                            "le conteneur ; declare ROMULE_PUBLIC_HOST pour "
-                            "les autres)", "warn", "acces")
-            CFG["jeton_annonce"] = True
-            config.save_config(CFG)
-        else:
-            console.say("Acces protege par un jeton. "
-                        "`romule token show` le rappelle.", "warn", "acces")
+        # Somebody set one on purpose: say it protects the way in, and where to
+        # read it back. Never the token itself — a secret reprinted at every
+        # restart ends up in every log attached to a bug report.
+        console.say("Acces protege par un jeton. "
+                    "`romule token show` le rappelle.", "warn", "acces")
+    elif not _claimed():
+        # The window this design accepts, said out loud rather than left to be
+        # discovered. It closes on the wizard's access step.
+        console.say("PERSONNE N'A ENCORE CHOISI COMMENT PROTEGER CET ACCES : "
+                    "tout appareil pouvant joindre cette adresse a tous les "
+                    "droits.", "warn", "acces")
+        console.say("Ouvre %s et reponds a l'etape « Ton acces » de "
+                    "l'assistant." % (_public_url(ip)
+                                      or "http://localhost:%d" % config.PORT),
+                    "warn", "acces")
+        if not ip:
+            console.say("  (adresse valable depuis la machine qui heberge "
+                        "le conteneur ; declare ROMULE_PUBLIC_HOST pour "
+                        "les autres)", "warn", "acces")
     if not adb_hint():
         console.say("adb absent — la console ne pourra pas etre pilotee",
                     "warn", "device")

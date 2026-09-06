@@ -12,7 +12,7 @@ So two situations are told apart:
   * somebody relays  -> the peer's address says nothing any more, unless the
                         operator has DECLARED their proxy.
 """
-import http.cookiejar, json, os, socket, subprocess, sys, tempfile, time
+import http.cookiejar, json, os, pathlib, socket, subprocess, sys, tempfile, time
 import urllib.error, urllib.request
 from pathlib import Path
 
@@ -35,6 +35,14 @@ def t(n, c, d=""):
 
 def demarrer(**env):
     racine = tempfile.mkdtemp(prefix="ludo-proxy-")
+    # An installation NOBODY has claimed answers everybody — that is what makes
+    # the setup wizard reachable from the device you are holding. It also makes
+    # every question this file asks meaningless: nothing can be refused for
+    # being relayed when nothing is refused at all. So the fixture answers the
+    # access question first, the way a real installation does before anyone
+    # thinks about a reverse proxy.
+    pathlib.Path(racine, "_romule-config.json").write_text(
+        json.dumps({"acces_choisi": True}), encoding="utf-8")
     port = libre()
     srv = subprocess.Popen(
         [sys.executable, "-m", "romule", "serve"], cwd=RACINE_PROJET,

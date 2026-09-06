@@ -2,27 +2,51 @@
 
 ## `docker compose up` works but the page is refused
 
-Expected on first start. The container is reachable but has no account yet, so
-Romule generates a token and prints it **once**:
+Only when something already protects it. On a fresh installation the page
+opens: until you answer the wizard's access step, the service answers
+everybody — that is what makes the wizard reachable from your phone.
+
+If it refuses, ask what is guarding it:
 
 ```sh
-docker compose logs romule
+docker compose exec romule python3 -m romule access status
 ```
 
-Open the address it prints, and paste the token in the field the page shows.
-See [the first-access token](securite.md#the-first-access-token).
+An account or an SSO: sign in. A token: paste it in the field the page shows
+(`romule token show` prints it again). Locked out of all three:
+
+```sh
+docker compose exec romule python3 -m romule access open
+docker compose restart
+```
 
 ## I have lost the access token
 
-It is not lost, only no longer printed:
+Nothing generates one any more, but if you set one:
 
 ```sh
 docker compose exec romule python3 -m romule token show
 python3 -m romule token show            # without Docker
 ```
 
-`token reset` replaces it when you would rather it changed — every browser that
-had remembered the old one is asked for the new one on its next load.
+`token reset` replaces it — every browser that had remembered the old one is
+asked for the new one on its next load.
+
+## I forgot my password and there is no second account
+
+```sh
+docker compose exec romule python3 -m romule user passwd you@example.com
+```
+
+Or reopen the door and settle it from the interface:
+
+```sh
+docker compose exec romule python3 -m romule access open
+docker compose restart
+```
+
+`open` switches the authentication off as well — the accounts are untouched,
+and `access close` puts it back.
 
 ## The address printed at first start does not answer
 

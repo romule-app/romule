@@ -126,11 +126,11 @@ docker run -d --name romule --restart unless-stopped \
   -v /path/to/your/games:/library \
   ghcr.io/romule-app/romule:latest
 
-docker logs romule              # prints your access token, once
+docker logs romule              # prints the address to open
 ```
 
-Open the address it prints, paste the token in the field it shows you, then
-create your account in the six-step wizard and point Romule at your library. Nothing else needs configuring. The image is
+Open it, answer the wizard — an account, or no password — and point Romule at
+your library. Nothing else needs configuring. The image is
 multi-arch (`amd64`, `arm64`) and ships `adb`, `nsz`, `unar` and `7z`.
 
 A [Compose file](https://romule-app.github.io/romule/installation/) is the
@@ -153,25 +153,30 @@ Python 3.10 or newer. No install step, no virtualenv, no build — Romule uses
 the standard library only.
 </details>
 
-### 🔑 Why a token, and where it comes from
+### 🔑 How the first access works
 
-The container is reachable from your network but has no account yet. Rather
-than open the service without a password, Romule generates an access token on
-first start and prints it — **once**. A secret reprinted at every restart ends
-up in every log attached to a bug report, and read by anyone walking past the
-screen.
+An installation nobody has claimed **answers everybody**, and opens on its setup
+wizard — the same thing Jellyfin, Home Assistant and the *arr stack do. Its
+access step cannot be skipped, and it settles the question once:
 
-Paste it in the field the interface shows. It is remembered in a cookie, so you
-type it once per browser. It does not change when the container restarts, and a
-service that only listens on `127.0.0.1` gets none — nothing to protect it from.
+- **an account** — the first becomes the administrator, authentication is
+  switched on with it, and that browser stays signed in;
+- **no password** — a legitimate choice on a trusted network. It holds for
+  everybody, reverse proxy included.
+
+Until you answer, every start says so in capitals. From the terminal, the door
+can always be settled where the data is:
 
 ```sh
-docker compose exec romule python3 -m romule token show    # show it again
-docker compose exec romule python3 -m romule token reset   # replace it
+docker compose exec romule python3 -m romule access status
+docker compose exec romule python3 -m romule access open    # no password
+docker compose exec romule python3 -m romule access close   # require a login
+docker compose exec romule python3 -m romule user create you@example.com
 ```
 
-`reset` invalidates the old one immediately and announces the new one at the
-next start — otherwise a token nobody has been told about is a lock-out.
+Prefer a shared secret? `ROMULE_TOKEN`, or `romule token reset`. The refusal
+page then carries a field to paste it into, and a cookie remembers it per
+browser. Nothing generates one for you.
 
 ---
 

@@ -44,41 +44,75 @@ In order:
 3. **A token is set?** It must match, compared in constant time.
 4. **Otherwise** — allowed only if `lan_access` is on.
 
-## The first-access token
+## The first access
 
-A service that is reachable but has no account, no token and no LAN access
-would refuse every request, including the one needed to reach the settings and
-fix it. Rather than open the door, Romule generates a token on first start and
-prints it — **once**:
+An installation nobody has claimed **answers everybody**. That is deliberate,
+and it is what every comparable tool does: Jellyfin, Home Assistant and the
+*arr stack all open on their setup screen.
 
-```
-Acces : ce service est joignable par le reseau et n'a pas encore de compte.
-        Ouvre http://192.0.2.20:8787, colle ce jeton, puis cree ton compte :
-        Kzrmfve7Qh2pX0cLd9WmTn4sBv1jRyAo
-```
+The alternative was tried and does not work. Romule used to generate a token,
+print it in the logs, and refuse everything else. It had to be copied out of a
+terminal onto every device — a phone, a tablet, the laptop — and the first
+account still could not be created, because that was refused unless the request
+came from `127.0.0.1`. Under Docker that is nobody: a request through the
+published port arrives from the bridge. The main installation path ended in a
+wall no token opened.
 
-Once, and not in a link. A secret reprinted at every restart ends up in every
-log a user attaches to a bug report; carried in the address it also lands in
-the browser history and in any proxy log on the way. What replaces the link is
-a field: the refusal page carries one, the token is pasted there, and a cookie
-remembers it for that browser.
+So the wizard's **access step** is what claims the installation, and it cannot
+be skipped:
 
-Later starts say only that a token protects the installation, and where to find
-it again:
+- **an account** — the first one becomes the administrator, internal
+  authentication is switched on by the same gesture, and that browser is signed
+  in on the spot;
+- **no password** — a legitimate choice on a trusted network, and the one most
+  self-hosted tools make.
+
+Until one of the two is answered, the terminal says so at every start, in
+capitals, and the audit reports it.
+
+### The window this accepts
+
+Between `docker compose up` and your answer, anyone who can reach the address
+can claim the installation. It is the same trust-on-first-use window every tool
+in this family lives with. Two things keep it short: the wizard is the first
+thing shown, and it cannot be dismissed.
+
+### "No password" means everybody
+
+The choice is not restricted to private addresses. Behind a reverse proxy or a
+domain name, an open installation is open to whoever finds the address. Romule
+says this beside the button rather than deciding for you — but it is your call
+and your exposure.
+
+### From the terminal
+
+The day the interface is the thing that is broken — a password forgotten with
+no second account, an SSO whose provider is down, a `close` regretted from the
+wrong network — access is settled where the data is:
 
 ```sh
-python3 -m romule token show     # print it again
-python3 -m romule token reset    # replace it
+romule access status    # what is protecting this installation
+romule access open      # no password (switches authentication OFF)
+romule access close     # require a login again
+romule user create you@example.com
 ```
 
-`reset` invalidates the previous token at once — browsers that remembered it
-are asked for the new one on their next load — and marks it to be announced at
-the next start, because a token nobody has been told about is a lock-out.
+`open` turns the authentication off as well as opening the network. It has to:
+the server consults the session before the setting, so `lan_access` alone would
+have reopened nothing and answered "opened" all the same. `close` puts it back
+— the accounts were never touched.
 
-It is stored in the service data folder — as `jeton_auto` in
-`_romule-config.json` — survives restarts, and is never sent to
-the browser with the rest of the configuration. Nothing is generated when
-Romule listens on `127.0.0.1` only.
+## A token, if you want one
+
+Nothing generates one any more, but `ROMULE_TOKEN` still works and
+`romule token reset` sets one deliberately. When a token protects the
+installation, the refusal page carries a field to paste it into and a cookie
+remembers it for that browser, for a year.
+
+```sh
+romule token show     # print it again
+romule token reset    # replace it
+```
 
 The stylesheet, and only the stylesheet, is served to a client that has not got
 in yet: the refusal page links it, and without it the page arrived unstyled and

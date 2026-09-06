@@ -3110,6 +3110,61 @@ body.compact .filters{margin-bottom:2px}
 /* The language choice sits on the first step, above the fold of everything
    that follows: it is separated from the list by a rule rather than by a gap,
    because it is not one more thing to read — it decides how the rest reads. */
+/* The second answer to the access question. Set apart by a rule rather than
+   dressed as a warning: it is a legitimate choice on a trusted network, and a
+   red box would only teach people to look for the way round. */
+/* One provider, one block. Piled into a single list of fields the two read as
+   one thing to fill in; the rule and the heading say there are two, and which
+   is which. The verdict sits inside its own block, so an answer can never be
+   read as the other one's. */
+/* The end of the wizard. A wizard that simply vanishes leaves you unsure
+   anything was kept; a mark that lingers gets in the way of the library you
+   came for. So: centred, brief, and it does not take the pointer. */
+.onbfini{position:fixed;inset:0;z-index:70;display:flex;align-items:center;
+  justify-content:center;font-size:64px;color:var(--green);
+  pointer-events:none;animation:onbfini 1.1s var(--ease) both}
+@keyframes onbfini{
+  0%{opacity:0;transform:scale(.5)}
+  25%{opacity:1;transform:scale(1.1)}
+  45%{transform:scale(1)}
+  100%{opacity:0;transform:scale(1)}
+}
+@media(prefers-reduced-motion:reduce){.onbfini{animation:none;opacity:0}}
+
+.onbservice{margin:16px 0 0;padding:14px;border:1px solid var(--bord);
+  border-radius:12px;background:var(--puits)}
+.onbservice-t{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.onbservice-t b{font-size:13.5px;color:var(--text)}
+.onbservice-t span{font-size:12px;color:var(--mute);flex:1 1 auto}
+.onbservice-t .lien{font-size:12px}
+.onbservice .onbaide{display:block;margin:2px 0 10px}
+.onbservice .onbchamps{margin-bottom:10px}
+
+/* The verdict. Colour carries the meaning, and a word says it too: a green dot
+   alone is unreadable to whoever does not see green. */
+.onbverdict{font-size:12.5px;margin:10px 0 0;padding-left:18px;position:relative}
+.onbverdict::before{position:absolute;left:0;top:0}
+.onbverdict.ok{color:var(--green)}
+.onbverdict.ok::before{content:"✓";animation:onbcoche .45s var(--ease) both}
+.onbverdict.ko{color:var(--amber)}
+.onbverdict.ko::before{content:"!"}
+.onbverdict.attente{color:var(--mute)}
+.onbverdict.attente::before{content:"…"}
+
+/* Short, and once: a check mark that keeps moving is noise, and the eye is
+   already on the block it belongs to. */
+@keyframes onbcoche{
+  from{transform:scale(.4) rotate(-12deg);opacity:0}
+  60%{transform:scale(1.18) rotate(0);opacity:1}
+  to{transform:scale(1);opacity:1}
+}
+@media(prefers-reduced-motion:reduce){.onbverdict.ok::before{animation:none}}
+
+.onbverrou{margin:14px 0 0;text-align:center;font-size:12px;color:var(--amber)}
+.onbsans{margin:20px 0 0;padding:14px 0 0;border-top:1px solid var(--bord)}
+.onbsans b{display:block;font-size:13px;color:var(--text);margin-bottom:4px}
+.onbsans .onbnote{margin:0 0 10px}
+
 .onblangue{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
   margin:18px 0 0;padding:14px 0 0;border-top:1px solid var(--bord)}
 .onblangue label{font-size:12.5px;color:var(--mute)}

@@ -82,8 +82,17 @@ def dc(*args, **kw):
         cwd=str(RACINE), capture_output=True, text=True, **kw)
 
 
-def http(chemin, entetes=None, methode="GET", timeout=15):
-    req = urllib.request.Request(BASE + chemin, headers=entetes or {},
+def http(chemin, entetes=None, methode="GET", timeout=15, corps=None):
+    e = dict(entetes or {})
+    donnees = None
+    if corps is not None:
+        donnees = json.dumps(corps).encode()
+        e.setdefault("Content-Type", "application/json")
+        # Every POST is checked for its origin: without this header the server
+        # answers 403 and the trial would read it as a refusal of the content.
+        e.setdefault("Origin", BASE)
+        methode = "POST"
+    req = urllib.request.Request(BASE + chemin, data=donnees, headers=e,
                                  method=methode)
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:
@@ -193,28 +202,41 @@ def main(argv):
       "etat=%s apres %ss" % (etat[2] if len(etat) > 2 else "?", etat[1]))
     print("   %d s pour devenir sain" % etat[1])
 
-    titre("acces")
-    jeton = jeton_des_journaux()
-    t("le jeton d'acces est affiche dans les journaux", bool(jeton),
-      "aucun jeton annonce dans `docker compose logs`")
-    # It must be announced ALONE: carried in a link it lands in the browser
-    # history and in every log the user ever shares.
-    t("il n'est plus porte par une adresse",
-      "?token=" not in (dc("logs", "romule").stdout or ""))
-    # FROM THE HOST, the request does not come from 127.0.0.1 but from the
-    # Docker bridge: it is therefore NOT local, and the token is required. That
-    # is precisely what we want to check — a container published on the network
-    # that answered without a token would be the defect, not the reverse.
-    code, _ = http("/api/health")
-    t("sans jeton, l'hote est refuse", code in (401, 403), code)
-    q = "?token=" + (jeton or "")
-    code, sante = http("/api/health" + q)
-    t("avec le jeton, /api/health repond", code == 200, code)
+    titre("premier acces")
+    journaux = dc("logs", "romule").stdout or ""
+    # Nothing is generated any more: the installation is open until its access
+    # question is answered, which is what makes the wizard reachable FROM THE
+    # HOST. A request through the published port arrives from the Docker
+    # bridge, never from 127.0.0.1 — anything stricter is a wall with nobody
+    # behind it, and that is exactly what the token model turned out to be.
+    t("aucun jeton n'est engendre", not jeton_des_journaux(), journaux[-300:])
+    t("aucun secret ne voyage dans une adresse", "?token=" not in journaux)
+    t("le terminal previent que rien n'est protege",
+      "PERSONNE N'A ENCORE CHOISI" in journaux, journaux[-400:])
+
+    code, sante = http("/api/health")
+    t("depuis l'hote, le service repond", code == 200, code)
+    code, _ = http("/")
+    t("et l'interface est servie", code == 200, code)
     if isinstance(sante, dict):
-        print("   version %s, premier lancement : %s"
-              % (sante.get("version"), sante.get("first_run")))
-    code, _ = http("/" + q)
-    t("avec le jeton, l'interface est servie", code == 200, code)
+        t("l'assistant est ce qu'il reste a faire",
+          sante.get("first_run") is True, sante.get("first_run"))
+        print("   version %s" % sante.get("version"))
+
+    titre("repondre a la question ferme la porte")
+    code, _ = http("/api/compte-creer",
+                   corps={"email": "essai@exemple.fr",
+                          "mdp": "UnMotDePasseAssezLong9"})
+    t("le premier compte se cree depuis l'hote", code == 200, code)
+    code, _ = http("/api/health")
+    t("et l'acces se referme aussitot", code == 401, code)
+    # Reopened for the rest of the trial, which is about the API and not about
+    # the door — and it proves the escape hatch works on the shipped image.
+    dc("exec", "-T", "romule", "python3", "-m", "romule", "access", "open")
+    dc("restart", "romule")
+    attendre_sain()
+    code, _ = http("/api/health")
+    t("`access open` rouvre depuis le terminal", code == 200, code)
 
     titre("cle d'API creee depuis le conteneur")
     # This is the real journey: there is no browser inside a container.
@@ -257,7 +279,10 @@ def main(argv):
     t("le conteneur redevient sain", etat[0], etat[1])
     code, _ = http("/api/v1/system", entete)
     t("la cle fonctionne encore apres redemarrage", code == 200, code)
-    t("le jeton n'a pas change", jeton_des_journaux() == jeton)
+    # The choice survives the restart: an installation that reopened itself
+    # would be the worst kind of surprise.
+    code, _ = http("/api/health")
+    t("le choix d'acces survit au redemarrage", code == 200, code)
 
     titre("revocation")
     r = dc("exec", "-T", "romule", "python3", "-m", "romule", "apikey", "list")
@@ -270,12 +295,28 @@ def main(argv):
         t("la cle revoquee est refusee aussitot", code in (401, 403), code)
 
     titre("audit dans le conteneur")
-    r = dc("exec", "-T", "romule", "python3", "-m", "romule.audit")
-    sortie = r.stdout or ""
-    m = re.search(r"(\d+) grave", sortie)
-    t("l'audit ne signale aucun probleme grave",
-      bool(m) and m.group(1) == "0", sortie.strip().splitlines()[-1:] or r.stderr[-200:])
-    print("   %s" % (sortie.strip().splitlines() or ["(rien)"])[-1])
+
+
+    def graves():
+        r = dc("exec", "-T", "romule", "python3", "-m", "romule.audit")
+        sortie = r.stdout or ""
+        m = re.search(r"(\d+) grave", sortie)
+        return (int(m.group(1)) if m else -1,
+                (sortie.strip().splitlines() or ["(rien)"])[-1])
+
+    # The stack is deliberately open at this point — `access open` was used to
+    # get back in. An audit that stayed quiet about THAT would be an audit
+    # nobody should trust, so the check is that it speaks.
+    n, ligne = graves()
+    t("l'audit signale l'acces sans mot de passe", n >= 1, ligne)
+    print("   ouvert : %s" % ligne)
+
+    dc("exec", "-T", "romule", "python3", "-m", "romule", "access", "close")
+    dc("restart", "romule")
+    attendre_sain()
+    n, ligne = graves()
+    t("et se tait une fois l'acces referme", n == 0, ligne)
+    print("   ferme  : %s" % ligne)
 
     if garder:
         print("\n   pile laissee debout : %s" % BASE)

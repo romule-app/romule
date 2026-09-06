@@ -124,6 +124,89 @@ def cmd_device(args):
         print("  %-8s %-9s %-12s %s" % (g["type"], _human(g["size"]), tag, g["name"]))
 
 
+def cmd_access(args):
+    """Open or close passwordless access, from the terminal.
+
+    The escape hatch. Everything else about access is decided in the interface,
+    which is the right place — until the day you cannot reach the interface:
+    a password forgotten with no second account, an SSO whose provider is down,
+    a `close` regretted from the wrong network. Then there has to be a way in
+    that does not go through the thing that is broken.
+
+    It runs where the data is — inside the container, over `docker compose
+    exec` — which is exactly the access that proves you are the operator.
+    """
+    from . import auth, config
+    action = getattr(args, "action", None) or "status"
+    cfg = config.load_config()
+
+    if action == "open":
+        # `lan_access` alone reopens NOTHING when an authentication is active:
+        # the server consults the session first and never reaches the setting.
+        # An escape hatch that answers "opened" and leaves the door shut is
+        # worse than no hatch, so this switches the authentication off too, and
+        # says exactly what it turned off.
+        etait = auth.enabled(cfg)
+        mode = cfg.get("auth_mode")
+        cfg["lan_access"] = True
+        cfg["acces_choisi"] = True
+        cfg["auth_mode"] = "aucun"
+        config.save_config(cfg)
+        print("Acces ouvert SANS MOT DE PASSE.")
+        if etait:
+            print("L'authentification (%s) est DESACTIVEE." % mode)
+            print("Les comptes existent toujours : `romule access close` la")
+            print("remet en service.")
+        print()
+        print("Tout appareil capable de joindre cette adresse a tous les")
+        print("droits — y compris derriere un proxy inverse. Redemarre le")
+        print("service pour que ce soit pris en compte.")
+        return
+
+    if action == "close":
+        # Closing with no way in left would lock everybody out, including the
+        # person typing this. That is the deadlock the whole first-access
+        # design exists to avoid, so it is refused rather than obeyed.
+        # `close` is also what puts an authentication back after `open` turned
+        # it off: accounts survive, only the mode was changed.
+        from . import accounts
+        if not auth.enabled(cfg) and accounts.count():
+            cfg["auth_mode"] = "interne"
+        if not auth.enabled(cfg):
+            print("Refuse : aucun compte ni SSO utilisable.")
+            print()
+            print("Fermer l'acces maintenant enfermerait tout le monde dehors,")
+            print("toi compris. Cree d'abord un compte :")
+            print("    romule user create toi@exemple.fr")
+            return 1
+        cfg["lan_access"] = False
+        cfg["acces_choisi"] = True
+        config.save_config(cfg)
+        print("Acces sans mot de passe desactive.")
+        print("Il faut desormais se connecter. Redemarre le service.")
+        return
+
+    protege = []
+    if auth.enabled(cfg):
+        protege.append("authentification (%s)" % cfg.get("auth_mode"))
+    if (cfg.get("jeton_auto") or "").strip() or config.TOKEN:
+        protege.append("jeton")
+    if cfg.get("lan_access"):
+        print("Acces : OUVERT sans mot de passe.")
+    elif protege:
+        print("Acces : protege par %s." % ", ".join(protege))
+    elif not cfg.get("acces_choisi"):
+        print("Acces : PERSONNE N'A ENCORE CHOISI.")
+        print()
+        print("L'installation repond a tout le monde jusqu'a ce que l'etape")
+        print("« Ton acces » de l'assistant soit renseignee.")
+    else:
+        print("Acces : cette machine seulement.")
+    print()
+    print("  romule access open     ouvrir sans mot de passe")
+    print("  romule access close    exiger une connexion")
+
+
 def cmd_token(args):
     """Show or replace the access token, from the terminal.
 
@@ -416,6 +499,35 @@ def cmd_user(args):
                      "oui" if u.get("double_facteur") else "-", vu))
         return
 
+    if action == "create":
+        # This was missing, and its absence was a wall. The wizard refused to
+        # create the first account unless the request came from 127.0.0.1 —
+        # nobody, under Docker — and there was no way round from the terminal
+        # either. A container install could not get an account at all.
+        from . import auth, config
+        mdp = args.mdp or _ask_password()
+        premier = not accounts.list_all()
+        try:
+            u = accounts.create(args.email, mdp, args.nom or "")
+        except ValueError as exc:
+            print("Refuse : %s" % exc)
+            return 1
+        print("Compte cree : %s%s" % (u["email"], "  (administrateur)" if premier else ""))
+        if premier:
+            # An account that guards nothing is not an answer. Creating the
+            # first one IS the choice, so it switches the mode on — the same
+            # thing the wizard does.
+            cfg = config.load_config()
+            cfg["auth_mode"] = "interne"
+            cfg["lan_access"] = False
+            cfg["acces_choisi"] = True
+            config.save_config(cfg)
+            print("Authentification interne activee. Redemarre le service.")
+        elif not auth.enabled(config.load_config()):
+            print("Note : l'authentification n'est pas active "
+                  "(Reglages > Acces, ou `romule access close`).")
+        return
+
     if action == "passwd":
         mdp = args.mdp or _ask_password()
         if mdp is None:
@@ -661,6 +773,12 @@ def main(argv):
     kr = ka.add_parser("revoke", help="revoquer une cle")
     kr.add_argument("id", help="identifiant montre par `apikey list`")
 
+    pa = sub.add_parser("access", help="acces sans mot de passe : ouvrir ou fermer")
+    aa = pa.add_subparsers(dest="action")
+    aa.add_parser("status", help="dire ce qui protege l'acces (defaut)")
+    aa.add_parser("open", help="ouvrir sans mot de passe")
+    aa.add_parser("close", help="exiger une connexion")
+
     pj = sub.add_parser("token", help="jeton d'acces : afficher ou renouveler")
     ja = pj.add_subparsers(dest="action")
     ja.add_parser("show", help="reafficher le jeton (defaut)")
@@ -669,6 +787,10 @@ def main(argv):
     pu = sub.add_parser("user", help="comptes : lister, reinitialiser, promouvoir")
     ua = pu.add_subparsers(dest="action")
     ua.add_parser("list", help="lister les comptes")
+    uc = ua.add_parser("create", help="creer un compte (le premier est administrateur)")
+    uc.add_argument("email")
+    uc.add_argument("--nom", help="nom affiche")
+    uc.add_argument("--mdp", help="ne pas demander (le shell le retiendra)")
     up = ua.add_parser("passwd", help="reposer un mot de passe oublie")
     up.add_argument("email")
     up.add_argument("--mdp", help="ne pas demander (le shell le retiendra)")
@@ -703,5 +825,6 @@ def main(argv):
         None: cmd_serve, "serve": cmd_serve, "scan": cmd_scan,
         "convert": cmd_convert, "push": cmd_push, "device": cmd_device,
         "test": cmd_test, "apikey": cmd_apikey, "token": cmd_token,
+        "access": cmd_access,
         "user": cmd_user, "config": cmd_config, "doctor": cmd_doctor,
     }[args.cmd](args) or 0
