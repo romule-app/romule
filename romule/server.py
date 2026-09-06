@@ -614,11 +614,17 @@ class Handler(BaseHTTPRequestHandler):
         if auth.enabled(CFG):
             return self._login_page()
         if config.TOKEN:
-            msg = ("Acces protege.\n\nAjoute ?token=TON_JETON a l'adresse, "
-                   "par exemple :\n  http://<serveur>:%d/?token=..." % config.PORT)
-        else:
-            msg = ("Acces reseau desactive.\n\nActive-le dans Reglages > "
-                   "Acces depuis le telephone.")
+            # A door is for a browser. An API client asked for JSON and gets a
+            # refusal it can read, with the code it has always had: turning
+            # `/api/*` into an HTML login page would break every dashboard
+            # plugged into this installation to fix the first-start journey.
+            if self.path.partition("?")[0].startswith("/api/"):
+                return self._json({"error": "Acces protege : jeton requis."}, 403)
+            return self._token_page()
+        # No token and no account: nothing to type, so nothing to offer. The
+        # refusal says what to switch on rather than showing an empty field.
+        msg = ("Acces reseau desactive.\n\nActive-le dans Reglages > "
+               "Acces depuis le telephone.")
         self._write_body(msg.encode(), "text/plain; charset=utf-8", 403)
 
     def _set_token_cookie(self):
@@ -651,13 +657,61 @@ class Handler(BaseHTTPRequestHandler):
         html = ("<!doctype html><meta charset='utf-8'>"
                 "<meta name='viewport' content='width=device-width,initial-scale=1'>"
                 "<title>%s</title><link rel='stylesheet' href='/app.css'>"
-                "<body><div class='chargeur' style='opacity:1;pointer-events:auto'>"
-                "<div class='chargeur-in'>%s</div></div>" % (title, body))
+                # `spinner`, not `chargeur`: the CSS class rename translated the
+                # stylesheet and left these two behind. The login page and this
+                # one then arrived unstyled — black on white, pinned to the top
+                # left, looking like a broken server rather than a door. Nothing
+                # saw it: `verifier-classes.py` compared app.css with app.js and
+                # index.html, and the server emits HTML too.
+                "<body><div class='spinner' style='opacity:1;pointer-events:auto'>"
+                "<div class='spinner-in'>%s</div></div>" % (title, body))
         self._write_body(html.encode("utf-8"), "text/html; charset=utf-8",
                      code, headers)
 
     FIELD_STYLE = ("padding:10px 12px;border-radius:9px;border:1px solid #3a3540;"
              "background:#221e28;color:#eee")
+
+    def _token_page(self, message="", code=401):
+        """Where the access token is pasted.
+
+        A service that binds to 0.0.0.0 with no account protects itself with a
+        generated token, and that token used to travel in the address:
+        `?token=...`. Which meant the only way in was a link copied out of a
+        terminal — unusable from a phone, gone the moment the scrollback
+        scrolled, and printed in full on every restart for anyone reading over
+        a shoulder.
+
+        A field is the ordinary shape of this. The token is typed once, the
+        cookie remembers it, and the terminal only has to show a string rather
+        than a whole address it cannot know (see `_lan_ip`).
+
+        French, like the login page and for the same reason: neither goes
+        through the interface's catalogue — the browser has not loaded it yet
+        at this point, and there is nothing to translate it with.
+        """
+        erreur = ("<span class='tid' style='color:#f2a2a2'>%s</span>"
+                  % html_escape(message)) if message else ""
+        body = ("<b>Cette ludotheque est protegee</b>" + erreur
+                + "<p style='color:#b6adbe;font-size:13px;line-height:1.6;"
+                  "max-width:340px;margin:10px 0 0'>Colle le jeton d'acces "
+                  "affiche dans le terminal au premier demarrage.<br>"
+                  "<span style='color:#8d8496'>Perdu ? "
+                  "<code>romule token show</code> le reaffiche.</span></p>"
+                + "<form method='post' action='/auth/jeton' "
+                  "style='display:flex;flex-direction:column;gap:10px;"
+                  "min-width:min(320px,80vw);margin-top:14px'>"
+                + "<input name='jeton' required autofocus "
+                  "autocomplete='off' autocapitalize='off' spellcheck='false' "
+                  # `&#39;`, not a backslash: this is HTML, not Python. Written
+                  # `d\'acces` the attribute ENDED at the apostrophe and the
+                  # field showed "Jeton d". The same family as `esc()` in the
+                  # interface, on the server side.
+                  "placeholder='Jeton d&#39;acces' style='%s;font-family:%s'>"
+                  % (self.FIELD_STYLE, "ui-monospace,Menlo,monospace")
+                + "<button type='submit' style='padding:10px 16px;"
+                  "border-radius:9px;border:0;background:#e0a340;color:#17141a;"
+                  "font-weight:600;cursor:pointer'>Entrer</button></form>")
+        self._page("Acces", body, code=code)
 
     def _login_page(self, message="", code=401, email="", second=False):
         """The login page. `second` asks for the one-time code: the password
@@ -774,6 +828,34 @@ class Handler(BaseHTTPRequestHandler):
                          auth.cookie_header_for(auth.internal_session(u), self._secure()))
         self.end_headers()
 
+    def _token_login(self):
+        """Take the token from the form and remember it in a cookie.
+
+        Reached WITHOUT being authorised — it is the way in — so it does its own
+        checking: same origin, a bounded read, a constant-time comparison, and
+        every refusal recorded. The rate limit that covers every request covers
+        this one too, which is what keeps the field from being a place to guess
+        a token one try at a time.
+        """
+        if not self._same_origin():
+            return self._token_page("Requete rejetee : origine inattendue.", 403)
+        n = min(int(self.headers.get("Content-Length", 0) or 0), 4096)
+        champs = parse_qs(self.rfile.read(n).decode("utf-8", "replace"))
+        propose = (champs.get("jeton") or [""])[0].strip()
+        if not (propose and config.TOKEN
+                and hmac.compare_digest(propose, config.TOKEN)):
+            JOB.log("Jeton refuse depuis %s" % self.client_address[0], "warn")
+            access_log.record("refus", self.client_address[0], "", "jeton")
+            return self._token_page("Ce jeton ne correspond pas.", 401)
+        access_log.record("connexion", self.client_address[0], "", "jeton")
+        self.send_response(302)
+        self.send_header("Location", "/")
+        self.send_header("Set-Cookie",
+                         "switch_token=%s; Path=/; Max-Age=31536000; "
+                         "SameSite=Lax; HttpOnly%s"
+                         % (config.TOKEN, "; Secure" if self._secure() else ""))
+        self.end_headers()
+
     def _binary(self, body, ctype):
         # PNGs and JPEGs come through here: `TYPES_GZIP` does not list them,
         # so they go out untouched. The manifest, on the other hand, is
@@ -787,6 +869,13 @@ class Handler(BaseHTTPRequestHandler):
         p = self.path.partition("?")[0]      # ignore ?token=... et autres parametres
         if p.startswith("/auth/") and self._auth_route(p):
             return
+        # The stylesheet, and only it, is served to a client who has not got in
+        # yet: the login page and the token page LINK it, and without it they
+        # arrived as black text on white, looking like a broken server rather
+        # than a door. It is a static file with nothing in it but style — no
+        # data, no route, no name — and it is already public in the repository.
+        if p == "/app.css":
+            return self._static("app.css")
         if not self._allowed():
             return self._deny()
         if p == "/manifest.webmanifest":
@@ -1059,6 +1148,13 @@ class Handler(BaseHTTPRequestHandler):
             if CFG.get("auth_mode") != "interne":
                 return self._json({"error": "connexion interne desactivee"}, 404)
             return self._internal_login()
+        # The token field, before the check: it IS the check. Only when a token
+        # is what protects this installation — otherwise the route does not
+        # exist, and there is nothing to try against.
+        if self.path.partition("?")[0] == "/auth/jeton":
+            if not config.TOKEN or auth.enabled(CFG):
+                return self._json({"error": "route inconnue : /auth/jeton"}, 404)
+            return self._token_login()
         if not self._allowed():
             return self._deny()
         # Every POST changes state: we require that it comes from this page.
@@ -2343,6 +2439,7 @@ def _first_run_token():
     if not jeton:
         jeton = secrets.token_urlsafe(24)
         CFG["jeton_auto"] = jeton
+        CFG["jeton_annonce"] = False
         config.save_config(CFG)
         JOB.log("Jeton d'acces engendre au premier demarrage.")
     # `config.TOKEN` is read everywhere else: setting it here avoids
@@ -2448,21 +2545,33 @@ def serve(open_browser=True):
         console.say("Accessible SANS MOT DE PASSE par tout appareil du reseau.",
                     "warn", "acces")
     if auto_token:
-        # Without the full address, the token is a string the user has to
-        # paste back by hand in the right place — that is where it fails.
-        console.say("Ce service est joignable par le reseau et n'a pas encore "
-                    "de compte. Ouvre cette adresse, puis cree ton compte :",
-                    "warn", "acces")
-        console.say("  %s/?token=%s"
-                    % (_public_url(ip) or "http://localhost:%d" % config.PORT,
-                       auto_token), "warn", "acces")
-        if not ip:
-            # The one address that works from the machine running the
-            # container. From anywhere else it is the host's, which only the
-            # operator knows.
-            console.say("  (depuis la machine qui heberge le conteneur ; "
-                        "d'ailleurs, declare ROMULE_PUBLIC_HOST)",
+        adresse = _public_url(ip) or "http://localhost:%d" % config.PORT
+        # ONCE. A token reprinted at every restart is a secret pasted into
+        # every log a user ever sends with a bug report, and read by anyone
+        # walking past the screen. The interface has a field for it now, so
+        # what has to survive is the string, not a whole address the service
+        # cannot know anyway (see `_lan_ip`).
+        if not CFG.get("jeton_annonce"):
+            console.say("Ce service est joignable par le reseau et n'a pas "
+                        "encore de compte. Ouvre %s, colle ce jeton, puis cree "
+                        "ton compte :" % adresse, "warn", "acces")
+            console.say("  %s" % auto_token, "warn", "acces")
+            console.say("Ce jeton ne sera plus affiche. "
+                        "`romule token show` le redonne, "
+                        "`romule token reset` en engendre un autre.",
                         "warn", "acces")
+            if not ip:
+                # The one address that works from the machine running the
+                # container. From anywhere else it is the host's, which only
+                # the operator knows.
+                console.say("  (adresse valable depuis la machine qui heberge "
+                            "le conteneur ; declare ROMULE_PUBLIC_HOST pour "
+                            "les autres)", "warn", "acces")
+            CFG["jeton_annonce"] = True
+            config.save_config(CFG)
+        else:
+            console.say("Acces protege par un jeton. "
+                        "`romule token show` le rappelle.", "warn", "acces")
     if not adb_hint():
         console.say("adb absent — la console ne pourra pas etre pilotee",
                     "warn", "device")

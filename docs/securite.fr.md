@@ -48,19 +48,45 @@ Dans cet ordre :
 ## Le jeton de premier accès
 
 Un service joignable mais sans compte, sans jeton et sans accès réseau
-refuserait toutes les requêtes — y compris celle qu'il faut pour atteindre les
-réglages et corriger le problème. Plutôt que d'ouvrir la porte, Romule engendre
-un jeton au premier démarrage et l'affiche avec l'adresse complète :
+refuserait toutes les requêtes — y compris celle qui permettrait d'atteindre
+les réglages pour corriger cela. Plutôt que d'ouvrir la porte, Romule engendre
+un jeton au premier démarrage et l'affiche, **une seule fois** :
 
 ```
 Acces : ce service est joignable par le reseau et n'a pas encore de compte.
-        http://192.0.2.20:8787/?token=Kzrmfve...
+        Ouvre http://192.0.2.20:8787, colle ce jeton, puis cree ton compte :
+        Kzrmfve7Qh2pX0cLd9WmTn4sBv1jRyAo
 ```
 
-Il est conservé dans le dossier de données du service — sous `jeton_auto`,
-dans `_romule-config.json` — survit aux redémarrages, et n'est
-jamais envoyé au navigateur avec le reste de la configuration. Rien n'est
-engendré quand Romule n'écoute que sur `127.0.0.1`.
+Une fois, et pas dans un lien. Un secret réimprimé à chaque redémarrage finit
+dans tous les journaux qu'un utilisateur joint à un rapport de bug ; porté par
+l'adresse, il finit aussi dans l'historique du navigateur et dans les journaux
+de tout relais sur le chemin. Ce qui remplace le lien est un champ : la page de
+refus en porte un, le jeton s'y colle, et un cookie s'en souvient pour ce
+navigateur.
+
+Les démarrages suivants disent seulement qu'un jeton protège l'installation, et
+où le retrouver :
+
+```sh
+python3 -m romule token show     # le réafficher
+python3 -m romule token reset    # le remplacer
+```
+
+`reset` invalide l'ancien immédiatement — les navigateurs qui l'avaient retenu
+redemandent le nouveau au chargement suivant — et le marque pour qu'il soit
+annoncé au prochain démarrage : un jeton dont personne n'a été informé est un
+enfermement dehors.
+
+Il est conservé dans le dossier de données du service — sous `jeton_auto` dans
+`_romule-config.json` —, survit aux redémarrages, et n'est jamais envoyé au
+navigateur avec le reste de la configuration. Rien n'est engendré quand Romule
+n'écoute que sur `127.0.0.1`.
+
+La feuille de style, et elle seule, est servie à un client qui n'est pas encore
+entré : la page de refus la référence, et sans elle la page arrivait sans
+habillage et se lisait comme un serveur en panne plutôt que comme une porte.
+`app.js`, l'interface et toutes les routes restent derrière le contrôle.
 
 ## Comptes et rôles
 

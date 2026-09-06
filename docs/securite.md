@@ -49,17 +49,41 @@ In order:
 A service that is reachable but has no account, no token and no LAN access
 would refuse every request, including the one needed to reach the settings and
 fix it. Rather than open the door, Romule generates a token on first start and
-prints it with the full URL:
+prints it — **once**:
 
 ```
 Acces : ce service est joignable par le reseau et n'a pas encore de compte.
-        http://192.0.2.20:8787/?token=Kzrmfve...
+        Ouvre http://192.0.2.20:8787, colle ce jeton, puis cree ton compte :
+        Kzrmfve7Qh2pX0cLd9WmTn4sBv1jRyAo
 ```
+
+Once, and not in a link. A secret reprinted at every restart ends up in every
+log a user attaches to a bug report; carried in the address it also lands in
+the browser history and in any proxy log on the way. What replaces the link is
+a field: the refusal page carries one, the token is pasted there, and a cookie
+remembers it for that browser.
+
+Later starts say only that a token protects the installation, and where to find
+it again:
+
+```sh
+python3 -m romule token show     # print it again
+python3 -m romule token reset    # replace it
+```
+
+`reset` invalidates the previous token at once — browsers that remembered it
+are asked for the new one on their next load — and marks it to be announced at
+the next start, because a token nobody has been told about is a lock-out.
 
 It is stored in the service data folder — as `jeton_auto` in
 `_romule-config.json` — survives restarts, and is never sent to
 the browser with the rest of the configuration. Nothing is generated when
 Romule listens on `127.0.0.1` only.
+
+The stylesheet, and only the stylesheet, is served to a client that has not got
+in yet: the refusal page links it, and without it the page arrived unstyled and
+read as a broken server rather than as a door. `app.js`, the interface and
+every route stay behind the check.
 
 ## Accounts and roles
 

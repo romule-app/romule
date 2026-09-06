@@ -288,6 +288,10 @@ let I18N = {};
 // gettext principle this project adopted — but the default language is
 // English: `en.json` translates those keys on load.
 let LANG = 'en';
+// What the server offers, filled by `langLoad()` at startup. The
+// wizard's first step reads it: choosing the language before reading
+// five screens of it beats discovering the setting afterwards.
+let LANGUES = [];
 
 // What we NEVER translate: code, paths, and above all the user's data (game
 // names, email addresses, file paths).
@@ -4597,6 +4601,9 @@ const app = {
   // ---- interface language
   async langLoad() {
     const r = await api('/api/langues');
+    // Kept for the wizard: its first step offers the choice, and it is drawn
+    // from a template rather than from a static element in index.html.
+    LANGUES = r.langues || [];
     const sel = $('s-uilang');
     if (sel) {
       sel.innerHTML = (r.langues || []).map(l =>
@@ -5266,12 +5273,22 @@ const app = {
     w.scrollIntoView({block: 'center', behavior: 'smooth'});
   },
   libClose() { $('ludowrap').hidden = true; },
-  async ludoAller(chemin) {
-    const r = await api('/api/browseServer', {chemin: chemin || ''}, true);
+  async ludoAller(chemin, deuxieme) {
+    const r = await api('/api/parcourir', {chemin: chemin || ''}, true);
     if (r.error) {
-      // Deliberately quiet: running into a forbidden folder while browsing is
-      // ordinary, and opening an error dialog on every click would be worse
-      // than the problem.
+      // The picker opens on the CURRENT library, which is the useful place to
+      // start — except when that folder is outside ROMULE_BASES. In a container
+      // that is the ordinary case: the library still points at /data while
+      // browsing is bounded to /library. The refusal then went into a quiet
+      // toast and the picker never appeared: the button looked dead.
+      //
+      // So we ask again from the default, which the server picks inside the
+      // allowed folders. `deuxieme` stops it there: two refusals in a row are a
+      // real problem and must be said.
+      if (!deuxieme && chemin) return this.ludoAller('', true);
+      // Deliberately quiet otherwise: running into a forbidden folder while
+      // browsing is ordinary, and opening an error dialog on every click would
+      // be worse than the problem.
       if (LUDO.cible === 'onb') return toast(r.error, 'warn');
       $('ludoetat').textContent = r.error;
       return;
@@ -6364,7 +6381,19 @@ function onbEtapes(h) {
           'ce qui rend la grille lisible.</span></li>' +
         '<li><b>Ta console</b><span class="onbdesc">Facultatif, et faisable ' +
           'plus tard.</span></li>' +
-        '</ul>',
+        '</ul>' +
+        // First, because everything after this is read in the language chosen
+        // here. Finding the setting once the wizard is over means having read
+        // six screens in the wrong one.
+        (LANGUES.length > 1
+          ? '<div class="onblangue"><label for="onb-langue">' +
+            esc(t('Langue de l\'interface')) + '</label>' +
+            '<select id="onb-langue" data-act-change="setLang">' +
+            LANGUES.map(l => '<option value="' + esc(l.code) + '"' +
+              (l.code === LANG ? ' selected' : '') + '>' +
+              esc(l.nom) + '</option>').join('') +
+            '</select></div>'
+          : ''),
     },
     {
       cle: 'biblio', titre: 'Ta bibliothèque', requis: true,
@@ -6389,8 +6418,12 @@ function onbEtapes(h) {
           '>' + (ONB.occupe ? 'Lecture…' : 'Analyser le dossier') + '</button>' +
           (r ? renderScanOnboard(r) : '');
       },
-      valide: () => !!(ONB.resultatScan && ONB.resultatScan.total > 0),
-      manque: 'Analyse le dossier pour vérifier que tes jeux sont bien vus.',
+      // What is required is having LOOKED at the folder, not having found
+      // something in it. An empty library is an ordinary state — you set the
+      // tool up, then you copy your games — and demanding a game here walled
+      // people into step 2 of 6 with no way forward and no way to explain it.
+      valide: () => !!ONB.resultatScan,
+      manque: 'Analyse le dossier pour confirmer que c\'est le bon.',
     },
     {
       cle: 'compte', titre: 'Ton accès', requis: !!c.expose,
@@ -6477,8 +6510,9 @@ function onbEtapes(h) {
 function renderScanOnboard(r) {
   if (!r.total) {
     return '<div class="onbresultat empty"><b>Aucun jeu trouvé.</b>' +
-      '<p class="onbnote">Dépose tes fichiers dans ce dossier, puis relance ' +
-      'l\'analyse.</p><p class="onbnote">' +
+      '<p class="onbnote">Le dossier est lu, il est simplement vide. Tu peux ' +
+      'continuer : dépose tes fichiers quand tu veux, puis relance l\'analyse ' +
+      'depuis la bibliothèque.</p><p class="onbnote">' +
       t('Romule reconnaît %d extensions de fichier.')
         .replace('%d', r.extensions || 0) + '</p></div>';
   }
@@ -7079,7 +7113,7 @@ const ACTES = new Set([
   'loadTrash', 'revokeKey',
   'libCancelOnb', 'libClose', 'libNewFolder', 'libOpen',
   'libConfirm', 'mkTree', 'onbGo', 'onbFindConsole',
-  'onbChooseFolder', 'onbCreateAccount', 'onbPrev', 'onbScan',
+  'onbChooseFolder', 'onbCreateAccount', 'onbPrev', 'onbScan', 'setLang',
   'onbScanConsole', 'onbNext', 'onbTestEntries', 'openGame',
   'openOnConsole', 'organize', 'forgetFolder', 'forgetTransfer',
   'openPlatform', 'page', 'browseServer', 'purgeTrash', 'reloadImport',

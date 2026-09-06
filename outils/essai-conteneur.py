@@ -132,10 +132,16 @@ def attendre_sain(limite=180):
 
 
 def jeton_des_journaux():
-    """Romule generates a token on the first start and prints it with the URL.
-    If it cannot be found here, nobody can get in."""
+    """Romule prints its token ONCE, on its own line, at the first start.
+
+    Anchored on the announcement rather than on the shape of the string: a
+    container's log carries plenty of long words — a temporary path, an
+    environment variable — and any of them would pass for a secret. If the
+    token cannot be found here, nobody can get in.
+    """
     sortie = dc("logs", "romule").stdout or ""
-    m = re.search(r"token=([A-Za-z0-9_\-]{16,})", sortie)
+    m = re.search(r"colle ce jeton[^\n]*\n[^\n]*?([A-Za-z0-9_-]{30,})",
+                  sortie, re.I)
     return m.group(1) if m else None
 
 
@@ -190,7 +196,11 @@ def main(argv):
     titre("acces")
     jeton = jeton_des_journaux()
     t("le jeton d'acces est affiche dans les journaux", bool(jeton),
-      "aucun `token=` dans `docker compose logs`")
+      "aucun jeton annonce dans `docker compose logs`")
+    # It must be announced ALONE: carried in a link it lands in the browser
+    # history and in every log the user ever shares.
+    t("il n'est plus porte par une adresse",
+      "?token=" not in (dc("logs", "romule").stdout or ""))
     # FROM THE HOST, the request does not come from 127.0.0.1 but from the
     # Docker bridge: it is therefore NOT local, and the token is required. That
     # is precisely what we want to check — a container published on the network

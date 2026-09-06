@@ -34,6 +34,12 @@ RACINE = Path(__file__).resolve().parent.parent
 CSS = RACINE / "romule" / "static" / "app.css"
 JS = RACINE / "romule" / "static" / "app.js"
 HTML = RACINE / "romule" / "static" / "index.html"
+# The server writes HTML too — the login page and the token page — and it was
+# outside this check. The CSS rename translated `.chargeur` into `.spinner` in
+# the stylesheet and left `class='chargeur'` in `server.py`: both gate pages
+# arrived unstyled, black on white, looking like a broken server rather than a
+# door. They are the FIRST thing a protected installation shows.
+SERVEUR = RACINE / "romule" / "server.py"
 BASELINE = RACINE / "outils" / "classes-connues.json"
 
 # Names that are not ours, or that are assembled at runtime. Each one is here
@@ -57,8 +63,12 @@ def styled():
 
 
 def used():
-    """The classes `index.html` and `app.js` mention."""
+    """The classes `index.html`, `app.js` and `server.py` mention."""
     out = set()
+    # Single quotes here: the server writes its HTML from Python strings.
+    for m in re.finditer(r"""class=['"]([^'"\n]*)['"]""",
+                         SERVEUR.read_text(encoding="utf-8")):
+        out.update(m.group(1).split())
     html = HTML.read_text(encoding="utf-8")
     for m in re.finditer(r'class="([^"]*)"', html):
         out.update(m.group(1).split())
@@ -97,30 +107,43 @@ def report():
     return dead, unstyled
 
 
-AUTOTEST_CSS = ".a{color:red}\n.b{color:blue}\n"
+AUTOTEST_CSS = ".a{color:red}\n.b{color:blue}\n.d{color:green}\n"
 AUTOTEST_HTML = '<div class="a"></div>'
 AUTOTEST_JS = "el.classList.add('c');"
+# `d` is styled and written only by the server: it must NOT be called dead.
+# `e` is written by the server and styled nowhere: it must be reported. That
+# pair is the blind spot the login page fell into.
+AUTOTEST_PY = """self._page("x", "<div class='d'><b class='e'>y</b></div>")"""
 
 
 def autotest():
     """A check that never bites protects against nothing."""
     import tempfile
     ok = True
-    global CSS, JS, HTML
-    keep = (CSS, JS, HTML)
+    global CSS, JS, HTML, SERVEUR
+    keep = (CSS, JS, HTML, SERVEUR)
     with tempfile.TemporaryDirectory() as d:
         CSS, JS, HTML = Path(d) / "a.css", Path(d) / "a.js", Path(d) / "a.html"
+        SERVEUR = Path(d) / "a.py"
         CSS.write_text(AUTOTEST_CSS, encoding="utf-8")
         JS.write_text(AUTOTEST_JS, encoding="utf-8")
         HTML.write_text(AUTOTEST_HTML, encoding="utf-8")
+        SERVEUR.write_text(AUTOTEST_PY, encoding="utf-8")
         dead, unstyled = report()
         cases = [("a styled and used class is quiet", "a" not in dead + unstyled),
                  ("a styled but unused class is reported", dead == ["b"]),
-                 ("a used but unstyled class is reported", unstyled == ["c"])]
+                 # `in`, not `==`: the fixtures now carry a second unstyled
+                 # class on purpose, and an exact list would make the case
+                 # about the fixture rather than about the detector.
+                 ("a used but unstyled class is reported", "c" in unstyled),
+                 # The blind spot itself: a class the SERVER writes and the
+                 # stylesheet no longer has.
+                 ("a class only the server writes is seen", "d" not in dead),
+                 ("and reported when the stylesheet lost it", "e" in unstyled)]
         for name, cond in cases:
             print(("  OK    " if cond else "  FAIL  ") + name)
             ok = ok and cond
-    CSS, JS, HTML = keep
+    CSS, JS, HTML, SERVEUR = keep
     return 0 if ok else 1
 
 

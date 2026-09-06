@@ -126,11 +126,11 @@ docker run -d --name romule --restart unless-stopped \
   -v /path/to/your/games:/library \
   ghcr.io/romule-app/romule:latest
 
-docker logs romule              # prints the URL with your access token
+docker logs romule              # prints your access token, once
 ```
 
-Open the address it prints, create your account in the six-step wizard, and
-point Romule at your library. Nothing else needs configuring. The image is
+Open the address it prints, paste the token in the field it shows you, then
+create your account in the six-step wizard and point Romule at your library. Nothing else needs configuring. The image is
 multi-arch (`amd64`, `arm64`) and ships `adb`, `nsz`, `unar` and `7z`.
 
 A [Compose file](https://romule-app.github.io/romule/installation/) is the
@@ -157,9 +157,21 @@ the standard library only.
 
 The container is reachable from your network but has no account yet. Rather
 than open the service without a password, Romule generates an access token on
-first start and prints it with the full URL. It is stored in your library
-folder and does not change when the container restarts. A service that only
-listens on `127.0.0.1` gets no token — nothing to protect it from.
+first start and prints it — **once**. A secret reprinted at every restart ends
+up in every log attached to a bug report, and read by anyone walking past the
+screen.
+
+Paste it in the field the interface shows. It is remembered in a cookie, so you
+type it once per browser. It does not change when the container restarts, and a
+service that only listens on `127.0.0.1` gets none — nothing to protect it from.
+
+```sh
+docker compose exec romule python3 -m romule token show    # show it again
+docker compose exec romule python3 -m romule token reset   # replace it
+```
+
+`reset` invalidates the old one immediately and announces the new one at the
+next start — otherwise a token nobody has been told about is a lock-out.
 
 ---
 

@@ -2,16 +2,41 @@
 
 ## `docker compose up` fonctionne mais la page est refusée
 
-C'est attendu au premier démarrage. Le conteneur est joignable mais n'a encore
-aucun compte : Romule engendre donc un jeton.
+Normal au premier démarrage. Le conteneur est joignable mais n'a pas encore de
+compte : Romule engendre un jeton et l'affiche **une seule fois** :
 
 ```sh
 docker compose logs romule
 ```
 
-Ouvre l'adresse affichée, jeton compris. Voir
-[le jeton de premier accès](securite.md).
+Ouvre l'adresse affichée, et colle le jeton dans le champ que propose la page.
+Voir [le jeton de premier accès](securite.fr.md#le-jeton-de-premier-acces).
 
+## J'ai perdu le jeton d'accès
+
+Il n'est pas perdu, seulement plus affiché :
+
+```sh
+docker compose exec romule python3 -m romule token show
+python3 -m romule token show            # sans Docker
+```
+
+`token reset` le remplace si tu préfères qu'il change — tout navigateur qui
+avait retenu l'ancien redemande le nouveau au chargement suivant.
+
+## L'adresse affichée au premier démarrage ne répond pas
+
+Si elle commence par `172.`, tu lis l'adresse du conteneur sur le réseau de
+Docker, que rien ne route. Romule ne l'affiche plus, mais une version
+antérieure le faisait. Depuis la machine qui héberge le conteneur,
+`http://localhost:8787` fonctionne ; pour toutes les autres, déclare la tienne :
+
+```yaml
+environment:
+  ROMULE_PUBLIC_HOST: "192.168.1.20"     # ta machine, pas le conteneur
+```
+
+Voir [Dans un conteneur](configuration.fr.md#dans-un-conteneur).
 ## Romule refuse le dossier que j'ai choisi
 
 Il refuse les emplacements manifestement faux — la racine du disque, ton
