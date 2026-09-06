@@ -1098,6 +1098,21 @@ class Handler(BaseHTTPRequestHandler):
             return "Reserve a un administrateur."
         return ""
 
+    def _session_finie(self):
+        """The refusal for an account action with no session behind it.
+
+        It almost always means the session ENDED while the page stayed open:
+        the interface still holds the account it read on load, still draws the
+        card and its buttons, and every one of them comes back refused. The
+        message said "no account signed in", which reads as "your account is
+        gone" rather than "sign in again".
+
+        `_session` is the flag `api()` already watches to offer a reload — the
+        same treatment the login page gets when it arrives instead of JSON.
+        """
+        return self._json({"error": "Aucun compte connecte.", "_session": True},
+                          401)
+
     def _who(self):
         """Compte INTERNE connecte, ou None.
 
@@ -1142,7 +1157,7 @@ class Handler(BaseHTTPRequestHandler):
     def _photo_upload(self):
         u = self._who()
         if not u:
-            return self._json({"error": "Aucun compte connecte."}, 401)
+            return self._session_finie()
         taille = int(self.headers.get("Content-Length", 0) or 0)
         if taille > accounts.PHOTO_MAX:
             return self._json({"error": "Image trop lourde (maximum %d Mo)."
@@ -1373,13 +1388,21 @@ class Handler(BaseHTTPRequestHandler):
             # "none" is a legitimate answer — a destination can be silenced
             # without being removed.
             nid = str(d.get("id") or "")
-            voulus = [e for e in (d.get("evenements") or []) if e in notify.EVENTS]
             liste = list(CFG.get("notif_destinations") or [])
             if not any(str(x.get("id")) == nid for x in liste):
                 return self._json({"error": "Unknown destination."}, 404)
             for x in liste:
-                if str(x.get("id")) == nid:
-                    x["evenements"] = voulus
+                if str(x.get("id")) != nid:
+                    continue
+                if "evenements" in d:
+                    x["evenements"] = [e for e in (d.get("evenements") or [])
+                                       if e in notify.EVENTS]
+                # Silencing a destination without removing it: a holiday, a
+                # channel being reorganised, a service that is down. Deleting
+                # it means retyping the address to get it back — which is what
+                # people did, because it was the only thing offered.
+                if "actif" in d:
+                    x["actif"] = bool(d.get("actif"))
             CFG["notif_destinations"] = liste
             config.save_config(CFG)
             self._json({"destinations": [_notif_public(x)
@@ -1512,7 +1535,7 @@ class Handler(BaseHTTPRequestHandler):
         elif p == "/api/compte-modifier":
             u = self._who()
             if not u:
-                return self._json({"error": "Aucun compte connecte."}, 401)
+                return self._session_finie()
             try:
                 v = accounts.update(u["id"], d.get("nom"), d.get("email"))
             except ValueError as exc:
@@ -1522,7 +1545,7 @@ class Handler(BaseHTTPRequestHandler):
         elif p == "/api/compte-mdp":
             u = self._who()
             if not u:
-                return self._json({"error": "Aucun compte connecte."}, 401)
+                return self._session_finie()
             try:
                 accounts.change_password(u["id"], d.get("ancien", ""), d.get("nouveau", ""))
             except ValueError as exc:
@@ -1556,13 +1579,13 @@ class Handler(BaseHTTPRequestHandler):
         elif p == "/api/compte-totp-preparer":
             u = self._who()
             if not u:
-                return self._json({"error": "Aucun compte connecte."}, 401)
+                return self._session_finie()
             self._json(accounts.totp_prepare(u["id"]))
 
         elif p == "/api/compte-totp-activer":
             u = self._who()
             if not u:
-                return self._json({"error": "Aucun compte connecte."}, 401)
+                return self._session_finie()
             try:
                 accounts.totp_enable(u["id"], d.get("code", ""))
             except ValueError as exc:
@@ -1574,7 +1597,7 @@ class Handler(BaseHTTPRequestHandler):
         elif p == "/api/compte-totp-desactiver":
             u = self._who()
             if not u:
-                return self._json({"error": "Aucun compte connecte."}, 401)
+                return self._session_finie()
             try:
                 accounts.totp_disable(u["id"], d.get("mdp", ""))
             except ValueError as exc:
@@ -1586,7 +1609,7 @@ class Handler(BaseHTTPRequestHandler):
         elif p == "/api/compte-photo-effacer":
             u = self._who()
             if not u:
-                return self._json({"error": "Aucun compte connecte."}, 401)
+                return self._session_finie()
             accounts.photo_delete(u["id"])
             self._json({"message": "Photo retiree."})
 
@@ -1834,7 +1857,18 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"ok": ok, "addr": addr, "message": msg})
 
         elif p == "/api/wifi-pair":
-            ok, msg = device.pair(d.get("addr", "").strip(), d.get("code", "").strip())
+            # Logged, both ways. Pairing is the step people retry blind, and
+            # the journal said nothing about any of the attempts — neither that
+            # one had been made, nor why it failed.
+            #
+            # The address is logged; the code never is. It is a one-shot
+            # secret, and the journal is shown in the interface and attached to
+            # bug reports.
+            cible = d.get("addr", "").strip()
+            JOB.log("Appairage sans fil demandé vers %s" % (cible or "(vide)"))
+            ok, msg = device.pair(cible, d.get("code", "").strip())
+            if not ok:
+                JOB.log("Appairage refusé : %s" % msg, "warn")
             found = device.discover() if ok else []
             addr = None
             if ok and found:
@@ -1844,8 +1878,11 @@ class Handler(BaseHTTPRequestHandler):
                     CFG["wifi_addr"] = addr
                     config.save_config(CFG)
                     msg = "Appairee et connectee (%s)." % addr
+                    JOB.log("Console appairée et connectée (%s)." % addr, "ok")
                 else:
                     msg = "Appairee, mais connexion refusee : %s" % cmsg
+                    JOB.log("Appairée, mais la connexion a été refusée : %s"
+                            % cmsg, "warn")
             self._json({"ok": ok, "addr": addr, "found": found, "message": msg})
 
         elif p == "/api/wifi-connect":

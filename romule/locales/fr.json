@@ -1302,5 +1302,21 @@
   "route inconnue : /auth/jeton": "route inconnue : /auth/jeton",
   "Sauvegarde enregistree.": "Sauvegarde enregistree.",
   "un travail est en cours — reessaie apres": "un travail est en cours — reessaie apres",
-  "Une tache est deja en cours.": "Une tache est deja en cours."
+  "Une tache est deja en cours.": "Une tache est deja en cours.",
+  "Prévenir cette destination": "Prévenir cette destination",
+  "Message envoyé. Regarde ton salon.": "Message envoyé. Regarde ton salon.",
+  "Par compte : il faut se connecter.": "Par compte : il faut se connecter.",
+  "Ouvert : aucun mot de passe n'est demandé.": "Ouvert : aucun mot de passe n'est demandé.",
+  "Cette machine seulement.": "Cette machine seulement.",
+  "Personne n'a encore choisi.": "Personne n'a encore choisi.",
+  "Qui peut ouvrir cette page": "Qui peut ouvrir cette page",
+  "Décidé au premier démarrage. Depuis le terminal :": "Décidé au premier démarrage. Depuis le terminal :",
+  "Changer": "Changer",
+  "Nom": "Nom",
+  "Renommer": "Renommer",
+  "Rien n'a été rangé : la console n'est pas connectée. Branche-la, ou connecte-la sans fil, puis relance.": "Rien n'a été rangé : la console n'est pas connectée. Branche-la, ou connecte-la sans fil, puis relance.",
+  "Console deja rangee : rien a deplacer.": "Console deja rangee : rien a deplacer.",
+  "Relire les fichiers": "Relire les fichiers",
+  "Relire les fichiers du serveur et de la console. Les titres et les jaquettes, eux, se cherchent avec « Fiches manquantes ».": "Relire les fichiers du serveur et de la console. Les titres et les jaquettes, eux, se cherchent avec « Fiches manquantes ».",
+  "Une Odin et un Retroid sont deux consoles, pas un réglage écrasé deux fois. Choisis celle que tu pilotes : tout ce qui suit lui appartient — comment l'outil la rejoint, et où elle range ses jeux.": "Une Odin et un Retroid sont deux consoles, pas un réglage écrasé deux fois. Choisis celle que tu pilotes : tout ce qui suit lui appartient — comment l'outil la rejoint, et où elle range ses jeux."
 }

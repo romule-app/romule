@@ -1302,5 +1302,21 @@
   "route inconnue : /auth/jeton": "unknown route: /auth/jeton",
   "Sauvegarde enregistree.": "Backup saved.",
   "un travail est en cours — reessaie apres": "a job is running — try again afterwards",
-  "Une tache est deja en cours.": "A task is already running."
+  "Une tache est deja en cours.": "A task is already running.",
+  "Prévenir cette destination": "Notify this destination",
+  "Message envoyé. Regarde ton salon.": "Message sent. Have a look at your channel.",
+  "Par compte : il faut se connecter.": "By account: you have to sign in.",
+  "Ouvert : aucun mot de passe n'est demandé.": "Open: no password is asked for.",
+  "Cette machine seulement.": "This machine only.",
+  "Personne n'a encore choisi.": "Nobody has chosen yet.",
+  "Qui peut ouvrir cette page": "Who can open this page",
+  "Décidé au premier démarrage. Depuis le terminal :": "Decided at first start. From the terminal:",
+  "Changer": "Change",
+  "Nom": "Name",
+  "Renommer": "Rename",
+  "Rien n'a été rangé : la console n'est pas connectée. Branche-la, ou connecte-la sans fil, puis relance.": "Nothing was filed: the console is not connected. Plug it in, or connect it wirelessly, then run this again.",
+  "Console deja rangee : rien a deplacer.": "Console already tidy: nothing to move.",
+  "Relire les fichiers": "Re-read the files",
+  "Relire les fichiers du serveur et de la console. Les titres et les jaquettes, eux, se cherchent avec « Fiches manquantes ».": "Re-read the files on the server and on the console. Titles and cover art are fetched with “Missing details”.",
+  "Une Odin et un Retroid sont deux consoles, pas un réglage écrasé deux fois. Choisis celle que tu pilotes : tout ce qui suit lui appartient — comment l'outil la rejoint, et où elle range ses jeux.": "An Odin and a Retroid are two consoles, not one setting overwritten twice. Choose the one you are driving: everything below belongs to it — how the tool reaches it, and where it keeps its games."
 }

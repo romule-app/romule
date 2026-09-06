@@ -154,7 +154,15 @@ select{cursor:pointer}
 /* The search: a magnifier on the left, the shortcut on the right. The badge is
    not decorative — it is the only thing announcing that the keyboard opens the
    search, and a shortcut nothing announces does not exist. */
-.champ-recherche{position:relative;display:flex;align-items:center;flex:1 1 260px;min-width:180px}
+/* The search is the widest thing on the row on purpose: it is what the row is
+   FOR. Its neighbours keep their natural width — without `flex:0 0 auto` on
+   them the browser shares the spare room out, and the field ends up the same
+   size as a button. */
+.champ-recherche{position:relative;display:flex;align-items:center;
+  flex:1 1 420px;min-width:180px}
+/* Everything else on the row keeps its natural width: without this the browser
+   shares the spare room out and the field ends up the size of a button. */
+.libbar > select,.libbar > button{flex:0 0 auto}
 .champ-recherche .loupe{position:absolute;left:11px;color:var(--mute);pointer-events:none}
 .champ-recherche .search{width:100%;padding-left:32px;padding-right:38px}
 .champ-recherche .raccourci{position:absolute;right:9px;pointer-events:none;
@@ -946,7 +954,12 @@ header,.libbar{padding-left:env(safe-area-inset-left,0);
 .favrow:hover{background:var(--panel2)}
 .favrow .tid{font-size:11px}
 #favbtn.on{border-color:var(--amber);color:var(--amber)}
-.sensbtn{border:1px solid var(--rule);border-radius:9px;padding:6px 10px;font-size:13px}
+/* It borrows `.szbtn` for its look, which is written for the segmented size
+   group: 11 px type, letter-spacing, and a padding meant to sit between two
+   neighbours. Alone in the row beside a 44 px button it came out narrower and
+   visibly off. Square, and the same height as everything else on the line. */
+.sensbtn{border:1px solid var(--rule);border-radius:9px;font-size:15px;
+  letter-spacing:0;padding:0;width:var(--h-controle);flex:0 0 auto}
 
 /* la coche apparait au survol : la carte reste lisible au repos */
 .gcard .pcheck{opacity:0;transition:opacity .15s,background .15s,border-color .15s}
@@ -1578,6 +1591,15 @@ button.lien:hover:not(:disabled){color:var(--text)}
 /* ================================================================================
    STARTUP — assert nothing before knowing
    ================================================================================ */
+/* The login page and the token page are built by the server inside `.spinner`,
+   and they were the only screens where nobody had looked since the stylesheet
+   started loading for them. The global rule gives a text field `flex:1 1 260px`,
+   meant for a horizontal row; in this column the 260 px basis becomes a HEIGHT,
+   and the two fields came out as two huge squares. Same defect, same fix as
+   `.onbchamps input`. */
+.spinner-in input{flex:0 0 auto;width:100%}
+.spinner-in form{width:min(320px,80vw)}
+
 .spinner{position:fixed;inset:0;z-index:60;display:flex;align-items:center;
   justify-content:center;background:var(--bg);
   opacity:0;pointer-events:none;transition:opacity .3s var(--ease)}
@@ -1944,7 +1966,9 @@ button.mini{padding:5px 10px;font-size:11.5px;border-radius:7px}
 
 /* -------------------------------------------------------- maintenance
    Five panels, one on screen at a time: the question asked stays readable. */
-.upkeep{display:flex;flex-wrap:wrap;gap:8px}
+/* The row sat flush against the block's edge: the buttons looked stuck to the
+   frame rather than placed inside it. */
+.upkeep{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 4px}
 .upkeep button.on{background:var(--panel2);color:var(--amber);
   border-color:var(--amber)}
 #entretien{margin-top:14px}
@@ -3166,6 +3190,26 @@ body.compact .filters{margin-bottom:2px}
   to{transform:scale(1);opacity:1}
 }
 @media(prefers-reduced-motion:reduce){.onbverdict.ok::before{animation:none}}
+
+/* A silenced destination: dimmed, not hidden. Hiding it would leave the reader
+   wondering where their channel went, which is how a destination gets added
+   twice. */
+.notifdest.eteinte{opacity:.55}
+.notifdest .notifon{margin:0 0 10px;font-weight:600}
+.notifdest .bar{margin-top:12px}
+.notifdest .onbverdict{margin-top:10px}
+
+/* The emulator's table and the three things one does to it, as one block. */
+.ecbloc{margin:12px 0 0;padding:14px;border:1px solid var(--bord);
+  border-radius:12px;background:var(--puits)}
+.ecbloc .ecactions{margin-top:14px;padding-top:12px;
+  border-top:1px solid var(--rule)}
+
+/* The access decision, read back rather than offered as a switch. */
+#etatacces{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.etatacces{font-size:12.5px}
+.etatacces.ok{color:var(--green)}
+.etatacces.avert{color:var(--amber)}
 
 .onbverrou{margin:14px 0 0;text-align:center;font-size:12px;color:var(--amber)}
 .onbsans{margin:20px 0 0;padding:14px 0 0;border-top:1px solid var(--bord)}

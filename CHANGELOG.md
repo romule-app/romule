@@ -147,6 +147,59 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Fixed
 
+- **Seventeen defects, found by installing Romule and using it.** The suites
+  check that routes answer, that persisted keys hold, that no French is left —
+  none of them sits down in front of the tool. What one session of that turned
+  up, and what now watches each class:
+
+  - **The theme and the motion settings did nothing.** Their six buttons carried
+    `data-val="sombre"` as a highlight marker. `argumentDe()` reads `data-val`
+    as JSON, `JSON.parse('sombre')` throws, and the throw happens BEFORE the
+    action is called. The marker is now `data-etat`, and the reader can no
+    longer kill a click by failing to parse an attribute.
+  - **Choosing a console did nothing.** `chooseConsole()` called
+    `this.reveilConsole()` — the name the method carried before the rename to
+    English, eight commits earlier. Everything after the call never ran.
+  - **The login and token pages were misshapen.** `flex:1 1 260px`, written for
+    a horizontal row, makes a 260 px HEIGHT in a column: two enormous fields.
+    The same defect as `.onbchamps input`, and it only became visible when
+    those pages started loading the stylesheet at all.
+  - **A card fetching its details showed nothing.** The card's UPDATE path set
+    `noentry`, the class the shimmer is written for; its CREATE path set
+    `sansfiche`, which is styled nowhere — so exactly the cards you look at
+    after an import had no indication at all.
+  - **"Réorganiser" said nothing.** It logged « Console non prete. » at `info`,
+    which the terminal does not print in normal mode, and which reads as a
+    status rather than as the reason nothing happened. It now says what to do,
+    and says "already tidy" when there was nothing to move.
+  - **Wireless pairing announced success and then refused.** `adb pair` exits 0
+    on failure too; trusting the return code made the interface say both things
+    in a row. Only adb's own word for success counts now, its raw line is
+    wrapped in a sentence somebody can act on, and every attempt is logged —
+    the address, never the code.
+  - **An account action after the session ended said "no account signed in".**
+    Which reads as "your account is gone". It now carries the flag the
+    interface already watches, and offers a reload.
+  - « Switch — Eden » in the platform list (a list of platforms names
+    platforms), three headings for one idea in the consoles section, buttons
+    flush against the fields above them, the search field starved by a spacer,
+    an animation preview with no artwork to animate, and the obsolete
+    « Accès depuis le téléphone » switch — replaced by a read-out of the access
+    decision, because two places deciding the same thing is how an installation
+    ends up open by accident.
+
+- **`outils/verifier-actions.py`** — a method called on `app` and defined
+  nowhere, and a `data-val` that is not JSON. Both make a button inert with
+  nothing on screen, and neither is inside the `data-act` triangle
+  `test_ui_injection.js` guards.
+
+- **`verifier-traduction.py` now checks every literal handed to `t()`**,
+  whatever its length. The rules that keep it from reporting identifiers also
+  let « Nom » and « Renommer » through, and both were shown untranslated.
+
+- **A destination can be silenced without being removed.** Deleting it meant
+  retyping the address to get it back, which is what people did.
+
 - **The language selector offered English twice.** `fr.json` was rebuilt from
   `en.json` during the catalogue work and took its `_meta` along, so the French
   catalogue announced itself as English. `/api/langues` listed the same

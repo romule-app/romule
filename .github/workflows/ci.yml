@@ -188,6 +188,11 @@ jobs:
       - name: Les phrases journalisees sont-elles au catalogue ?
         run: python3 outils/verifier-journal.py
 
+      # Une methode appelee et jamais definie, un data-val qui n'est pas du
+      # JSON : deux facons de rendre un bouton inerte sans un mot a l'ecran.
+      - name: Les actions offertes existent-elles ?
+        run: python3 outils/verifier-actions.py
+
       - name: La specification OpenAPI est-elle a jour ?
         run: |
           python -m romule.apiv1 > /tmp/openapi-attendu.json

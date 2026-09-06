@@ -83,10 +83,12 @@
         <input type="text" id="filter" class="search" placeholder="Rechercher un jeu..." data-i18n-ph="lib.search" data-act-input="filterGames">
         <kbd class="raccourci" id="kbd-recherche" data-i18n-skip>/</kbd>
       </div>
-      <span style="flex:1"></span>
+      <!-- The spacer that used to sit here pushed the buttons right by eating
+           the room the SEARCH could have had. The field grows instead: it is
+           what this row is for. -->
       <button class="go" id="bulkconv" style="display:none" data-act="convertAll"></button>
       <button class="ghost repliable" data-act="refreshAll"
-              title="Relire le serveur et la console">Actualiser</button>
+              title="Relire les fichiers du serveur et de la console. Les titres et les jaquettes, eux, se cherchent avec « Fiches manquantes ».">Relire les fichiers</button>
       <button class="ghost repliable" data-act="refreshEntries"
               title="Chercher les titres, résumés et jaquettes manquants, toutes plateformes">Fiches manquantes</button>
       <!-- On a phone, the filter and sort rows fold behind this single button:
@@ -289,15 +291,10 @@
       <div class="setgroup">
         <div class="setgt">Mes consoles</div>
         <p class="lead" style="margin:0 0 10px">Une Odin et un Retroid sont deux
-          consoles, pas un réglage écrasé deux fois. Tout ce qui suit dans cette
-          section appartient à celle qui est choisie ici.</p>
+          consoles, pas un réglage écrasé deux fois. Choisis celle que tu pilotes :
+          tout ce qui suit lui appartient — comment l'outil la rejoint, et où elle
+          range ses jeux.</p>
         <div id="consoles"></div>
-      </div>
-
-      <div class="setgroup">
-        <div class="setgt">Ma console</div>
-        <p class="lead" style="margin:0 0 10px">À régler une fois : comment l'outil rejoint
-          ta console, et où elle range ses jeux.</p>
 
         <div id="device"><div class="empty">Branche ta console en USB (débogage activé), puis clique « Détecter ».</div></div>
         <div class="bar" id="barreconsole" style="margin-top:12px"></div>
@@ -503,15 +500,21 @@
         <p class="lead" style="margin:10px 0">Réglages de l'émulateur pour <b>tous</b> les jeux.
           Pour un jeu précis, ouvre sa fiche depuis la liste : c'est là que vivent
           ses réglages et ceux recommandés par la communauté.</p>
-        <div class="bar">
-          <select id="ec-scope" data-act-change="ecLoad"></select>
-          <button class="ghost" data-act="ecLoad">Relire</button>
-          <span class="mono" id="ec-info"></span>
-        </div>
-        <div id="ec-table"></div>
-        <div class="bar" style="margin-top:10px">
-          <button class="go" data-act="ecApply">Appliquer les modifications</button>
-          <button data-act="ecSaveProfile">Enregistrer comme profil</button>
+        <!-- The three actions belong to the table they act on, and are drawn
+             inside it: floating at the block's level they read as three more
+             settings of the section rather than as what does something to the
+             list above. -->
+        <div class="ecbloc">
+          <div class="bar">
+            <select id="ec-scope" data-act-change="ecLoad"></select>
+            <button class="ghost" data-act="ecLoad">Relire</button>
+            <span class="mono" id="ec-info"></span>
+          </div>
+          <div id="ec-table"></div>
+          <div class="bar ecactions">
+            <button class="go" data-act="ecApply">Appliquer les modifications</button>
+            <button data-act="ecSaveProfile">Enregistrer comme profil</button>
+          </div>
         </div>
         <div id="ec-profiles"></div>
       </details>
@@ -840,10 +843,10 @@
         <div class="setgt">Réseau et notifications</div>
 
         <div class="setrow">
-          <div class="setlab"><b>Accès depuis le téléphone</b>
-            <span>Ouvre l'interface aux appareils de ton réseau. <b>Sans mot de passe</b> :
-              tout appareil du wifi pourra piloter l'outil. Prise en compte immédiate.</span></div>
-          <div class="setctl"><label class="sw"><input type="checkbox" id="s-lan"><span></span></label></div>
+          <div class="setlab"><b>Qui peut ouvrir cette page</b>
+            <span>Décidé au premier démarrage. Depuis le terminal :
+              <code>romule access status</code>.</span></div>
+          <div class="setctl" id="etatacces"></div>
         </div>
 
         <!-- ------------------------------------- notifications sortantes -->
@@ -905,9 +908,9 @@
             <span data-i18n="settings.theme.help">« Automatique » suit le réglage clair ou sombre de l'appareil.</span></div>
           <div class="setctl">
             <div class="segment" id="s-theme" role="group" aria-label="Thème">
-              <button data-val="sombre" data-act="setTheme" data-arg="sombre" data-i18n="theme.sombre">Sombre</button>
-              <button data-val="clair" data-act="setTheme" data-arg="clair" data-i18n="theme.clair">Clair</button>
-              <button data-val="auto" data-act="setTheme" data-arg="auto" data-i18n="theme.auto">Automatique</button>
+              <button data-etat="sombre" data-act="setTheme" data-arg="sombre" data-i18n="theme.sombre">Sombre</button>
+              <button data-etat="clair" data-act="setTheme" data-arg="clair" data-i18n="theme.clair">Clair</button>
+              <button data-etat="auto" data-act="setTheme" data-arg="auto" data-i18n="theme.auto">Automatique</button>
             </div>
           </div>
         </div>
@@ -923,9 +926,9 @@
             <span data-i18n="settings.mvt.help">Vaut pour tout le reste : arrivée des listes, ouverture des fenêtres, journal.</span></div>
           <div class="setctl">
             <div class="segment" id="s-mvt" role="group" aria-label="Mouvement">
-              <button data-val="complet" data-act="setMotion" data-arg="complet" data-i18n="mvt.complet">Complet</button>
-              <button data-val="reduit" data-act="setMotion" data-arg="reduit" data-i18n="mvt.reduit">Réduit</button>
-              <button data-val="aucun" data-act="setMotion" data-arg="aucun" data-i18n="mvt.aucun">Aucun</button>
+              <button data-etat="complet" data-act="setMotion" data-arg="complet" data-i18n="mvt.complet">Complet</button>
+              <button data-etat="reduit" data-act="setMotion" data-arg="reduit" data-i18n="mvt.reduit">Réduit</button>
+              <button data-etat="aucun" data-act="setMotion" data-arg="aucun" data-i18n="mvt.aucun">Aucun</button>
             </div>
           </div>
         </div>
