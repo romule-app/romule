@@ -129,7 +129,19 @@ habillage et se lisait comme un serveur en panne plutôt que comme une porte.
   premier appareil du réseau gouverne ».
 - Il n'y a jamais zéro administrateur : le dernier ne peut pas être supprimé.
 - Les mots de passe passent par scrypt (N=2¹⁷). Le second facteur TOTP est
-  disponible par compte.
+  disponible par compte, et l'écran de mise en route affiche un **QR code** à
+  scanner — dessiné par `romule/qr.py`, un encodeur QR écrit sur la
+  bibliothèque standard, parce que Romule n'a aucune dépendance à l'exécution
+  et n'en prendrait pas une pour une seule image. La clé reste affichée, pour
+  qui ne peut pas scanner.
+
+  Un QR code subtilement faux a l'air parfait et ne scanne simplement pas :
+  `test_qr.py` relit donc la matrice — il retrouve le masque dans
+  l'information de format, le défait, parcourt le même zigzag, dés-entrelace
+  les blocs et rend la charge utile, pour chaque version, à la taille qui la
+  force. Il vérifie aussi les syndromes de Reed-Solomon, un calcul indépendant
+  de la division qui les a produits, et les octets correcteurs reproduisent le
+  vecteur de référence publié pour `HELLO WORLD`.
 
 ## Parcourir le système de fichiers de l'hôte
 

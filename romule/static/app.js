@@ -723,8 +723,11 @@ function updateFollowButton() {
 // it implies, and we give the technical detail to copy.
 const D_ICONE = {error: '⚠️', warn: '⚠️', ok: '✅', info: 'ℹ️'};
 
+// `html` is markup the CALLER built, and the only caller is the two-factor
+// setup handing over a QR the server drew. It is not user data and never goes
+// near one: everything that comes from outside still goes through `esc()`.
 function dialogue({titre, niveau = 'info', message = '', detail = '', options = [],
-                   champs = [], actions = [], fermer = 'Fermer'}) {
+                   champs = [], actions = [], fermer = 'Fermer', html = ''}) {
   const el = $('dialog');
   const boutons = actions.map((a, i) =>
     '<button class="' + (a.principal ? 'go' : 'ghost') + '" data-di="' + i + '">' +
@@ -750,7 +753,8 @@ function dialogue({titre, niveau = 'info', message = '', detail = '', options = 
   el.innerHTML = '<div class="sheet dlg d-' + niveau + '" data-interieur>' +
     '<div class="dhead"><span class="dico">' + (D_ICONE[niveau] || 'ℹ️') + '</span>' +
     '<div><h3>' + esc(titre) + '</h3>' +
-    (message ? '<p class="dmsg">' + esc(message) + '</p>' : '') + '</div></div>' + opts + saisies +
+    (message ? '<p class="dmsg">' + esc(message) + '</p>' : '') + '</div></div>' +
+    html + opts + saisies +
     (detail ? '<details class="ddet"><summary>Détail technique</summary>' +
       '<pre>' + esc(detail) + '</pre></details>' : '') +
     '<div class="acts">' + boutons +
@@ -4181,11 +4185,14 @@ async function enableTwoFactor() {
   if (!p || p.error) return toast((p && p.error) || 'Préparation impossible.', 'warn');
   dialogue({
     titre: 'Double authentification',
-    message: "Ajoute ce compte dans ton application d'authentification "
+    message: "Scanne ce code avec ton application d'authentification "
            + '(Aegis, Ente, Bitwarden, Google Authenticator…), puis saisis le '
            + "code qu'elle affiche.",
-    detail: tpl('Clé à saisir manuellement :\n%s\n\nAdresse otpauth :\n%s',
-                   p.lisible, p.uri),
+    // The QR arrives as an inline SVG: the address it carries is a secret
+    // being set up, and a route serving it would be one more place it exists.
+    html: p.qr ? '<div class="qrbloc">' + p.qr + '</div>' : '',
+    detail: tpl('À saisir à la main si tu ne peux pas scanner :\n%s',
+                   p.lisible),
     champs: [{id: 'code', libelle: 'Code à 6 chiffres', exemple: '123456'}],
     actions: [{libelle: 'Activer', principal: true, faire: v =>
       accountUpload('/api/compte-totp-activer', {code: v.code}, loadAccounts)}],

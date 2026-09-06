@@ -530,6 +530,25 @@ def autotest():
 _APPEL_T = re.compile(r"""\bt\(\s*(['"])((?:\\.|(?!\1).)*)\1\s*\)""")
 
 
+_LIBELLE = re.compile(r"""libelle:\s*(['"])((?:\\.|(?!\1).)+)\1""")
+
+
+def libelles(source):
+    """The captions of dialog buttons.
+
+    They are written as bare literals — the DOM observer translates them — so
+    nothing looked at them, and « Activer » and « Lancer » sat untranslated in
+    an English interface. A caption is shown to somebody; it has to be a key.
+    """
+    out = set()
+    for _, brut in _LIBELLE.findall(re.sub(r"//[^\n]*", "", source)):
+        texte = brut.replace("\\'", "'").replace('\\"', '"')
+        # A caption assembled from a template is resolved elsewhere.
+        if texte and "%" not in texte:
+            out.add(texte)
+    return out
+
+
 def appels_t(source):
     """The literals passed to `t()`, unescaped."""
     out = set()
@@ -586,10 +605,13 @@ def main(argv):
     soucis = entetes()
     catalogue = json.loads((RACINE / "romule" / "locales" / "fr.json")
                            .read_text(encoding="utf-8"))
-    for texte in sorted(appels_t(
-            (RACINE / "romule" / "static" / "app.js").read_text(encoding="utf-8"))):
+    js = (RACINE / "romule" / "static" / "app.js").read_text(encoding="utf-8")
+    for texte in sorted(appels_t(js)):
         if texte not in catalogue:
             soucis.append("t(%r) n'est pas au catalogue" % texte)
+    for texte in sorted(libelles(js)):
+        if texte not in catalogue:
+            soucis.append("le libelle de bouton %r n'est pas au catalogue" % texte)
     for souci in soucis:
         print("  ENTETE   %s" % souci)
     if paresse:

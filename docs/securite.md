@@ -127,7 +127,19 @@ every route stay behind the check.
   library** — otherwise "the first account governs" would mean "the first
   device on the network governs".
 - There is never zero administrator: the last one cannot be deleted.
-- Passwords use scrypt (N=2¹⁷). TOTP two-factor is available per account.
+- Passwords use scrypt (N=2¹⁷). TOTP two-factor is available per account,
+  and the setup screen shows a **QR code** to scan — drawn by `romule/qr.py`,
+  which is a QR encoder written against the standard library because Romule
+  has no runtime dependency and would not gain one for a single image. The key
+  is still shown, for anyone who cannot scan.
+
+  A QR code that is subtly wrong looks fine and simply does not scan, so
+  `test_qr.py` reads the matrix back: it recovers the mask from the format
+  information, undoes it, walks the same zigzag, de-interleaves the blocks and
+  returns the payload — for every version, at the size that forces it. It also
+  checks the Reed-Solomon syndromes, an independent computation from the
+  division that produced them, and the error-correction bytes match the
+  published reference vector for `HELLO WORLD`.
 
 ## Browsing the host filesystem
 
