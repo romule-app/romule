@@ -29,7 +29,7 @@ from urllib.parse import parse_qs, unquote
 from . import (access_log, accounts, actions, apikeys, apiv1, audit, auth,
                backup, browse, config, console, covers, device, duplicates,
                edenconf, emuready, igdb, integrity, meta, nand, net, notify,
-               nsztool, profiles, saves, scan, systems, titleid, transfers,
+               nsztool, profiles, qr, saves, scan, systems, titleid, transfers,
                consoles, report, scheduler, trash, updates, versions,
                views)
 from . import cli
@@ -1602,7 +1602,18 @@ class Handler(BaseHTTPRequestHandler):
             u = self._who()
             if not u:
                 return self._session_finie()
-            self._json(accounts.totp_prepare(u["id"]))
+            prep = accounts.totp_prepare(u["id"])
+            # The QR beside the key. Every authenticator app scans; reading
+            # thirty-two characters off a screen and typing them into a phone
+            # is the step people give up on.
+            #
+            # Built here and sent inline: the address is a secret being set up,
+            # and a route serving it would be one more place it exists.
+            try:
+                prep["qr"] = qr.svg(prep["uri"])
+            except Exception as exc:      # the key alone still works
+                JOB.log("QR non genere : %s" % exc, "warn")
+            self._json(prep)
 
         elif p == "/api/compte-totp-activer":
             u = self._who()

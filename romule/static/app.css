@@ -3232,6 +3232,12 @@ body.compact .filters{margin-bottom:2px}
 .ecbloc .ecactions{margin-top:14px;padding-top:12px;
   border-top:1px solid var(--rule)}
 
+/* The two-factor QR. White background under it, always: a scanner needs the
+   contrast, and the dark theme would otherwise show black on near-black. */
+.qrbloc{display:flex;justify-content:center;margin:4px 0 14px}
+.qrbloc svg{width:min(220px,60vw);height:auto;border-radius:8px;
+  background:#fff;padding:6px}
+
 /* Who is signed in, in the header. Small, quiet, and present on every screen:
    it answers "whose session is this" without being asked, and carries the way
    out — which used to exist only at the bottom of the settings. */

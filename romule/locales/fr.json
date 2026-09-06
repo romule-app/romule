@@ -1323,5 +1323,9 @@
   "Authentification desactivee : l'acces reseau est ouvert SANS MOT DE PASSE, sinon plus personne n'entrerait.": "Authentification desactivee : l'acces reseau est ouvert SANS MOT DE PASSE, sinon plus personne n'entrerait.",
   "Romule tourne dans un conteneur : il ne voit pas ton réseau local, donc il ne peut pas trouver la console tout seul. Saisis son adresse et son port à la main, tels que la console les affiche.": "Romule tourne dans un conteneur : il ne voit pas ton réseau local, donc il ne peut pas trouver la console tout seul. Saisis son adresse et son port à la main, tels que la console les affiche.",
   "Revoir ce choix": "Revoir ce choix",
-  "Un compte et son mot de passe, ou personne — l'accès ouvert à tout appareil qui atteint cette adresse. Choisi au premier démarrage ; « Revoir ce choix » rouvre cette étape. Depuis le terminal :": "Un compte et son mot de passe, ou personne — l'accès ouvert à tout appareil qui atteint cette adresse. Choisi au premier démarrage ; « Revoir ce choix » rouvre cette étape. Depuis le terminal :"
+  "Un compte et son mot de passe, ou personne — l'accès ouvert à tout appareil qui atteint cette adresse. Choisi au premier démarrage ; « Revoir ce choix » rouvre cette étape. Depuis le terminal :": "Un compte et son mot de passe, ou personne — l'accès ouvert à tout appareil qui atteint cette adresse. Choisi au premier démarrage ; « Revoir ce choix » rouvre cette étape. Depuis le terminal :",
+  "Scanne ce code avec ton application d'authentification (Aegis, Ente, Bitwarden, Google Authenticator…), puis saisis le code qu'elle affiche.": "Scanne ce code avec ton application d'authentification (Aegis, Ente, Bitwarden, Google Authenticator…), puis saisis le code qu'elle affiche.",
+  "À saisir à la main si tu ne peux pas scanner : %s": "À saisir à la main si tu ne peux pas scanner : %s",
+  "Lancer": "Lancer",
+  "Activer": "Activer"
 }

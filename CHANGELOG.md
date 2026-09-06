@@ -66,6 +66,27 @@ change it. Breaking changes are always listed under **Changed** with the reason.
   the server consults the session before the setting, so `lan_access` alone
   would have reopened nothing while answering "opened".
 
+- **A QR code for two-factor setup**, drawn by `romule/qr.py` — a QR encoder
+  written against the standard library, because Romule has no runtime
+  dependency and would not take one for a single image. Byte mode, correction
+  level M, versions 1 to 10; an `otpauth://` address is about 145 characters,
+  so version 8.
+
+  A QR code that is subtly wrong looks fine and simply does not scan, and there
+  is no scanner in a test suite. So `test_qr.py` reads the matrix BACK: it
+  recovers the mask from the format information, undoes it, walks the same
+  zigzag, de-interleaves the blocks and returns the payload — for every
+  version, at the size that forces it. It checks the Reed-Solomon syndromes
+  too, an independent computation from the division that produced them, and
+  the error-correction bytes match the published reference vector for
+  `HELLO WORLD`. Writing it turned up two placement defects that nothing else
+  would have shown: the second copy of the format information written
+  transposed, and the reserved area stopping one row short, which left the
+  format cells free for data.
+
+- **The account, and the way out, in the header.** Who is signed in existed
+  only at the bottom of the settings; signing out meant going to look for it.
+
 - **A token field on the refusal page.** A protected installation with no
   account used to answer with a sentence telling you to add `?token=` to the
   address — which meant copying a link out of a terminal, unusable from a
