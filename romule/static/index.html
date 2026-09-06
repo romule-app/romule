@@ -47,6 +47,10 @@
       <span id="installlead" hidden></span>
       <span id="installurl" hidden></span>
       <span id="installhelp" hidden></span>
+      <!-- Who is signed in, and the way out. Both lived in the settings only:
+           on every other screen there was nothing saying whose session this
+           was, and no way to end it without going looking for it. -->
+      <div id="moichip" class="moichip" hidden></div>
     </div>
   </div>
 </header>
@@ -273,16 +277,6 @@
         <h3 class="sectitre">Ta console</h3>
         <p class="sectxt">Comment l'outil la rejoint, et où elle range ses jeux.</p>
 
-      <!-- The emulator profile decides EVERY path on the console: so it comes
-           before the rest of the section, rather than buried further down. -->
-      <div class="setgroup">
-        <div class="setgt">Émulateur</div>
-        <p class="lead" style="margin:0 0 10px">Il détermine où l'outil dépose les
-          jeux et où il lit les sauvegardes. Seul Eden est vérifié sur matériel
-          réel ; les autres profils sont fournis tels quels.</p>
-        <div id="choixemulateur" class="bar"></div>
-      </div>
-
       <!-- Which console we are talking about. It comes before everything the
            section says, because everything the section says is about one of
            them: the folder, the pairing, the emulator. A selector further down
@@ -495,6 +489,20 @@
         </div>
         <div id="saves"></div>
       </div>
+      <!-- The emulator profile, next to the settings it governs.
+           It used to open the section, on the grounds that it decides every
+           path on the console. True, and beside the point: you choose a
+           CONSOLE first, and the emulator is one of the things that console
+           has. Sitting above the console selector, it read as a setting of the
+           whole tool. -->
+      <div class="setgroup">
+        <div class="setgt">Émulateur</div>
+        <p class="lead" style="margin:0 0 10px">Il détermine où l'outil dépose les
+          jeux et où il lit les sauvegardes. Seul Eden est vérifié sur matériel
+          réel ; les autres profils sont fournis tels quels.</p>
+        <div id="choixemulateur" class="bar"></div>
+      </div>
+
       <details class="setgroup platform-group" data-plateforme="switch" id="edengroup">
         <summary class="setgt">Émulateur <span class="scope">Switch</span><span class="beta">bêta</span></summary>
         <p class="lead" style="margin:10px 0">Réglages de l'émulateur pour <b>tous</b> les jeux.
@@ -844,13 +852,17 @@
 
         <div class="setrow">
           <div class="setlab"><b>Qui peut ouvrir cette page</b>
-            <span>Décidé au premier démarrage. Depuis le terminal :
-              <code>romule access status</code>.</span></div>
+            <span>Un compte et son mot de passe, ou personne — l'accès ouvert à
+              tout appareil qui atteint cette adresse. Choisi au premier
+              démarrage ; « Revoir ce choix » rouvre cette étape. Depuis le
+              terminal : <code>romule access status</code>.</span></div>
           <div class="setctl" id="etatacces"></div>
         </div>
 
         <!-- ------------------------------------- notifications sortantes -->
-        <div class="setrow" style="align-items:flex-start">
+        <!-- A panel, not a control: the destinations, their events and their
+             tests do not fit in the 300 px column a setting gets. -->
+        <div class="setrow pleine">
           <div class="setlab"><b>Notifications</b>
             <span>Être prévenu quand une tâche se termine — Discord, Slack,
               Telegram, ntfy, Gotify, ou n'importe quel webhook.</span>
@@ -866,7 +878,7 @@
         </div>
 
         <!-- ------------------------------------------ API keys -->
-        <div class="setrow" style="align-items:flex-start">
+        <div class="setrow pleine">
           <div class="setlab"><b>Clés d'API</b>
             <span>Pour interroger Romule depuis un tableau de bord ou un script.</span>
             <span>Une clé n'atteint que l'API publique&nbsp;: elle ne peut ni ouvrir

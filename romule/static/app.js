@@ -3987,6 +3987,7 @@ async function loadAccounts() {
   MOI = r.moi || '';
   MDP_MIN = r.mdp_min || 12;
   renderAccounts();
+  renderMe();
 }
 
 // What decides who gets in, said rather than offered as a switch.
@@ -3996,6 +3997,31 @@ async function loadAccounts() {
 // question once and for all — and having two places decide the same thing, one
 // of them a switch nobody explains, is how an installation ends up open by
 // accident. So this reads the decision back, and points at where to change it.
+// Who is signed in, in the header, on every screen. It only existed in the
+// settings: elsewhere nothing said whose session this was, and signing out
+// meant going to look for the button.
+//
+// Nothing is shown when there is no session — an installation with no password
+// has no one to name, and an empty avatar would only raise the question.
+function renderMe() {
+  const el = $('moichip');
+  if (!el) return;
+  const moi = ACCOUNTS.find(c => c.id === MOI);
+  if (!moi) { el.hidden = true; el.innerHTML = ''; return; }
+  el.hidden = false;
+  el.innerHTML = '<span class="moiav"></span>'
+    + '<span class="moinom" data-i18n-skip>' + esc(moi.nom || moi.email) + '</span>'
+    + '<button class="ghost mini" data-act="signOut">'
+    + esc(t('Se déconnecter')) + '</button>';
+  const av = el.querySelector('.moiav');
+  if (moi.photo) {
+    av.style.backgroundImage = "url('/photo/" + moi.id + "?v=" + Date.now() + "')";  // i18n:ok - URL CSS
+  } else {
+    av.textContent = (moi.nom || moi.email).slice(0, 1).toUpperCase();
+  }
+}
+
+
 function renderAccessState() {
   const el = $('etatacces');
   if (!el) return;
@@ -4010,8 +4036,8 @@ function renderAccessState() {
         : t('Personne n\'a encore choisi.');
   el.innerHTML = '<span class="etatacces' + (compte ? ' ok' : ' avert') + '">'
     + esc(texte) + '</span>'
-    + '<button class="ghost mini" data-act="showOnboard">'
-    + esc(t('Changer')) + '</button>';
+    + '<button class="ghost mini" data-act="showAccessStep">'
+    + esc(t('Revoir ce choix')) + '</button>';
 }
 
 
@@ -4992,9 +5018,17 @@ const app = {
     $('pairfound').innerHTML = found.length
       ? '<div class="card">' + found.map(a => '<div class="row"><span class="grow">' + esc(a) +
           '</span><button class="go" data-act="wifiConnect" data-arg="' + esc(a) + '">Connecter</button></div>').join('') + '</div>'
+      // In a container the search CANNOT work: mDNS discovery only sees the
+      // Docker bridge, never your LAN. Saying "check your Wi-Fi" there sends
+      // people to look at a network that is fine — the address has to be typed.
       : '<div class="mono" style="margin-top:8px">' +
-        esc(t('Aucune console visible. Vérifie que le débogage sans fil est activé '
-              + 'et que la console est sur le même réseau.')) + '</div>';
+        esc(((HEALTH && HEALTH.checks) || {}).container
+            ? t('Romule tourne dans un conteneur : il ne voit pas ton réseau '
+                + 'local, donc il ne peut pas trouver la console tout seul. '
+                + 'Saisis son adresse et son port à la main, tels que la '
+                + 'console les affiche.')
+            : t('Aucune console visible. Vérifie que le débogage sans fil est activé '
+                + 'et que la console est sur le même réseau.')) + '</div>';
   },
   async wifiConnect(addr) {
     say('Connexion…');
@@ -5036,7 +5070,16 @@ const app = {
     // The upload ceiling comes from the server: freezing it in the browser
     // would mean lying as soon as the host changes it.
     TELEVERSEMENT_MAX = ((HEALTH || {}).checks || {}).televersement_max || 0;
-    const vu = localStorage.getItem('onboard-vu') === '1';
+    // The access read-out is drawn by `fillSettings()`, which runs before the
+    // health has come back, so it announced that nobody had chosen yet on an
+    // installation that already had an account. It is redrawn here, once the
+    // answer exists.
+    renderAccessState();
+    // Server-side, not `localStorage`. The wizard was remembered per BROWSER:
+    // finish it on the laptop, open Romule on the phone, and it started over —
+    // on an installation that is already set up. What it records is a fact
+    // about the INSTALLATION, so it belongs where the installation's facts are.
+    const vu = !!(HEALTH.checks || {}).assistant_vu;
     renderChoixEmulateur();
     renderPied();
     majLudotheque();
@@ -5186,14 +5229,14 @@ const app = {
     } finally {
       ONB.occupe = false;
     }
-    if (etat.state === 'ok') toast('Console trouvée.', 'ok');
-    else {
-      this.closeOnboard();
-      this.tab('settings');
-      showSettingsSection('sec-console');
-      this.togglePairing();
-      return;
-    }
+    // Found or not, we STAY. Failing to find a console used to close the
+    // wizard, jump to the settings and open the pairing panel — with the
+    // completion mark playing on the way out, as if the setup had finished.
+    // A step that cannot be completed is not a reason to end the sequence:
+    // this one is optional, and "Next" was always available.
+    if (etat.state === 'ok') toast(t('Console trouvée.'), 'ok');
+    else toast(t('Aucune console trouvée. Branche-la en USB, ou connecte-la '
+                 + 'sans câble depuis cette étape.'), 'warn');
     await this.checkHealth(true);
   },
 
@@ -5207,7 +5250,7 @@ const app = {
       onbGo(onbEtapes(HEALTH).findIndex(x => x.cle === 'compte'));
       return;
     }
-    localStorage.setItem('onboard-vu', '1');
+    api('/api/assistant-vu', {vu: true});
     const el = $('onboard');
     // A wizard that vanishes leaves you wondering whether anything was kept.
     // One short mark, then the library — the same amount of ceremony the work
@@ -5220,6 +5263,19 @@ const app = {
     el.classList.remove('open');
   },
   async showOnboard() { await this.checkHealth(true); },
+
+  // The way out, reachable from the header on every screen. It lived in the
+  // account card of the settings only.
+  signOut() { location.href = '/auth/logout'; },
+
+  // « Changer » opened the wizard at whatever step it had been left on, which
+  // is not an answer to the question the button sits next to. It opens the
+  // ACCESS step, and says so.
+  async showAccessStep() {
+    await this.checkHealth(true);
+    const i = onbEtapes(HEALTH).findIndex(x => x.cle === 'compte');
+    if (i >= 0) onbGo(i);
+  },
 
   dismissA2HS() { localStorage.setItem('a2hs-off', '1'); renderA2HS(); },
   async installApp() {
@@ -6200,8 +6256,19 @@ const app = {
     f.type = 'file';
     f.multiple = true;
     f.accept = EXTS_ACCEPTEES.join(',');
-    f.onchange = () => { if (f.files && f.files.length) uploadFiles(f.files); };
+    // In the DOM before being clicked, and out again afterwards. Safari
+    // refuses `click()` on a detached file input — silently, which left drag
+    // and drop as the only way in and nothing on screen to say why.
+    f.style.display = 'none';
+    document.body.appendChild(f);
+    f.onchange = () => {
+      if (f.files && f.files.length) uploadFiles(f.files);
+      f.remove();
+    };
     f.click();
+    // Cancelling the dialog fires no event anywhere: without this the page
+    // would collect one dead input per attempt.
+    setTimeout(() => { if (f.isConnected && !f.files.length) f.remove(); }, 60000);
   },
 
   toggleFollow() {
@@ -6336,9 +6403,13 @@ const app = {
            + tpl('— le plus ancien a %d {jour|jours}', r.plus_vieux) + '</span>' : '')
       : '<span class="mono">Corbeille vide.</span>';
     const sel = $('s-trashdays');
-    if (sel && t.jours != null) sel.value = String(t.jours);
-    $('trash').innerHTML = t.items.length
-      ? '<div class="card">' + t.items.map(i => '<div class="row"><span class="grow">' +
+    // `rep`, not `t`. `t` is the TRANSLATION function: `t.jours` was quietly
+    // `undefined`, and `t.items.length` threw on every single load — so the
+    // trash panel has never listed anything. The comment above records the
+    // first half of this same defect being fixed; the second half stayed.
+    if (sel && rep.jours != null) sel.value = String(rep.jours);
+    $('trash').innerHTML = (rep.items || []).length
+      ? '<div class="card">' + rep.items.map(i => '<div class="row"><span class="grow">' +
           esc(i.name) + '</span><span class="mono">' + countPhrase(i.count, '{fichier|fichiers}') + ' · ' +
           fmt(i.size || 0) + '</span>' +
           '<button data-act="restore" data-arg="' + esc(i.name) + '">Restaurer</button></div>').join('') + '</div>'
@@ -7373,6 +7444,7 @@ const ACTES = new Set([
   'libConfirm', 'mkTree', 'onbGo', 'onbFindConsole',
   'onbChooseFolder', 'onbCreateAccount', 'onbOpenAccess', 'onbPrev',
   'onbScan', 'onbTestSgdb', 'onbTestIgdb', 'setLang', 'toggleNotification',
+  'signOut', 'showAccessStep',
   'onbScanConsole', 'onbNext', 'openGame',
   'openOnConsole', 'organize', 'forgetFolder', 'forgetTransfer',
   'openPlatform', 'page', 'browseServer', 'purgeTrash', 'reloadImport',
