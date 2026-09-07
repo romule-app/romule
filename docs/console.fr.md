@@ -16,8 +16,19 @@ Les réglages contiennent un assistant pas à pas. En résumé :
    l'appareil à l'aide d'un code**. Laisse la fenêtre ouverte : le code expire
    quand elle se ferme. Elle affiche un code à six chiffres et une adresse du
    type `192.168.1.42:37105`.
-3. **Dans Romule** — saisis les deux. Une fois appairée, la console est
-   reconnue toute seule ensuite.
+3. **Dans Romule** — saisis cette adresse et ce code, puis valide
+   l'appairage.
+4. **Sur la console** — ferme la fenêtre du code. L'écran de débogage sans fil
+   affiche derrière elle **sa propre ligne « Adresse IP et port »**, et ce
+   n'est pas la même : le port d'appairage ne sert qu'une fois. Recopie
+   celle-là dans Romule, puis **Connecter la console**.
+
+Une fois connectée, la console est reconnue toute seule ensuite.
+
+!!! warning "Deux adresses, deux ports"
+    C'est le point où l'on se trompe. La fenêtre du code donne un port
+    d'appairage, jetable ; l'écran de débogage sans fil en donne un autre, celui
+    de la connexion. Saisir le premier à l'étape 4 échoue sans rien expliquer.
 
 !!! note "Le Wi-Fi est plus lent"
     Deux à cinq fois plus lent que l'USB sur les gros transferts. Sans
