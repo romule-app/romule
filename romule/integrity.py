@@ -14,6 +14,7 @@ from datetime import datetime
 from pathlib import Path
 
 from . import config, nsztool
+from . import messages
 
 REGISTRY = config.ROOT / "_integrity.json"
 
@@ -112,7 +113,7 @@ def check(files, job, deep=False, budget_bytes=None):
 
     for f in files:
         if not job.checkpoint():
-            job.log("Verification interrompue.")
+            job.log(messages.VERIF_INTERROMPUE)
             break
         p = Path(f["path"])
         rel = f.get("rel") or p.name

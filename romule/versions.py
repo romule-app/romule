@@ -3,6 +3,7 @@
 import time
 
 from . import config, net
+from . import messages
 
 
 def load(lib, force=False, log=lambda m, n=None: None):
@@ -34,7 +35,7 @@ def _download(log):
             with net.open_url(url, timeout=90) as r:
                 data = r.read()
             if b"version" not in data[:80]:
-                raise ValueError("contenu inattendu")
+                raise ValueError(messages.CONTENU_INATTENDU)
             config.VCACHE.write_bytes(data)
             log("Base de versions enregistree (%.1f Mo)" % (len(data) / 1048576))
             return

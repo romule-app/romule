@@ -17,6 +17,7 @@ from datetime import datetime
 from pathlib import Path
 
 from . import config, device, profiles
+from . import messages
 
 # These paths depend on the chosen emulator: they can no longer be module
 # constants. They used to be, pinned to Eden, which made every other emulator
@@ -56,10 +57,10 @@ def read_pfs0(path):
     with open(path, "rb") as fh:
         tete = fh.read(16)
         if len(tete) < 16:
-            raise Incomplete("fichier vide ou tronque")
+            raise Incomplete(messages.FICHIER_VIDE)
         magic, count, strtab, _ = struct.unpack("<4sIII", tete)
         if magic != b"PFS0":
-            raise ValueError("ce fichier n'est pas une archive NSP (PFS0)")
+            raise ValueError(messages.PAS_UN_NSP)
         entries = [struct.unpack("<QQII", fh.read(24)) for _ in range(count)]
         names = fh.read(strtab)
         base = 16 + count * 24 + strtab
@@ -189,7 +190,7 @@ def status(paths, installed=None):
 def install(paths, job):
     """Install .nsp files (updates/DLC) into Eden's NAND, over adb."""
     if device.state() != "device":
-        job.log("Console non connectee.")
+        job.log(messages.CONSOLE_NON_CONNECTEE)
         return
     if not device._shell("[ -d %s ] && echo 1" % device._q(folder())).strip():
         job.log("%s introuvable sur la console (%s)."
@@ -207,7 +208,7 @@ def install(paths, job):
     try:
         for p in paths:
             if not job.checkpoint():
-                job.log("Installation interrompue.")
+                job.log(messages.INSTALL_INTERROMPUE)
                 break
             src = Path(p)
             job.log("Lecture de %s…" % src.name)
@@ -269,7 +270,7 @@ def install(paths, job):
     job.log("Termine : %d fichier(s) installe(s), %d deja present(s), %d cle(s) de titre."
             % (poses, ignores, len(nouvelles_cles)))
     if poses:
-        job.log("Relance Eden pour que les mises a jour et DLC soient pris en compte.")
+        job.log(messages.RELANCE_EDEN)
 
 
 def _merge_title_keys(new_keys, job):
@@ -287,7 +288,7 @@ def _merge_title_keys(new_keys, job):
         lignes.append("%s = %s" % (rights, key))
         ajout += 1
     if not ajout:
-        job.log("Cles de titre : rien de nouveau.")
+        job.log(messages.CLES_RIEN_DE_NEUF)
         return
     local = config.IMPORT / "_title.keys"
     local.write_text("\n".join([l for l in lignes if l.strip()]) + "\n", encoding="utf-8")

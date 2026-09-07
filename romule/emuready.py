@@ -17,6 +17,7 @@ import urllib.parse
 import urllib.request
 
 from . import config, meta, net
+from . import messages
 
 BASE = "https://www.emuready.com/api/mobile/trpc"
 CACHE = config.ROOT / "_emuready-cache.json"
@@ -187,7 +188,7 @@ def config_of(listing_id):
     """The contents of a report's Eden configuration file."""
     r = call("listings.getEmulatorConfig", {"listingId": listing_id}) or {}
     if (r.get("type") or "").lower() != "eden":
-        raise RuntimeError("ce rapport ne fournit pas de configuration Eden")
+        raise RuntimeError(messages.ER_SANS_CONFIG)
     return r.get("content") or ""
 
 
@@ -201,7 +202,7 @@ def sync(games, cfg, job, force=False):
     neufs = 0
     for g in games:
         if not job.checkpoint():
-            job.log("Synchronisation interrompue.")
+            job.log(messages.SYNC_INTERROMPUE)
             break
         tid = (g.get("tid") or "").lower()
         if not tid:

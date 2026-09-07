@@ -16,6 +16,7 @@ import time
 from pathlib import Path
 
 from . import config
+from . import messages
 
 FOLDER = config.ROOT / "_sauvegardes"
 KEEP = 20                       # nombre de copies conservees
@@ -95,9 +96,9 @@ def restore(batch):
     try:
         d.resolve().relative_to(FOLDER.resolve())
     except (ValueError, OSError) as exc:
-        raise ValueError("Lot invalide.") from exc
+        raise ValueError(messages.LOT_INVALIDE) from exc
     if not d.is_dir():
-        raise ValueError("Lot introuvable.")
+        raise ValueError(messages.LOT_INTROUVABLE)
     create("avant-restauration")          # the current state is never lost
     remis = []
     for src in _sources():

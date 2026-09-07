@@ -35,6 +35,7 @@ from . import (access_log, accounts, actions, apikeys, apiv1, audit, auth,
 from . import cli
 from . import LICENCE, SOURCE_URL, __version__
 from .jobs import JobRunner
+from . import messages
 
 LIB = scan.Library()
 JOB = JobRunner(config.LOGFILE)
@@ -631,7 +632,7 @@ class Handler(BaseHTTPRequestHandler):
             # `/api/*` into an HTML login page would break every dashboard
             # plugged into this installation to fix the first-start journey.
             if self.path.partition("?")[0].startswith("/api/"):
-                return self._json({"error": "Acces protege : jeton requis."}, 403)
+                return self._json({"error": messages.ACCES_JETON_REQUIS}, 403)
             return self._token_page()
         # No token and no account: nothing to type, so nothing to offer.
         #
@@ -937,7 +938,7 @@ class Handler(BaseHTTPRequestHandler):
                 # revalidate, as with the inventory.
                 self._json_revalide(json.loads(f.read_text(encoding="utf-8")))
             else:
-                self._json({"error": "langue inconnue"}, 404)
+                self._json({"error": messages.LANGUE_INCONNUE}, 404)
         elif p == "/api/maj":
             # Lazy: it returns what it knows and only goes out when the cache
             # is more than a day old. A GitHub outage answers "I don't know",
@@ -1119,7 +1120,7 @@ class Handler(BaseHTTPRequestHandler):
         `_session` is the flag `api()` already watches to offer a reload — the
         same treatment the login page gets when it arrives instead of JSON.
         """
-        return self._json({"error": "Aucun compte connecte.", "_session": True},
+        return self._json({"error": messages.AUCUN_COMPTE_CONNECTE, "_session": True},
                           401)
 
     def _who(self):
@@ -1175,21 +1176,21 @@ class Handler(BaseHTTPRequestHandler):
             d = accounts.photo_write(u["id"], self.rfile.read(taille))
         except ValueError as exc:
             return self._json({"error": str(exc)}, 400)
-        self._json({"message": "Photo mise a jour.", **d})
+        self._json({"message": messages.PHOTO_MISE_A_JOUR, **d})
 
     def do_POST(self):
         if not self._rate_ok():
             return
         if self.path.partition("?")[0] == "/auth/connexion":
             if CFG.get("auth_mode") != "interne":
-                return self._json({"error": "connexion interne desactivee"}, 404)
+                return self._json({"error": messages.CONNEXION_INTERNE_OFF}, 404)
             return self._internal_login()
         # The token field, before the check: it IS the check. Only when a token
         # is what protects this installation — otherwise the route does not
         # exist, and there is nothing to try against.
         if self.path.partition("?")[0] == "/auth/jeton":
             if not config.TOKEN or auth.enabled(CFG):
-                return self._json({"error": "route inconnue : /auth/jeton"}, 404)
+                return self._json({"error": messages.ROUTE_JETON_INCONNUE}, 404)
             return self._token_login()
         if not self._allowed():
             return self._deny()
@@ -1197,7 +1198,7 @@ class Handler(BaseHTTPRequestHandler):
         if not self._same_origin():
             JOB.log("POST rejete sur %s : origine %s"
                     % (self.path, self.headers.get("Origin") or "?"), "warn")
-            return self._json({"error": "origine inattendue"}, 403)
+            return self._json({"error": messages.ORIGINE_INATTENDUE}, 403)
         chemin = self.path.partition("?")[0]
         if chemin.startswith(apiv1.PREFIX):
             return self._api_v1(chemin, "POST")
@@ -1210,7 +1211,7 @@ class Handler(BaseHTTPRequestHandler):
             d = self._payload()
         except (ValueError, OSError) as exc:
             JOB.log("Requete invalide sur %s : %s" % (p, exc))
-            return self._json({"error": "requete invalide"}, 400)
+            return self._json({"error": messages.REQUETE_INVALIDE}, 400)
         refus = self._admin_only_for(p)
         if refus:
             JOB.log("%s refuse : %s" % (p, refus), "warn")
@@ -1315,26 +1316,25 @@ class Handler(BaseHTTPRequestHandler):
                     # migrates the flat keys again on the next load: the console
                     # would come back on its own, which reads as the removal
                     # having silently failed.
-                    return self._json({"error": "The last console cannot be "
-                                       "removed."}, 400)
+                    return self._json({"error": messages.V1_DERNIERE_CONSOLE}, 400)
                 if not consoles.remove(CFG, cid):
-                    return self._json({"error": "Unknown console."}, 404)
+                    return self._json({"error": messages.V1_CONSOLE_INCONNUE}, 404)
                 # Its inventory goes with it. Left behind, it would be handed to
                 # the next console that happened to take the same identifier —
                 # which is why identifiers are time-based and not counted.
                 consoles.forget_inventory(cid)
             elif geste == "choisir":
                 if not consoles.select(CFG, cid):
-                    return self._json({"error": "Unknown console."}, 404)
+                    return self._json({"error": messages.V1_CONSOLE_INCONNUE}, 404)
                 # The tree read from the PREVIOUS console has nothing to say
                 # about this one. Keeping it would show one console's games
                 # under the other's name.
                 systems.clear_tree_cache()
             elif geste == "renommer":
                 if not consoles.rename(CFG, cid, str(d.get("nom") or "")):
-                    return self._json({"error": "Unknown console."}, 404)
+                    return self._json({"error": messages.V1_CONSOLE_INCONNUE}, 404)
             else:
-                return self._json({"error": "Unknown gesture."}, 400)
+                return self._json({"error": messages.V1_GESTE_INCONNU}, 400)
             config.save_config(CFG)
             # Re-read rather than patch: `load_config` is what overlays the
             # active console's fields, and after a `choisir` the eight flat keys
@@ -1346,7 +1346,7 @@ class Handler(BaseHTTPRequestHandler):
         elif p == "/api/notif-creer":
             url = str(d.get("url") or "").strip()
             if not url:
-                return self._json({"error": "An address is required."}, 400)
+                return self._json({"error": messages.V1_ADRESSE_REQUISE}, 400)
             try:
                 net.check(url)
             except net.SchemeRefused as exc:
@@ -1395,7 +1395,7 @@ class Handler(BaseHTTPRequestHandler):
             # the settings govern, and this route can no longer loosen anything
             # — which is what the refusal below says.
             if _claimed() and not self._is_admin():
-                return self._json({"error": "Reserve a l'administrateur."}, 403)
+                return self._json({"error": messages.RESERVE_ADMIN}, 403)
             ouvert = bool(d.get("ouvert", True))
             CFG["lan_access"] = ouvert
             CFG["acces_choisi"] = True
@@ -1412,7 +1412,7 @@ class Handler(BaseHTTPRequestHandler):
             nid = str(d.get("id") or "")
             liste = list(CFG.get("notif_destinations") or [])
             if not any(str(x.get("id")) == nid for x in liste):
-                return self._json({"error": "Unknown destination."}, 404)
+                return self._json({"error": messages.V1_DESTINATION_INCONNUE}, 404)
             for x in liste:
                 if str(x.get("id")) != nid:
                     continue
@@ -1447,7 +1447,7 @@ class Handler(BaseHTTPRequestHandler):
                 cible = next((x for x in notify.destinations(CFG)
                               if x["id"] == str(d.get("id") or "")), None)
                 if not cible:
-                    return self._json({"error": "Unknown destination."}, 404)
+                    return self._json({"error": messages.V1_DESTINATION_INCONNUE}, 404)
                 url, service = cible["url"], cible["service"]
             else:
                 service = d.get("service")
@@ -1513,7 +1513,7 @@ class Handler(BaseHTTPRequestHandler):
                 # branch is not reached at all.
                 if _claimed():
                     return self._json(
-                        {"error": "Cette installation a deja un acces defini."},
+                        {"error": messages.ACCES_DEJA_DEFINI},
                         403)
             else:
                 refus = self._admin_required()
@@ -1547,7 +1547,7 @@ class Handler(BaseHTTPRequestHandler):
                             auth.cookie_header_for(
                                 auth.internal_session(accounts.by_id(u["id"])),
                                 self._secure()))]
-                JOB.log("Authentification activée : ce navigateur reste connecté.")
+                JOB.log(messages.AUTH_ACTIVEE)
             JOB.log("Compte cree : %s" % u["email"])
             access_log.record("compte", self.client_address[0], u["email"], "creation")
             self._json({"message": "Compte cree pour %s." % u["email"],
@@ -1562,7 +1562,7 @@ class Handler(BaseHTTPRequestHandler):
                 v = accounts.update(u["id"], d.get("nom"), d.get("email"))
             except ValueError as exc:
                 return self._json({"error": str(exc)}, 400)
-            self._json({"message": "Profil enregistre.", "compte": v})
+            self._json({"message": messages.PROFIL_ENREGISTRE, "compte": v})
 
         elif p == "/api/compte-mdp":
             u = self._who()
@@ -1581,8 +1581,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_header("Set-Cookie", auth.cookie_header_for(
                 auth.internal_session(accounts.by_id(u["id"])), self._secure()))
-            body = json.dumps({"message": "Mot de passe change. Les autres "
-                                           "appareils ont ete deconnectes."}).encode()
+            body = json.dumps({"message": messages.MDP_CHANGE}).encode()
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
@@ -1595,8 +1594,8 @@ class Handler(BaseHTTPRequestHandler):
                 accounts.delete(d.get("id", ""))
             except ValueError as exc:
                 return self._json({"error": str(exc)}, 400)
-            JOB.log("Compte supprime.")
-            self._json({"message": "Compte supprime.", "comptes": accounts.list_all()})
+            JOB.log(messages.COMPTE_SUPPRIME)
+            self._json({"message": messages.COMPTE_SUPPRIME, "comptes": accounts.list_all()})
 
         elif p == "/api/compte-totp-preparer":
             u = self._who()
@@ -1625,7 +1624,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"error": str(exc)}, 400)
             access_log.record("compte", self.client_address[0], u["email"],
                                 "double facteur active")
-            self._json({"message": "Double authentification activée."})
+            self._json({"message": messages.TOTP_ACTIVEE})
 
         elif p == "/api/compte-totp-desactiver":
             u = self._who()
@@ -1637,14 +1636,14 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"error": str(exc)}, 400)
             access_log.record("compte", self.client_address[0], u["email"],
                                 "double facteur desactive")
-            self._json({"message": "Double authentification retirée."})
+            self._json({"message": messages.TOTP_RETIREE})
 
         elif p == "/api/compte-photo-effacer":
             u = self._who()
             if not u:
                 return self._session_finie()
             accounts.photo_delete(u["id"])
-            self._json({"message": "Photo retiree."})
+            self._json({"message": messages.PHOTO_RETIREE})
 
         elif p == "/api/sgdb-test":
             ok, msg = covers.test_key(CFG)
@@ -1662,12 +1661,12 @@ class Handler(BaseHTTPRequestHandler):
         elif p == "/api/transfert-reprendre":
             r = transfers.summary()
             if not r:
-                return self._json({"error": "Aucun transfert a reprendre."}, 400)
+                return self._json({"error": messages.AUCUN_TRANSFERT}, 400)
             self._job(actions.deploy_games, LIB, CFG, JOB, r["chemins"], [], [])
 
         elif p == "/api/transfert-oublier":
             transfers.finish()
-            self._json({"message": "Reprise abandonnée."})
+            self._json({"message": messages.REPRISE_ABANDONNEE})
 
         elif p == "/api/import-suggestions":
             self._json({"items": actions.import_suggestions(CFG)})
@@ -1714,7 +1713,7 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"lots": backup.listing()})
 
         elif p == "/api/sauvegarde-creer":
-            self._json({"message": "Sauvegarde enregistree.",
+            self._json({"message": messages.SAUVEGARDE_ENREGISTREE,
                         **backup.create("manuelle"),
                         "lots": backup.listing()})
 
@@ -1805,7 +1804,7 @@ class Handler(BaseHTTPRequestHandler):
             # folder, or fail a move halfway. We refuse; we do not queue.
             if JOB.running:
                 return self._json(
-                    {"error": "un travail est en cours — reessaie apres"}, 409)
+                    {"error": messages.TRAVAIL_EN_COURS}, 409)
             souci = config.set_library(d.get("chemin", ""),
                                        create=bool(d.get("creer")))
             if souci:
@@ -1869,9 +1868,9 @@ class Handler(BaseHTTPRequestHandler):
             if not ip:
                 self._json({"ok": False, "message": _no_address_reason()})
             elif not CFG.get("lan_access"):
-                self._json({"ok": False, "message": "Active d'abord l'acces reseau (Reglages)."})
+                self._json({"ok": False, "message": messages.ACTIVE_ACCES_RESEAU})
             elif device.connection()["kind"] is None:
-                self._json({"ok": False, "message": "Connecte d'abord la console."})
+                self._json({"ok": False, "message": messages.CONNECTE_LA_CONSOLE})
             else:
                 url = _public_url(ip)
                 ok, msg = device.open_url(url)
@@ -1933,13 +1932,13 @@ class Handler(BaseHTTPRequestHandler):
             device.disconnect(CFG.get("wifi_addr") or None)
             CFG["wifi_addr"] = ""
             config.save_config(CFG)
-            self._json({"ok": True, "message": "Connexion sans fil oubliee."})
+            self._json({"ok": True, "message": messages.WIFI_OUBLIE})
 
         elif p == "/api/device-tree":
             self._json({"tree": device.tree_status(CFG["device_dir"])})
 
         elif p == "/api/device-mktree":
-            JOB.log("Creation de l'arborescence GAMES/UPDATE/DLC sur la console.")
+            JOB.log(messages.ARBORESCENCE_CREEE)
             self._json({"tree": device.make_tree(CFG["device_dir"])})
 
         elif p == "/api/device-organize":
@@ -2050,7 +2049,7 @@ class Handler(BaseHTTPRequestHandler):
 
         elif p == "/api/emuready-clear":
             emuready.clear()
-            self._json({"message": "Cache EmuReady vide."})
+            self._json({"message": messages.ER_CACHE_VIDE})
 
         # ---- Eden's configuration
         elif p in ("/api/eden-config", "/api/eden-apply", "/api/emuready-apply") \
@@ -2122,7 +2121,7 @@ class Handler(BaseHTTPRequestHandler):
         # ---- controle de la tache en cours
         elif p == "/api/journal-clear":
             JOB.clear()
-            JOB.log("Journal efface.", "info")
+            JOB.log(messages.JOURNAL_EFFACE, "info")
             self._json(JOB.snapshot())
 
         elif p == "/api/job-control":
@@ -2181,9 +2180,7 @@ class Handler(BaseHTTPRequestHandler):
                     and _listen_address() != "127.0.0.1" \
                     and not CFG.get("lan_access") and not config.TOKEN:
                 CFG["lan_access"] = True
-                JOB.log("Authentification desactivee : l'acces reseau est "
-                        "ouvert SANS MOT DE PASSE, sinon plus personne "
-                        "n'entrerait.", "warn")
+                JOB.log(messages.AUTH_DESACTIVEE_OUVRE, "warn")
             # The schedule is sanitised ON WRITE: only known tasks and known
             # presets reach the file. An unknown preset stored here would be
             # read back as `never`, which is a setting that shows one thing and
@@ -2223,7 +2220,7 @@ class Handler(BaseHTTPRequestHandler):
                                        "email": "", "src": "config",
                                        "exp": time.time() + auth.BRIDGE_TTL}))
                 self.send_header("Set-Cookie", auth.cookie_header_for(jeton, self._secure()))
-                JOB.log("Authentification activée : ce navigateur reste connecté.",
+                JOB.log(messages.AUTH_ACTIVEE,
                         "warn")
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
@@ -2245,18 +2242,17 @@ class Handler(BaseHTTPRequestHandler):
             # The exception message is not returned: it often carries an
             # absolute path, hence the server's directory tree.
             return self._json({"error": "internal_error",
-                               "message": "The request could not be served."},
+                               "message": messages.V1_REQUETE_REFUSEE},
                               500)
         if reponse is None:
             return self._json({"error": "not_found",
-                               "message": "Unknown route. See "
-                                          "/api/v1/openapi.json."}, 404)
+                               "message": messages.V1_ROUTE_INCONNUE}, 404)
         code, body = reponse
         self._json(body, code)
 
     def _job(self, fn, *args):
         ok = JOB.start(fn.__name__, fn, *args)
-        self._json({} if ok else {"error": "Une tache est deja en cours."})
+        self._json({} if ok else {"error": messages.TACHE_EN_COURS})
 
 
 STARTED = time.time()
@@ -2279,14 +2275,14 @@ def _start_v1(what):
     """Return (started, reason). One task at a time: that is how Romule works,
     and the API says so rather than pretending there is a queue."""
     if JOB.snapshot()["running"]:
-        return False, "Another task is already running."
+        return False, messages.V1_TACHE_EN_COURS
     if what == "scan":
         return JOB.start("scan", _inventory_v1), ""
     if what == "convert":
         return JOB.start("convert", actions.convert_files, LIB, CFG, JOB, []), ""
     if what == "push":
         return JOB.start("push", actions.push_files, LIB, CFG, JOB, []), ""
-    return False, "Unknown task."
+    return False, messages.V1_TACHE_INCONNUE
 
 
 # --------------------------------------------------------------- scheduler
@@ -2562,7 +2558,7 @@ def _startup_audit():
         console.say("Securite : %d point(s) a regarder — `python3 -m romule.audit`"
                     % n, "warn", "audit")
     else:
-        console.say("Securite : aucun point d'attention.", "ok", "audit")
+        console.say(messages.SECURITE_OK, "ok", "audit")
 
 
 def _notif_public(d):
@@ -2707,30 +2703,25 @@ def serve(open_browser=True):
     for souci in config.PROBLEMS:
         console.say(souci, "warn", "config")
     if CFG.get("lan_access") and not config.TOKEN:
-        console.say("Accessible SANS MOT DE PASSE par tout appareil du reseau.",
+        console.say(messages.ACCES_OUVERT,
                     "warn", "acces")
     if auto_token:
         # Somebody set one on purpose: say it protects the way in, and where to
         # read it back. Never the token itself — a secret reprinted at every
         # restart ends up in every log attached to a bug report.
-        console.say("Acces protege par un jeton. "
-                    "`romule token show` le rappelle.", "warn", "acces")
+        console.say(messages.ACCES_JETON_RAPPEL, "warn", "acces")
     elif not _claimed():
         # The window this design accepts, said out loud rather than left to be
         # discovered. It closes on the wizard's access step.
-        console.say("PERSONNE N'A ENCORE CHOISI COMMENT PROTEGER CET ACCES : "
-                    "tout appareil pouvant joindre cette adresse a tous les "
-                    "droits.", "warn", "acces")
+        console.say(messages.ACCES_NON_CHOISI, "warn", "acces")
         console.say("Ouvre %s et reponds a l'etape « Ton acces » de "
                     "l'assistant." % (_public_url(ip)
                                       or "http://localhost:%d" % config.PORT),
                     "warn", "acces")
         if not ip:
-            console.say("  (adresse valable depuis la machine qui heberge "
-                        "le conteneur ; declare ROMULE_PUBLIC_HOST pour "
-                        "les autres)", "warn", "acces")
+            console.say(messages.ADRESSE_HOTE_CONTENEUR, "warn", "acces")
     if not adb_hint():
-        console.say("adb absent — la console ne pourra pas etre pilotee",
+        console.say(messages.ADB_ABSENT,
                     "warn", "device")
     # What the operator asked to happen on its own. The startup pass comes
     # after the inventory: a `startup` scan that ran before `LIB.scan` would be
@@ -2745,7 +2736,7 @@ def serve(open_browser=True):
     def stop(*_):
         # `docker stop` sends SIGTERM: we warn the running task and hand back
         # cleanly rather than being killed outright.
-        console.say("Arret demande, fermeture...", "info", "serveur")
+        console.say(messages.ARRET_DEMANDE, "info", "serveur")
         JOB.cancel()
         threading.Thread(target=srv.shutdown, daemon=True).start()
 

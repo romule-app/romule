@@ -12,6 +12,28 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Changed
 
+- **The French has its accents back, and the sentences left the code.** 312
+  strings of the shipped Python were written without accents: « Range »,
+  « recuperee », « termine », « Decompression » — that is what the log showed.
+  Nothing required it. What made it look required is that `sys.stdout` takes
+  its encoding from the locale: under `LANG=C` the first accent raises
+  `UnicodeEncodeError`, inside the logging call, so the line that would have
+  explained the problem is the line that disappears. `console.py` now
+  reconfigures both streams to UTF-8 with `errors="replace"`.
+
+  The 135 sentences the server shows live in **`romule/messages.py`**, named
+  and accented; the call sites reference constants. The French text is still
+  the catalogue KEY — that is the i18n mechanism, not a style — so both
+  catalogues follow, 57 keys re-accented. The eleven `/api/v1` answers stay
+  English and untranslated: clients are written against them.
+
+  `verifier-journal.py` reads that module instead of sweeping thirty files. The
+  check became exact rather than heuristic, and immediately found **43
+  sentences that had never been in the catalogue** — every OIDC refusal, every
+  password rule, every account error. All of them would have shown in French in
+  an English interface.
+
+
 - **The code is in English.** Comments, docstrings, function and variable
   names, CSS classes and the `data-act` action names. The repository is public,
   under the AGPL, with an English README, documentation and interface; French

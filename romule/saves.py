@@ -10,6 +10,7 @@ the known locations, and the user can pin one.
 from datetime import datetime
 
 from . import config, device
+from . import messages
 
 def candidates():
     """Where to look for saves, from the most specific to the most general.
@@ -71,12 +72,12 @@ def find_dirs(cfg=None):
 def backup(job, cfg=None):
     """Copy the console's saves into _saves/<date>/."""
     if device.state() != "device":
-        job.log("Console non connectee.")
+        job.log(messages.CONSOLE_NON_CONNECTEE)
         return None
     dirs = find_dirs(cfg)
     if not dirs:
-        job.log("Aucun dossier de sauvegardes trouve sur la console.")
-        job.log("Indique son chemin dans les Reglages si tu le connais.")
+        job.log(messages.SAUVEGARDES_ABSENTES)
+        job.log(messages.SAUVEGARDES_CHEMIN)
         return None
 
     dest = SAVES / datetime.now().strftime("%Y-%m-%d_%H%M%S")
@@ -85,7 +86,7 @@ def backup(job, cfg=None):
     ok = 0
     for d in dirs:
         if not job.checkpoint():
-            job.log("Sauvegarde interrompue.")
+            job.log(messages.SAUVEGARDE_INTERROMPUE)
             break
         job.log("Recuperation de %s…" % d)
         sub = dest / d.strip("/").replace("/", "_")
@@ -100,7 +101,7 @@ def backup(job, cfg=None):
         job.tick()
 
     if not ok:
-        job.log("Rien n'a pu etre sauvegarde.")
+        job.log(messages.RIEN_SAUVEGARDE)
         return None
     job.log("Sauvegardes enregistrees dans _saves/%s" % dest.name)
     return str(dest.relative_to(config.ROOT))

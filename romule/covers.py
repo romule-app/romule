@@ -20,6 +20,7 @@ import urllib.request
 
 from . import config, net
 from . import matching
+from . import messages
 
 NLIB = "https://api.nlib.cc/nx/{tid}/icon/256/256"
 
@@ -241,7 +242,7 @@ def test_key(cfg):
     """
     key = (cfg.get("steamgriddb_key") or "").strip()
     if not key:
-        return (False, "Aucune cle renseignee.")
+        return (False, messages.SGDB_SANS_CLE)
     url = ("https://www.steamgriddb.com/api/v2/search/autocomplete/"
            + urllib.parse.quote("zelda"))
     try:
@@ -249,7 +250,7 @@ def test_key(cfg):
         return (True, "Cle acceptee.")
     except urllib.error.HTTPError as exc:
         if exc.code in (401, 403):
-            return (False, "Cle refusee par SteamGridDB.")
+            return (False, messages.SGDB_CLE_REFUSEE)
         return (False, "SteamGridDB repond %d." % exc.code)
     except Exception as exc:
         return (False, "Contact impossible : %s" % exc)
