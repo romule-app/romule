@@ -12,6 +12,43 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Changed
 
+- **Twelve more defects, from a second session of using the tool.**
+
+  - **The wizard's console step was a dead end.** It offered « Chercher une
+    console » and nothing else — and mDNS discovery reaches Docker's own
+    network, never the LAN, so in a container it can never find anything. The
+    address and pairing-code fields the settings have always had are now in the
+    step too, and the search button is hidden where it cannot work.
+  - **A game's detail view showed no description.** `loadGameMeta` has been
+    writing into `#gm-desc` since the view existed; the element was created
+    nowhere. The card showed the summary, the screen you open to read it never
+    did.
+  - **Two `{singulier|pluriel}` reached the page raw.** The observer translates
+    a sentence, it does not resolve that notation: « 1 {mise|mises} à jour ».
+  - **The journal filled a third of its drawer.** `#journal` was freed of its
+    ceiling, `#log` kept its own 250 px.
+  - **Refusals the interface already handles are no longer logged as errors.**
+    The folder browser falls back to an allowed folder and said so as an error
+    nobody could act on, beside the ones that matter.
+  - **A release note is rendered, not flattened.** It was folded into a block
+    called « Détail technique » — the wrong name for the thing you opened the
+    dialog to read — with its lists turned into paragraphs. The block is now
+    named by the caller and open when it carries something to read: the note,
+    an API key, a two-factor key. The note goes through a small Markdown
+    renderer that escapes everything FIRST and only then turns six marks back
+    into tags; `javascript:` links are refused and `test_ui_injection.js`
+    checks both directions, because that text is written by whoever publishes
+    the release.
+  - Plus: the state band no longer leaves a hairline of cover on a Retina
+    screen, the API key field says what to type, a link inside a setting is a
+    tap target rather than fifteen pixels of text, and the access read-out is
+    gone — it repeated a state and changed nothing.
+
+- **`verifier-fuite.py` runs in the suite, not only in continuous
+  integration.** A file it refuses could be committed and only bounce back at
+  the next push. One did: `test_qr.py` carried a two-factor address written out
+  in full.
+
 - **Alignment is measured now, not reviewed.** 734 spacing values are written
   by hand across the stylesheet, in 32 distinct sizes: every block invents its
   own margin, which is why buttons flush against a frame and rows a few pixels

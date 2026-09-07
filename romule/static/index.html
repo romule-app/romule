@@ -361,8 +361,13 @@
                 <button class="ghost" data-act="wizStep" data-val="2">Retour</button>
                 <button class="go" id="pairgo" data-act="wifiPair" disabled>Associer la console</button>
               </div>
-              <div class="wsep">ou</div>
-              <button class="ghost" data-act="wifiDiscover">Chercher les consoles du réseau</button>
+              <!-- Hidden in a container: mDNS discovery only sees Docker's
+                   own network, never the LAN, so this button can never find
+                   anything there. `renderHost()` sets the flag. -->
+              <div id="pairdecouverte">
+                <div class="wsep">ou</div>
+                <button class="ghost" data-act="wifiDiscover">Chercher les consoles du réseau</button>
+              </div>
               <div id="pairfound"></div>
             </div>
           </div>
@@ -850,15 +855,11 @@
       <div class="setgroup">
         <div class="setgt">Réseau et notifications</div>
 
-        <div class="setrow">
-          <div class="setlab"><b>Qui peut ouvrir cette page</b>
-            <span>Un compte et son mot de passe, ou personne — l'accès ouvert à
-              tout appareil qui atteint cette adresse. Choisi au premier
-              démarrage ; « Revoir ce choix » rouvre cette étape. Depuis le
-              terminal : <code>romule access status</code>.</span></div>
-          <div class="setctl" id="etatacces"></div>
-        </div>
-
+        <!-- The access read-out stood here: a line that repeated a state and
+             changed nothing. Access is decided on the wizard's
+             access step and settled from the terminal with `romule access`;
+             a second place that only echoes it is noise in a settings screen.
+             -->
         <!-- ------------------------------------- notifications sortantes -->
         <!-- A panel, not a control: the destinations, their events and their
              tests do not fit in the 300 px column a setting gets. -->
@@ -890,7 +891,8 @@
                  target="_blank" rel="noopener">Voir la documentation</a></span></div>
           <div class="setctl"><div id="listecles"></div>
             <div id="clenouvelle" hidden></div>
-            <input type="text" id="s-clenom" placeholder="À quoi elle sert">
+            <input type="text" id="s-clenom"
+                   placeholder="Nom de la clé — « tableau de bord », « sauvegarde »">
             <button class="ghost" data-act="createKey">Créer une clé</button></div>
         </div>
 

@@ -115,7 +115,12 @@ def decoder(m):
 
 
 def test_un_aller_retour_simple():
-    texte = "otpauth://totp/Romule:moi@exemple.fr?secret=ABCDEFGH&issuer=Romule"
+    # Built by `totp.uri()` rather than written out. A literal `otpauth://…
+    # secret=…` in a file is refused by `verifier-fuite.py`, and rightly: it
+    # cannot tell an invented secret from a real one, and a check that has to
+    # judge intent is a check that lets the real one through.
+    from romule import totp
+    texte = totp.uri("ABCDEFGH", "moi@exemple.fr")
     t("un aller-retour rend le meme texte", decoder(qr.matrice(texte)) == texte)
 
 
@@ -164,7 +169,8 @@ def test_un_texte_trop_long_est_refuse():
 
 
 def test_le_svg_est_autonome():
-    s = qr.svg("otpauth://totp/x?secret=y")
+    from romule import totp
+    s = qr.svg(totp.uri("ABCDEFGH", "x"))
     t("le SVG ne reference aucun fichier", "http" not in s.replace(
         'xmlns="http://www.w3.org/2000/svg"', ""))
     t("il porte un fond blanc", 'fill="#ffffff"' in s)
