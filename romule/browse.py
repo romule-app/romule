@@ -33,6 +33,7 @@ import os
 from pathlib import Path
 
 from . import config, systems
+from . import messages
 
 # `BASES` and the membership check live in `config`: the same rule must hold
 # for what we BROWSE and for what we CHOOSE.
@@ -109,9 +110,9 @@ def list_dir(path="", cfg=None):
     if not autorise(cible):
         # Deliberately stingy: confirming that a path outside the bases
         # exists would already answer the question we are refusing.
-        return {"error": "chemin hors des dossiers autorises"}
+        return {"error": messages.CHEMIN_HORS_BASES}
     if not cible.is_dir():
-        return {"error": "ce dossier n'existe pas"}
+        return {"error": messages.DOSSIER_INEXISTANT}
 
     dossiers = []
     try:
@@ -132,7 +133,7 @@ def list_dir(path="", cfg=None):
                     "lisible": os.access(p, os.R_OK | os.X_OK),
                 })
     except PermissionError:
-        return {"error": "lecture refusee sur ce dossier"}
+        return {"error": messages.DOSSIER_ILLISIBLE}
     except OSError as exc:
         return {"error": "lecture impossible : %s" % exc}
     dossiers.sort(key=lambda d: d["nom"].lower())

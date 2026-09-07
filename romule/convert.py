@@ -5,6 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from . import nsztool
+from . import messages
 
 
 def run(paths, jobs, threads, precheck, maxkey, job, verify=True):
@@ -27,7 +28,7 @@ def run(paths, jobs, threads, precheck, maxkey, job, verify=True):
 
     job.set_total(len(todo))
     if not todo:
-        job.log("Rien a convertir.")
+        job.log(messages.RIEN_A_CONVERTIR)
         return []
 
     converted = []

@@ -7,6 +7,7 @@ from pathlib import Path
 
 from . import (config, convert, device, edenconf, emuready, integrity, nand,
                saves, systems, titleid, trash)
+from . import messages
 
 
 # --------------------------------------------------------------- dossier depot
@@ -103,7 +104,7 @@ def _extract_one(archive, job):
     # .7z / .rar via un outil externe (7-Zip ou The Unarchiver)
     sevenzip = shutil.which("7z") or shutil.which("7za") or shutil.which("7zz")
     if not sevenzip and not shutil.which("unar"):
-        job.log("  Aucun outil pour cette archive (installe The Unarchiver : brew install unar).")
+        job.log(messages.ARCHIVE_SANS_OUTIL)
         return (False, 0)
     tmp = config.IMPORT / ("_x_" + archive.stem)
     tmp.mkdir(exist_ok=True)
@@ -148,7 +149,7 @@ def _extract_archives(job):
                 job.log("  %d element(s) extrait(s)." % n)
                 trash.move([str(a)], "archive decompressee", job.log)
             else:
-                job.log("  Aucun jeu dedans (donnees non installables) -> corbeille.")
+                job.log(messages.ARCHIVE_SANS_JEU)
                 trash.move([str(a)], "archive sans contenu jouable", job.log)
             total += 1
     return total
@@ -298,8 +299,7 @@ def import_files(lib, cfg, job, convert_after=True):
         if ambigus:
             _explain_ambiguous(ambigus, job)
         else:
-            job.log("Aucun jeu a ranger dans _import "
-                    "(archives non extraites eventuellement laissees).")
+            job.log(messages.IMPORT_VIDE)
         return
     # Recompute the destinations, accounting for the games already present.
     moved = []
@@ -441,7 +441,7 @@ def verify_library(lib, cfg, job, deep=False, sys_key=None, budget_gb=None):
         lib.scan(log=job.log)
         files = lib.files
     if not files:
-        job.log("Aucun fichier a verifier.")
+        job.log(messages.RIEN_A_VERIFIER)
         return
     job.log("Verification de %d fichier(s)%s…" % (len(files), " (approfondie)" if deep else ""))
     integrity.check(files, job, deep,
@@ -461,7 +461,7 @@ def sync_meta(lib, cfg, job):
     tids = [titleid.tid_base(f["tid"]) for f in lib.files if f["tid"]]
     a_faire = meta.missing(tids, cfg)
     if not a_faire:
-        job.log("Fiches Switch : toutes deja en cache.")
+        job.log(messages.FICHES_SWITCH_EN_CACHE)
     job.set_total(len(a_faire))
     if a_faire:
         job.log("Recuperation de %d fiche(s) Switch en %s..."
@@ -484,8 +484,7 @@ def sync_meta(lib, cfg, job):
     # SteamGridDB, the same source as the cover art.
     from . import igdb
     if not (cfg.get("steamgriddb_key") or "").strip() and not igdb.configure(cfg):
-        job.log("Sans cle SteamGridDB ni identifiants IGDB, les jeux des autres "
-                "plateformes gardent le nom de leur fichier.", "warn")
+        job.log(messages.SANS_FOURNISSEUR_JAQUETTES, "warn")
         return
     # The other platforms' games often live ONLY on the console: looking at
     # the server alone left their titles unfindable.
@@ -554,10 +553,10 @@ def analyse_device(lib, cfg, job):
     """
     racine = systems.roms_root(cfg)
     if not racine:
-        job.log("Aucune racine de ROMs definie : renseigne-la d'abord.", "error")
+        job.log(messages.ROMS_ROOT_ABSENTE, "error")
         return
     if device.state() != "device":
-        job.log("Console non connectee.", "error")
+        job.log(messages.CONSOLE_NON_CONNECTEE, "error")
         return
 
     plateformes = systems.list_all(cfg)
@@ -566,7 +565,7 @@ def analyse_device(lib, cfg, job):
     trouvees, total, vides = 0, 0, []
     for s in plateformes:
         if not job.checkpoint():
-            job.log("Analyse interrompue.", "warn")
+            job.log(messages.ANALYSE_INTERROMPUE, "warn")
             return
         dossier = systems.device_dir(s["key"], cfg)
         job.set_detail(s["name"])
@@ -587,8 +586,7 @@ def analyse_device(lib, cfg, job):
     if vides:
         job.log("Sans jeu (dossier absent ou vide) : %s" % ", ".join(vides[:12])
                 + (" …" if len(vides) > 12 else ""), "warn")
-        job.log("Si l'une d'elles existe sous un autre nom, ouvre sa fiche dans "
-                "les Reglages et indique son dossier.", "warn")
+        job.log(messages.PLATEFORME_AUTRE_NOM, "warn")
 
 
 def apply_eden_config(lib, cfg, job, changes, tid=None):
@@ -621,7 +619,7 @@ def emuready_apply(lib, cfg, job, listing_id, tid):
         job.log("Configuration indisponible : %s" % exc)
         return
     if not contenu.strip():
-        job.log("Ce rapport ne contient aucune configuration.")
+        job.log(messages.RAPPORT_SANS_CONFIG)
         return
     job.log("Configuration recuperee (%d octets)." % len(contenu))
     edenconf.write_raw(contenu, job, tid)
@@ -636,7 +634,7 @@ def _auto_nand(lib, cfg, job, paths):
     if not cfg.get("auto_nand"):
         return
     if device.connection()["kind"] is None:
-        job.log("Activation automatique : console non connectee, reporte.", "warn")
+        job.log(messages.NAND_AUTO_REPORTEE, "warn")
         return
     interesse = {str(Path(c)) for c in paths}
     cibles = [f["path"] for f in lib.files
@@ -704,7 +702,7 @@ def deploy_games(lib, cfg, job, to_send, to_enable, configs=None):
         job.log("Termine, mais %d reglage(s) sur %d n'ont pas pu etre appliques."
                 % (len(configs) - poses, len(configs)), "warn")
     else:
-        job.log("Console a jour.", "ok")
+        job.log(messages.CONSOLE_A_JOUR, "ok")
 
 
 def restore_eden_config(lib, cfg, job, tid, filename):
@@ -761,6 +759,6 @@ def import_from_device(lib, cfg, job, remote_paths, convert_after=True):
     """Fetch games from the console, file them and (optionally) convert them."""
     got = device.pull(remote_paths, job)
     if not got:
-        job.log("Rien de recupere depuis la console.")
+        job.log(messages.RIEN_RECUPERE)
         return
     import_files(lib, cfg, job, convert_after)

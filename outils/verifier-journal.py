@@ -1,150 +1,64 @@
 #!/usr/bin/env python3
-"""The sentences the SERVER writes are read in the interface too.
+"""Every sentence `romule/messages.py` holds must be in the catalogue.
 
-`job.log("Console non connectee.")` lands in the Log panel, beside everything
-`app.js` writes. `app.js`'s sentences go through the catalogue; the server's did
-not, so an English interface showed French lines with no warning — which is what
-a user reported, on that exact sentence.
+The sentences the server writes are read in the interface too:
+`job.log(messages.CONSOLE_NON_CONNECTEE)` lands in the Log panel beside
+everything `app.js` writes, and `{"error": …}` comes back as a toast. They need
+no `t()` call — the interface's MutationObserver translates any text node whose
+sentence is a catalogue key — so the only thing that can go missing is the key.
 
-They need no `t()` call: the interface's MutationObserver translates every text
-node whose sentence is a catalogue key. The only thing missing was the key. So
-this checks the one thing that can be checked: that each FIXED sentence the
-server logs exists in `fr.json`.
+This used to walk thirty files looking for the shapes that reach a user. It no
+longer has to: every one of those sentences now lives in one module, named. The
+check is therefore exact rather than heuristic, and the place to look when it
+fails is a single file.
 
-It covers two shapes: what the server LOGS, and what it ANSWERS —
-`{"error": ...}` and `{"message": ...}`, which `app.js` shows as they arrive. A
-refused SteamGridDB key answered "Cle refusee par SteamGridDB." in an English
-interface, and no catalogue held it.
+What it leaves alone
+--------------------
+The `V1_` constants. `/api/v1` answers in English by contract — "Unknown
+console.", "q is required." — and translating them would break every client
+written against them.
 
-What it leaves alone, and why
------------------------------
-An ENGLISH sentence is out of scope. `/api/v1` answers in English by contract —
-"q is required.", "Unknown console." — and translating those would break every
-client written against them. Only a French sentence is reported, because only a
-French sentence is one the catalogue can carry.
-
-
-A sentence carrying a `%s` is not a key: the catalogue holds templates for the
-interface, resolved on the client from the format AND its arguments, and the
-server sends an already-assembled line. Translating those needs a server-side
-i18n Romule does not have — the limit is written in `docs/beta.md`. Reporting
-them here would mean reporting something nobody can fix, which is how a check
-gets ignored.
-
-The key is the sentence AS THE SERVER WRITES IT, accents and all. Most of the
-server's are unaccented; that is not tidy, but a key that does not match to the
-byte translates nothing, and matching is the whole job.
+A sentence carrying a `%s` is still a key: the interface resolves the template
+on the client. What is NOT a key is a sentence assembled by the server from
+several pieces, and none of those live here.
 """
-import ast
 import json
-import re
 import sys
 from pathlib import Path
 
 RACINE = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(RACINE))
+
+from romule import messages                                      # noqa: E402
+
 CATALOGUE = RACINE / "romule" / "locales" / "fr.json"
-# Where a logged sentence goes to be read.
-SORTIES = ("log", "say", "event")
 
 
-# French function words with no ambiguity against English. A sentence carrying
-# one of them — or an accent — is one the catalogue can hold.
-# The false friends are deliberately absent -- anglais:ok, it lists the words
-# it excludes. They are English words as well as French ones, and including
-# them made `Unknown console.` — an /api/v1 message, English by contract —
-# look French.
-MARQUEURS = {
-    "le", "la", "les", "un", "une", "des", "du", "de", "est", "sont", "pas",
-    "aucun", "aucune", "avec", "sans", "pour", "dans", "que", "qui", "deja",
-    "cette", "ces", "vers", "chez", "hors", "trop", "abord", "toujours",
-    "jamais", "cle", "jeton", "dossier", "chemin", "compte", "acces", "tache",
-    "reglages", "adresse", "requete", "sauvegarde", "connexion", "mot",
-    "introuvable", "inconnue", "inconnu", "manquante", "manquant", "refusee",
-    "refuse", "enregistre", "enregistree", "connectee", "connecte", "non",
-    "prete", "engendre", "efface", "interrompue", "annulee", "reessaie",
-    "autorises", "desactivee", "activee", "retiree", "abandonnee",
-}
-_MOT = re.compile(r"[a-zàâäéèêëîïôöûùüç']+", re.I)
+def phrases():
+    """(name, sentence) for everything the module offers, contract aside."""
+    return [(nom, getattr(messages, nom)) for nom in sorted(dir(messages))
+            if nom.isupper() and not nom.startswith("V1_")
+            and isinstance(getattr(messages, nom), str)]
 
 
-def francaise(texte):
-    """Is this a sentence the catalogue could carry?"""
-    if any(c in texte for c in "àâäéèêëîïôöûùüçÀÉÈÊÎÔÛÙÇ«»"):
-        return True
-    return bool({m.lower() for m in _MOT.findall(texte)} & MARQUEURS)
-
-
-def phrases(source):
-    """The fixed French sentences this source shows: (line, text).
-
-    Two shapes: what it LOGS, and what it ANSWERS — the interface renders both,
-    side by side in the Log panel and in a toast.
-    """
-    out = []
-    arbre = ast.parse(source)
-    for n in ast.walk(arbre):
-        candidats = []
-        if isinstance(n, ast.Call) and getattr(n.func, "attr", "") in SORTIES:
-            if n.args and isinstance(n.args[0], ast.Constant):
-                candidats.append(n.args[0])
-        elif isinstance(n, ast.Dict):
-            for k, v in zip(n.keys, n.values, strict=False):
-                if (isinstance(k, ast.Constant) and k.value in ("error", "message")
-                        and isinstance(v, ast.Constant)):
-                    candidats.append(v)
-        elif isinstance(n, ast.Tuple) and len(n.elts) == 2:
-            # `return (False, "...")`: how the probes answer.
-            a, b = n.elts
-            if (isinstance(a, ast.Constant) and a.value is False
-                    and isinstance(b, ast.Constant)):
-                candidats.append(b)
-        for c in candidats:
-            v = c.value
-            # A template is assembled server-side and cannot be a key; a single
-            # word is a label, not a sentence somebody reads for meaning; an
-            # English one belongs to the /api/v1 contract.
-            if (isinstance(v, str) and "%" not in v and len(v.split()) >= 2
-                    and francaise(v)):
-                out.append((c.lineno, v))
-    return out
-
-
-BON = '''
-job.log("Console non connectee.")
-'''
-REPONSE = '''
-self._json({"error": "Cle refusee par SteamGridDB."}, 400)
-'''
-CONTRAT_V1 = '''
-self._json({"error": "Unknown console."}, 404)
-'''
-GABARIT = '''
-job.log("Copie de %s vers la console." % nom)
-'''
-UN_MOT = '''
-job.log("Termine.")
-'''
+def contrat():
+    return [(nom, getattr(messages, nom)) for nom in sorted(dir(messages))
+            if nom.startswith("V1_") and isinstance(getattr(messages, nom), str)]
 
 
 def epreuve():
-    """The shape it must catch, and the two it must leave alone."""
-    if not phrases(BON):
-        print("   SELF-TEST FAILED: a fixed sentence is not seen")
+    """Does it see the module, and tell the two halves apart?"""
+    if not phrases():
+        print("   EPREUVE ECHOUEE : aucune phrase lue dans messages.py")
         return False
-    if phrases(GABARIT):
-        print("   SELF-TEST FAILED: a template is reported, and nobody can fix it")
+    if any(nom.startswith("V1_") for nom, _ in phrases()):
+        print("   EPREUVE ECHOUEE : le contrat /api/v1 est melange aux phrases")
         return False
-    if phrases(UN_MOT):
-        print("   SELF-TEST FAILED: a single word is reported")
+    if not contrat():
+        print("   EPREUVE ECHOUEE : le contrat /api/v1 n'est pas reconnu")
         return False
-    if not phrases(REPONSE):
-        print("   SELF-TEST FAILED: an answered sentence is not seen")
-        return False
-    # The /api/v1 contract is English on purpose: translating it would break
-    # every client written against it.
-    if phrases(CONTRAT_V1):
-        print("   SELF-TEST FAILED: an English API message is reported")
-        return False
+    # A sentence with no accent at all, in a French corpus, is what this whole
+    # module was written to stop coming back.
     return True
 
 
@@ -152,19 +66,14 @@ def main():
     if not epreuve():
         return 2
     catalogue = json.loads(CATALOGUE.read_text(encoding="utf-8"))
-    total = manquantes = 0
-    for chemin in sorted((RACINE / "romule").glob("*.py")):
-        for ligne, texte in phrases(chemin.read_text(encoding="utf-8")):
-            total += 1
-            if texte not in catalogue:
-                manquantes += 1
-                print("   %s:%d  %s"
-                      % (chemin.relative_to(RACINE), ligne, texte[:78]))
+    manquantes = [(n, t) for n, t in phrases() if t not in catalogue]
+    for nom, texte in manquantes:
+        print("   messages.%s n'est pas au catalogue : %s" % (nom, texte[:64]))
     if manquantes:
-        print("   %d phrase(s) journalisee(s) hors catalogue : elles s'afficheront"
-              " en francais dans une interface anglaise." % manquantes)
-    print("   %d phrase(s) fixe(s) journalisee(s), %d hors catalogue."
-          % (total, manquantes))
+        print("   %d phrase(s) hors catalogue : elles s'afficheront en francais"
+              " dans une interface anglaise." % len(manquantes))
+    print("   %d phrase(s) dans messages.py, %d du contrat /api/v1, %d hors"
+          " catalogue." % (len(phrases()), len(contrat()), len(manquantes)))
     return 1 if manquantes else 0
 
 

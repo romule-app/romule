@@ -20,6 +20,7 @@ from datetime import datetime
 from pathlib import Path
 
 from . import config, device, profiles
+from . import messages
 
 # The configuration paths come from the profile: every emulator files its
 # settings its own way, and some — Ryujinx — use a format this tool cannot
@@ -167,15 +168,15 @@ def games_with_config():
 def write_config(changements, job, tid=None):
     """Apply values to the global configuration or to a game's."""
     if device.state() != "device":
-        job.log("Console non connectee.")
+        job.log(messages.CONSOLE_NON_CONNECTEE)
         return False
     path = game_ini(tid) if tid else global_ini()
     text = _read(path)
     if not text.strip() and tid:
-        job.log("Aucune configuration pour ce jeu : creation.")
+        job.log(messages.EDEN_CONFIG_CREEE)
         data = []
     elif not text.strip():
-        job.log("Configuration globale introuvable sur la console.")
+        job.log(messages.EDEN_GLOBALE_ABSENTE)
         return False
     else:
         data = parse(text)
@@ -184,7 +185,7 @@ def write_config(changements, job, tid=None):
     if not _write(path, dump(data), job):
         return False
     job.log("%d reglage(s) applique(s) %s." % (n, ("au jeu %s" % tid) if tid else "globalement"))
-    job.log("Ancienne version conservee dans _eden-backup/.")
+    job.log(messages.EDEN_SAUVEGARDE)
     return True
 
 
@@ -226,15 +227,15 @@ def write_raw(contenu, job, tid):
     Eden configuration is refused.
     """
     if not tid:
-        job.log("Un jeu doit etre precise.")
+        job.log(messages.EDEN_JEU_REQUIS)
         return False
     data = parse(contenu)
     if not data:
-        job.log("Contenu invalide : aucune section reconnue.")
+        job.log(messages.EDEN_CONTENU_INVALIDE)
         return False
     _drop_locales(data, job)
     if device.state() != "device":
-        job.log("Console non connectee.")
+        job.log(messages.CONSOLE_NON_CONNECTEE)
         return False
     path = game_ini(tid)
     _save_copy(path, _read(path))
@@ -243,7 +244,7 @@ def write_raw(contenu, job, tid):
     surcharges = contenu.count("use_global=false")
     job.log("Configuration appliquee : %d section(s), %d reglage(s) specifique(s)."
             % (len(data), surcharges))
-    job.log("Ancienne version conservee dans _eden-backup/.")
+    job.log(messages.EDEN_SAUVEGARDE)
     return True
 
 
@@ -277,14 +278,14 @@ def backups_for(tid):
 def restore_backup(tid, filename, job):
     """Put a backup back in place on the console."""
     if not tid or not filename:
-        job.log("Sauvegarde non precisee.")
+        job.log(messages.EDEN_SAUVEGARDE_NON_PRECISEE)
         return False
     p = BACKUP / Path(filename).name          # never a path supplied by the client
     if not p.is_file() or not p.name.upper().startswith(tid.upper() + ".INI_"):
-        job.log("Sauvegarde introuvable pour ce jeu.")
+        job.log(messages.EDEN_SAUVEGARDE_ABSENTE)
         return False
     if device.state() != "device":
-        job.log("Console non connectee.")
+        job.log(messages.CONSOLE_NON_CONNECTEE)
         return False
     path = game_ini(tid)
     _save_copy(path, _read(path))      # the current state becomes restorable in turn
@@ -292,7 +293,7 @@ def restore_backup(tid, filename, job):
     if not text.strip():
         # la sauvegarde correspond a « aucune configuration » : on efface
         device._shell("rm -f %s" % device._q(path))
-        job.log("Configuration du jeu retiree (retour a l'etat d'origine).")
+        job.log(messages.EDEN_CONFIG_RETIREE)
         return True
     if not _write(path, text, job):
         return False

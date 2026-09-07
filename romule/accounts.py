@@ -34,6 +34,7 @@ import time
 import unicodedata
 
 from . import config
+from . import messages
 
 FILE = config.state_file("_romule-comptes.json", "_switch-comptes.json")
 PHOTOS = config.ROOT / "_comptes"
@@ -129,11 +130,11 @@ def set_admin(uid, admin=True):
             if u["id"] == uid:
                 if not admin and not any(
                         v.get("admin") for v in d["comptes"] if v["id"] != uid):
-                    raise ValueError("Il doit rester au moins un administrateur.")
+                    raise ValueError(messages.UN_ADMIN_MINIMUM)
                 u["admin"] = bool(admin)
                 _write(d)
                 return _public(u)
-    raise ValueError("Compte introuvable.")
+    raise ValueError(messages.COMPTE_INTROUVABLE)
 
 
 def refresh_roles():
@@ -227,15 +228,14 @@ def check_password(password, email=""):
                          % MDP_MAX)
     bas = password.lower()
     if bas in COMMON_PASSWORDS:
-        raise ValueError("Ce mot de passe figure parmi les plus utilises : "
-                         "choisis-en un autre.")
+        raise ValueError(messages.MDP_COURANT)
     # A password made of the same letter repeated passes the length rule and
     # is worth nothing.
     if len(set(bas)) < 5:
-        raise ValueError("Ce mot de passe est trop repetitif.")
+        raise ValueError(messages.MDP_REPETITIF)
     local = (email or "").split("@")[0].lower()
     if len(local) >= 4 and local in bas:
-        raise ValueError("Le mot de passe ne doit pas contenir ton adresse email.")
+        raise ValueError(messages.MDP_CONTIENT_EMAIL)
     return password
 
 
@@ -245,7 +245,7 @@ EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s.]+\.[^@\s]+$")
 def check_email(email):
     e = (email or "").strip().lower()
     if not EMAIL_RE.match(e) or len(e) > 254:
-        raise ValueError("Adresse email invalide.")
+        raise ValueError(messages.EMAIL_INVALIDE)
     return e
 
 
@@ -290,7 +290,7 @@ def create(email, password, name="", cfg=None):
     with _LOCK:
         d = _read()
         if _email_index(d, email) >= 0:
-            raise ValueError("Un compte existe deja avec cette adresse.")
+            raise ValueError(messages.EMAIL_DEJA_PRIS)
         # The FIRST account is the administrator. That is the convention among
         # self-hosted tools (Jellyfin, Immich, Paperless): whoever installs it
         # governs. With no roles at all, any user could delete the others or
@@ -330,7 +330,7 @@ def totp_prepare(uid):
             _write(d)
             return {"secret": secret, "lisible": totp.readable(secret),
                     "uri": totp.uri(secret, u["email"])}
-    raise ValueError("Compte introuvable.")
+    raise ValueError(messages.COMPTE_INTROUVABLE)
 
 
 def totp_enable(uid, entered):
@@ -342,16 +342,16 @@ def totp_enable(uid, entered):
                 continue
             conf = u.get("totp") or {}
             if not conf.get("secret"):
-                raise ValueError("Commence par générer un secret.")
+                raise ValueError(messages.TOTP_SANS_SECRET)
             bon, counter = totp.verify(conf["secret"], entered,
                                         used=set(conf.get("utilises") or []))
             if not bon:
-                raise ValueError("Code incorrect. Vérifie l'heure de ton téléphone.")
+                raise ValueError(messages.CODE_INCORRECT)
             conf.update({"actif": True, "utilises": [counter]})
             d["comptes"][i]["totp"] = conf
             _write(d)
             return True
-    raise ValueError("Compte introuvable.")
+    raise ValueError(messages.COMPTE_INTROUVABLE)
 
 
 def totp_disable(uid, password):
@@ -362,11 +362,11 @@ def totp_disable(uid, password):
             if u["id"] != uid:
                 continue
             if not verify_password(password, u["hash"]):
-                raise ValueError("Mot de passe incorrect.")
+                raise ValueError(messages.MDP_INCORRECT)
             d["comptes"][i]["totp"] = {}
             _write(d)
             return True
-    raise ValueError("Compte introuvable.")
+    raise ValueError(messages.COMPTE_INTROUVABLE)
 
 
 def totp_active(u):
@@ -410,7 +410,7 @@ def login(email, password, ip="", code=""):
     if not u:
         _spend_time(password)          # same cost as for a real account
         _ip_failure(ip)
-        raise ValueError("Email ou mot de passe incorrect.")
+        raise ValueError(messages.IDENTIFIANTS_INCORRECTS)
 
     if not verify_password(password, u["hash"]):
         _ip_failure(ip)
@@ -422,7 +422,7 @@ def login(email, password, ip="", code=""):
                 d["comptes"][i]["echecs"] = n
                 d["comptes"][i]["bloque"] = time.time() + _wait_for(n)
                 _write(d)
-        raise ValueError("Email ou mot de passe incorrect.")
+        raise ValueError(messages.IDENTIFIANTS_INCORRECTS)
 
     # Password valid. If a second factor exists, it is still to be cleared:
     # the failure counters are therefore not reset yet.
@@ -458,17 +458,17 @@ def change_password(uid, old, new):
             if u["id"] != uid:
                 continue
             if not verify_password(old, u["hash"]):
-                raise ValueError("Mot de passe actuel incorrect.")
+                raise ValueError(messages.MDP_ACTUEL_INCORRECT)
             check_password(new, u["email"])
             if verify_password(new, u["hash"]):
-                raise ValueError("Le nouveau mot de passe est identique a l'ancien.")
+                raise ValueError(messages.MDP_INCHANGE)
             d["comptes"][i]["hash"] = hash_password(new)
             # Move the account's epoch: every session signed before this
             # instant stops being valid (see auth.session).
             d["comptes"][i]["maj_mdp"] = int(time.time())
             _write(d)
             return _public(d["comptes"][i])
-    raise ValueError("Compte introuvable.")
+    raise ValueError(messages.COMPTE_INTROUVABLE)
 
 
 def reset_password(email, new):
@@ -492,7 +492,7 @@ def reset_password(email, new):
         d = _read()
         i = _email_index(d, email)
         if i < 0:
-            raise ValueError("Aucun compte avec cette adresse.")
+            raise ValueError(messages.COMPTE_ADRESSE_INCONNUE)
         d["comptes"][i]["hash"] = hash_password(new)
         # Cut every open session: if the account was taken over, reclaiming it
         # must not leave the other party logged in.
@@ -518,7 +518,7 @@ def disable_totp(email):
         d = _read()
         i = _email_index(d, email)
         if i < 0:
-            raise ValueError("Aucun compte avec cette adresse.")
+            raise ValueError(messages.COMPTE_ADRESSE_INCONNUE)
         avait = bool((d["comptes"][i].get("totp") or {}).get("actif"))
         # `{}` rather than a removed key: that is what `totp_desactiver`
         # already does, and two representations of the same state always end up
@@ -547,11 +547,11 @@ def update(uid, name=None, email=None):
                 e = check_email(email)
                 j = _email_index(d, e)
                 if j >= 0 and j != i:
-                    raise ValueError("Un compte existe deja avec cette adresse.")
+                    raise ValueError(messages.EMAIL_DEJA_PRIS)
                 d["comptes"][i]["email"] = e
             _write(d)
             return _public(d["comptes"][i])
-    raise ValueError("Compte introuvable.")
+    raise ValueError(messages.COMPTE_INTROUVABLE)
 
 
 def delete(uid):
@@ -559,17 +559,15 @@ def delete(uid):
     with _LOCK:
         d = _read()
         if len(d["comptes"]) <= 1:
-            raise ValueError("C'est le dernier compte : il doit rester quelqu'un "
-                             "pour se connecter.")
+            raise ValueError(messages.DERNIER_COMPTE)
         reste = [u for u in d["comptes"] if u["id"] != uid]
         if len(reste) == len(d["comptes"]):
-            raise ValueError("Compte introuvable.")
+            raise ValueError(messages.COMPTE_INTROUVABLE)
         # "Someone must remain" is not enough: someone WHO CAN ADMINISTER
         # must remain. Otherwise the settings become unreachable without
         # editing the accounts file by hand.
         if not any(u.get("admin") for u in reste):
-            raise ValueError("C'est le dernier administrateur : promeus "
-                             "quelqu'un d'autre avant de le supprimer.")
+            raise ValueError(messages.DERNIER_ADMIN)
         d["comptes"] = reste
         _write(d)
     for ext in (".png", ".jpg", ".gif", ".webp"):
@@ -608,12 +606,12 @@ def photo_write(uid, data):
         raise ValueError("Image trop lourde (maximum %d Mo)." % (PHOTO_MAX // 2 ** 20))
     ext, mime = _image_type(data or b"")
     if not ext:
-        raise ValueError("Format d'image non reconnu (PNG, JPEG, GIF ou WebP).")
+        raise ValueError(messages.IMAGE_INCONNUE)
     with _LOCK:
         d = _read()
         i = next((k for k, u in enumerate(d["comptes"]) if u["id"] == uid), -1)
         if i < 0:
-            raise ValueError("Compte introuvable.")
+            raise ValueError(messages.COMPTE_INTROUVABLE)
         PHOTOS.mkdir(parents=True, exist_ok=True)
         os.chmod(PHOTOS, 0o700)
         for vieux in (".png", ".jpg", ".gif", ".webp"):

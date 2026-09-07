@@ -24,6 +24,7 @@ import urllib.request
 
 from . import config, net
 from . import matching
+from . import messages
 
 TOKEN_URL = "https://id.twitch.tv/oauth2/token"
 API_URL = "https://api.igdb.com/v4"
@@ -302,9 +303,9 @@ def probe(cfg=None):
     """Check that the credentials work, without saving anything."""
     cfg = cfg or config.load_config()
     if not configure(cfg):
-        raise ValueError("Client ID et Client Secret Twitch sont necessaires.")
+        raise ValueError(messages.IGDB_IDENTIFIANTS_REQUIS)
     if not token(cfg, force=True):
-        raise ValueError("Twitch a refuse ces identifiants.")
+        raise ValueError(messages.IGDB_REFUSE)
     essai = search("The Legend of Zelda", cfg)
     # `nom`, not `name`: `search()` returns an ENTRY, whose field names are
     # data — written to the cache and read by the interface. The rename walked

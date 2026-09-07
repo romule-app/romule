@@ -34,6 +34,7 @@ import urllib.parse
 import urllib.request
 
 from . import config, net
+from . import messages
 
 SESSION_TTL = 12 * 3600      # past this, back through the provider
 # How long the "bridge" handed to whoever just switched authentication on
@@ -106,7 +107,7 @@ def discovery(issuer, force=False):
     """The provider's configuration document, cached for an hour."""
     issuer = (issuer or "").rstrip("/")
     if not issuer:
-        raise ValueError("Aucune adresse de fournisseur configuree.")
+        raise ValueError(messages.OIDC_SANS_FOURNISSEUR)
     cache = _DISCOVERY.get(issuer)
     if cache and not force and cache[0] > time.time():
         return cache[1]
@@ -170,7 +171,7 @@ def verify_id_token(token, doc, client_id, nonce):
         claims = json.loads(_b64url_decode(c64))
         signature = _b64url_decode(s64)
     except (ValueError, TypeError) as exc:
-        raise ValueError("Jeton d'identite illisible.") from exc
+        raise ValueError(messages.OIDC_JETON_ILLISIBLE) from exc
 
     alg = entete.get("alg")
     if alg != "RS256":
@@ -179,24 +180,24 @@ def verify_id_token(token, doc, client_id, nonce):
         raise ValueError("Algorithme de signature non pris en charge : %s." % alg)
     jwks_uri = doc.get("jwks_uri")
     if not jwks_uri:
-        raise ValueError("Le fournisseur ne publie pas ses cles (jwks_uri).")
+        raise ValueError(messages.OIDC_SANS_JWKS)
     jwk = _keys(jwks_uri, entete.get("kid"))
     if not jwk or not _rs256_ok((e64 + "." + c64).encode("ascii"), signature, jwk):
-        raise ValueError("Signature du jeton d'identite invalide.")
+        raise ValueError(messages.OIDC_SIGNATURE)
 
     maintenant = time.time()
     if claims.get("iss", "").rstrip("/") != doc["issuer"].rstrip("/"):
-        raise ValueError("Emetteur du jeton inattendu.")
+        raise ValueError(messages.OIDC_EMETTEUR)
     aud = claims.get("aud")
     aud = aud if isinstance(aud, list) else [aud]
     if client_id not in aud:
-        raise ValueError("Ce jeton ne nous est pas destine.")
+        raise ValueError(messages.OIDC_MAUVAISE_AUDIENCE)
     if claims.get("exp", 0) < maintenant - 60:
-        raise ValueError("Jeton expire.")
+        raise ValueError(messages.OIDC_JETON_EXPIRE)
     if claims.get("iat", 0) > maintenant + 300:
-        raise ValueError("Jeton date du futur : verifie l'horloge du serveur.")
+        raise ValueError(messages.OIDC_JETON_FUTUR)
     if nonce and claims.get("nonce") != nonce:
-        raise ValueError("Nonce inattendu : la reponse ne correspond pas a la demande.")
+        raise ValueError(messages.OIDC_NONCE)
     return claims
 
 
@@ -275,14 +276,14 @@ def finish(cfg, params, transit_cookie, redirect_uri):
                          % params.get("error_description") or params["error"])
     attendu = _verify(transit_cookie)
     if not attendu:
-        raise ValueError("Demande de connexion expiree ou inconnue. Recommence.")
+        raise ValueError(messages.OIDC_TRANSIT_INCONNU)
     if not hmac.compare_digest(str(params.get("state") or ""), attendu["etat"]):
-        raise ValueError("Reponse inattendue (state) : connexion abandonnee.")
+        raise ValueError(messages.OIDC_STATE)
     if attendu.get("uri") != redirect_uri:
-        raise ValueError("L'adresse de retour ne correspond pas a la demande.")
+        raise ValueError(messages.OIDC_REDIRECT)
     code = params.get("code")
     if not code:
-        raise ValueError("Aucun code d'autorisation dans la reponse.")
+        raise ValueError(messages.OIDC_SANS_CODE)
 
     issuer, client_id, secret = _settings(cfg)
     doc = discovery(issuer)
@@ -309,7 +310,7 @@ def finish(cfg, params, transit_cookie, redirect_uri):
 
     id_token = rep.get("id_token")
     if not id_token:
-        raise ValueError("Le fournisseur n'a pas renvoye de jeton d'identite.")
+        raise ValueError(messages.OIDC_SANS_JETON)
     claims = verify_id_token(id_token, doc, client_id, attendu["nonce"])
 
     identity = {
@@ -367,7 +368,7 @@ def _check_authorised(cfg, identity):
         return
     if groupes and {g.lower() for g in identity["groupes"]} & set(groupes):
         return
-    raise ValueError("Ce compte n'est pas autorise a acceder a cette ludotheque.")
+    raise ValueError(messages.OIDC_COMPTE_REFUSE)
 
 
 def internal_session(u):

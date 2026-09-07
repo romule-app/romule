@@ -14,6 +14,7 @@ import time
 from pathlib import Path
 
 from . import config, titleid
+from . import messages
 
 SD_RE = re.compile(r"^[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}$")
 _GAME_FIND = (r"\( -iname '*.nsp' -o -iname '*.xci' "
@@ -250,7 +251,7 @@ def discover():
 def connect(addr, timeout=20):
     """Connect to a console over the network. Returns (ok, message)."""
     if not addr:
-        return (False, "adresse manquante")
+        return (False, messages.ADRESSE_MANQUANTE)
     rc, out, err = _run(["connect", addr], timeout=timeout, targeted=False)
     msg = (out + err).strip().splitlines()
     msg = msg[-1] if msg else ""
@@ -268,13 +269,13 @@ def disconnect(addr=None):
 def pair(addr, code):
     """Wireless pairing (Android 11+). Returns (ok, message)."""
     if not addr or not code:
-        return (False, "adresse ou code manquant")
+        return (False, messages.ADRESSE_OU_CODE_MANQUANT)
     # This function bypassed `_run`: it ran a hard-coded "adb", with no
     # existence guard. It was therefore the one call `ROMULE_ADB` would have
     # missed, and the one to raise when adb is absent.
     binaire = _adb_binary()
     if not binaire:
-        return (False, "adb introuvable")
+        return (False, messages.ADB_INTROUVABLE)
     try:
         p = subprocess.run([binaire, "pair", addr, str(code)],
                            capture_output=True, text=True, timeout=60)
@@ -574,8 +575,7 @@ def organize(device_dir, job, types=None):
         # not reach the terminal in normal mode, and « Console non prete. »
         # alone reads as a status rather than as the reason nothing happened —
         # the action looked like it had done nothing at all, in silence.
-        job.log("Rien n'a été rangé : la console n'est pas connectée. "
-                "Branche-la, ou connecte-la sans fil, puis relance.", "warn")
+        job.log(messages.RANGEMENT_SANS_CONSOLE, "warn")
         return
     make_tree(device_dir)
     base = device_dir.rstrip("/")
@@ -779,7 +779,7 @@ def push_generic(paths, target_dir, job, verify=True, incremental=True):
         return
     base = target_dir.rstrip("/")
     if not base:
-        job.log("Dossier cible inconnu sur la console.")
+        job.log(messages.DOSSIER_CIBLE_INCONNU)
         return
     _shell("mkdir -p %s" % _q(base))
 
@@ -803,7 +803,7 @@ def push_generic(paths, target_dir, job, verify=True, incremental=True):
         job.log("%d fichier(s) deja sur la console, ignore(s)." % nskip)
     job.set_total(len(todo))
     if not todo:
-        job.log("Rien a envoyer.")
+        job.log(messages.RIEN_A_ENVOYER)
         return
 
     okc = 0
@@ -816,7 +816,7 @@ def push_generic(paths, target_dir, job, verify=True, incremental=True):
                         "size" if verify else "none", job)
         if res == "gone":
             job.log("Console deconnectee — transfert arrete (%d/%d envoyes)." % (okc, len(todo)))
-            job.log("Rebranche-la : la reprise ne renverra que ce qui manque.")
+            job.log(messages.REBRANCHE_LA)
             return
         if res == "ok":
             job.log("OK  %s" % f.name)
@@ -989,7 +989,7 @@ def push(paths, device_dir, job, verify_mode="size", layout="type", incremental=
     st = state()
     if st != "device":
         job.log("Aucun appareil adb pret (etat : %s)." % (st or "non connecte"))
-        job.log("Branche le handheld en USB, autorise le debogage, puis reessaie.")
+        job.log(messages.BRANCHE_EN_USB)
         return
 
     items = plan(paths, device_dir, layout, incremental, types)
@@ -1002,10 +1002,9 @@ def push(paths, device_dir, job, verify_mode="size", layout="type", incremental=
     for it in casses:
         job.log("Refuse : %s est incomplet — %s" % (it["name"], it["broken"]), "error")
     if casses:
-        job.log("Un fichier incomplet apparait dans Eden comme un jeu qui ne "
-                "demarre pas. Retelecharge-le, puis relance l'envoi.", "warn")
+        job.log(messages.FICHIER_INCOMPLET, "warn")
     if not todo:
-        job.log("Rien a envoyer : la console est deja a jour.")
+        job.log(messages.RIEN_A_ENVOYER_A_JOUR)
         return
 
     total_bytes = sum(it["size"] for it in todo)
@@ -1021,7 +1020,7 @@ def push(paths, device_dir, job, verify_mode="size", layout="type", incremental=
     for it in todo:
         if not job.checkpoint():
             job.log("Transfert interrompu (%d/%d envoyes)." % (okc, len(todo)))
-            job.log("La reprise est proposee au prochain envoi.", "warn")
+            job.log(messages.REPRISE_PROPOSEE, "warn")
             return
         if it["remote_dir"] not in made:
             _shell("mkdir -p %s" % _q(it["remote_dir"]))
@@ -1032,7 +1031,7 @@ def push(paths, device_dir, job, verify_mode="size", layout="type", incremental=
         if res == "gone":
             job.log("Console deconnectee — transfert arrete (%d/%d envoyes)."
                     % (okc, len(todo)))
-            job.log("Rebranche-la : la reprise ne renverra que ce qui manque.")
+            job.log(messages.REBRANCHE_LA)
             job.set_detail("")
             return
         if res == "ok":

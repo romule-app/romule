@@ -28,6 +28,7 @@ import time
 import urllib.parse
 
 from . import __version__
+from . import messages
 
 PREFIX = "/api/v1/"
 
@@ -160,12 +161,12 @@ def router(path, params, method, ctx):
                 if f.get("rel") == key:
                     return 200, _entry(f)
             return 404, {"error": "not_found",
-                         "message": "No game with that key."}
+                         "message": messages.V1_JEU_INCONNU}
         if nom == "search":
             q = (params.get("q") or [""])[0].strip().lower()
             if not q:
                 return 400, {"error": "missing_parameter",
-                             "message": "q is required."}
+                             "message": messages.V1_Q_REQUIS}
             lib = ctx["inventaire"]()
             trouves = [_entry(f) for f in lib["files"]
                        if q in (f.get("name") or "").lower()
