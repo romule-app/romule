@@ -293,7 +293,15 @@ def coherence_doc():
                   "verifier-traduction.py", "verifier-anglais.py",
                   "verifier-imports.py", "verifier-classes.py",
                   "verifier-routes.py", "verifier-journal.py",
-                  "verifier-actions.py"):
+                  "verifier-actions.py",
+                  # It only ran in continuous integration, so a file it
+                  # refuses could be committed and only bounce back a push
+                  # later. It did: `test_qr.py` carried a two-factor address
+                  # written out in full, and nothing said so until the next
+                  # manual run. (This comment cannot quote the shape it is
+                  # about — the check would refuse this file too, and it would
+                  # be right.)
+                  "verifier-fuite.py"):
         args = ["--strict"] if outil == "verifier-classes.py" else []
         r = subprocess.run([sys.executable, str(RACINE / "outils" / outil), *args],
                            cwd=str(RACINE), capture_output=True, text=True)

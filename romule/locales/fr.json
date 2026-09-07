@@ -1370,5 +1370,15 @@
   "Commence par générer un secret.": "Commence par générer un secret.",
   "Il doit rester au moins un administrateur.": "Il doit rester au moins un administrateur.",
   "en trop": "en trop",
-  "Format d'image": "Format d'image"
+  "Format d'image": "Format d'image",
+  "{sélectionné|sélectionnés}": "{sélectionné|sélectionnés}",
+  "{mise|mises}": "{mise|mises}",
+  "à jour": "à jour",
+  "Nom de la clé — « tableau de bord », « sauvegarde »": "Nom de la clé — « tableau de bord », « sauvegarde »",
+  "La clé": "La clé",
+  "À saisir à la main si tu ne peux pas scanner": "À saisir à la main si tu ne peux pas scanner",
+  "Associée. Saisis maintenant son adresse avec le port de CONNEXION — celui de l'écran « Débogage sans fil », pas celui de la fenêtre d'appairage.": "Associée. Saisis maintenant son adresse avec le port de CONNEXION — celui de l'écran « Débogage sans fil », pas celui de la fenêtre d'appairage.",
+  "Ou sans câble, à la main": "Ou sans câble, à la main",
+  "Sur la console : Paramètres → Système → Options pour les développeurs → Débogage sans fil → Associer un appareil avec un code. Recopie ce qu'elle affiche.": "Sur la console : Paramètres → Système → Options pour les développeurs → Débogage sans fil → Associer un appareil avec un code. Recopie ce qu'elle affiche.",
+  "Adresse et port d'appairage": "Adresse et port d'appairage"
 }

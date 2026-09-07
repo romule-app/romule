@@ -964,7 +964,7 @@
   "Profil appliqué.": "Profile applied.",
   "Le code fait exactement 6 chiffres.": "The code is exactly 6 digits.",
   "Bascule en Wi-Fi…": "Switching to Wi-Fi…",
-  "Recopie l'adresse et le code affichés sur la console.": "Copy the address and code shown on the console.",
+  "Recopie l'adresse et le code affichés sur la console.": "Copy the address and the code the console is showing.",
   "Association en cours…": "Pairing…",
   "Associée, mais adresse de connexion introuvable — utilise « Chercher ».": "Paired, but no connection address found — use “Search”.",
   "Association refusée.": "Pairing refused.",
@@ -1370,5 +1370,15 @@
   "Commence par générer un secret.": "Generate a secret first.",
   "Il doit rester au moins un administrateur.": "At least one administrator has to remain.",
   "en trop": "too many",
-  "Format d'image": "Aspect ratio"
+  "Format d'image": "Aspect ratio",
+  "{sélectionné|sélectionnés}": "{selected|selected}",
+  "{mise|mises}": "{update|updates}",
+  "à jour": "to date",
+  "Nom de la clé — « tableau de bord », « sauvegarde »": "Key name — “dashboard”, “backup”",
+  "La clé": "The key",
+  "À saisir à la main si tu ne peux pas scanner": "To type by hand if you cannot scan",
+  "Associée. Saisis maintenant son adresse avec le port de CONNEXION — celui de l'écran « Débogage sans fil », pas celui de la fenêtre d'appairage.": "Paired. Now type its address with the CONNECTION port — the one on the “Wireless debugging” screen, not the one from the pairing window.",
+  "Ou sans câble, à la main": "Or without a cable, by hand",
+  "Sur la console : Paramètres → Système → Options pour les développeurs → Débogage sans fil → Associer un appareil avec un code. Recopie ce qu'elle affiche.": "On the console: Settings → System → Developer options → Wireless debugging → Pair device with pairing code. Copy what it shows.",
+  "Adresse et port d'appairage": "Pairing address and port"
 }

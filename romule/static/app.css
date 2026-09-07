@@ -526,6 +526,10 @@ img.empty{visibility:hidden}
 .setgroup>.setrow:first-of-type,.setgt+.setrow{border-top:0}
 .setrow:hover{background:var(--surface-2)}
 .setlab{flex:1 1 auto;min-width:0}
+/* A link inside a setting's description is a tap target like any other: at the
+   height of its own text it was 15 px on a tablet. The padding is vertical
+   only, so the line it sits on does not grow. */
+.setlab a{display:inline-block;padding:12px 0;line-height:1.25}
 /* `>` is deliberate: only the row's TITLE is a block. Without it, a <b>
    emphasis inside the description broke onto its own line — "The parent folder
    of / all / your platforms…". */
@@ -1076,7 +1080,12 @@ h2,h3{font-family:var(--disp);letter-spacing:.2px}
 /* --- the state becomes a screen-printed label, not a floating pill */
 .gcard .art{border-radius:0}
 .gcard .badge{
-  left:0;right:0;bottom:0;border-radius:0;text-align:center;
+  /* A pixel PAST the edges, which `.art { overflow:hidden }` cuts back. At
+     `left:0;right:0` the band matches the cover exactly in CSS pixels — and on
+     a Retina screen a fractional card width leaves a hairline of cover showing
+     at the right, because the background rounds one way and the image the
+     other. Overflowing removes the seam without changing what is drawn. */
+  left:-1px;right:-1px;bottom:0;border-radius:0;text-align:center;
   padding:5px 8px;font-family:var(--disp);font-size:10.5px;font-weight:600;
   letter-spacing:.9px;text-transform:uppercase;
   background:var(--capot);backdrop-filter:blur(6px);
@@ -1206,6 +1215,11 @@ button .tid{color:inherit;opacity:.72;font-weight:400}
    a handheld in landscape, where the height is very small */
 .jdrawer #journal{max-width:none;margin:0;padding:0 16px 16px;
   max-height:none;overflow:auto;flex:1;min-height:0}
+/* `#journal` was freed of its ceiling; `#log` kept its own — 250 px — so the
+   list stopped a third of the way down a drawer that runs the whole height.
+   Below it, nothing. */
+.jdrawer #journal{display:flex;flex-direction:column}
+.jdrawer #log{max-height:none;flex:1;min-height:0}
 .jdrawer .jbar{flex-direction:column;align-items:stretch;gap:8px;
   position:sticky;top:0;background:var(--panel);padding-top:12px;z-index:1}
 .jdrawer .jbar .search{width:100%;flex:0 0 auto}   /* en colonne, flex:1 etirerait la HAUTEUR */
@@ -3238,6 +3252,28 @@ body.compact .filters{margin-bottom:2px}
 .qrbloc svg{width:min(220px,60vw);height:auto;border-radius:8px;
   background:#fff;padding:6px}
 
+/* A rendered release note. Modest on purpose: it sits inside a dialog, and
+   the dialog is not a reader. */
+.notesmaj{max-height:min(46vh,340px);overflow:auto;margin:4px 0 12px;
+  font-size:13px;line-height:1.6;color:var(--mute)}
+.notesmaj h4{font-family:var(--disp);font-size:13px;color:var(--text);
+  margin:14px 0 6px;letter-spacing:.2px}
+.notesmaj h4:first-child{margin-top:0}
+.notesmaj p{margin:0 0 8px}
+.notesmaj ul{margin:0 0 10px;padding-left:18px}
+.notesmaj li{margin:0 0 4px}
+.notesmaj code{font-family:var(--mono);font-size:11.5px;
+  background:var(--puits);border-radius:5px;padding:1px 5px}
+
+/* The words beside the rolling number of the selection counter: they change
+   with it, and they live apart so the `<b>` is never replaced. */
+.somots{color:inherit}
+
+/* The summary under a game's title, in the detail view. */
+.gm-desc{margin:10px 0 0;font-size:13px;line-height:1.6;color:var(--mute);
+  max-width:62ch}
+.gm-desc:empty{display:none}
+
 /* Who is signed in, in the header. Small, quiet, and present on every screen:
    it answers "whose session is this" without being asked, and carries the way
    out — which used to exist only at the bottom of the settings. */
@@ -3250,11 +3286,6 @@ body.compact .filters{margin-bottom:2px}
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media (max-width:700px){.moinom{display:none}}
 
-/* The access decision, read back rather than offered as a switch. */
-#etatacces{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.etatacces{font-size:12.5px}
-.etatacces.ok{color:var(--green)}
-.etatacces.avert{color:var(--amber)}
 
 .onbverrou{margin:14px 0 0;text-align:center;font-size:12px;color:var(--amber)}
 .onbsans{margin:20px 0 0;padding:14px 0 0;border-top:1px solid var(--bord)}

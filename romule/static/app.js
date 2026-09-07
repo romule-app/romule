@@ -256,7 +256,11 @@ async function api(path, body, discret) {
     return j;
   }
   if (j && j.error) {
-    journal(path + ' : ' + j.error, 'error');
+    // `discret` means the caller shows the refusal itself and carries on —
+    // the folder browser falls back to an allowed folder, the settings show
+    // the reason in place. Logging those as errors filled the journal with
+    // lines nobody can act on, next to the ones that matter.
+    journal(path + ' : ' + j.error, discret ? 'info' : 'error');
     if (discret) return j;
     dialogue({
       titre: 'Une action n\'a pas abouti',
@@ -726,8 +730,13 @@ const D_ICONE = {error: '⚠️', warn: '⚠️', ok: '✅', info: 'ℹ️'};
 // `html` is markup the CALLER built, and the only caller is the two-factor
 // setup handing over a QR the server drew. It is not user data and never goes
 // near one: everything that comes from outside still goes through `esc()`.
+// `detailTitre` names the block, `detailOuvert` decides whether it starts
+// open. Both used to be fixed: every dialog carried a folded « Détail
+// technique », which is the wrong name and the wrong state for an API key you
+// are meant to copy, or for a release note you opened the dialog to read.
 function dialogue({titre, niveau = 'info', message = '', detail = '', options = [],
-                   champs = [], actions = [], fermer = 'Fermer', html = ''}) {
+                   champs = [], actions = [], fermer = 'Fermer', html = '',
+                   detailTitre = '', detailOuvert = false}) {
   const el = $('dialog');
   const boutons = actions.map((a, i) =>
     '<button class="' + (a.principal ? 'go' : 'ghost') + '" data-di="' + i + '">' +
@@ -755,8 +764,9 @@ function dialogue({titre, niveau = 'info', message = '', detail = '', options = 
     '<div><h3>' + esc(titre) + '</h3>' +
     (message ? '<p class="dmsg">' + esc(message) + '</p>' : '') + '</div></div>' +
     html + opts + saisies +
-    (detail ? '<details class="ddet"><summary>Détail technique</summary>' +
-      '<pre>' + esc(detail) + '</pre></details>' : '') +
+    (detail ? '<details class="ddet"' + (detailOuvert ? ' open' : '') + '>'
+      + '<summary>' + esc(detailTitre || t('Détail technique')) + '</summary>'
+      + '<pre>' + esc(detail) + '</pre></details>' : '') +
     '<div class="acts">' + boutons +
     '<button class="ghost" data-di="close">' + esc(fermer) + '</button></div></div>';
   // Reopening cancels a closing in progress: without this, `closeOverlay`'s
@@ -1385,15 +1395,44 @@ async function loadUpdate() {
 // The notes come from GitHub: this is text WRITTEN BY SOMEONE ELSE. So it
 // never enters HTML — `dialogue()` sets its `detail` through `textContent`. We
 // merely lighten the noisiest Markdown syntax, without ever interpreting it.
-function notesLisibles(md) {
-  return String(md || '')
-    .replace(/\r/g, '')
-    .replace(/^#{1,6}\s*/gm, '')        // titres
-    .replace(/^\s*[-*]\s+/gm, '• ')     // puces
-    .replace(/\*\*([^*]+)\*\*/g, '$1')  // gras
-    .replace(/`([^`]+)`/g, '$1')        // code
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
+// A release note, rendered. It used to be flattened to plain text and folded
+// into « Détail technique » — the wrong name for the thing you opened the
+// dialog to read, and a shape that turned a list into a paragraph.
+//
+// The whole markup is escaped FIRST, then the few marks are turned back into
+// tags. Doing it the other way round — formatting then escaping — is how a
+// release note becomes an injection point, and GitHub's notes are written by
+// whoever publishes the release.
+//
+// Six marks, no more: headings, lists, bold, code, links, paragraphs. A
+// release note that needs a table can be read on GitHub, and the button for
+// that is right there.
+function markdownLeger(md) {
+  const lignes = esc(String(md || '').replace(/\r/g, '')).split('\n');
+  const out = [];
+  let liste = false;
+  const enligne = (x) => x
+    .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    // Only http(s): a `javascript:` address in a note would be a link that
+    // runs. The text is already escaped, so only the shape is checked here.
+    .replace(/\[([^\]]+)\]\((https?:&#x2F;&#x2F;[^)\s]+|https?:\/\/[^)\s]+)\)/g,
+             '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+  for (const brute of lignes) {
+    const l = brute.trim();
+    const puce = l.match(/^[-*]\s+(.*)$/);
+    if (puce) {
+      if (!liste) { out.push('<ul>'); liste = true; }
+      out.push('<li>' + enligne(puce[1]) + '</li>');
+      continue;
+    }
+    if (liste) { out.push('</ul>'); liste = false; }
+    const titre = l.match(/^(#{1,6})\s+(.*)$/);
+    if (titre) { out.push('<h4>' + enligne(titre[2]) + '</h4>'); continue; }
+    if (l) out.push('<p>' + enligne(l) + '</p>');
+  }
+  if (liste) out.push('</ul>');
+  return out.join('');
 }
 
 async function loadViews() {
@@ -2008,8 +2047,20 @@ function renderActionBar() {
   // click would replace the <b>, and the number would jump instead of
   // rolling.
   const som = $('deploysum');
-  if (!som.firstElementChild) som.innerHTML = t('<b>0</b> {jeu|jeux} {sélectionné|sélectionnés}');
+  // `{jeu|jeux} {sélectionné|sélectionnés}` used to be written STRAIGHT into
+  // the markup. The observer translates a sentence; it does not resolve that
+  // notation — so the counter read « 0 {jeu|jeux} {sélectionné|sélectionnés} ».
+  //
+  // The number keeps its own `<b>` so it can roll, and the words live in a
+  // span beside it, rewritten when the count changes. Rebuilding the whole
+  // line would replace the `<b>` and the number would jump instead.
+  if (!som.firstElementChild) som.innerHTML = '<b>0</b> <span class="somots"></span>';
   chiffreAnime(som.firstElementChild, dsel2.size);
+  const mots = som.querySelector('.somots');
+  if (mots) {
+    R.texte(mots, accorder(t('{jeu|jeux}'), dsel2.size) + ' '
+                  + accorder(t('{sélectionné|sélectionnés}'), dsel2.size));
+  }
 
   // "Select all" disappears once everything is ticked: a button that can do
   // nothing is a button that lies.
@@ -2149,6 +2200,11 @@ function openGameHtml(g) {
       })() +
     '</div>' +
     '<div class="sub2" id="gm-info">' + (g.tid ? 'chargement des infos…' : '') + '</div>' +
+    // The summary. `loadGameMeta` has been writing into `#gm-desc` since the
+    // detail view existed, and the element was never created: the card showed
+    // the description, the detail view — the screen you open to read it —
+    // never did.
+    '<p class="gm-desc" id="gm-desc"></p>' +
     // One status per line, with a coloured dot: stacking framed pills made the
     // detail view unreadable as soon as there were two pieces of information.
     '<div class="status">' + lines.map(l =>
@@ -2166,7 +2222,12 @@ function openGameHtml(g) {
       '<div class="pres"><b class="p-' + e.presence.console + '">' +
         {oui: 'oui', partiel: 'en partie', non: 'non', inconnu: '?'}[e.presence.console] +
         '</b><span>sur la console</span></div>' +
-      '<div><b>' + (g.updCount || 0) + '</b><span>{mise|mises} à jour</span></div>' +
+      // Through the resolver: the observer TRANSLATES a sentence, it does
+      // not resolve `{singulier|pluriel}`. Written straight into the markup,
+      // « 1 {mise|mises} à jour » is what the reader got.
+      '<div><b>' + (g.updCount || 0) + '</b><span>' +
+        esc(accorder(t('{mise|mises}'), g.updCount || 0)) + ' ' +
+        esc(t('à jour')) + '</span></div>' +
       '<div><b>' + (g.dlcCount || 0) + '</b><span>DLC</span></div>' +
     '</div>' +
     majSection(g, e) +
@@ -3652,6 +3713,8 @@ async function createKey() {
     message: t('Note-la maintenant : elle n\'est conservée que sous forme '
                + 'd\'empreinte et ne pourra pas être réaffichée.'),
     detail: r.secret,
+    detailTitre: t('La clé'),
+    detailOuvert: true,
     actions: [{libelle: t('Copier'), principal: true, faire: () => {
       navigator.clipboard.writeText(r.secret)
         .then(() => toast(t('Clé copiée.'), 'ok'))
@@ -3994,13 +4057,6 @@ async function loadAccounts() {
   renderMe();
 }
 
-// What decides who gets in, said rather than offered as a switch.
-//
-// The setting it replaces was a checkbox that opened the service without
-// a password. It predates the access step of the wizard, which now settles the
-// question once and for all — and having two places decide the same thing, one
-// of them a switch nobody explains, is how an installation ends up open by
-// accident. So this reads the decision back, and points at where to change it.
 // Who is signed in, in the header, on every screen. It only existed in the
 // settings: elsewhere nothing said whose session this was, and signing out
 // meant going to look for the button.
@@ -4023,25 +4079,6 @@ function renderMe() {
   } else {
     av.textContent = (moi.nom || moi.email).slice(0, 1).toUpperCase();
   }
-}
-
-
-function renderAccessState() {
-  const el = $('etatacces');
-  if (!el) return;
-  const c = (HEALTH && HEALTH.checks) || {};
-  const compte = (c.auth_mode === 'interne' && c.comptes) || c.auth_mode === 'oidc';
-  const texte = compte
-    ? t('Par compte : il faut se connecter.')
-    : c.lan_access
-      ? t('Ouvert : aucun mot de passe n\'est demandé.')
-      : c.acces_choisi
-        ? t('Cette machine seulement.')
-        : t('Personne n\'a encore choisi.');
-  el.innerHTML = '<span class="etatacces' + (compte ? ' ok' : ' avert') + '">'
-    + esc(texte) + '</span>'
-    + '<button class="ghost mini" data-act="showAccessStep">'
-    + esc(t('Revoir ce choix')) + '</button>';
 }
 
 
@@ -4191,8 +4228,8 @@ async function enableTwoFactor() {
     // The QR arrives as an inline SVG: the address it carries is a secret
     // being set up, and a route serving it would be one more place it exists.
     html: p.qr ? '<div class="qrbloc">' + p.qr + '</div>' : '',
-    detail: tpl('À saisir à la main si tu ne peux pas scanner :\n%s',
-                   p.lisible),
+    detail: p.lisible,
+    detailTitre: t('À saisir à la main si tu ne peux pas scanner'),
     champs: [{id: 'code', libelle: 'Code à 6 chiffres', exemple: '123456'}],
     actions: [{libelle: 'Activer', principal: true, faire: v =>
       accountUpload('/api/compte-totp-activer', {code: v.code}, loadAccounts)}],
@@ -4339,7 +4376,6 @@ function fillSettings() {
   if (c.meta_lang) $('s-lang').value = c.meta_lang;
   if (document.activeElement !== $('s-mirrors')) $('s-mirrors').value = (c.versions_urls || []).join('\n');
   $('s-incr').checked = c.incremental !== false;
-  renderAccessState();
   $('s-emuready').checked = !!c.emuready;
   $('s-autonand').checked = !!c.auto_nand;
   $('s-notify').checked = c.notify !== false;
@@ -5008,16 +5044,27 @@ const app = {
     else toast(r.message || 'Bascule impossible.', 'err');
   },
   async wifiPair() {
-    const addr = $('pair-addr').value.trim(), code = $('pair-code').value.trim();
-    if (!addr || !code) return toast('Recopie l\'adresse et le code affichés sur la console.', 'warn');
+    // The two fields exist twice: in the settings' pairing panel, and in the
+    // wizard's console step. Whichever is on screen is the one being filled.
+    const champ = (id) => $('onb-' + id) || $(id);
+    const cAddr = champ('pair-addr'), cCode = champ('pair-code');
+    if (!cAddr || !cCode) return;
+    const addr = cAddr.value.trim(), code = cCode.value.trim();
+    if (!addr || !code) return toast(t('Recopie l\'adresse et le code affichés sur la console.'), 'warn');
     say('Association en cours…');
     const r = await api('/api/wifi-pair', {addr, code});
     if (r.ok && r.addr) {
       toast(r.message, 'ok'); $('pairwrap').style.display = 'none'; this.detect();
     } else if (r.ok) {
-      toast('Associée, mais adresse de connexion introuvable — utilise « Chercher ».', 'warn');
-      this.wifiDiscover();
-    } else toast(r.message || 'Association refusée.', 'err');
+      // Paired, but adb cannot say at which address to connect. That is the
+      // ordinary case in a container — mDNS reaches nothing — and « Chercher »
+      // is precisely the button that is hidden there. What works is the
+      // console's CONNECTION port, which is not the pairing one it just used.
+      toast(t('Associée. Saisis maintenant son adresse avec le port de '
+              + 'CONNEXION — celui de l\'écran « Débogage sans fil », pas '
+              + 'celui de la fenêtre d\'appairage.'), 'warn');
+      if (!((HEALTH && HEALTH.checks) || {}).container) this.wifiDiscover();
+    } else toast(r.message || t('Association refusée.'), 'err');
   },
   async wifiDiscover() {
     const r = await api('/api/wifi-discover', {});
@@ -5077,11 +5124,7 @@ const app = {
     // The upload ceiling comes from the server: freezing it in the browser
     // would mean lying as soon as the host changes it.
     TELEVERSEMENT_MAX = ((HEALTH || {}).checks || {}).televersement_max || 0;
-    // The access read-out is drawn by `fillSettings()`, which runs before the
-    // health has come back, so it announced that nobody had chosen yet on an
-    // installation that already had an account. It is redrawn here, once the
-    // answer exists.
-    renderAccessState();
+    renderDiscovery();
     // Server-side, not `localStorage`. The wizard was remembered per BROWSER:
     // finish it on the laptop, open Romule on the phone, and it started over —
     // on an installation that is already set up. What it records is a fact
@@ -5274,15 +5317,6 @@ const app = {
   // The way out, reachable from the header on every screen. It lived in the
   // account card of the settings only.
   signOut() { location.href = '/auth/logout'; },
-
-  // « Changer » opened the wizard at whatever step it had been left on, which
-  // is not an answer to the question the button sits next to. It opens the
-  // ACCESS step, and says so.
-  async showAccessStep() {
-    await this.checkHealth(true);
-    const i = onbEtapes(HEALTH).findIndex(x => x.cle === 'compte');
-    if (i >= 0) onbGo(i);
-  },
 
   dismissA2HS() { localStorage.setItem('a2hs-off', '1'); renderA2HS(); },
   async installApp() {
@@ -5691,7 +5725,9 @@ const app = {
       titre: tpl('Version %s disponible', MAJ.version || '?'),
       niveau: 'ok',
       message: MAJ.titre && MAJ.titre !== MAJ.version ? MAJ.titre : '',
-      detail: notesLisibles(MAJ.notes) || t('Aucune note de version publiée.'),
+      html: MAJ.notes
+        ? '<div class="notesmaj">' + markdownLeger(MAJ.notes) + '</div>'
+        : '<p class="lead">' + esc(t('Aucune note de version publiée.')) + '</p>',
       fermer: t('Plus tard'),
       actions: [{libelle: t('Voir la publication'), principal: true, faire: () => {
         if (MAJ.url) window.open(MAJ.url, '_blank', 'noopener');
@@ -6737,7 +6773,27 @@ function onbEtapes(h) {
              '<div class="onbchemin" data-i18n-skip>' + esc(c.remede_adb || '') +
              '</div>') +
           '<button class="ghost" data-act="onbFindConsole"' +
-            (c.adb ? '' : ' disabled') + '>Chercher une console</button>',
+            (c.adb ? '' : ' disabled') + '>Chercher une console</button>' +
+          // Without these two fields the step is a dead end wherever adb
+          // cannot discover the console by itself — which is every container.
+          // The settings have carried them since the beginning; there was no
+          // reason for the wizard not to.
+          '<div class="onbsans"><b>Ou sans câble, à la main</b>' +
+          '<p class="onbnote">Sur la console : Paramètres → Système → Options ' +
+          'pour les développeurs → Débogage sans fil → Associer un appareil ' +
+          'avec un code. Recopie ce qu\'elle affiche.</p>' +
+          '<div class="onbchamps">' +
+          '<label>Adresse et port d\'appairage' +
+            '<input type="text" id="onb-pair-addr" autocomplete="off" ' +
+            'placeholder="192.168.1.42:37105" value="' +
+            onbValeur('onb-pair-addr') + '"></label>' +
+          '<label>Code à 6 chiffres' +
+            '<input type="text" id="onb-pair-code" inputmode="numeric" ' +
+            'maxlength="6" autocomplete="off" placeholder="123456" value="' +
+            onbValeur('onb-pair-code') + '"></label>' +
+          '</div>' +
+          '<button class="ghost" data-act="wifiPair">Associer la console</button>' +
+          '</div>',
     },
     {
       cle: 'fin', titre: 'C\'est prêt', requis: null,
@@ -6943,6 +6999,17 @@ function installContext() {
 
 // When driving from the console or the phone, we remind that the library and
 // the actions live on the server, not on the device.
+// The network search cannot work from a container: mDNS reaches Docker's own
+// network and nothing else. Saying so under a button that stays clickable was
+// half an answer — the button goes, and the address field is what is left,
+// which is what actually works.
+function renderDiscovery() {
+  const el = $('pairdecouverte');
+  if (!el) return;
+  el.hidden = !!((HEALTH && HEALTH.checks) || {}).container;
+}
+
+
 function renderHost() {
   const c = installContext();
   const el = $('hostchip');
@@ -7451,7 +7518,7 @@ const ACTES = new Set([
   'libConfirm', 'mkTree', 'onbGo', 'onbFindConsole',
   'onbChooseFolder', 'onbCreateAccount', 'onbOpenAccess', 'onbPrev',
   'onbScan', 'onbTestSgdb', 'onbTestIgdb', 'setLang', 'toggleNotification',
-  'signOut', 'showAccessStep',
+  'signOut',
   'onbScanConsole', 'onbNext', 'openGame',
   'openOnConsole', 'organize', 'forgetFolder', 'forgetTransfer',
   'openPlatform', 'page', 'browseServer', 'purgeTrash', 'reloadImport',

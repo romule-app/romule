@@ -401,6 +401,46 @@ const fautifsRappel = rappelsFautifs(src);
 t('no dialog button uses `action:`',
   fautifsRappel.length === 0, 'lignes : ' + fautifsRappel.join(', '));
 
+// ---- 9. the release note is rendered, and it comes from outside
+//
+// `markdownLeger` turns a GitHub release note into markup. The text is written
+// by whoever publishes the release — outside this project — so the order of
+// operations is the whole point: escape everything FIRST, then turn the few
+// marks back into tags. Formatting then escaping is how a release note becomes
+// an injection point.
+console.log("   -- 9. la note de version est rendue, et elle vient d'ailleurs --");
+{
+  const d = lignes.findIndex(l => l.startsWith('function markdownLeger'));
+  const f = lignes.findIndex((l, i) => i > d && l === '}');
+  t('markdownLeger est trouve dans app.js', d >= 0 && f > d);
+  if (d >= 0 && f > d) {
+    const rendre = new Function(
+      lignes.slice(debut, fin + 1).join('\n') + '\n'
+      + lignes.slice(d, f + 1).join('\n')
+      + '\nreturn markdownLeger;')();
+    const cas = [
+      ['un titre devient un titre', '## Titre', '<h4>Titre</h4>'],
+      ['une puce devient une liste', '- un', '<ul><li>un</li></ul>'],
+      ['le gras est rendu', '**x**', '<p><b>x</b></p>'],
+      ['le code est rendu', '`x`', '<p><code>x</code></p>'],
+    ];
+    for (const [nom, entree, attendu] of cas)
+      t(nom, rendre(entree) === attendu, rendre(entree));
+    // The two that matter.
+    t('une balise brute est neutralisee',
+      rendre('<script>alert(1)</script>').indexOf('<script') < 0,
+      rendre('<script>alert(1)</script>'));
+    t('un lien http est rendu',
+      rendre('[d](https://ex.org/x)').indexOf('href="https://ex.org/x"') > 0,
+      rendre('[d](https://ex.org/x)'));
+    t('un lien javascript: est refuse',
+      rendre('[p](javascript:alert(1))').indexOf('<a ') < 0,
+      rendre('[p](javascript:alert(1))'));
+    t('un lien s\'ouvre sans donner la main a la page',
+      rendre('[d](https://ex.org/)').indexOf('rel="noopener noreferrer"') > 0);
+  }
+}
+
 console.log('      ------------------------------------------------');
 console.log('      ' + ok + ' checks OK, ' + ko + ' failure(s)');
 process.exit(ko ? 1 : 0);
