@@ -12,6 +12,26 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Changed
 
+- **Alignment is measured now, not reviewed.** 734 spacing values are written
+  by hand across the stylesheet, in 32 distinct sizes: every block invents its
+  own margin, which is why buttons flush against a frame and rows a few pixels
+  apart kept coming back — reported three sessions running, fixed three times
+  one case at a time.
+
+  `audit_responsive.py` already measured overflow, covered controls and
+  touch-target size on the rendered page. Two rules join them: **no control
+  touches the edge of its block** (six pixels, measured against the block's
+  border box; a full-width row is exempt — its own padding is the spacing), and
+  **the controls of one row share their height and their top line**, to the
+  pixel. It now visits every settings section rather than whichever one happens
+  to be open.
+
+  Writing them found two defects nobody had seen: a volume row flush against
+  its card, and the notification address field sitting three pixels below the
+  name beside it — an inline `margin-top` written when the two were stacked.
+  Proven to bite by removing the margin that fixes the console section: 19
+  findings, then none.
+
 - **The French has its accents back, and the sentences left the code.** 312
   strings of the shipped Python were written without accents: « Range »,
   « recuperee », « termine », « Decompression » — that is what the log showed.

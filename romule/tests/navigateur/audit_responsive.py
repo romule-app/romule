@@ -64,7 +64,16 @@ SONDE = r"""
 (function () {
   const MIN = 44;
   const res = {debord: document.documentElement.scrollWidth - innerWidth,
-               bloques: [], petits: [], total: 0};
+               bloques: [], petits: [], colles: [], desalignes: [], total: 0};
+
+  // L'ecart minimum entre un controle et le bord de son bloc. En dessous, le
+  // bouton se lit comme une partie du cadre et non comme quelque chose de
+  // pose dedans — c'est le defaut signale trois sessions de suite, corrige
+  // trois fois au cas par cas.
+  const ECART = 6;
+  // Ce qui compte comme un bloc : un cadre visible, avec un fond a lui.
+  const BLOCS = '.setgroup, .onbservice, .notifdest, .pairbox, .ecbloc, '
+              + '.dlg, .onbcard, .card';
 
   // Un element d'un panneau ferme n'est pas « recouvert » : il n'est pas la.
   // On ne garde que ce qui est reellement affiche ET reellement cliquable,
@@ -136,6 +145,76 @@ SONDE = r"""
     if (r.height < MIN - 6) {
       res.petits.push(nom + ' « ' + etiq + ' » ' +
         Math.round(r.width) + 'x' + Math.round(r.height));
+    }
+
+    // Colle-t-il au bord de son bloc ? Mesure contre la boite de BORDURE :
+    // un element qui occupe legitimement toute la largeur garde le padding
+    // du bloc comme ecart. Un bloc sans padding, lui, colle tout.
+    const bloc = el.parentElement && el.parentElement.closest(BLOCS);
+    if (bloc && bloc !== el) {
+      const b = bloc.getBoundingClientRect();
+      // Une RANGEE pleine largeur est le contenu du bloc, pas quelque chose
+      // pose dedans : son propre padding fait l'espacement, et elle touche le
+      // cadre par construction. C'est le cas de `.setrow` et de `.vol`.
+      if (r.width >= b.width - 2) { /* rangee : rien a signaler */ } else {
+      const ecart = Math.min(r.left - b.left, b.right - r.right,
+                             r.top - b.top, b.bottom - r.bottom);
+      if (ecart > -40 && ecart < ECART) {
+        res.colles.push(nom + ' « ' + etiq + ' » a ' + Math.round(ecart)
+          + ' px du bord de ' + (bloc.id ? '#' + bloc.id
+             : '.' + String(bloc.className).split(' ')[0]));
+      }
+      }
+    }
+  }
+
+  // Les controles d'une meme rangee partagent leur hauteur et leur ligne du
+  // haut. Deux boutons voisins de 34 et 44 px se voient immediatement, et
+  // aucune relecture de la feuille de style ne les montre.
+  const rangees = new Map();
+  for (const el of document.querySelectorAll('button, select, input:not([type=hidden])')) {
+    if (!utilisable(el) || rogne(el)) continue;
+    const r = el.getBoundingClientRect();
+    if (!r.width || !r.height) continue;
+    if (el.type === 'checkbox' || el.type === 'radio') continue;   // pas des boutons
+    const parent = el.parentElement;
+    if (!parent) continue;
+    // Groupe par l'ELEMENT parent, pas par son nom de classe : `.bar` est
+    // porte par une dizaine de conteneurs differents, et les regrouper par
+    // classe mettait toute la page dans le meme seau.
+    if (!rangees.has(parent)) rangees.set(parent, []);
+    rangees.get(parent).push({el: el, r: r});
+  }
+  // Une RANGEE, c'est une grappe : des controles dont les bandes verticales
+  // se recouvrent, de proche en proche. Sans cela, des boutons passes a la
+  // ligne — la barre d'entretien, les vignettes d'animation — se comparaient
+  // d'une ligne a l'autre, et deux champs empiles passaient pour voisins.
+  for (const [parent, tous] of rangees) {
+    if (tous.length < 2) continue;
+    const tries = tous.slice().sort((a, b) => a.r.top - b.r.top);
+    const grappes = [];
+    for (const item of tries) {
+      const g = grappes[grappes.length - 1];
+      const bas = g ? Math.max(...g.map(x => x.r.bottom)) : -1;
+      const haut = g ? Math.min(...g.map(x => x.r.top)) : -1;
+      const chevauche = g && (Math.min(bas, item.r.bottom)
+                              - Math.max(haut, item.r.top))
+                             > Math.min(item.r.height, bas - haut) / 2;
+      if (chevauche) { g.push(item); } else { grappes.push([item]); }
+    }
+    for (const g of grappes) {
+      if (g.length < 2) continue;
+      const hauts = g.map(x => Math.round(x.r.height));
+      const tops = g.map(x => Math.round(x.r.top));
+      const dh = Math.max(...hauts) - Math.min(...hauts);
+      const dt = Math.max(...tops) - Math.min(...tops);
+      if (dh > 1 || dt > 1) {
+        const quoi = g.map(x => (x.el.textContent || x.el.value || x.el.tagName)
+          .trim().slice(0, 14) + ':' + Math.round(x.r.height)).join(' ');
+        const ou = parent.id ? '#' + parent.id
+          : '.' + String(parent.className).split(' ')[0];
+        res.desalignes.push(ou + ' — ' + quoi);
+      }
     }
   }
   return res;
@@ -221,25 +300,46 @@ def main():
                     print("   ::error:: la sonde ne distingue plus recouvert "
                           "et rogne — les resultats qui suivent ne valent rien")
                     total_pb += 1
-            for onglet, libelle in (("jeux", "Jeux"), ("settings", "Réglages")):
+            # Every settings SECTION, not just the one that happens to be
+            # open. They are exclusive: measuring « Réglages » alone measured
+            # « Ta console » and nothing else, and the rows people complained
+            # about were in the four others.
+            ecrans = [("jeux", "Jeux", ""), ("settings", "Réglages", "")]
+            for cle, titre in (("sec-console", "Console"), ("sec-biblio", "Biblio"),
+                               ("sec-entretien", "Entretien"), ("sec-acces", "Accès"),
+                               ("sec-interface", "Interface")):
+                ecrans.append(("settings", titre, cle))
+            for onglet, libelle, section in ecrans:
                 n.js("app.tab('%s')" % onglet)
+                if section:
+                    n.js("showSettingsSection('%s')" % section)
                 time.sleep(0.6)
                 r = n.js(SONDE)
                 pb = []
                 if r["debord"] > 1:
                     pb.append("deborde de %d px" % r["debord"])
                 bl, pt = uniq(r["bloques"]), uniq(r["petits"])
+                co, de = uniq(r["colles"]), uniq(r["desalignes"])
                 if bl:
                     pb.append("%d recouvert(s)" % len(bl))
                 if pt:
                     pb.append("%d trop petit(s)" % len(pt))
-                total_pb += len(bl) + len(pt) + (1 if r["debord"] > 1 else 0)
+                if co:
+                    pb.append("%d colle(s) au bord" % len(co))
+                if de:
+                    pb.append("%d rangee(s) desalignee(s)" % len(de))
+                total_pb += (len(bl) + len(pt) + len(co) + len(de)
+                             + (1 if r["debord"] > 1 else 0))
                 etat = " | ".join(pb) if pb else "rien a signaler"
                 print("   %s %-9s %3d controles  %s" % (nom, libelle, r["total"], etat))
                 for x in bl[:4]:
                     print("        recouvert : %s" % x)
                 for x in pt[:4]:
                     print("        trop petit: %s" % x)
+                for x in co[:4]:
+                    print("        colle     : %s" % x)
+                for x in de[:4]:
+                    print("        desaligne : %s" % x)
         finally:
             n.fermer()
     print("   ------------------------------------------------")
