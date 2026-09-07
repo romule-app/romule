@@ -488,6 +488,44 @@ def autotest():
         vu = bool(manquantes(source_js="", source_html=html, catalogue=cat))
         t(nom, vu == attendu, "detecte=%s" % vu)
 
+    # Emphasis that CUTS a sentence. The failure it stands for: an English page
+    # reading `That is pas the port`, because `<b>pas</b>` sits mid-sentence and
+    # the fragment is too short to ever be a key. What must NOT be reported is
+    # emphasis around a whole sentence — the shape used all over this interface.
+    coupe_cas = [
+        ("une emphase au milieu d'une phrase -> detectee",
+         "<p>Ce n'est <b>pas</b> le port.</p>", {"pas"}),
+        ("une emphase sur la phrase entiere -> ignoree",
+         "<p><b>Ce n'est pas le port.</b></p>", set()),
+        ("une emphase seule sur sa ligne -> ignoree",
+         "<div>\n  <b>Glisse tes jeux ici</b>\n</div>", set()),
+        ("une emphase en TETE de phrase -> ignoree",
+         "<p><b>Attention</b> au port indique.</p>", set()),
+        ("une emphase en FIN de phrase -> ignoree",
+         "<p>Recopie le port <b>d'appairage</b></p>", set()),
+        ("une emphase dans un autre parent ne compte pas",
+         "<p><span>Avant</span><b>Seul</b></p>", set()),
+        ("une donnee emphasee n'est pas une phrase",
+         "<p>du type <b>192.168.1.42</b> exactement.</p>", set()),
+        ("un <i> decoratif n'est pas une emphase",
+         "<p>Avant <i>\u00b7</i> apres</p>", set()),
+        ("une emphase imbriquee est lue en entier",
+         "<p>Va dans <b>Para<em>metres</em></b> puis la.</p>", {"Parametres"}),
+    ]
+    for nom, html, attendu in coupe_cas:
+        t(nom, emphases_html(html) == attendu, emphases_html(html))
+
+    js_coupe_cas = [
+        ("une emphase au milieu, en JS -> detectee",
+         "h = 'appuie sur <b>Partager</b> puis la;';", {"Partager"}),
+        ("une phrase entiere emphasee, en JS -> ignoree",
+         "h = '<b>Glisse tes jeux ici</b>' + reste;", set()),
+        ("une valeur construite par le code -> ignoree",
+         "h = 'sous <b>' + esc(dir) + '</b> :';", set()),
+    ]
+    for nom, js, attendu in js_coupe_cas:
+        t(nom, emphases_js(js) == attendu, emphases_js(js))
+
     # The SINGLE word: the class that let "aucune" show in French inside an
     # English interface. NON_PROSE threw it away as an identifier, and both
     # heuristics demanded an accent or two function words.
@@ -559,6 +597,111 @@ def appels_t(source):
     return out
 
 
+# An emphasis in the MIDDLE of a sentence: `Ce n'est <b>pas</b> le port`. Every
+# extractor here splits on tags, so one sentence becomes three fragments. The
+# short one falls under every length threshold used to avoid reporting
+# identifiers, so it is never a key and stays in French inside an English page
+# — which is what happened to `pas`, to `Partager`, and to the wireless
+# debugging paragraph.
+#
+# Being at the catalogue does NOT excuse it: a half-sentence key cannot be
+# reordered by a translator, and the two halves drift apart the first time one
+# of them is reworded.
+#
+# Emphasis around a WHOLE sentence is fine — that is a single text node, hence a
+# single key. Telling the two apart is the whole difficulty, and it is why this
+# walks the document instead of matching a pattern: `<b>` alone on its line is
+# preceded by a newline and some indentation, which any "a character, then the
+# tag" rule reads as text. The question is not what characters sit next to the
+# tag, it is whether the tag has non-empty text on BOTH sides WITHIN ITS PARENT.
+# `<i>` is not in this set: here it is a decorative separator and an icon
+# holder — `<i>·</i>`, `<i></i>` — never emphasis carrying words.
+_EMPHASE_TAGS = {"b", "em", "strong"}
+# Data, not prose: an address, a version, a path, a symbol. Shown as they are.
+_DONNEE = re.compile(r"^[\d.:/_\-]+$|^[A-Z_]{3,}$|^[^\w\s]+$")
+
+
+class _Coupures(HTMLParser):
+    """Emphasis tags with text on both sides inside the same parent."""
+
+    def __init__(self):
+        HTMLParser.__init__(self)
+        # One entry per open element: the text seen before the current child,
+        # the emphases opened at this level and still awaiting text after them.
+        self.pile = [{"avant": "", "attente": []}]
+        self.profond = 0
+        self.courant = None
+        self.trouve = set()
+
+    def _texte(self, data):
+        niveau = self.pile[-1]
+        if data.strip():
+            # Everything still waiting at this level now has text after it.
+            for texte in niveau["attente"]:
+                self.trouve.add(texte)
+            niveau["attente"] = []
+            niveau["avant"] += data
+
+    def handle_starttag(self, tag, attrs):
+        if self.courant is not None:
+            self.profond += 1
+            return
+        if tag in _EMPHASE_TAGS and self.pile[-1]["avant"].strip():
+            self.courant, self.profond = [], 0
+            return
+        self.pile.append({"avant": "", "attente": []})
+
+    def handle_endtag(self, tag):
+        if self.courant is not None:
+            if self.profond:
+                self.profond -= 1
+                return
+            texte = " ".join("".join(self.courant).split())
+            self.courant = None
+            if texte and not _DONNEE.match(texte):
+                self.pile[-1]["attente"].append(texte)
+            return
+        if len(self.pile) > 1:
+            self.pile.pop()
+
+    def handle_data(self, data):
+        if self.courant is not None:
+            self.courant.append(data)
+        else:
+            self._texte(data)
+
+
+def emphases_html(source):
+    lecteur = _Coupures()
+    lecteur.feed(source)
+    return lecteur.trouve
+
+
+# In `app.js` the markup lives inside string literals, so there is no document
+# to walk. A quote, a `+` or a brace is a boundary rather than text — that is
+# what tells `'<b>Whole sentence</b>' +` from `'... sur <b>Partager</b> puis'`.
+_BORD = r"[^\s<>'\"+`;{}(),\[\]]"
+_EMPHASE_JS = re.compile(_BORD + r"[ \t]*<(b|em|strong)>([^<>]{1,40})</\1>"
+                         r"[ \t]*" + _BORD)
+
+
+# A fragment the INTERFACE builds: `<b>' + esc(x) + '</b>`. What lands there is
+# a value, not a sentence, and no catalogue can hold it.
+_CODE = ("' +", "+ '", "${", "esc(", "$1", '" +', '+ "')
+
+
+def emphases_js(source):
+    out = set()
+    for _, brut in _EMPHASE_JS.findall(source):
+        texte = " ".join(brut.split()).replace("\\'", "'")
+        if not texte or _DONNEE.match(texte):
+            continue
+        if any(marque in texte for marque in _CODE):
+            continue
+        out.add(texte)
+    return out
+
+
 def entetes():
     """Does each catalogue announce ITSELF?
 
@@ -612,6 +755,10 @@ def main(argv):
     for texte in sorted(libelles(js)):
         if texte not in catalogue:
             soucis.append("le libelle de bouton %r n'est pas au catalogue" % texte)
+    html = (RACINE / "romule" / "static" / "index.html").read_text(encoding="utf-8")
+    for texte in sorted(emphases_html(html) | emphases_js(js)):
+        soucis.append("l'emphase %r coupe une phrase en deux : porte-la sur la"
+                      " phrase entiere, ou retire-la" % texte)
     for souci in soucis:
         print("  ENTETE   %s" % souci)
     if paresse:

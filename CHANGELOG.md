@@ -12,6 +12,25 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Changed
 
+- **Pairing said what to do next, with nowhere to do it.** The Wi-Fi assistant
+  stopped at three steps: it announced « Associée. Saisis maintenant son adresse
+  avec le port de connexion » and offered no field to type it in. The panel now
+  has a fourth step, carrying that field, the host part already filled in, and
+  the one sentence that makes the flow work — the connection port is not the
+  pairing port, which is used once and discarded. `docs/console` and
+  `docs/depannage` gained the same, in both languages.
+
+- **Thirteen sentences were cut in two by their own emphasis.** A `<b>` placed
+  inside a sentence splits it into fragments, and every extractor in this
+  project splits on tags: the emphasised words were never catalogue keys, so
+  they stayed French inside the English page — « Partager », « Système »,
+  « toutes », « 7 fois », the whole wireless-debugging walkthrough. The
+  sentences are whole again, `verifier-traduction.py` walks the document rather
+  than matching a pattern, and reports any emphasis that has text on both sides
+  within its parent. Emphasis around a whole sentence — the shape used
+  everywhere in this interface — is untouched, which is what the twelve new
+  self-test cases pin down.
+
 - **Twelve more defects, from a second session of using the tool.**
 
   - **The wizard's console step was a dead end.** It offered « Chercher une

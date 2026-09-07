@@ -121,6 +121,20 @@ Docker. Romule supplies neither the tool's keys nor any way to obtain them.
 4. Under Docker with bridge networking, USB is not visible. Use Wi-Fi pairing,
    or see [Installation](installation.md#networking).
 
+## Pairing succeeded, but the console will not connect
+
+Nearly always the same cause: the address entered to connect is the one from the
+**pairing window**. Its port is disposable — it is used once and never again.
+
+Close the code window. Behind it, the **Wireless debugging** screen shows its own
+“IP address and Port” line, on a different port. That is the one step 4 of the
+assistant is asking for.
+
+If the address is right and connecting still fails, the console has most likely
+left the network or changed address: the connection port changes every time
+wireless debugging restarts, and step 4 has to be done again — not the pairing,
+which stays.
+
 ## Transfers over Wi-Fi are slow
 
 Two to five times slower than USB, by nature. For a first bulk transfer, cable

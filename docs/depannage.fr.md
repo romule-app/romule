@@ -128,6 +128,20 @@ aucun moyen de se les procurer.
 4. Sous Docker en réseau *bridge*, l'USB n'est pas visible. Utilise
    l'appairage Wi-Fi, ou voir [Installation](installation.md#reseau).
 
+## L'appairage a réussi, mais la console ne se connecte pas
+
+Presque toujours la même cause : l'adresse saisie pour se connecter est celle de
+la **fenêtre d'appairage**. Son port est jetable, il ne sert qu'une fois.
+
+Ferme la fenêtre du code. Derrière elle, l'écran **Débogage sans fil** affiche sa
+propre ligne « Adresse IP et port » — un autre port. C'est celui-là qu'attend
+l'étape 4 de l'assistant.
+
+Si l'adresse est la bonne et que la connexion échoue quand même, la console a
+sans doute quitté le réseau ou changé d'adresse : le port de connexion change à
+chaque redémarrage du débogage sans fil, et il faut refaire l'étape 4 (pas
+l'appairage, qui reste acquis).
+
 ## Les transferts Wi-Fi sont lents
 
 Deux à cinq fois plus lents que l'USB, par nature. Pour un premier transfert en

@@ -15,8 +15,19 @@ The settings hold a step-by-step assistant. In short:
 2. **On the console** — in the Wireless debugging screen, tap **Pair device
    with pairing code**. Leave the window open: the code expires when it closes.
    It shows a six-digit code and an address like `192.168.1.42:37105`.
-3. **In Romule** — enter both. Once paired, the console is recognised on its
-   own from then on.
+3. **In Romule** — enter that address and that code, then confirm the
+   pairing.
+4. **On the console** — close the code window. The Wireless debugging screen
+   behind it shows **its own “IP address and Port” line**, and it is not the
+   same one: the pairing port is used only once. Copy that one into Romule,
+   then **Connect the console**.
+
+Once connected, the console is recognised on its own from then on.
+
+!!! warning "Two addresses, two ports"
+    This is where it goes wrong. The code window gives a pairing port, good for
+    one use; the Wireless debugging screen gives another one, for the
+    connection. Entering the first at step 4 fails without explaining itself.
 
 !!! note "Wi-Fi is slower"
     Two to five times slower than USB for large transfers. Fine for a few

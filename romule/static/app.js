@@ -5004,16 +5004,27 @@ const app = {
   },
   // Wizard: one visible step at a time, each saying WHERE to act.
   wizStep(n) {
-    for (let i = 1; i <= 3; i++) {
+    for (let i = 1; i <= 4; i++) {
       const el = $('wstep' + i);
       if (el) el.classList.toggle('on', i === n);
     }
     const b = $('wizbar');
-    if (b) b.style.width = Math.round(n / 3 * 100) + '%';
+    if (b) b.style.width = Math.round(n / 4 * 100) + '%';
     if (n === 3) {
       this.wizCheck();
-      this.wifiDiscover();               // pre-fills the address if it can be found
+      // The search only pre-fills where it can work at all — never in a
+      // container, where it reaches Docker's network and nothing else.
+      if (!((HEALTH && HEALTH.checks) || {}).container) this.wifiDiscover();
       const a = $('pair-addr'); if (a && !a.value) a.focus();
+    }
+    if (n === 4) {
+      // The connection address is the pairing one with another port: the host
+      // part is right, and it saves retyping it.
+      const c = $('conn-addr'), a = $('pair-addr');
+      if (c && !c.value && a && a.value.includes(':')) {
+        c.value = a.value.split(':')[0] + ':';
+      }
+      if (c) c.focus();
     }
   },
   // Validates as you go: the user sees what is missing before failing.
@@ -5056,14 +5067,12 @@ const app = {
     if (r.ok && r.addr) {
       toast(r.message, 'ok'); $('pairwrap').style.display = 'none'; this.detect();
     } else if (r.ok) {
-      // Paired, but adb cannot say at which address to connect. That is the
-      // ordinary case in a container — mDNS reaches nothing — and « Chercher »
-      // is precisely the button that is hidden there. What works is the
-      // console's CONNECTION port, which is not the pairing one it just used.
-      toast(t('Associée. Saisis maintenant son adresse avec le port de '
-              + 'CONNEXION — celui de l\'écran « Débogage sans fil », pas '
-              + 'celui de la fenêtre d\'appairage.'), 'warn');
-      if (!((HEALTH && HEALTH.checks) || {}).container) this.wifiDiscover();
+      // Paired, and adb cannot say at which address to connect — the ordinary
+      // case in a container, where mDNS reaches nothing. Telling the reader to
+      // type the connection address was only half an answer: there was nowhere
+      // to type it. The panel goes to the step that asks for it.
+      toast(t('Associée. Il reste à la connecter.'), 'ok');
+      this.wizStep(4);
     } else toast(r.message || t('Association refusée.'), 'err');
   },
   async wifiDiscover() {
@@ -5084,6 +5093,18 @@ const app = {
             : t('Aucune console visible. Vérifie que le débogage sans fil est activé '
                 + 'et que la console est sur le même réseau.')) + '</div>';
   },
+  // The connection step's field. `wifiConnect` takes an address from the
+  // discovery list; this one takes it from the reader.
+  async wifiConnectField() {
+    const c = $('conn-addr');
+    const addr = (c && c.value || '').trim();
+    if (!addr.includes(':')) {
+      return toast(t('Recopie l\'adresse ET le port, séparés par deux points.'),
+                   'warn');
+    }
+    return this.wifiConnect(addr);
+  },
+
   async wifiConnect(addr) {
     say('Connexion…');
     const r = await api('/api/wifi-connect', addr ? {addr} : {});
@@ -7025,9 +7046,16 @@ function renderA2HS() {
   const c = installContext();
   if (c.standalone || c.local || c.dismissed) { el.style.display = 'none'; return; }
 
-  const how = c.ios
-    ? 'appuie sur <b>Partager</b> puis <b>Sur l\'écran d\'accueil</b>'
-    : 'ouvre le menu <b>⋮</b> du navigateur puis <b>Ajouter à l\'écran d\'accueil</b>';
+  // Translated as ONE sentence, markup included: the emphasis names two buttons
+  // the reader must find on their own screen, and a `<b>` in the middle of a
+  // sentence cuts it into fragments no catalogue can hold.
+  // No markup inside a translatable sentence: every extractor in this project
+  // splits on tags, so a `<b>` around a word turns one key into three fragments
+  // and the emphasised word stays French in an English page. The button names
+  // are quoted instead — the `.mono` span already sets the hint apart.
+  const how = t(c.ios
+    ? 'appuie sur « Partager » puis « Sur l\'écran d\'accueil »'
+    : 'ouvre le menu « ⋮ » du navigateur puis « Ajouter à l\'écran d\'accueil »');
   const action = INSTALL_EVT
     ? '<button class="go" data-act="installApp">Installer l\'application</button>'
     : '<span class="mono">' + how + '</span>';
@@ -7530,7 +7558,8 @@ const ACTES = new Set([
   'setNotificationEvents',
   'toggleDrop', 'toggleFav', 'toggleJournal', 'togglePairing', 'togglePause',
   'trashFile', 'useDir', 'verify', 'showMaintenance', 'showVersions',
-  'wifiConnect', 'wifiDiscover', 'wifiForget', 'wifiPair', 'wifiSwitch',
+  'wifiConnect', 'wifiConnectField', 'wifiDiscover', 'wifiForget',
+  'wifiPair', 'wifiSwitch',
   'wizCheck', 'wizStep',
 ]);
 
