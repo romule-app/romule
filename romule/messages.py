@@ -458,3 +458,18 @@ CLI_RAPPORT_SANS_SECRET = (
     "ni adresse de webhook.")
 CLI_RIEN_A_ENVOYER = 'Aucun .nsp/.xci à envoyer.'
 CLI_BRANCHE_USB = 'Branche le handheld en USB et autorise le débogage.'
+
+
+# -------------------------------- what a wireless connection actually ends as
+D_LIEN_HORS_LIGNE = (
+    "La console a accepté la connexion puis l'a laissée retomber. Le port de "
+    'connexion change à chaque redémarrage du débogage sans fil : relis-le sur '
+    "l'écran de la console. Si c'est le bon, coupe et rallume le débogage sans "
+    'fil.')
+D_LIEN_NON_AUTORISE = (
+    "La console demande ton autorisation : regarde son écran et accepte « "
+    'Autoriser le débogage USB ». Coche « Toujours autoriser » pour ne plus '
+    'avoir à le refaire.')
+D_LIEN_ABSENT = (
+    "adb a dit « connecté », puis la console n'est apparue dans aucune liste. "
+    "L'adresse répond mais ce n'est pas une console en débogage sans fil.")

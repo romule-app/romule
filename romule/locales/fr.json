@@ -1628,5 +1628,18 @@
   "Aucune authentification, mais rien n'est exposé : seul 127.0.0.1 peut se connecter.": "Aucune authentification, mais rien n'est exposé : seul 127.0.0.1 peut se connecter.",
   "Les %d en-têtes sont posés.": "Les %d en-têtes sont posés.",
   "Aucun des %d motifs surveillés n'apparaît dans le code, et aucune donnée n'est injectée en innerHTML sans échappement.": "Aucun des %d motifs surveillés n'apparaît dans le code, et aucune donnée n'est injectée en innerHTML sans échappement.",
-  "%s — série maintenue%s.": "%s — série maintenue%s."
+  "%s — série maintenue%s.": "%s — série maintenue%s.",
+  "Romule transfère les jeux vers une console Android par adb. Comment est-elle reliée à cette machine ?": "Romule transfère les jeux vers une console Android par adb. Comment est-elle reliée à cette machine ?",
+  "Avec un câble": "Avec un câble",
+  "USB. Deux à cinq fois plus rapide, et rien à appairer.": "USB. Deux à cinq fois plus rapide, et rien à appairer.",
+  "Depuis un conteneur, le port USB n'est visible que s'il a été monté.": "Depuis un conteneur, le port USB n'est visible que s'il a été monté.",
+  "Sans câble": "Sans câble",
+  "Wi-Fi. Un appairage à faire une fois, ensuite la console est reconnue toute seule.": "Wi-Fi. Un appairage à faire une fois, ensuite la console est reconnue toute seule.",
+  "Choisir l'autre méthode": "Choisir l'autre méthode",
+  "Relier autrement": "Relier autrement",
+  "Branche la console, active le « débogage USB » dans ses options pour les développeurs, puis accepte la demande qui s'affiche sur son écran.": "Branche la console, active le « débogage USB » dans ses options pour les développeurs, puis accepte la demande qui s'affiche sur son écran.",
+  "Chercher la console": "Chercher la console",
+  "La console a accepté la connexion puis l'a laissée retomber. Le port de connexion change à chaque redémarrage du débogage sans fil : relis-le sur l'écran de la console. Si c'est le bon, coupe et rallume le débogage sans fil.": "La console a accepté la connexion puis l'a laissée retomber. Le port de connexion change à chaque redémarrage du débogage sans fil : relis-le sur l'écran de la console. Si c'est le bon, coupe et rallume le débogage sans fil.",
+  "La console demande ton autorisation : regarde son écran et accepte « Autoriser le débogage USB ». Coche « Toujours autoriser » pour ne plus avoir à le refaire.": "La console demande ton autorisation : regarde son écran et accepte « Autoriser le débogage USB ». Coche « Toujours autoriser » pour ne plus avoir à le refaire.",
+  "adb a dit « connecté », puis la console n'est apparue dans aucune liste. L'adresse répond mais ce n'est pas une console en débogage sans fil.": "adb a dit « connecté », puis la console n'est apparue dans aucune liste. L'adresse répond mais ce n'est pas une console en débogage sans fil."
 }

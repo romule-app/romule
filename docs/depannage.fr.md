@@ -128,6 +128,28 @@ aucun moyen de se les procurer.
 4. Sous Docker en réseau *bridge*, l'USB n'est pas visible. Utilise
    l'appairage Wi-Fi, ou voir [Installation](installation.md#reseau).
 
+## « Console connectée », mais rien dans l'en-tête
+
+C'était un mensonge, et il a duré. `adb connect` écrit « connected to
+192.168.1.42:5555 » et sort en 0 même quand la console reste ensuite à l'état
+`offline` ou `unauthorized` — deux états que Romule refuse à juste titre de
+piloter. Le message annonçait donc une réussite, l'en-tête ne montrait aucune
+console, et les réglages reproposaient la configuration qu'on venait de faire.
+Trois écrans en désaccord, et celui qui mentait était le message.
+
+Romule **vérifie** maintenant le lien au lieu de l'annoncer : la connexion n'est
+tenue pour faite que si adb liste l'adresse à l'état `device`. Un lien qui reste
+`offline` est repris une fois — adb garde parfois une entrée périmée pour cette
+adresse — puis refusé avec sa raison.
+
+Les deux raisons que tu peux voir :
+
+- **la console demande ton autorisation.** Regarde son écran et accepte
+  « Autoriser le débogage USB ». Coche « Toujours autoriser » ;
+- **la console a laissé le lien retomber.** Le port de connexion change à chaque
+  redémarrage du débogage sans fil : relis-le sur l'écran de la console. Si
+  c'est le bon, coupe et rallume le débogage sans fil.
+
 ## « protocol fault (couldn't read status message): Success »
 
 Le message d'adb pendant l'appairage. Le mot « Success » à la fin est un code

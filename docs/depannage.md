@@ -121,6 +121,28 @@ Docker. Romule supplies neither the tool's keys nor any way to obtain them.
 4. Under Docker with bridge networking, USB is not visible. Use Wi-Fi pairing,
    or see [Installation](installation.md#networking).
 
+## “Console connected”, but nothing in the header
+
+It was a lie, and it lasted. `adb connect` prints “connected to
+192.168.1.42:5555” and exits 0 even when the console then sits at `offline` or
+`unauthorized` — two states Romule rightly refuses to drive. So the message
+announced success, the header showed no console, and the settings offered again
+the configuration you had just done. Three screens disagreeing, and the one
+lying was the message.
+
+Romule now **checks** the link instead of announcing it: a connection counts as
+made only if adb lists the address as `device`. A link that stays `offline` is
+retried once — adb sometimes holds a stale entry for that address — then refused
+with its reason.
+
+The two reasons you may see:
+
+- **the console is asking for your permission.** Look at its screen and accept
+  “Allow USB debugging”. Tick “Always allow”;
+- **the console let the link drop.** The connection port changes every time
+  wireless debugging restarts: read it again on the console's screen. If it is
+  the right one, turn wireless debugging off and on again.
+
 ## “protocol fault (couldn't read status message): Success”
 
 What adb says during pairing. The word “Success” at the end is a system error

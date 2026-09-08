@@ -6,7 +6,9 @@ des [profils](profils.md), pas des chemins écrits en dur.
 
 ## Appairage en Wi-Fi
 
-Les réglages contiennent un assistant pas à pas. En résumé :
+L'assistant de premier démarrage demande d'abord **comment la console est
+reliée** — avec ou sans câble — et ne montre que le chemin correspondant. Les
+réglages contiennent le même assistant pas à pas. En résumé :
 
 1. **Sur la console** — Paramètres → Système → Options pour les développeurs →
    **Débogage sans fil**, à activer.

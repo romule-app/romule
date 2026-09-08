@@ -5305,6 +5305,17 @@ const app = {
     renderOnboard();
   },
 
+  // Which way the console is plugged in. Chosen rather than guessed: the
+  // step used to show both paths stacked, one of which cannot work inside a
+  // container.
+  onbLien(quoi) {
+    ONB.lien = (quoi === 'usb' || quoi === 'wifi') ? quoi : null;
+    renderOnboard();
+  },
+  onbAutreLien() {
+    ONB.lien = null;
+    renderOnboard();
+  },
   async onbFindConsole() {
     ONB.occupe = true; renderOnboard();
     let etat = {};
@@ -5435,6 +5446,11 @@ const app = {
     const d = await api('/api/device');
     renderConn(d); this.refreshInstall();
     renderDeviceCard(d.info || {}, d.volumes || []);
+    // The wizard, when it is the thing on screen. Connecting from it used to
+    // leave the address and code fields exactly where they were, under a toast
+    // announcing success: `detect` refreshed the header and the card, and the
+    // step that had just done the work was the only place not told.
+    if ($('onboard').classList.contains('open')) await this.checkHealth(true);
     if (d.info && d.info.connected) {
       annonce(tpl('Console détectée : %s', d.info.name), 'ok');
       await this.loadConsole();
@@ -6672,9 +6688,97 @@ let HEALTH = null;
    ========================================================================== */
 let ONB = {i: 0, sens: 1, occupe: false, resultatScan: null,
            consoleScan: null, champs: {},
+           // How the console is to be linked: null until asked, then 'usb' or
+           // 'wifi'. The step used to offer BOTH paths at once — a search
+           // button that finds nothing in a container, and four pairing steps
+           // below it — so the reader had to work out which half was theirs.
+           lien: null,
            // One verdict per provider: a single line for both said nothing
            // about WHICH of the two had answered.
            sgdb: null, igdb: null};
+
+// The console step, in four states rather than one screen holding all of them.
+//
+// It used to show everything at once: an intro, a `Chercher une console`
+// button that can find nothing inside a container, and the four pairing steps
+// underneath. Nothing said which half was yours, and — the part that mattered —
+// nothing changed once the console WAS linked: the address and code fields
+// stayed on screen under a toast claiming success.
+//
+// So: ask how it is plugged in, show that path alone, and replace the whole
+// thing with the console once there is one.
+function onbConsoleCorps(c) {
+  if (c.device) {
+    return '<div class="onblie" data-etat="lie">' +
+      '<div class="onblietete"><span class="onbliecoche">✓</span>' +
+        '<b>' + esc(tpl('Console reliée en %s.',
+                        c.device === 'wifi' ? 'Wi-Fi' : 'USB')) + '</b></div>' +
+      '<p class="onbnote">Le dossier de jeux repéré sur la console :</p>' +
+      '<div class="onbchemin" data-i18n-skip>' + esc(c.device_dir || '') + '</div>' +
+      '<div class="onbliebar">' +
+        '<button class="ghost" data-act="onbScanConsole"' +
+          (ONB.occupe ? ' disabled' : '') + '>' +
+          (ONB.occupe ? 'Lecture…' : 'Recenser les jeux de la console') + '</button>' +
+        '<button class="lien" data-act="onbAutreLien">Relier autrement</button>' +
+      '</div>' +
+      (ONB.consoleScan ? renderConsoleScan(ONB.consoleScan) : '') +
+      '</div>';
+  }
+
+  const adbManquant = c.adb ? '' :
+    '<p class="onbnote">adb n\'est pas installé sur cette machine. ' +
+    'Pour l\'ajouter :</p>' +
+    '<div class="onbchemin" data-i18n-skip>' + esc(c.remede_adb || '') + '</div>';
+
+  if (!ONB.lien) {
+    return '<p class="onbp">Romule transfère les jeux vers une console Android ' +
+      'par adb. Comment est-elle reliée à cette machine ?</p>' + adbManquant +
+      '<div class="onbchoix">' +
+      // USB first: it is 2 to 5 times faster, and the honest default when the
+      // machine can see the port at all.
+      '<button class="onbcarte" data-act="onbLien" data-arg="usb"' +
+        (c.adb ? '' : ' disabled') + '>' +
+        '<span class="onbcicone">🔌</span>' +
+        '<b>Avec un câble</b>' +
+        '<span class="onbcdesc">USB. Deux à cinq fois plus rapide, et rien à ' +
+        'appairer.</span>' +
+        (c.container
+          ? '<span class="onbcnote">Depuis un conteneur, le port USB n\'est ' +
+            'visible que s\'il a été monté.</span>' : '') +
+      '</button>' +
+      '<button class="onbcarte" data-act="onbLien" data-arg="wifi"' +
+        (c.adb ? '' : ' disabled') + '>' +
+        '<span class="onbcicone">📶</span>' +
+        '<b>Sans câble</b>' +
+        '<span class="onbcdesc">Wi-Fi. Un appairage à faire une fois, ensuite ' +
+        'la console est reconnue toute seule.</span>' +
+      '</button>' +
+      '</div>';
+  }
+
+  const retour = '<button class="lien" data-act="onbAutreLien">' +
+    'Choisir l\'autre méthode</button>';
+
+  if (ONB.lien === 'usb') {
+    return '<div class="onbvoie" data-voie="usb">' +
+      '<p class="onbp">Branche la console, active le « débogage USB » dans ses ' +
+      'options pour les développeurs, puis accepte la demande qui ' +
+      's\'affiche sur son écran.</p>' + adbManquant +
+      '<div class="onbliebar">' +
+      '<button class="go" data-act="onbFindConsole"' +
+        (c.adb ? '' : ' disabled') + '>Chercher la console</button>' +
+      retour + '</div></div>';
+  }
+
+  // An empty slot, not a copy of the pairing panel. The wizard borrows the
+  // settings' own node — see `pairPreter`. A second copy is what produced the
+  // defect this replaces: the wizard's version stopped at « Associer » with no
+  // connection step, while the settings had four.
+  return '<div class="onbvoie" data-voie="wifi">' + adbManquant +
+    '<div id="onb-pair-slot"></div>' +
+    '<div class="onbliebar">' + retour + '</div></div>';
+}
+
 
 function onbEtapes(h) {
   const c = (h && h.checks) || {};
@@ -6808,32 +6912,7 @@ function onbEtapes(h) {
     {
       cle: 'console', titre: 'Ta console', requis: false,
       sous: 'Facultatif, et faisable à tout moment depuis les réglages.',
-      corps: () => c.device
-        ? '<p class="onbok">' + t('Console reliée en %s.')
-            .replace('%s', c.device === 'wifi' ? 'Wi-Fi' : 'USB') + '</p>' +
-          '<p class="onbnote">Le dossier de jeux repéré sur la console :</p>' +
-          '<div class="onbchemin" data-i18n-skip>' + esc(c.device_dir || '') + '</div>' +
-          '<button class="ghost" data-act="onbScanConsole"' +
-            (ONB.occupe ? ' disabled' : '') + '>' +
-            (ONB.occupe ? 'Lecture…' : 'Recenser les jeux de la console') + '</button>' +
-          (ONB.consoleScan ? renderConsoleScan(ONB.consoleScan) : '')
-        : '<p class="onbp">Romule transfère les jeux vers une console Android par ' +
-          'adb. Branche-la en USB, ou active le débogage sans fil et indique son ' +
-          'adresse.</p>' +
-          (c.adb ? '' : '<p class="onbnote">adb n\'est pas installé sur cette ' +
-             'machine. Pour l\'ajouter :</p>' +
-             '<div class="onbchemin" data-i18n-skip>' + esc(c.remede_adb || '') +
-             '</div>') +
-          (c.container ? '' :
-            '<button class="ghost" data-act="onbFindConsole"' +
-              (c.adb ? '' : ' disabled') + '>Chercher une console</button>') +
-          // An empty slot, not a copy of the pairing panel. The wizard borrows
-          // the settings' own node — see `pairPreter`. A second copy is what
-          // produced the defect this replaces: the wizard's version stopped at
-          // « Associer » with no connection step, while the settings had four,
-          // and `wifiPair` finished by hiding a panel and moving to a step that
-          // were not on the screen at all.
-          '<div id="onb-pair-slot"></div>',
+      corps: () => onbConsoleCorps(c),
     },
     {
       cle: 'fin', titre: 'C\'est prêt', requis: null,
@@ -7615,6 +7694,7 @@ const ACTES = new Set([
   'libConfirm', 'mkTree', 'onbGo', 'onbFindConsole',
   'onbChooseFolder', 'onbCreateAccount', 'onbOpenAccess', 'onbPrev',
   'onbScan', 'onbTestSgdb', 'onbTestIgdb', 'setLang', 'toggleNotification',
+  'onbLien', 'onbAutreLien',
   'signOut',
   'onbScanConsole', 'onbNext', 'openGame',
   'openOnConsole', 'organize', 'forgetFolder', 'forgetTransfer',
