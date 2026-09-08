@@ -352,12 +352,20 @@ def ports_ouverts(hote, debut=None, fin=None, budget=8.0, lot=800, delai=0.25):
     return sorted(ouverts)
 
 
-def candidats(hote):
+def candidats(adresse):
     """Addresses worth trying for this console, most likely first.
 
-    `discover()` alone is not enough, and taking its first answer is worse than
-    not answering: it may name ANOTHER console on the network. Three sources,
-    in order of how much they know:
+    FIRST of all: the address that was just paired with, port included.
+
+    On a good many devices the pairing port and the connection port are the
+    same number, and this code threw it away on its first line — `_hote()`
+    strips the port before anything else looks at it. So the one candidate that
+    was certain to be worth a try was the only one never tried, and the wizard
+    went on asking for a port the reader had already typed, which then worked
+    when typed a second time. Every other source here was written to work
+    around an obvious one that was missing.
+
+    Then, in order of how much they know:
 
       * what adb already lists for that host — a link from a previous session,
         possibly `offline`, whose port is still the right one. The connection
@@ -367,8 +375,11 @@ def candidats(hote):
       * the rest of what mDNS announced, last, for the case where the pairing
         address and the connection address differ by more than their port.
     """
-    hote = _hote(hote)
+    appairee = str(adresse or "").strip()
+    hote = _hote(appairee)
     vus, annonces = [], discover()
+    if ":" in appairee and appairee.rsplit(":", 1)[1].isdigit():
+        vus.append(appairee)
     for d in devices():
         s = d.get("serial") or ""
         if ":" in s and _hote(s) == hote and s not in vus:
