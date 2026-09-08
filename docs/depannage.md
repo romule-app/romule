@@ -121,6 +121,23 @@ Docker. Romule supplies neither the tool's keys nor any way to obtain them.
 4. Under Docker with bridge networking, USB is not visible. Use Wi-Fi pairing,
    or see [Installation](installation.md#networking).
 
+## “protocol fault (couldn't read status message): Success”
+
+What adb says during pairing. The word “Success” at the end is a system error
+code, not an outcome: it means nothing here.
+
+Romule now starts the adb daemon before pairing and retries once — the most
+frequent cause was `adb pair` starting the daemon itself and racing its own
+startup. If the message comes back anyway:
+
+1. the pairing code is good **once, and for a few minutes**. Close the window
+   on the console and reopen “Pair device with pairing code”: you get a new
+   code **and a new port**;
+2. copy both, together. The pairing window's port changes every time it opens;
+3. check that the console and Romule are on the same network. From a container
+   in *bridge* mode they are, as long as the port is published — but a guest
+   network, or Wi-Fi with client isolation, lets nothing through.
+
 ## Starting over to test the install from scratch
 
 The service's state — configuration, accounts, cover art, token, "the assistant

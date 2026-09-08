@@ -277,11 +277,33 @@ def pair(addr, code):
     binaire = _adb_binary()
     if not binaire:
         return (False, messages.ADB_INTROUVABLE)
+    # The daemon FIRST, on its own. `adb pair` starts one when none is running,
+    # and the pairing handshake then races that startup: adb reports
+    # "protocol fault (couldn't read status message): Success" — the word
+    # `Success` at the end being errno, not an outcome. In a container the
+    # daemon is cold on every restart, so this is the ordinary case there
+    # rather than a rare one.
     try:
+        subprocess.run([binaire, "start-server"], capture_output=True,
+                       text=True, timeout=20)
+    except (OSError, subprocess.SubprocessError):
+        pass                      # `pair` will start it itself, as before
+
+    def _essai():
         p = subprocess.run([binaire, "pair", addr, str(code)],
                            capture_output=True, text=True, timeout=60)
-        brut = (p.stdout + p.stderr).strip().splitlines()
-        brut = brut[-1] if brut else ""
+        lignes = (p.stdout + p.stderr).strip().splitlines()
+        return lignes[-1] if lignes else ""
+
+    try:
+        brut = _essai()
+        # One retry, and only on that fault. The pairing code survives a failed
+        # attempt — it is spent by a SUCCESSFUL pairing or by its own timeout —
+        # so trying twice costs nothing and covers the daemon still settling.
+        # Any other refusal is answered by the console and repeating it would
+        # only spend the reader's time.
+        if "protocol fault" in brut.lower():
+            brut = _essai()
         # `adb pair` exits 0 on failures too. Trusting the return code alone
         # announced "paired" and then refused every connection — the interface
         # said both things in a row and the user had to guess which was true.
