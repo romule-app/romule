@@ -12,6 +12,27 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Fixed
 
+- **A refresh sent the pairing panel back to its first step.** `pairPreter`
+  reset it to step 1 every time the wizard lent it — and the wizard rebuilds its
+  own markup on every health read, so a refresh landing while someone reads
+  step 4 was the ordinary case, not an edge one. The step is remembered, and
+  what was typed in the three pairing fields is restored with it.
+
+- **The connection field refused what a person actually types.** A space around
+  the colon, a non-breaking space pasted from somewhere, the port alone because
+  the address was already in the field: all mean the same thing, and refusing
+  them taught nothing. The input is normalised, the refusal now names what is
+  missing — the number after the colon — and Enter validates, in that field and
+  in the pairing code's.
+
+- **A sentence hidden in a ternary escaped every check.**
+  `job.log("A" if x else "B")` reaches the terminal with one of two sentences,
+  and the rule looked only at the argument itself — an `IfExp`, not a string.
+  That is how the open-access warning stayed unaccented, absent from the
+  catalogue, and French inside an English log with nothing reporting it.
+  `verifier-journal.py` unfolds ternaries now, and found two more the same
+  shape had been hiding.
+
 - **A green tick that meant one thing and was read as another.** Step 4 opened
   on « L'appairage a réussi. » — static markup, so it greeted anyone who simply
   walked to that step, and a tick on its own reads as *everything* is done.

@@ -59,8 +59,22 @@ def contrat():
             if nom.startswith("V1_") and isinstance(getattr(messages, nom), str)]
 
 
+def _branches(noeud):
+    """Every expression that can BE the argument, ternaries unfolded.
+
+    `job.log("A" if x else "B")` reaches the terminal with one of two
+    sentences, and looking only at the argument itself saw neither: the node is
+    an `IfExp`, not a string. That is how the open-access warning stayed
+    unaccented, absent from the catalogue, and French inside an English log,
+    with the checker reporting nothing.
+    """
+    if isinstance(noeud, ast.IfExp):
+        return _branches(noeud.body) + _branches(noeud.orelse)
+    return [noeud]
+
+
 def _sorties(arbre):
-    """(node, interpolated?) for the first argument of every logging call."""
+    """(line, sentence, interpolated?) for every logging call."""
     out = []
     for n in ast.walk(arbre):
         if not isinstance(n, ast.Call) or not n.args:
@@ -71,11 +85,11 @@ def _sorties(arbre):
                       and f.attr in ("say", "event")) or f.attr == "log"))
         if not vise:
             continue
-        a = n.args[0]
-        interp = isinstance(a, ast.BinOp) and isinstance(a.op, ast.Mod)
-        g = a.left if interp else a
-        if isinstance(g, ast.Constant) and isinstance(g.value, str):
-            out.append((n.lineno, g.value, interp))
+        for a in _branches(n.args[0]):
+            interp = isinstance(a, ast.BinOp) and isinstance(a.op, ast.Mod)
+            for g in _branches(a.left if interp else a):
+                if isinstance(g, ast.Constant) and isinstance(g.value, str):
+                    out.append((n.lineno, g.value, interp))
     return out
 
 
@@ -93,6 +107,7 @@ def points_d_appel(source, catalogue):
 
 
 BON = 'job.log(messages.RANGE)\nconsole.say(langue.phrase(messages.RANGE, n))\n'
+TERNAIRE = 'job.log(messages.RANGE if x else "Une phrase inconnue ici.")\n'
 ASSEMBLEE = 'job.log("Rangé : %s" % nom)\n'
 INCONNUE = 'job.log("Une phrase que personne n\'a mise au catalogue.")\n'
 AILLEURS = 'print("Rangé : %s" % nom)\n'
@@ -124,6 +139,10 @@ def epreuve():
         return False
     if points_d_appel(AILLEURS, cat):
         print("   EPREUVE ECHOUEE : un print() est pris pour un journal")
+        return False
+    # The shape that slipped through: a sentence hidden in a ternary.
+    if not points_d_appel(TERNAIRE, cat):
+        print("   EPREUVE ECHOUEE : une phrase dans un ternaire passe")
         return False
     return True
 

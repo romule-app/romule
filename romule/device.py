@@ -770,9 +770,8 @@ def organize(device_dir, job, types=None):
     _shell("find %s -mindepth 1 -type d -empty %s -delete 2>/dev/null" % (_q(base), keep))
     # Say it even when nothing moved: "already tidy" is an answer, and the
     # absence of one is what makes people click again.
-    job.log("Console deja rangee : rien a deplacer." if not moved
-            else "%d fichier(s) range(s) en GAMES / UPDATE / DLC sur la console."
-                 % moved, "ok")
+    job.log(messages.D_CONSOLE_DEJA_RANGEE if not moved
+            else langue.phrase(messages.D_RANGES_GUD_CONSOLE, moved), "ok")
 
 
     _invalidate_cache()

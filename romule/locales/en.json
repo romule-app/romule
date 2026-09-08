@@ -1663,5 +1663,9 @@
   "La console ne répond plus.": "The console has stopped answering.",
   "Appairage fait. Il reste la connexion.": "Pairing done. The connection is still to come.",
   "Connexion sans fil demandée vers %s": "Wireless connection requested to %s",
-  "Connexion refusée vers %s : %s": "Connection refused to %s: %s"
+  "Connexion refusée vers %s : %s": "Connection refused to %s: %s",
+  "Il manque le port : le nombre après les deux points, lu sur l'écran de débogage sans fil.": "The port is missing: the number after the colon, read on the wireless debugging screen.",
+  "Accès réseau désactivé.": "Network access turned off.",
+  "Console déjà rangée : rien à déplacer.": "Console already tidy: nothing to move.",
+  "%d fichier(s) rangé(s) en GAMES / UPDATE / DLC sur la console.": "%d file(s) filed into GAMES / UPDATE / DLC on the console."
 }

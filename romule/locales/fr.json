@@ -1663,5 +1663,9 @@
   "La console ne répond plus.": "La console ne répond plus.",
   "Appairage fait. Il reste la connexion.": "Appairage fait. Il reste la connexion.",
   "Connexion sans fil demandée vers %s": "Connexion sans fil demandée vers %s",
-  "Connexion refusée vers %s : %s": "Connexion refusée vers %s : %s"
+  "Connexion refusée vers %s : %s": "Connexion refusée vers %s : %s",
+  "Il manque le port : le nombre après les deux points, lu sur l'écran de débogage sans fil.": "Il manque le port : le nombre après les deux points, lu sur l'écran de débogage sans fil.",
+  "Accès réseau désactivé.": "Accès réseau désactivé.",
+  "Console déjà rangée : rien à déplacer.": "Console déjà rangée : rien à déplacer.",
+  "%d fichier(s) rangé(s) en GAMES / UPDATE / DLC sur la console.": "%d fichier(s) rangé(s) en GAMES / UPDATE / DLC sur la console."
 }

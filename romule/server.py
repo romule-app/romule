@@ -1397,8 +1397,8 @@ class Handler(BaseHTTPRequestHandler):
             CFG["lan_access"] = ouvert
             CFG["acces_choisi"] = True
             config.save_config(CFG)
-            JOB.log("Accessible SANS MOT DE PASSE par tout appareil du reseau."
-                    if ouvert else "Acces reseau desactive.", "warn")
+            JOB.log(messages.ACCES_OUVERT if ouvert
+                    else messages.ACCES_RESEAU_DESACTIVE, "warn")
             self._json({"ok": True, "lan_access": ouvert, "acces_choisi": True})
 
         elif p == "/api/notif-evenements":

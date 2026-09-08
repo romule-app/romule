@@ -260,12 +260,38 @@ def main():
         time.sleep(0.3)
         # Typing only the port means the same thing as retyping the whole
         # address: the field is pre-filled and the caret sits after the colon.
-        vu = n.js("(() => { $('pair-addr').value = '192.0.2.4:37105';"
-                  " $('conn-addr').value = '41111';"
-                  " app.wifiConnectField();"
-                  " return $('conn-addr').value; })()")
-        t("un port seul est complete par l'hote appaire",
-          vu == "192.0.2.4:41111", vu)
+        # What is READ off a console's screen and typed back rarely arrives
+        # clean. All of these mean the same thing, and refusing any of them
+        # teaches nothing.
+        for saisi, attendu in (
+                ("41111", "192.0.2.4:41111"),            # the port alone
+                ("192.0.2.4:41111", "192.0.2.4:41111"),  # the whole address
+                (" 192.0.2.4 : 41111 ", "192.0.2.4:41111"),   # spaces around
+                ("192.0.2.4:", ""),                      # nothing typed yet
+                ("", "")):
+            vu = n.js("app.adresseSaisie(%s, '192.0.2.4:37105')"
+                      % json.dumps(saisi))
+            t("saisie %r -> %r" % (saisi, attendu), vu == attendu, vu)
+        # What is typed must survive whatever the interface does next. The
+        # wizard rebuilds its own innerHTML on every health read, and the
+        # pairing panel is a BORROWED node inside it — so a refresh landing
+        # between typing the port and pressing the button is the ordinary case,
+        # not an edge one.
+        n.js("(() => { app.wizStep(4);"
+             " $('conn-addr').value = '192.0.2.4:41111'; })()")
+        time.sleep(0.3)
+        n.js("(async () => { await app.checkHealth(true); })()")
+        time.sleep(1.0)
+        t("un rafraichissement n'efface pas le port saisi",
+          n.js("(($('conn-addr') || {}).value) || ''") == "192.0.2.4:41111",
+          n.js("(($('conn-addr') || {}).value) || ''"))
+        t("et ne renvoie pas le panneau a sa premiere etape",
+          n.js("(() => { const e ="
+               " document.querySelector('#pairwrap .wstep.on');"
+               " return e && e.id; })()") == "wstep4",
+          n.js("(() => { const e ="
+               " document.querySelector('#pairwrap .wstep.on');"
+               " return e && e.id; })()"))
         # Changing step must not lose it, and must not leave a copy behind:
         # `renderOnboard` rewrites its own innerHTML, which would destroy the
         # settings' panel if it were still inside.

@@ -5016,9 +5016,11 @@ const app = {
     const ouvre = w.style.display === 'none';
     w.style.display = ouvre ? '' : 'none';
     if (ouvre) { this.wizStep(1); w.scrollIntoView({block: 'center', behavior: 'smooth'}); }
+    else PAIR_ETAPE = 1;
   },
   // Wizard: one visible step at a time, each saying WHERE to act.
   wizStep(n) {
+    PAIR_ETAPE = n;
     // Five panels, four STEPS: the fifth is the conclusion, not another thing
     // to do, so the progress bar is full rather than five-fifths of the way.
     for (let i = 1; i <= 5; i++) {
@@ -5127,22 +5129,27 @@ const app = {
   },
   // The connection step's field. `wifiConnect` takes an address from the
   // discovery list; this one takes it from the reader.
+  // What is READ off a console's screen and typed back rarely arrives clean:
+  // a space around the colon, a non-breaking space pasted from somewhere, the
+  // port alone because the address was already there. All of it means the same
+  // thing, and refusing it teaches nothing.
+  adresseSaisie(brut, hote) {
+    // Every kind of space, including the non-breaking one, then anything that
+    // is neither a digit, a dot nor a colon.
+    let a = String(brut || '').replace(/[\s\u00a0]+/g, '').replace(/[^\d.:]/g, '');
+    const h = String(hote || '').split(':')[0];
+    if (/^\d{1,5}$/.test(a) && h) a = h + ':' + a;          // the port alone
+    if (a.endsWith(':') && h) a = '';                       // nothing typed yet
+    return /^\d{1,3}(\.\d{1,3}){3}:\d{1,5}$/.test(a) ? a : '';
+  },
+
   async wifiConnectField() {
     const c = $('conn-addr');
-    let addr = (c && c.value || '').trim();
-    // The field is pre-filled with `192.0.2.22:` and the caret sits after
-    // the colon, so what gets typed is a port. Someone who clears the field and
-    // types only that port means the same thing, and being told to «  copy the
-    // address AND the port » when the address is already known is a refusal
-    // with nothing behind it.
-    const hote = ($('pair-addr') || {}).value || '';
-    if (/^\d{2,5}$/.test(addr) && hote.includes(':')) {
-      addr = hote.split(':')[0] + ':' + addr;
-    }
-    if (addr.endsWith(':')) addr = '';
-    if (!/^[\w.:-]+:\d{2,5}$/.test(addr)) {
-      return toast(t('Recopie l\'adresse ET le port, séparés par deux points.'),
-                   'warn');
+    const addr = this.adresseSaisie((c && c.value) || '',
+                                    ($('pair-addr') || {}).value || '');
+    if (!addr) {
+      return toast(t('Il manque le port : le nombre après les deux points, lu '
+                     + 'sur l\'écran de débogage sans fil.'), 'warn');
     }
     if (c) c.value = addr;
     return this.wifiConnect(addr);
@@ -7151,6 +7158,13 @@ async function renderConnOk() {
 }
 
 
+// Which step the panel was showing, so that lending it again does not undo
+// where the reader had got to. The wizard rebuilds its own innerHTML on every
+// health read, and the panel is borrowed INSIDE it: a refresh landing while
+// someone reads step 4 sent them back to step 1, with the address they were
+// halfway through copying still in the field but no longer on screen.
+let PAIR_ETAPE = 1;
+
 function pairPreter(slot) {
   const panneau = $('pairwrap');
   if (!panneau || !slot) return;
@@ -7159,7 +7173,13 @@ function pairPreter(slot) {
   }
   slot.appendChild(panneau);
   panneau.style.display = '';
-  app.wizStep(1);
+  app.wizStep(PAIR_ETAPE);
+  // What was typed belongs to the wizard's state, not to the node that happens
+  // to be showing it — the same rule `onbValeur` follows for every other field.
+  ['pair-addr', 'pair-code', 'conn-addr'].forEach(id => {
+    const el = $(id);
+    if (el && !el.value && ONB.champs[id]) el.value = ONB.champs[id];
+  });
 }
 
 // Given back BEFORE the wizard rewrites its own innerHTML, which would
@@ -7439,6 +7459,20 @@ function uploadFiles(files) {
 }
 
 // ---------------------------------------------------------------- init
+// Enter validates. Reading a number off the console's screen and typing it
+// into this field ends with Enter — hunting for the button afterwards is a step
+// nobody expects to have to take.
+['conn-addr', 'pair-code'].forEach(id => {
+  const el = $(id);
+  if (!el) return;
+  el.addEventListener('keydown', ev => {
+    if (ev.key !== 'Enter') return;
+    ev.preventDefault();
+    if (id === 'conn-addr') app.wifiConnectField();
+    else app.wifiPair();
+  });
+});
+
 $('tabs').addEventListener('click', e => { if (e.target.dataset.tab) app.tab(e.target.dataset.tab); });
 $('filters').addEventListener('click', e => { const b = e.target.closest('.chip'); if (b) app.setFilter(b.dataset.f); });
 $('jfilters').addEventListener('click', e => { const b = e.target.closest('.chip'); if (b) app.setJFilter(b.dataset.jl); });
