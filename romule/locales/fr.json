@@ -1677,5 +1677,8 @@
   "Connexion à la console…": "Connexion à la console…",
   "Recherche du port sur la console… (jusqu'à 10 s)": "Recherche du port sur la console… (jusqu'à 10 s)",
   "Ne plus me le rappeler": "Ne plus me le rappeler",
-  "Rappel mis de côté. La prochaine version le redira.": "Rappel mis de côté. La prochaine version le redira."
+  "Rappel mis de côté. La prochaine version le redira.": "Rappel mis de côté. La prochaine version le redira.",
+  "Recherche du port sur la console…": "Recherche du port sur la console…",
+  "Port non trouvé : recopie-le ci-dessous.": "Port non trouvé : recopie-le ci-dessous.",
+  "Android ouvre deux services : celui de l'appairage, qui ne vit que le temps de la fenêtre du code, et celui de la connexion, ouvert tant que le débogage sans fil l'est. Deux services, deux ports.": "Android ouvre deux services : celui de l'appairage, qui ne vit que le temps de la fenêtre du code, et celui de la connexion, ouvert tant que le débogage sans fil l'est. Deux services, deux ports."
 }

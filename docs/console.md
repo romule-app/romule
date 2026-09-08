@@ -41,6 +41,21 @@ which makes it worth more than a plain “connected”.
     it: it has to be read off the console's screen. On a direct install
     discovery works, and step 4 almost never appears.
 
+!!! info "Why two ports?"
+    Android's wireless debugging exposes **two services**, each on its own
+    random port:
+
+    - `_adb-tls-pairing` exists only while the code window is on screen. It
+      exchanges a TLS certificate, checked against the six-digit code, and then
+      closes;
+    - `_adb-tls-connect` is the adb daemon itself. It stays open for as long as
+      wireless debugging does, and accepts only the certificates obtained by
+      pairing.
+
+    Both ports come from the same ephemeral pool and are handed out moments
+    apart, so they are often neighbours — which is what Romule uses to find the
+    second one without asking for it.
+
 !!! warning "Two addresses, two ports"
     This is where it goes wrong. The code window gives a pairing port, good for
     one use; the Wireless debugging screen gives another one, for the

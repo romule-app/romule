@@ -6,6 +6,7 @@ device); everything that talks to adb goes through `_run` / `_shell`.
 """
 
 import hashlib
+import itertools
 import os
 import re
 import select
@@ -295,7 +296,31 @@ def _hote(addr):
 _PLAGE_ADB = (30000, 65535)
 
 
-def ports_ouverts(hote, debut=None, fin=None, budget=8.0, lot=800, delai=0.25):
+def _ordre_des_ports(debut, fin, autour):
+    """The ports to try, nearest `autour` first.
+
+    Android hands the pairing port and the connection port out of the same
+    ephemeral pool, moments apart: they land close to each other far more often
+    than chance would put them. Sweeping outward from the one we know turns a
+    search of thirty-five thousand ports into one that usually answers in the
+    first few hundred.
+    """
+    if not autour or not (debut <= autour <= fin):
+        return range(debut, fin + 1)
+
+    def suite():
+        yield autour
+        for ecart in range(1, max(autour - debut, fin - autour) + 1):
+            bas, haut = autour - ecart, autour + ecart
+            if bas >= debut:
+                yield bas
+            if haut <= fin:
+                yield haut
+    return suite()
+
+
+def ports_ouverts(hote, debut=None, fin=None, budget=8.0, lot=800, delai=0.25,
+                  autour=None):
     """The TCP ports answering on this host, within the wireless-debugging range.
 
     Why this exists
@@ -318,10 +343,13 @@ def ports_ouverts(hote, debut=None, fin=None, budget=8.0, lot=800, delai=0.25):
     fin = _PLAGE_ADB[1] if fin is None else fin
     ouverts = []
     depart = time.monotonic()
-    port = debut
-    while port <= fin and time.monotonic() - depart < budget:
+    restants = iter(_ordre_des_ports(debut, fin, autour))
+    while time.monotonic() - depart < budget:
+        paquet = list(itertools.islice(restants, lot))
+        if not paquet:
+            break
         prises, sondeur = {}, select.poll()
-        for p in range(port, min(port + lot, fin + 1)):
+        for p in paquet:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.setblocking(False)
             try:
@@ -348,8 +376,10 @@ def ports_ouverts(hote, debut=None, fin=None, budget=8.0, lot=800, delai=0.25):
                 s.close()
         for s, _ in prises.values():
             s.close()
-        port += lot
-    return sorted(ouverts)
+        # Answered already: no reason to sweep the rest of the range.
+        if ouverts:
+            break
+    return ouverts
 
 
 def candidats(adresse):
@@ -394,7 +424,8 @@ def candidats(adresse):
     return vus + memes + autres + defaut
 
 
-def relier_apres_appairage(hote, attente=6.0, scruter=True):
+def relier_apres_appairage(hote, attente=6.0, scruter=True,
+                           budget_scrutation=8.0):
     """Connect the console just paired, without asking for its port.
 
     Returns (address, tried) — the address that worked, or None.
@@ -431,7 +462,8 @@ def relier_apres_appairage(hote, attente=6.0, scruter=True):
         repere = int(str(hote).rsplit(":", 1)[1])
     except (IndexError, ValueError):
         repere = 0
-    trouves = ports_ouverts(_hote(hote))
+    trouves = ports_ouverts(_hote(hote), budget=budget_scrutation,
+                            autour=repere or None)
     if repere:
         trouves.sort(key=lambda p: abs(p - repere))
     for port in trouves[:12]:
