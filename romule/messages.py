@@ -485,3 +485,5 @@ SV_APPAIREE_PORT_INCONNU = (
     'affiche.')
 SV_APPAIREE_PORT_INCONNU_LOG = (
     'Appairée, mais aucune adresse de connexion trouvée (essayées : %s).')
+SV_CONNEXION_DEMANDEE = 'Connexion sans fil demandée vers %s'
+SV_CONNEXION_REFUSEE_ADR = 'Connexion refusée vers %s : %s'

@@ -3531,3 +3531,21 @@ body.compact .filters{margin-bottom:2px}
 /* The card the machine can actually honour, marked without being pushy: a
    border, not a colour block. */
 .onbcarte-vise{border-color:color-mix(in srgb, var(--amber) 55%, var(--bord))}
+
+/* The facts read FROM the console, laid out as a definition list because that
+   is what they are: a label and the value the console answered. Two columns on
+   a wide card, one on a phone. */
+.onbfaits{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:8px 18px;margin:12px 0 0}
+.onbfaits > div{display:flex;align-items:baseline;gap:8px;min-width:0}
+.onbfaits dt{flex:none;font-size:11.5px;color:var(--mute)}
+.onbfaits dd{margin:0;font-size:12.5px;color:var(--text);font-family:var(--mono);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* The pairing line is static markup, so it must not greet whoever simply walks
+   to step 4: it only means something after a pairing actually happened. */
+#wstep4 .wok{display:none}
+#wstep4[data-appaire="1"] .wok{display:flex}
+/* The conclusion's number is a tick, not a digit: there is nothing to do here. */
+.wnum-ok{background:color-mix(in srgb, var(--green) 22%, transparent);
+  color:var(--green)}

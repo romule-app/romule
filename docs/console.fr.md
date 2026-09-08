@@ -30,6 +30,12 @@ réglages contiennent le même assistant pas à pas. En résumé :
 
 Une fois connectée, la console est reconnue toute seule ensuite.
 
+Une fois la connexion faite, le panneau ne demande plus rien : il montre ce que
+la console a répondu — son nom, son adresse, sa version d'Android, son niveau de
+batterie, depuis combien de temps le lien tient. Ces informations ne peuvent pas
+s'afficher si la console n'a pas répondu, ce qui les rend plus utiles qu'un
+simple « connectée ».
+
 !!! note "Sous Docker, l'étape 4 est la règle"
     La console annonce son port de connexion en **mDNS**, et le multicast ne
     traverse pas le pont Docker. Depuis un conteneur, Romule ne peut donc pas le

@@ -5019,12 +5019,14 @@ const app = {
   },
   // Wizard: one visible step at a time, each saying WHERE to act.
   wizStep(n) {
-    for (let i = 1; i <= 4; i++) {
+    // Five panels, four STEPS: the fifth is the conclusion, not another thing
+    // to do, so the progress bar is full rather than five-fifths of the way.
+    for (let i = 1; i <= 5; i++) {
       const el = $('wstep' + i);
       if (el) el.classList.toggle('on', i === n);
     }
     const b = $('wizbar');
-    if (b) b.style.width = Math.round(n / 4 * 100) + '%';
+    if (b) b.style.width = Math.round(Math.min(n, 4) / 4 * 100) + '%';
     if (n === 3) {
       this.wizCheck();
       // The search only pre-fills where it can work at all — never in a
@@ -5098,7 +5100,10 @@ const app = {
       toast(r.message || t('Associée. Il reste son port de connexion.'), 'ok');
       // The step says whether the announcement could have reached us at all.
       const bloc = $('wstep4');
-      if (bloc) bloc.dataset.mdns = r.mdns ? '1' : '0';
+      if (bloc) {
+        bloc.dataset.mdns = r.mdns ? '1' : '0';
+        bloc.dataset.appaire = '1';
+      }
       this.wizStep(4);
     } else toast(r.message || t('Association refusée.'), 'err');
   },
@@ -5124,23 +5129,36 @@ const app = {
   // discovery list; this one takes it from the reader.
   async wifiConnectField() {
     const c = $('conn-addr');
-    const addr = (c && c.value || '').trim();
-    if (!addr.includes(':')) {
+    let addr = (c && c.value || '').trim();
+    // The field is pre-filled with `192.0.2.22:` and the caret sits after
+    // the colon, so what gets typed is a port. Someone who clears the field and
+    // types only that port means the same thing, and being told to «  copy the
+    // address AND the port » when the address is already known is a refusal
+    // with nothing behind it.
+    const hote = ($('pair-addr') || {}).value || '';
+    if (/^\d{2,5}$/.test(addr) && hote.includes(':')) {
+      addr = hote.split(':')[0] + ':' + addr;
+    }
+    if (addr.endsWith(':')) addr = '';
+    if (!/^[\w.:-]+:\d{2,5}$/.test(addr)) {
       return toast(t('Recopie l\'adresse ET le port, séparés par deux points.'),
                    'warn');
     }
+    if (c) c.value = addr;
     return this.wifiConnect(addr);
   },
 
   async wifiConnect(addr) {
     say('Connexion…');
     const r = await api('/api/wifi-connect', addr ? {addr} : {});
-    if (r.ok) {
-      toast('Console connectée sans fil.', 'ok');
-      if (!pairPrete()) $('pairwrap').style.display = 'none';
-      this.detect();
-    }
-    else toast(r.message || 'Connexion impossible.', 'err');
+    if (!r.ok) return toast(r.message || t('Connexion impossible.'), 'err');
+    toast(t('Console connectée sans fil.'), 'ok');
+    // The panel does not vanish and it does not stay on its form either: it
+    // shows the console. Hiding it left the reader with nothing to confirm the
+    // success, and keeping the address field left them doubting it.
+    this.wizStep(5);
+    await this.detect();
+    await renderConnOk();
   },
   async wifiForget() {
     if (!confirm('Oublier la connexion sans fil ?')) return;
@@ -6716,10 +6734,25 @@ let ONB = {i: 0, sens: 1, occupe: false, resultatScan: null,
 // thing with the console once there is one.
 function onbConsoleCorps(c) {
   if (c.device) {
-    return '<div class="onblie" data-etat="lie">' +
+    // The EVIDENCE, not the claim. « Console reliée. » asks to be believed;
+    // the console's own name, its battery and its Android version were read
+    // FROM it, so they cannot be there unless it answered. That is what tells
+    // this apart from the pairing step's own success line — which says only
+    // that the pairing worked, and was read as meaning everything had.
+    const k = c.console || {};
+    const faits = [
+      [t('Lien'), c.device === 'wifi' ? 'Wi-Fi' : 'USB'],
+      [t('Adresse'), k.adresse || ''],
+      [t('Android'), k.android ? 'Android ' + k.android : ''],
+      [t('Batterie'), k.batterie == null ? '' : k.batterie + ' %'],
+      [t('Depuis'), k.depuis == null ? '' : duree(k.depuis)],
+    ].filter(x => x[1]);
+    return '<div class="onblie">' +
       '<div class="onblietete"><span class="onbliecoche">✓</span>' +
-        '<b>' + esc(tpl('Console reliée en %s.',
-                        c.device === 'wifi' ? 'Wi-Fi' : 'USB')) + '</b></div>' +
+        '<b>' + esc(k.nom || t('Console reliée')) + '</b></div>' +
+      '<dl class="onbfaits">' + faits.map(x =>
+        '<div><dt>' + esc(x[0]) + '</dt>' +
+        '<dd data-i18n-skip>' + esc(x[1]) + '</dd></div>').join('') + '</dl>' +
       '<p class="onbnote">Le dossier de jeux repéré sur la console :</p>' +
       '<div class="onbchemin" data-i18n-skip>' + esc(c.device_dir || '') + '</div>' +
       '<div class="onbliebar">' +
@@ -7085,6 +7118,38 @@ function onbValeur(id) {
 // Borrowing makes divergence impossible rather than unlikely: same ids, same
 // steps, same handlers, same validation, by construction.
 let PAIR_MAISON = null;
+
+// What the console answered, in the panel's last step. Read from `/api/device`
+// rather than from the configuration: the point of showing a name and a battery
+// level is that neither can be there unless the console replied.
+async function renderConnOk() {
+  const el = $('conn-ok');
+  if (!el) return;
+  let d = {};
+  try { d = await api('/api/device'); } catch (e) { d = {}; }
+  const c = (d && d.connection) || {};
+  const i = (d && d.info) || {};
+  if (!c.kind) {
+    el.innerHTML = '<p class="onbnote">' +
+      esc(t('La console ne répond plus.')) + '</p>';
+    return;
+  }
+  const faits = [
+    [t('Lien'), c.kind === 'usb' ? 'USB' : 'Wi-Fi'],
+    [t('Adresse'), c.serial || ''],
+    [t('Android'), i.android ? 'Android ' + i.android : ''],
+    [t('Batterie'), d.batterie == null ? '' : d.batterie + ' %'],
+    [t('Depuis'), c.depuis == null ? '' : duree(c.depuis)],
+  ].filter(x => x[1]);
+  el.innerHTML =
+    '<div class="onblietete"><span class="onbliecoche">✓</span><b>' +
+      esc(i.name || t('Console reliée')) + '</b></div>' +
+    '<dl class="onbfaits">' + faits.map(x =>
+      '<div><dt>' + esc(x[0]) + '</dt><dd data-i18n-skip>' + esc(x[1]) +
+      '</dd></div>').join('') + '</dl>';
+  translateDOM(el);
+}
+
 
 function pairPreter(slot) {
   const panneau = $('pairwrap');

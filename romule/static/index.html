@@ -393,7 +393,13 @@
                    own dialog has closed: the pairing DID work. Confirming that
                    first, then naming the one thing left, costs a line and
                    removes the doubt. -->
-              <p class="wok">L'appairage a réussi.</p>
+              <!-- Shown only after a pairing that actually happened: this is
+                   static markup, so it used to greet anyone who simply
+                   walked to this step. And it says what it means — the
+                   PAIRING worked — because a green tick on its own was
+                   read as "everything is done", which left a reader
+                   wondering why the header still showed no console. -->
+              <p class="wok">Appairage fait. Il reste la connexion.</p>
               <p>Il reste un seul nombre : le port de connexion, que seule la
                 console affiche. Ferme la fenêtre du code — derrière elle,
                 l'écran de débogage sans fil montre sa propre ligne
@@ -411,6 +417,23 @@
               <div class="bar">
                 <button class="ghost" data-act="wizStep" data-val="3">Retour</button>
                 <button class="go" data-act="wifiConnectField">Connecter la console</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Connected. This panel exists to CONNECT, so once that is done it
+               has nothing left to ask: it shows what the console answered — its
+               name, its battery, its Android version — because those can only
+               be there if it really is on the other end. Leaving the address
+               field and the « Connecter » button on screen after a success is
+               what made a reader doubt the success was real. -->
+          <div class="wstep" id="wstep5">
+            <div class="wnum wnum-ok">✓</div>
+            <div class="wbody">
+              <div class="wtitle">Console connectée</div>
+              <div id="conn-ok"></div>
+              <div class="bar">
+                <button class="ghost" data-act="togglePairing">Fermer</button>
               </div>
             </div>
           </div>

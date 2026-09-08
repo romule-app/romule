@@ -29,6 +29,11 @@ same step-by-step assistant. In short:
 
 Once connected, the console is recognised on its own from then on.
 
+Once connected, the panel asks nothing more: it shows what the console
+answered — its name, its address, its Android version, its battery level, how
+long the link has held. None of that can appear unless the console replied,
+which makes it worth more than a plain “connected”.
+
 !!! note "Under Docker, step 4 is the rule"
     The console announces its connection port over **mDNS**, and multicast does
     not cross the Docker bridge. From a container Romule therefore cannot guess
