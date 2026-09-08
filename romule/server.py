@@ -1926,11 +1926,20 @@ class Handler(BaseHTTPRequestHandler):
                         "mdns": not _in_container()})
 
         elif p == "/api/wifi-connect":
+            # Logged both ways, like pairing. Connecting is the other step
+            # people retry blind, and the journal said nothing about any
+            # attempt — neither that one had been made, nor why adb refused.
             addr = (d.get("addr") or CFG.get("wifi_addr") or "").strip()
+            JOB.log(langue.phrase(messages.SV_CONNEXION_DEMANDEE,
+                                  addr or "(vide)"))
             ok, msg = device.connect(addr)
             if ok:
                 CFG["wifi_addr"] = addr
                 config.save_config(CFG)
+                JOB.log(langue.phrase(messages.SV_CONSOLE_PRETE, addr), "ok")
+            else:
+                JOB.log(langue.phrase(messages.SV_CONNEXION_REFUSEE_ADR,
+                                      addr or "(vide)", msg), "warn")
             self._json({"ok": ok, "addr": addr, "message": msg})
 
         elif p == "/api/wifi-discover":
@@ -2384,6 +2393,47 @@ def _first_run():
     return not _claimed()
 
 
+# `/api/health` is also the container's health probe, called every few seconds.
+# Reading the console's name, battery and Android version shells out to adb
+# three times, so the answer is held briefly. Short enough that a battery level
+# is never stale on screen, long enough that a probe loop costs nothing.
+_RESUME_TTL = 5.0
+_resume_cache = {"a": 0.0, "cle": None, "v": None}
+
+
+def _console_resume(conn):
+    """The few facts that PROVE a console is on the other end.
+
+    Read from the console itself, never from the configuration: the point is
+    that they cannot be shown unless it answered. The interface used to say
+    `Console connectée sans fil.` and stop there — a claim, where the same
+    space could hold the evidence.
+    """
+    cle = conn.get("serial") or ""
+    maintenant = time.monotonic()
+    if (_resume_cache["cle"] == cle
+            and maintenant - _resume_cache["a"] < _RESUME_TTL):
+        return _resume_cache["v"]
+    try:
+        infos = device.info() or {}
+    except Exception:
+        infos = {}
+    try:
+        batterie = device.battery()
+    except Exception:
+        batterie = None
+    resume = {
+        "nom": infos.get("name") or "",
+        "android": infos.get("android") or "",
+        "lien": conn.get("kind") or "",
+        "adresse": conn.get("serial") or "",
+        "depuis": conn.get("depuis"),
+        "batterie": batterie,
+    }
+    _resume_cache.update({"a": maintenant, "cle": cle, "v": resume})
+    return resume
+
+
 def _health():
     """Etat de preparation : sert a la sonde Docker et au parcours de demarrage."""
     keyfile = LIB.keyfile
@@ -2416,6 +2466,12 @@ def _health():
             # nothing about whether a cable would be seen is asking someone to
             # find out by failing.
             "usb": device.usb_state(),
+            # Enough to CONFIRM the link rather than assert it. A step
+            # saying "connected" and nothing else asks to be believed;
+            # the console's own name, battery and Android version are
+            # read FROM the console, so they cannot be shown unless it
+            # answered. Nothing is read when there is no link.
+            "console": _console_resume(conn) if conn.get("kind") else None,
             "device_dir": CFG.get("device_dir", ""),
             "lan": bool(CFG.get("lan_access")),
             "token": bool(config.TOKEN),

@@ -227,11 +227,45 @@ def main():
         time.sleep(0.6)
         t("le panneau est dans l'etape de l'assistant",
           n.js("!!document.querySelector('#onb-pair-slot #pairwrap')"))
-        t("l'assistant montre les quatre memes etapes",
-          n.js("document.querySelectorAll('#onb-pair-slot #pairwrap .wstep').length") == 4,
+        # Five panels, four steps: the fifth is the conclusion, not another
+        # thing to do.
+        t("l'assistant montre les memes panneaux que les reglages",
+          n.js("document.querySelectorAll('#onb-pair-slot #pairwrap .wstep').length") == 5,
           n.js("document.querySelectorAll('#onb-pair-slot #pairwrap .wstep').length"))
         t("le champ de connexion est du voyage",
           n.js("!!document.querySelector('#onb-pair-slot #conn-addr')"))
+        # The pairing line is static markup: it used to greet whoever
+        # simply walked to step 4, and a green tick alone was read as
+        # "everything is done" — which is why the header still showing no
+        # console looked like a contradiction.
+        t("la ligne d'appairage ne s'affiche pas sans appairage",
+          n.js("(() => { const e = document.querySelector('#wstep4 .wok');"
+               " return !e || getComputedStyle(e).display === 'none'; })()"))
+        n.js("(() => { $('wstep4').dataset.appaire = '1'; })()")
+        time.sleep(0.3)
+        t("et s'affiche apres un appairage",
+          n.js("getComputedStyle(document.querySelector('#wstep4 .wok'))"
+               ".display") != "none")
+        # The panel exists to CONNECT: once that is done it has nothing left to
+        # ask, so the address field and the button give way to what the console
+        # answered.
+        t("le panneau a un etat 'connectee'",
+          n.js("!!document.querySelector('#onb-pair-slot #wstep5 #conn-ok')"))
+        n.js("app.wizStep(5)")
+        time.sleep(0.4)
+        t("l'etat connectee cache le champ d'adresse",
+          n.js("getComputedStyle($('wstep4')).display") == "none"
+          and n.js("getComputedStyle($('wstep5')).display") != "none")
+        n.js("app.wizStep(4)")
+        time.sleep(0.3)
+        # Typing only the port means the same thing as retyping the whole
+        # address: the field is pre-filled and the caret sits after the colon.
+        vu = n.js("(() => { $('pair-addr').value = '192.0.2.4:37105';"
+                  " $('conn-addr').value = '41111';"
+                  " app.wifiConnectField();"
+                  " return $('conn-addr').value; })()")
+        t("un port seul est complete par l'hote appaire",
+          vu == "192.0.2.4:41111", vu)
         # Changing step must not lose it, and must not leave a copy behind:
         # `renderOnboard` rewrites its own innerHTML, which would destroy the
         # settings' panel if it were still inside.

@@ -12,6 +12,14 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Fixed
 
+- **A green tick that meant one thing and was read as another.** Step 4 opened
+  on « L'appairage a réussi. » — static markup, so it greeted anyone who simply
+  walked to that step, and a tick on its own reads as *everything* is done.
+  The header then showing no console looked like a contradiction when it was
+  the plain truth: pairing is not connecting. The line now appears only after a
+  pairing that actually happened, and says what it means — the pairing is done,
+  the connection is not.
+
 - **A successful pairing always ended on "still to be connected".** The server
   ran mDNS discovery and, if that found nothing, gave up — which reads as a
   contradiction the moment the console's own dialog has just closed: the
@@ -51,6 +59,24 @@ change it. Breaking changes are always listed under **Changed** with the reason.
   scripted adb, and all three fail without the fix.
 
 ### Changed
+
+- **A connected console is now shown, not asserted.** The panel exists to
+  connect, so once that is done it has nothing left to ask: the address field
+  and the button give way to what the console answered — its name, its Wi-Fi or
+  USB link, its address, its Android version, its battery level, how long the
+  link has held. Those cannot be on screen unless the console really replied,
+  which is the difference between evidence and a claim. The wizard's console
+  step shows the same facts. Leaving the form up after a success is what made a
+  reader doubt the success was real.
+
+- **Typing only the port is now enough.** The connection field is pre-filled
+  with the paired host and the caret sits after the colon, so what gets typed
+  is a port. Being told to « copy the address AND the port » when the address
+  is already there was a refusal with nothing behind it.
+
+- **Connection attempts are logged, both ways.** Like pairing before it,
+  connecting was the step people retried blind while the journal said nothing —
+  neither that an attempt had been made, nor why adb refused.
 
 - **The USB card said nothing about the USB port.** Offering "with a cable"
   while saying nothing about whether a cable would even be seen is asking

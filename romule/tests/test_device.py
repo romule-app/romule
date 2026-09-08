@@ -327,7 +327,6 @@ def test_relier_apres_appairage_abandonne_proprement():
 
 
 def test_usb_dit_ce_que_le_port_montre():
-    import os
     vrai = d.adb_available
     d.adb_available = lambda: True
     try:

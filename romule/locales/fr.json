@@ -1653,5 +1653,15 @@
   "Romule ne peut pas le deviner d'ici : la console l'annonce en mDNS, qui ne traverse pas le réseau d'un conteneur.": "Romule ne peut pas le deviner d'ici : la console l'annonce en mDNS, qui ne traverse pas le réseau d'un conteneur.",
   "Associée. Il reste son port de connexion.": "Associée. Il reste son port de connexion.",
   "Appairée. Il reste son port de connexion, que seule la console affiche.": "Appairée. Il reste son port de connexion, que seule la console affiche.",
-  "Appairée, mais aucune adresse de connexion trouvée (essayées : %s).": "Appairée, mais aucune adresse de connexion trouvée (essayées : %s)."
+  "Appairée, mais aucune adresse de connexion trouvée (essayées : %s).": "Appairée, mais aucune adresse de connexion trouvée (essayées : %s).",
+  "Lien": "Lien",
+  "Adresse": "Adresse",
+  "Android": "Android",
+  "Batterie": "Batterie",
+  "Depuis": "Depuis",
+  "Console reliée": "Console reliée",
+  "La console ne répond plus.": "La console ne répond plus.",
+  "Appairage fait. Il reste la connexion.": "Appairage fait. Il reste la connexion.",
+  "Connexion sans fil demandée vers %s": "Connexion sans fil demandée vers %s",
+  "Connexion refusée vers %s : %s": "Connexion refusée vers %s : %s"
 }

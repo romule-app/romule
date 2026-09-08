@@ -1653,5 +1653,15 @@
   "Romule ne peut pas le deviner d'ici : la console l'annonce en mDNS, qui ne traverse pas le réseau d'un conteneur.": "Romule cannot guess it from here: the console announces it over mDNS, which does not cross a container's network.",
   "Associée. Il reste son port de connexion.": "Paired. Its connection port is still needed.",
   "Appairée. Il reste son port de connexion, que seule la console affiche.": "Paired. Its connection port is left, and only the console shows it.",
-  "Appairée, mais aucune adresse de connexion trouvée (essayées : %s).": "Paired, but no connection address found (tried: %s)."
+  "Appairée, mais aucune adresse de connexion trouvée (essayées : %s).": "Paired, but no connection address found (tried: %s).",
+  "Lien": "Link",
+  "Adresse": "Address",
+  "Android": "Android",
+  "Batterie": "Battery",
+  "Depuis": "For",
+  "Console reliée": "Console connected",
+  "La console ne répond plus.": "The console has stopped answering.",
+  "Appairage fait. Il reste la connexion.": "Pairing done. The connection is still to come.",
+  "Connexion sans fil demandée vers %s": "Wireless connection requested to %s",
+  "Connexion refusée vers %s : %s": "Connection refused to %s: %s"
 }
