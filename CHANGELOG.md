@@ -12,6 +12,22 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Fixed
 
+- **The port sweep found nothing, silently, in the only process where it
+  mattered.** `select.select()` raises `ValueError: filedescriptor out of range`
+  as soon as any descriptor is 1024 or above — and a running server, with its
+  HTTP socket, its clients and its log files, is always in that state, so eight
+  hundred fresh sockets land far above it. The first version caught that
+  `ValueError` and moved on to the next batch, every time. It worked perfectly
+  when tried on its own, which is exactly how a defect like that survives a
+  release. It uses `poll` now, which has no such limit, and the test opens 1100
+  descriptors before sweeping so the condition is reproduced rather than
+  assumed.
+
+- **Scanned ports are tried nearest the pairing port first.** Android hands both
+  out of the same ephemeral pool moments apart, so they land near each other far
+  more often than chance would put them — and a console can answer on a dozen
+  ports, of which only one is adb.
+
 - **Pairing asked for a third number, and that is the step people gave up on.**
   You copy an address and a code from the console's pairing dialog, press the
   button — and the interface sends you back to the console for a different port,

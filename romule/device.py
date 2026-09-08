@@ -282,12 +282,20 @@ def _hote(addr):
     return str(addr or "").rsplit(":", 1)[0]
 
 
-# The range Android picks its wireless-debugging port from, and the shape of
-# the sweep. `lot` stays under the 1024 descriptors a process is commonly
-# allowed: asking for more raises `EMFILE` and finds nothing at all. `delai` is
-# generous for a LAN, where a closed port answers with a reset in milliseconds.
-def ports_ouverts(hote, debut=30000, fin=65535, budget=8.0, lot=800,
-                  delai=0.15):
+# The range Android picks its wireless-debugging port from, and the shape of the
+# sweep.
+#
+# `poll`, never `select`: `select.select()` fails with
+# `ValueError: filedescriptor out of range` as soon as ANY descriptor is 1024 or
+# above, and in a running server — an HTTP socket, its clients, the log files —
+# eight hundred fresh sockets land far above that. The first version caught that
+# ValueError and moved on, so the sweep found nothing at all, silently, in the
+# only process where it mattered. It worked perfectly when tried on its own,
+# which is exactly how a defect like this survives.
+_PLAGE_ADB = (30000, 65535)
+
+
+def ports_ouverts(hote, debut=None, fin=None, budget=8.0, lot=800, delai=0.25):
     """The TCP ports answering on this host, within the wireless-debugging range.
 
     Why this exists
@@ -295,52 +303,53 @@ def ports_ouverts(hote, debut=30000, fin=65535, budget=8.0, lot=800,
     Android announces its wireless-debugging port over mDNS, and multicast does
     not cross a Docker bridge. From a container the port therefore cannot be
     discovered — and the interface had no answer but to send the reader back to
-    the console's screen for a second number, after they had already copied one.
-    That is the step people gave up on.
+    the console for a second number, after they had already copied one. That is
+    the step people give up on.
 
     So we look. The host is one the user has just typed and paired with, on
     their own network, and the range is the ephemeral one Android picks from —
-    not a sweep of anything else. It is bounded in time rather than in scope: a
+    not a sweep of anything else. It is bounded in TIME rather than in scope: a
     connection that has not answered within `budget` seconds is not the console
     someone is waiting on.
-
-    Non-blocking sockets in batches, not one connection at a time: 35 000 ports
-    checked serially at a third of a second each would take three hours.
     """
     if not hote:
         return []
+    debut = _PLAGE_ADB[0] if debut is None else debut
+    fin = _PLAGE_ADB[1] if fin is None else fin
     ouverts = []
-    debut_t = time.monotonic()
+    depart = time.monotonic()
     port = debut
-    while port <= fin and time.monotonic() - debut_t < budget:
-        prises = {}
+    while port <= fin and time.monotonic() - depart < budget:
+        prises, sondeur = {}, select.poll()
         for p in range(port, min(port + lot, fin + 1)):
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.setblocking(False)
             try:
                 s.connect_ex((hote, p))
-                prises[s] = p
             except OSError:
                 s.close()
-        fin_lot = time.monotonic() + delai
-        while prises and time.monotonic() < fin_lot:
-            restant = max(0.0, fin_lot - time.monotonic())
-            try:
-                _, prets, _ = select.select([], list(prises), [], restant)
-            except (OSError, ValueError):
-                break
-            for s in prets:
-                p = prises.pop(s, None)
+                continue
+            prises[s.fileno()] = (s, p)
+            sondeur.register(s.fileno(), select.POLLOUT)
+        limite = time.monotonic() + delai
+        while prises and time.monotonic() < limite:
+            restant = max(0.0, limite - time.monotonic())
+            for fd, _ in sondeur.poll(restant * 1000):
+                paire = prises.pop(fd, None)
+                if not paire:
+                    continue
+                s, p = paire
+                sondeur.unregister(fd)
                 try:
                     if s.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR) == 0:
                         ouverts.append(p)
                 except OSError:
                     pass
                 s.close()
-        for s in prises:
+        for s, _ in prises.values():
             s.close()
         port += lot
-    return ouverts
+    return sorted(ouverts)
 
 
 def candidats(hote):
@@ -400,10 +409,21 @@ def relier_apres_appairage(hote, attente=6.0, scruter=True):
             return (addr, essayees)
     if not scruter:
         return (None, essayees)
-    # A handful at most: several ports answer on any device, and each wrong one
-    # costs an adb round trip. Beyond a dozen we are guessing rather than
-    # looking, and the reader is better served by being asked.
-    for port in ports_ouverts(_hote(hote))[:12]:
+    # Closest to the PAIRING port first. Android hands both out of the same
+    # ephemeral pool, moments apart, so they land near each other far more often
+    # than chance would put them — and a console can answer on a dozen ports,
+    # of which only one is adb.
+    #
+    # A handful at most: each wrong one costs an adb round trip, and beyond a
+    # dozen we are guessing rather than looking.
+    try:
+        repere = int(str(hote).rsplit(":", 1)[1])
+    except (IndexError, ValueError):
+        repere = 0
+    trouves = ports_ouverts(_hote(hote))
+    if repere:
+        trouves.sort(key=lambda p: abs(p - repere))
+    for port in trouves[:12]:
         addr = "%s:%d" % (_hote(hote), port)
         if addr in essayees:
             continue

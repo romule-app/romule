@@ -365,6 +365,35 @@ def test_usb_le_dit_quand_le_port_n_est_pas_visible():
         os.path.isdir = vrai_isdir
 
 
+def test_le_balayage_marche_avec_beaucoup_de_descripteurs_ouverts():
+    """The condition that made the first version find nothing, silently.
+
+    `select.select()` raises `ValueError: filedescriptor out of range` as soon
+    as ANY descriptor is 1024 or above. A running server — its HTTP socket, its
+    clients, its log files — is always in that state, and eight hundred fresh
+    sockets land far above it. The sweep therefore worked perfectly when tried
+    on its own and found nothing at all in the only process where it mattered.
+
+    So the test puts the process in that state FIRST. Without it, this file
+    would go on passing while the feature stayed broken.
+    """
+    import socket as _s
+    gardes = [_s.socket() for _ in range(1100)]
+    srv = _s.socket()
+    try:
+        assert max(g.fileno() for g in gardes) > 1024, "condition non reproduite"
+        srv.bind(("127.0.0.1", 0))
+        srv.listen(1)
+        port = srv.getsockname()[1]
+        vu = d.ports_ouverts("127.0.0.1", debut=port, fin=port, budget=2.0,
+                             delai=0.4)
+        assert vu == [port], vu
+    finally:
+        srv.close()
+        for g in gardes:
+            g.close()
+
+
 def test_le_balayage_trouve_un_port_qui_repond():
     """The console announces its wireless-debugging port over mDNS, and
     multicast does not cross a Docker bridge. Asking the host directly is what
@@ -395,6 +424,25 @@ def test_le_balayage_est_borne_dans_le_temps():
 
 def test_le_balayage_ignore_un_hote_vide():
     assert d.ports_ouverts("") == []
+
+
+def test_le_balayage_essaie_d_abord_les_ports_voisins_de_l_appairage():
+    """Android hands the pairing port and the connection port out of the same
+    ephemeral pool, moments apart: they land near each other far more often than
+    chance would put them. A console can answer on a dozen ports, of which one
+    is adb, and we only get to try twelve."""
+    faux = _AdbReseau(mdns=[], acceptees=["192.0.2.4:37200"])
+    vrai = d.ports_ouverts
+    d.ports_ouverts = lambda h, **kw: [31000, 60000, 37200, 45000]
+    try:
+        addr, essayees = _avec_reseau(
+            faux, lambda: d.relier_apres_appairage("192.0.2.4:37105",
+                                                   attente=0.4))
+    finally:
+        d.ports_ouverts = vrai
+    assert addr == "192.0.2.4:37200", (addr, essayees)
+    balayes = [a for a in essayees if a != "192.0.2.4:5555"]
+    assert balayes[0] == "192.0.2.4:37200", balayes
 
 
 def test_relier_bascule_sur_le_balayage_quand_rien_d_autre_ne_marche():
