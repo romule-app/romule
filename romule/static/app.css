@@ -3269,10 +3269,6 @@ body.compact .filters{margin-bottom:2px}
    with it, and they live apart so the `<b>` is never replaced. */
 .somots{color:inherit}
 
-/* The summary under a game's title, in the detail view. */
-.gm-desc{margin:10px 0 0;font-size:13px;line-height:1.6;color:var(--mute);
-  max-width:62ch}
-.gm-desc:empty{display:none}
 
 /* Who is signed in, in the header. Small, quiet, and present on every screen:
    it answers "whose session is this" without being asked, and carries the way
