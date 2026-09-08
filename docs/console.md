@@ -6,7 +6,9 @@ AYN Thor running the Eden emulator, but the device and the emulator are
 
 ## Pairing over Wi-Fi
 
-The settings hold a step-by-step assistant. In short:
+The first-start assistant asks first **how the console is connected** — with
+or without a cable — and shows only the matching path. The settings hold the
+same step-by-step assistant. In short:
 
 1. **On the console** — Settings → System → Developer options → **Wireless
    debugging**, switch it on.

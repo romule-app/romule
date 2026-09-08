@@ -249,17 +249,72 @@ def discover():
     return found
 
 
-def connect(addr, timeout=20):
-    """Connect to a console over the network. Returns (ok, message)."""
+def _etat_de(addr):
+    """The state adb gives this address, or None when it lists it at all."""
+    for d in devices():
+        if d.get("serial") == addr:
+            return d.get("state")
+    return None
+
+
+def _attendre_pret(addr, delai=8.0):
+    """Poll until the address is usable, or give up. Returns the last state.
+
+    `adb connect` answers before the link is usable: the entry shows up as
+    `offline` for a moment and settles a second or two later. Reading `adb
+    devices` once, straight after, therefore says "offline" about a connection
+    that was going to work.
+    """
+    import time as _t
+    fin = _t.monotonic() + delai
+    etat = None
+    while _t.monotonic() < fin:
+        etat = _etat_de(addr)
+        if etat == "device":
+            return etat
+        _t.sleep(0.4)
+    return etat
+
+
+def connect(addr, timeout=20, attente=8.0):
+    """Connect to a console over the network. Returns (ok, message).
+
+    adb's word is not taken for it. `adb connect` prints "connected to
+    192.168.1.42:5555" and exits 0 in cases where the console then sits at
+    `offline` or `unauthorized` — states `_pick` rightly refuses to drive. The
+    interface said `Console connectée sans fil.`, the header showed no console,
+    and the settings went on asking for the configuration that had just been
+    done. Three screens disagreeing, and the one that was lying was the toast.
+
+    So the link is CHECKED, not announced: usable means adb lists this address
+    as `device`.
+    """
     if not addr:
         return (False, messages.ADRESSE_MANQUANTE)
     rc, out, err = _run(["connect", addr], timeout=timeout, targeted=False)
     msg = (out + err).strip().splitlines()
     msg = msg[-1] if msg else ""
-    ok = "connected" in msg.lower() and "cannot" not in msg.lower()
-    if ok:
+    if "connected" not in msg.lower() or "cannot" in msg.lower():
+        return (False, msg or messages.D_LIEN_ABSENT)
+
+    etat = _attendre_pret(addr, attente)
+    if etat != "device":
+        # `offline` after a successful `connect` is adb holding a stale entry
+        # for that address — a previous session the console has forgotten.
+        # Dropping it and asking again is what clears it, and it costs one
+        # round trip.
+        _run(["disconnect", addr], timeout=10, targeted=False)
+        _run(["connect", addr], timeout=timeout, targeted=False)
+        etat = _attendre_pret(addr, attente)
+
+    if etat == "device":
         set_target(addr)
-    return (ok, msg or ("connecte a %s" % addr))
+        return (True, msg or ("connecte a %s" % addr))
+    if etat == "unauthorized":
+        return (False, messages.D_LIEN_NON_AUTORISE)
+    if etat == "offline":
+        return (False, messages.D_LIEN_HORS_LIGNE)
+    return (False, messages.D_LIEN_ABSENT)
 
 
 def disconnect(addr=None):

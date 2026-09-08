@@ -162,6 +162,85 @@ def test_pair_sans_adresse_ne_lance_rien():
     assert not ok and faux.appels == [], faux.appels
 
 
+class _AdbListe:
+    """A fake adb, driven by the SCENARIO rather than by a call count.
+
+    Counting calls would make the test depend on how fast the poll spins, which
+    is exactly what `time.sleep` being stubbed out changes. `apres_reprise` is
+    the state the console reaches once the stale entry has been dropped.
+    """
+
+    def __init__(self, etat, apres_reprise=None,
+                 connect="connected to 192.0.2.4:5555"):
+        self.etat = etat
+        self.apres_reprise = apres_reprise
+        self.connect = connect
+        self.appels = []
+
+    def __call__(self, args, timeout=60, targeted=True):
+        self.appels.append(list(args))
+        if args[0] == "devices":
+            corps = ("192.0.2.4:5555\t%s\n" % self.etat) if self.etat else ""
+            return (0, "List of devices attached\n" + corps, "")
+        if args[0] == "disconnect" and self.apres_reprise:
+            self.etat = self.apres_reprise
+            return (0, "", "")
+        if args[0] == "connect":
+            return (0, self.connect, "")
+        return (0, "", "")
+
+
+def _avec_liste(faux, fn):
+    vrai_run, vrai_sleep = d._run, None
+    import time
+    vrai_sleep = time.sleep
+    d._run = faux
+    time.sleep = lambda s: None          # the poll must not slow the suite down
+    try:
+        return fn()
+    finally:
+        d._run, time.sleep = vrai_run, vrai_sleep
+
+
+def test_connect_refuse_un_lien_qui_reste_offline():
+    """adb prints "connected to ..." and exits 0 while the console sits at
+    `offline` — a state `_pick` refuses to drive. Announcing success there is
+    what made the toast say connected while the header showed no console and
+    the settings still asked for the configuration just done."""
+    faux = _AdbListe("offline")
+    ok, msg = _avec_liste(faux, lambda: d.connect("192.0.2.4:5555", attente=0.5))
+    assert not ok, "un lien offline ne doit pas passer pour connecte"
+    assert "débogage sans fil" in msg, msg
+
+
+def test_connect_reprend_un_lien_offline_puis_reussit():
+    # offline, offline, then the retry brings it up.
+    faux = _AdbListe("offline", apres_reprise="device")
+    ok, _ = _avec_liste(faux, lambda: d.connect("192.0.2.4:5555", attente=0.5))
+    assert ok, "la reprise doit compter"
+    assert ["disconnect", "192.0.2.4:5555"] in faux.appels, faux.appels
+
+
+def test_connect_dit_quoi_faire_quand_la_console_demande_l_autorisation():
+    faux = _AdbListe("unauthorized")
+    ok, msg = _avec_liste(faux, lambda: d.connect("192.0.2.4:5555", attente=0.5))
+    assert not ok
+    assert "autorisation" in msg.lower() or "autoriser" in msg.lower(), msg
+
+
+def test_connect_accepte_un_lien_vraiment_pret():
+    faux = _AdbListe("device")
+    ok, _ = _avec_liste(faux, lambda: d.connect("192.0.2.4:5555", attente=0.5))
+    assert ok
+    assert ["disconnect", "192.0.2.4:5555"] not in faux.appels, faux.appels
+
+
+def test_connect_refuse_quand_adb_dit_non():
+    faux = _AdbListe("device", connect="cannot connect to 192.0.2.4:5555")
+    ok, _ = _avec_liste(faux, lambda: d.connect("192.0.2.4:5555", attente=0.5))
+    assert not ok
+
+
 def _run():
     fns = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     failed = 0

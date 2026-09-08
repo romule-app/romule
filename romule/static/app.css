@@ -3451,3 +3451,49 @@ body.compact .filters{margin-bottom:2px}
 .gcredit:empty{display:none}
 .gcredit a{color:var(--mute);text-decoration:underline}
 .gcredit a:hover{color:var(--text-2)}
+
+/* ------------------------------------------------- the console step, staged
+
+   One question at a time. The step used to stack both ways of plugging a
+   console in — a search button that finds nothing inside a container, and four
+   pairing steps below it — and then kept the address fields on screen after the
+   console was linked, under a toast claiming success. Each state now replaces
+   the previous one. */
+.onbchoix{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
+  gap:12px;margin:16px 0 0}
+.onbcarte{display:flex;flex-direction:column;align-items:flex-start;gap:6px;
+  padding:16px;text-align:left;border:1px solid var(--bord);border-radius:12px;
+  background:var(--puits);color:var(--text);cursor:pointer;
+  /* `height`, not `flex`: `flex:1 1 210px` inside a column is a HEIGHT, and
+     that is how the login fields once became 260 px tall. */
+  transition:border-color .18s var(--ease), transform .18s var(--ease),
+             background-color .18s var(--ease)}
+.onbcarte:hover:not(:disabled),
+.onbcarte:focus-visible{border-color:var(--amber);transform:translateY(-2px)}
+.onbcarte:disabled{opacity:.5;cursor:default}
+.onbcarte b{font-size:14px;color:var(--text)}
+.onbcicone{font-size:22px;line-height:1}
+.onbcdesc{font-size:12px;line-height:1.5;color:var(--mute)}
+.onbcnote{font-size:11.5px;line-height:1.45;color:var(--amber)}
+
+/* The chosen path arrives; it does not appear. Which one you picked is worth
+   half a second of movement, because the screen changed underneath. */
+.onbvoie{animation:enter .28s var(--ease)}
+.onbliebar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  margin:14px 0 0}
+
+/* Linked. The fields are gone — that is the whole point of this block. */
+.onblie{animation:enter .3s var(--ease)}
+.onblietete{display:flex;align-items:center;gap:10px}
+.onblietete b{font-size:14px;color:var(--text)}
+.onbliecoche{display:inline-flex;align-items:center;justify-content:center;
+  width:26px;height:26px;flex:none;border-radius:50%;
+  background:color-mix(in srgb, var(--green) 22%, transparent);
+  color:var(--green);font-size:14px;font-weight:700;
+  animation:coche .34s var(--ease) both}
+@keyframes coche{from{transform:scale(.4);opacity:0}
+  60%{transform:scale(1.12)}to{transform:scale(1);opacity:1}}
+
+@media (prefers-reduced-motion:reduce){
+  .onbcarte,.onbvoie,.onblie,.onbliecoche{transition:none;animation:none}
+}

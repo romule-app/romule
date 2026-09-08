@@ -191,6 +191,25 @@ def main():
         n.js("(() => { const e = onbEtapes(HEALTH);"
              " onbGo(e.findIndex(x => x.cle === 'console')); })()")
         time.sleep(0.8)
+        # One question at a time. Both ways of plugging a console in used to be
+        # stacked on the same screen — including a search that finds nothing
+        # inside a container — with nothing saying which half was yours.
+        t("l'etape demande d'abord comment la console est reliee",
+          n.js("document.querySelectorAll('#onboard .onbcarte').length") == 2,
+          n.js("document.querySelectorAll('#onboard .onbcarte').length"))
+        t("et ne montre aucun champ d'appairage avant qu'on ait choisi",
+          not n.js("!!document.querySelector('#onb-pair-slot')"))
+        n.js("app.onbLien('usb')")
+        time.sleep(0.5)
+        t("la voie USB ne montre pas le panneau sans fil",
+          n.js("!!document.querySelector('#onboard [data-voie=\"usb\"]')")
+          and not n.js("!!document.querySelector('#onb-pair-slot #pairwrap')"))
+        n.js("app.onbAutreLien()")
+        time.sleep(0.4)
+        t("on peut revenir au choix",
+          n.js("document.querySelectorAll('#onboard .onbcarte').length") == 2)
+        n.js("app.onbLien('wifi')")
+        time.sleep(0.6)
         t("le panneau est dans l'etape de l'assistant",
           n.js("!!document.querySelector('#onb-pair-slot #pairwrap')"))
         t("l'assistant montre les quatre memes etapes",
@@ -205,6 +224,24 @@ def main():
              " onbGo(e.findIndex(x => x.cle === 'console') > 0 ? 0 : 1); })()")
         time.sleep(0.6)
         t("il n'en reste pas une copie dans l'assistant",
+          n.js("document.querySelectorAll('#pairwrap').length") == 1,
+          n.js("document.querySelectorAll('#pairwrap').length"))
+        # Linked, the step must show the CONSOLE, not the form that found it.
+        # It kept the address and code fields on screen under a toast claiming
+        # success — three screens disagreeing, and the toast was the one lying.
+        # Rendered directly rather than by mutating HEALTH: the interface polls,
+        # and a refresh landing mid-assertion would overwrite the state under
+        # the test — which is a race in the TEST, not a defect in the step.
+        lie = n.js("onbConsoleCorps({device: 'wifi',"
+                   " device_dir: '/storage/emulated/0/Switch', adb: true})")
+        t("une fois reliee, l'etape montre la console",
+          "onblie" in (lie or ""), (lie or "")[:90])
+        t("et plus aucun champ d'appairage",
+          "onb-pair-slot" not in (lie or "") and "conn-addr" not in (lie or ""))
+        t("elle nomme le dossier repere sur la console",
+          "/storage/emulated/0/Switch" in (lie or ""))
+        t("et laisse relier autrement", "onbAutreLien" in (lie or ""))
+        t("le panneau est revenu aux reglages, pas detruit",
           n.js("document.querySelectorAll('#pairwrap').length") == 1,
           n.js("document.querySelectorAll('#pairwrap').length"))
         n.js("app.closeOnboard()")

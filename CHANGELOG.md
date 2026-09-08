@@ -12,6 +12,21 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Fixed
 
+- **The console was never actually connected, and three screens said different
+  things.** `adb connect` prints "connected to 192.168.1.42:5555" and exits 0
+  even when the console then sits at `offline` or `unauthorized` — states
+  `_pick` rightly refuses to drive. Romule took adb at its word, so the toast
+  said connected, the header showed no console, and the settings offered again
+  the configuration just done. The toast was the one lying, and it had been
+  lying for several releases.
+
+  The link is now checked rather than announced: it counts as made only when
+  adb lists that address as `device`. A link still `offline` is retried once —
+  adb sometimes holds a stale entry for the address — then refused with a
+  reason that says what to do, one for the console asking permission and one
+  for a connection port that has moved. Five tests with a scripted adb cover
+  it.
+
 - **`adb pair` started the daemon itself, and raced it.** When no adb server is
   running, `adb pair` forks one and the pairing handshake overlaps its startup;
   adb then reports `protocol fault (couldn't read status message): Success` —
@@ -23,6 +38,17 @@ change it. Breaking changes are always listed under **Changed** with the reason.
   scripted adb, and all three fail without the fix.
 
 ### Changed
+
+- **The console step asked nothing and showed everything.** Both ways of
+  plugging a console in were stacked on one screen — a search button that finds
+  nothing inside a container, and four pairing steps below it — with nothing
+  saying which half was yours. And once the console WAS linked, the address and
+  code fields stayed exactly where they were, under a toast claiming success.
+
+  The step now asks how the console is connected, shows that path alone, and
+  replaces the whole thing with the console once there is one — the folder it
+  found, what to do next, and a way back. `detect()` refreshes the wizard when
+  it is the thing on screen, which is what the previous version never did.
 
 - **The terminal spoke French whatever the language setting said.** `ui_lang`
   defaults to `en` — "the language of a public self-hosted project" — so the
