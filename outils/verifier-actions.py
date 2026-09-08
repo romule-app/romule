@@ -83,6 +83,40 @@ const app = {
   chooseConsole() { return 1; },
 };
 """
+# `$('x')` returns the FIRST node carrying that id. Two nodes with the same
+# one therefore make the lookup silently address the wrong element, and there is
+# no error anywhere: the code runs, writes into a node nobody looks at, and the
+# visible one keeps whatever placeholder it was built with.
+#
+# That is how the detail view spent a release showing `chargement des infos…`:
+# a second `id="gm-desc"` had been added in the header while the real one sat in
+# the body, and `$('gm-desc')` handed back the invisible one.
+#
+# Only ids that are ACTUALLY looked up are reported. A repeated id in markup
+# nobody addresses by id is untidy, not broken, and reporting it would drown the
+# reading that matters.
+_ID = re.compile(r'''id=\\?["\']([A-Za-z][\w-]*)\\?["\']''')
+_LOOKUP = re.compile(r"\$\('([\w-]+)'\)")
+
+
+def ids_doubles(*sources):
+    """Ids emitted more than once and read back by `$()`."""
+    vus = {}
+    cherches = set()
+    for src in sources:
+        propre = sans_commentaires(src)
+        for nom in _ID.findall(propre):
+            vus[nom] = vus.get(nom, 0) + 1
+        cherches |= set(_LOOKUP.findall(propre))
+    return sorted(n for n, c in vus.items() if c > 1 and n in cherches)
+
+
+BON_ID = "h = '<p id=\"gm-desc\"></p>'; const d = $('gm-desc');"
+MAUVAIS_ID = ("h = '<p id=\"gm-desc\"></p>' + '<p id=\"gm-desc\"></p>';"
+              " const d = $('gm-desc');")
+# Repeated, but never addressed by id: not this tool's business.
+IGNORE_ID = "h = '<p id=\"ligne\"></p><p id=\"ligne\"></p>';"
+
 BON_HTML = '<button data-act="setTheme" data-val="true">x</button>'
 MAUVAIS_HTML = '<button data-act="setTheme" data-val="sombre">x</button>'
 
@@ -104,6 +138,15 @@ def epreuve():
     if valeurs_illisibles(MAUVAIS_HTML) != ["sombre"]:
         print("   EPREUVE ECHOUEE : un data-val illisible passe")
         return False
+    if ids_doubles(BON_ID):
+        print("   EPREUVE ECHOUEE : un id unique est signale")
+        return False
+    if ids_doubles(MAUVAIS_ID) != ["gm-desc"]:
+        print("   EPREUVE ECHOUEE : un id en double passe")
+        return False
+    if ids_doubles(IGNORE_ID):
+        print("   EPREUVE ECHOUEE : un id double jamais cherche est signale")
+        return False
     return True
 
 
@@ -118,9 +161,12 @@ def main():
     illisibles = valeurs_illisibles(js, html)
     for v in illisibles:
         print("   data-val=%r n'est pas du JSON : le clic mourra avant l'action" % v)
-    print("   %d methode(s) fantome(s), %d data-val illisible(s)."
-          % (len(manque), len(illisibles)))
-    return 1 if (manque or illisibles) else 0
+    doubles = ids_doubles(js, html)
+    for nom in doubles:
+        print("   id=%r existe deux fois : $() rendra le mauvais noeud" % nom)
+    print("   %d methode(s) fantome(s), %d data-val illisible(s), %d id(s) en double."
+          % (len(manque), len(illisibles), len(doubles)))
+    return 1 if (manque or illisibles or doubles) else 0
 
 
 if __name__ == "__main__":

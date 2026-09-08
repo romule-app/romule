@@ -599,11 +599,25 @@ function closeOverlay(el) {
    including when the transition is interrupted. */
 const TRANSITION_NAME = 'jaquette';
 
+// Returns a promise that settles ONCE `muter` has run, which is not the same
+// moment as this function returning. `startViewTransition` calls its callback
+// asynchronously — the browser first captures the outgoing frame — so anything
+// looking up a node of the dialog straight after this call found the PREVIOUS
+// dialog, or nothing.
+//
+// That is what left the detail view stuck on `chargement des infos…`: the
+// lookup happened before the markup existed, the fetch had nowhere to write,
+// and the placeholder in the fresh template was never replaced. It looked
+// intermittent because the fallback path below is synchronous — with reduced
+// motion, or in a browser without view transitions, the same code worked.
 function openFromCover(cle, muter) {
   const source = document.querySelector(
     '.gcard[data-key="' + (window.CSS && CSS.escape ? CSS.escape(cle) : cle) + '"] .art img');
   if (!source || !document.startViewTransition ||
-      document.documentElement.dataset.mvt === 'aucun') { muter(); return; }
+      document.documentElement.dataset.mvt === 'aucun') {
+    muter();
+    return Promise.resolve();
+  }
 
   const cible = () => $('modal').querySelector('.cover');
   const nettoyer = () => {
@@ -631,9 +645,14 @@ function openFromCover(cle, muter) {
       if (c) c.style.viewTransitionName = TRANSITION_NAME;
     });
     t.finished.then(nettoyer, nettoyer);
+    // `updateCallbackDone`, not `finished`: the caller waits for the DOM to
+    // exist, not for the animation to end. Waiting for the animation would
+    // delay the fetch by the length of a visual effect.
+    return t.updateCallbackDone.catch(() => {});
   } catch (e) {
     nettoyer();
     muter();
+    return Promise.resolve();
   }
 }
 
@@ -2200,11 +2219,6 @@ function openGameHtml(g) {
       })() +
     '</div>' +
     '<div class="sub2" id="gm-info">' + (g.tid ? 'chargement des infos…' : '') + '</div>' +
-    // The summary. `loadGameMeta` has been writing into `#gm-desc` since the
-    // detail view existed, and the element was never created: the card showed
-    // the description, the detail view — the screen you open to read it —
-    // never did.
-    '<p class="gm-desc" id="gm-desc"></p>' +
     // One status per line, with a coloured dot: stacking framed pills made the
     // detail view unreadable as soon as there were two pieces of information.
     '<div class="status">' + lines.map(l =>
@@ -4497,7 +4511,8 @@ const app = {
   },
   async openGame(k) {
     const g = this.gameByKey(k); if (!g) return;
-    openFromCover(k, () => {
+    // Awaited: the two nodes read just below belong to the markup this builds.
+    await openFromCover(k, () => {
       $('modal').innerHTML = openGameHtml(g);
       // Reopening cancels a closing already under way: without this, the
       // deferred cleanup in `closeOverlay` would empty the dialog we just opened.
@@ -5065,7 +5080,12 @@ const app = {
     say('Association en cours…');
     const r = await api('/api/wifi-pair', {addr, code});
     if (r.ok && r.addr) {
-      toast(r.message, 'ok'); $('pairwrap').style.display = 'none'; this.detect();
+      toast(r.message, 'ok');
+      // Lent to the wizard, the panel must not be hidden: the step around it
+      // would stay, empty. The wizard redraws itself on the next health read
+      // and shows the connected console.
+      if (!pairPrete()) $('pairwrap').style.display = 'none';
+      this.detect();
     } else if (r.ok) {
       // Paired, and adb cannot say at which address to connect — the ordinary
       // case in a container, where mDNS reaches nothing. Telling the reader to
@@ -5108,7 +5128,11 @@ const app = {
   async wifiConnect(addr) {
     say('Connexion…');
     const r = await api('/api/wifi-connect', addr ? {addr} : {});
-    if (r.ok) { toast('Console connectée sans fil.', 'ok'); $('pairwrap').style.display = 'none'; this.detect(); }
+    if (r.ok) {
+      toast('Console connectée sans fil.', 'ok');
+      if (!pairPrete()) $('pairwrap').style.display = 'none';
+      this.detect();
+    }
     else toast(r.message || 'Connexion impossible.', 'err');
   },
   async wifiForget() {
@@ -5332,6 +5356,9 @@ const app = {
     document.body.appendChild(fini);
     setTimeout(() => fini.remove(), 1100);
     el.classList.remove('open');
+    // The pairing panel goes home, or the settings would find an empty space
+    // where their own wizard used to be.
+    pairRendre();
   },
   async showOnboard() { await this.checkHealth(true); },
 
@@ -6793,28 +6820,16 @@ function onbEtapes(h) {
              'machine. Pour l\'ajouter :</p>' +
              '<div class="onbchemin" data-i18n-skip>' + esc(c.remede_adb || '') +
              '</div>') +
-          '<button class="ghost" data-act="onbFindConsole"' +
-            (c.adb ? '' : ' disabled') + '>Chercher une console</button>' +
-          // Without these two fields the step is a dead end wherever adb
-          // cannot discover the console by itself — which is every container.
-          // The settings have carried them since the beginning; there was no
-          // reason for the wizard not to.
-          '<div class="onbsans"><b>Ou sans câble, à la main</b>' +
-          '<p class="onbnote">Sur la console : Paramètres → Système → Options ' +
-          'pour les développeurs → Débogage sans fil → Associer un appareil ' +
-          'avec un code. Recopie ce qu\'elle affiche.</p>' +
-          '<div class="onbchamps">' +
-          '<label>Adresse et port d\'appairage' +
-            '<input type="text" id="onb-pair-addr" autocomplete="off" ' +
-            'placeholder="192.168.1.42:37105" value="' +
-            onbValeur('onb-pair-addr') + '"></label>' +
-          '<label>Code à 6 chiffres' +
-            '<input type="text" id="onb-pair-code" inputmode="numeric" ' +
-            'maxlength="6" autocomplete="off" placeholder="123456" value="' +
-            onbValeur('onb-pair-code') + '"></label>' +
-          '</div>' +
-          '<button class="ghost" data-act="wifiPair">Associer la console</button>' +
-          '</div>',
+          (c.container ? '' :
+            '<button class="ghost" data-act="onbFindConsole"' +
+              (c.adb ? '' : ' disabled') + '>Chercher une console</button>') +
+          // An empty slot, not a copy of the pairing panel. The wizard borrows
+          // the settings' own node — see `pairPreter`. A second copy is what
+          // produced the defect this replaces: the wizard's version stopped at
+          // « Associer » with no connection step, while the settings had four,
+          // and `wifiPair` finished by hiding a panel and moving to a step that
+          // were not on the screen at all.
+          '<div id="onb-pair-slot"></div>',
     },
     {
       cle: 'fin', titre: 'C\'est prêt', requis: null,
@@ -6942,10 +6957,51 @@ function onbValeur(id) {
 }
 
 
+// The pairing panel exists ONCE, in the settings. The wizard BORROWS that node
+// instead of carrying a copy of it.
+//
+// It carried a copy until now, and the two drifted exactly as copies do: the
+// settings grew a fourth step — the connection address, which is not the
+// pairing address — and the wizard kept its single « Associer » button. Worse,
+// `wifiPair` ends by hiding `#pairwrap` and moving to step 4; run from the
+// wizard, both acted on nodes that were not on screen, so a SUCCESSFUL pairing
+// looked like nothing at all.
+//
+// Borrowing makes divergence impossible rather than unlikely: same ids, same
+// steps, same handlers, same validation, by construction.
+let PAIR_MAISON = null;
+
+function pairPreter(slot) {
+  const panneau = $('pairwrap');
+  if (!panneau || !slot) return;
+  if (!PAIR_MAISON) {
+    PAIR_MAISON = {parent: panneau.parentNode, apres: panneau.nextSibling};
+  }
+  slot.appendChild(panneau);
+  panneau.style.display = '';
+  app.wizStep(1);
+}
+
+// Given back BEFORE the wizard rewrites its own innerHTML, which would
+// otherwise destroy the panel the settings still need.
+function pairRendre() {
+  const panneau = $('pairwrap');
+  if (!panneau || !PAIR_MAISON) return;
+  PAIR_MAISON.parent.insertBefore(panneau, PAIR_MAISON.apres);
+  panneau.style.display = 'none';
+  PAIR_MAISON = null;
+}
+
+function pairPrete() { return PAIR_MAISON !== null; }
+
+
 function renderOnboard() {
   const el = $('onboard');
-  if (!HEALTH) { el.classList.remove('open'); return; }
+  if (!HEALTH) { el.classList.remove('open'); pairRendre(); return; }
   onbRetenir();
+  // Before the innerHTML below, never after: it would take the settings'
+  // pairing panel down with it.
+  pairRendre();
   const etapes = onbEtapes(HEALTH);
   ONB.i = Math.max(0, Math.min(etapes.length - 1, ONB.i));
   const e = etapes[ONB.i];
@@ -6996,6 +7052,8 @@ function renderOnboard() {
       : '<button class="onbpasser" data-act="closeOnboard">Passer ' +
         'l\'assistant</button>') +
     '</div>';
+  const slot = $('onb-pair-slot');
+  if (slot) pairPreter(slot);
   translateDOM(el);
   el.classList.add('open');
 }
@@ -7181,7 +7239,14 @@ function uploadFiles(files) {
     xhr.setRequestHeader('X-Filename', encodeURIComponent(file.name));
     xhr.upload.onprogress = e => { if (e.lengthComputable) avancer(e.loaded, file.name); };
     xhr.onload = () => {
-      envoyes += file.size; journal(tpl('Reçu : %s', file.name), 'ok'); next();
+      envoyes += file.size;
+      journal(tpl('Reçu : %s', file.name), 'ok');
+      // Each file appears AS IT LANDS, not once the whole batch is over. The
+      // drop panel used to be reloaded only at the very end: with the panel
+      // open and its ETA running, the file just received was nowhere in the
+      // list, and closing and reopening the panel was the only way to see it.
+      if ($('dropwrap').classList.contains('on')) app.reloadImport();
+      next();
     };
     xhr.onerror = () => {
       envoyes += file.size;

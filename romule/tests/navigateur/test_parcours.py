@@ -181,6 +181,39 @@ def main():
           n.js("document.documentElement.dataset.mvt"))
         n.js("app.setTheme('sombre'); app.setMotion('complet')")
 
+        # The pairing panel exists ONCE and the wizard borrows it. It used to
+        # carry a copy, and the copy fell behind: the settings grew a fourth
+        # step — the connection address, which is not the pairing address —
+        # while the wizard still stopped at « Associer ». A successful pairing
+        # then hid a panel and moved to a step that were not on the screen, so
+        # it looked like nothing had happened at all.
+        print("   -- l'assistant emprunte le panneau d'appairage --")
+        n.js("(() => { const e = onbEtapes(HEALTH);"
+             " onbGo(e.findIndex(x => x.cle === 'console')); })()")
+        time.sleep(0.8)
+        t("le panneau est dans l'etape de l'assistant",
+          n.js("!!document.querySelector('#onb-pair-slot #pairwrap')"))
+        t("l'assistant montre les quatre memes etapes",
+          n.js("document.querySelectorAll('#onb-pair-slot #pairwrap .wstep').length") == 4,
+          n.js("document.querySelectorAll('#onb-pair-slot #pairwrap .wstep').length"))
+        t("le champ de connexion est du voyage",
+          n.js("!!document.querySelector('#onb-pair-slot #conn-addr')"))
+        # Changing step must not lose it, and must not leave a copy behind:
+        # `renderOnboard` rewrites its own innerHTML, which would destroy the
+        # settings' panel if it were still inside.
+        n.js("(() => { const e = onbEtapes(HEALTH);"
+             " onbGo(e.findIndex(x => x.cle === 'console') > 0 ? 0 : 1); })()")
+        time.sleep(0.6)
+        t("il n'en reste pas une copie dans l'assistant",
+          n.js("document.querySelectorAll('#pairwrap').length") == 1,
+          n.js("document.querySelectorAll('#pairwrap').length"))
+        n.js("app.closeOnboard()")
+        time.sleep(0.6)
+        t("il est rendu aux reglages, et masque",
+          n.js("(() => { const p = document.getElementById('pairwrap');"
+               " return !!p && !p.closest('#onboard')"
+               " && p.style.display === 'none'; })()"))
+
         print("   -- rien n'a echoue en chemin --")
         erreurs = n.js("window.__erreurs") or []
         t("aucune exception JavaScript", not erreurs, " | ".join(erreurs[:2]))
