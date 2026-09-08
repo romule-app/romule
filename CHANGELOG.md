@@ -12,6 +12,20 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Fixed
 
+- **A flat refusal from `adb connect` was taken as a verdict.** Right after a
+  pairing, adbd on the console is re-binding its connection port and answers
+  nothing for a second or two. Romule gave up there — so the same address,
+  typed again a moment later, worked. That is a bug report in which the reader
+  has already done the debugging. It is retried once, after a pause.
+
+- **`Batterie [object Object]`.** `device.battery()` returns a record — level,
+  state, temperature — and the wizard's card pasted it into a string. The card
+  and the panel's conclusion showed the same facts from two copies of the same
+  code, which is how they drifted; they now come from one function. The address
+  takes a full row rather than being cut to `192.0.2.22:…` — it is the one
+  value you compare with the console's own screen — and the Android version no
+  longer repeats the word already in its label.
+
 - **The port sweep found nothing, silently, in the only process where it
   mattered.** `select.select()` raises `ValueError: filedescriptor out of range`
   as soon as any descriptor is 1024 or above — and a running server, with its
@@ -118,6 +132,30 @@ change it. Breaking changes are always listed under **Changed** with the reason.
   scripted adb, and all three fail without the fix.
 
 ### Changed
+
+- **Nothing can be typed while a pairing or a connection is in flight.** The
+  fields stayed live and the buttons pressable, so pressing twice sent a second
+  `adb connect` into the middle of the first — which adb answers by refusing
+  both. The panel now veils itself and says what it is doing, and a control
+  disabled for its own reason stays disabled afterwards.
+
+- **Pairing no longer sweeps the console's ports.** It costs up to eight
+  seconds, and the reader is standing in front of the console with the number
+  on its screen: making them wait for a search they could answer instantly is
+  the wrong trade. The fast sources are still tried; the sweep stays one press
+  away on step 4, for whoever cannot read the number.
+
+- **The update pill can be put down.** It had no way of being acknowledged:
+  reading the note changed nothing, so it sat in the header for as long as you
+  chose not to upgrade — an invitation turning into a nag. « Ne plus me le
+  rappeler » records the version server-side, because a reminder dismissed on
+  the laptop that comes back on the phone is the same reminder. The next
+  version says so again.
+
+- **The header stopped reporting the versions database.** « base des versions à
+  l'instant » sat among the console's own facts, answering a question nobody
+  asked while looking at a console, next to another « à l'instant » that meant
+  something else. It moved into the tooltip.
 
 - **A connected console is now shown, not asserted.** The panel exists to
   connect, so once that is done it has nothing left to ask: the address field

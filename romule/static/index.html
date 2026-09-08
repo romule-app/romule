@@ -294,6 +294,12 @@
         <div class="bar" id="barreconsole" style="margin-top:12px"></div>
 
         <div id="pairwrap" class="pairbox" style="display:none">
+          <!-- What is happening, while it happens. The panel used to stay live
+               and silent through a pairing or a connection: the fields could be
+               edited mid-flight, and pressing a button twice sent a second
+               `adb connect` into the middle of the first — which adb answers by
+               refusing both. -->
+          <div class="pairoccupe" id="pairoccupe" aria-live="polite"></div>
           <div class="wizhead">
             <h3>Connecter la console sans câble</h3>
             <button class="ghost" data-act="togglePairing">Fermer</button>

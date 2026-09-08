@@ -268,6 +268,7 @@ def main():
                 ("192.0.2.4:41111", "192.0.2.4:41111"),  # the whole address
                 (" 192.0.2.4 : 41111 ", "192.0.2.4:41111"),   # spaces around
                 ("192.0.2.4:", ""),                      # nothing typed yet
+                ("192.0.2.4:42653", "192.0.2.4:42653"),  # a five-digit port
                 ("", "")):
             vu = n.js("app.adresseSaisie(%s, '192.0.2.4:37105')"
                       % json.dumps(saisi))
@@ -285,6 +286,26 @@ def main():
         t("un rafraichissement n'efface pas le port saisi",
           n.js("(($('conn-addr') || {}).value) || ''") == "192.0.2.4:41111",
           n.js("(($('conn-addr') || {}).value) || ''"))
+        # While something is in flight the fields must be out of reach. They
+        # stayed live and silent, so pressing twice sent a second `adb connect`
+        # into the middle of the first — which adb answers by refusing both.
+        n.js("(() => { $('pairgo').disabled = true;"
+             " pairOccupe(true, 'test'); })()")
+        time.sleep(0.3)
+        t("le panneau se voile pendant l'operation",
+          n.js("$('pairwrap').classList.contains('occupe')"))
+        t("et les champs deviennent inaccessibles",
+          n.js("$('conn-addr').disabled") is True)
+        n.js("pairOccupe(false)")
+        time.sleep(0.3)
+        t("le voile levé, les champs reviennent",
+          n.js("$('conn-addr').disabled") is False)
+        # A control disabled for its OWN reason must stay so: `#pairgo` waits
+        # for the fields to validate.
+        t("sauf ceux qui etaient deja desactives",
+          n.js("$('pairgo').disabled") is True)
+        n.js("(() => { $('pairgo').disabled = false; })()")
+
         t("et ne renvoie pas le panneau a sa premiere etape",
           n.js("(() => { const e ="
                " document.querySelector('#pairwrap .wstep.on');"

@@ -392,6 +392,10 @@ DEFAULTS = {
     # outbound call Romule makes unasked; some people self-host precisely so as
     # to talk to nobody.
     "maj_check": True,
+    # The version whose release note has been acknowledged. Kept
+    # server-side, not in the browser: a reminder dismissed on the
+    # laptop that comes back on the phone is the same reminder.
+    "maj_vue": "",
     "auth_secret": "",                            # cookie signing key, generated on its own
     # What runs on its own, and when. `{task: preset}` — see scheduler.py for
     # the five presets. Empty = nothing is scheduled, which stays the default:

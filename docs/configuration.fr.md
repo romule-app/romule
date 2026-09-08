@@ -139,6 +139,7 @@ Tous se modifient depuis l'interface. Les noms sont les clés rangées dans
 | `auth_mode` | `aucun` | `aucun`, `interne` (comptes), ou `oidc` ([bêta](beta.md)) |
 | `lan_access` | `false` | Laisse entrer le réseau **sans mot de passe** |
 | `maj_check` | `true` | Demande à GitHub une fois par jour s'il existe une version plus récente. C'est la **seule** fois où Romule sort sur internet sans qu'on le lui demande ; coupé, il ne le fait jamais. |
+| `maj_vue` | — | La version dont la note a été acquittée depuis la pastille « Mise à jour ». Côté serveur et non dans le navigateur : un rappel écarté sur le portable qui revient sur le téléphone est le même rappel. La pastille revient d'elle-même à la version suivante. |
 | `notif_destinations` | `[]` | Destinations de [notification](#notifications) sortante. Se posent depuis Réglages → Accès, pas ici : l'adresse y est vérifiée et le nombre borné. |
 | `auth_secret` | engendrée | Clé de signature des cookies de session. Ne quitte jamais le serveur. |
 | `jeton_auto` | engendré | Le jeton de premier accès, conservé pour survivre aux redémarrages. Écrit seulement si le service est joignable et n'a ni compte, ni `ROMULE_TOKEN`, ni accès réseau — voir [Sécurité](securite.md#le-jeton-de-premier-acces). |
