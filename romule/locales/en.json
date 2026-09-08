@@ -1677,5 +1677,8 @@
   "Connexion à la console…": "Connecting to the console…",
   "Recherche du port sur la console… (jusqu'à 10 s)": "Looking for the port on the console… (up to 10 s)",
   "Ne plus me le rappeler": "Stop reminding me",
-  "Rappel mis de côté. La prochaine version le redira.": "Reminder put aside. The next version will say so."
+  "Rappel mis de côté. La prochaine version le redira.": "Reminder put aside. The next version will say so.",
+  "Recherche du port sur la console…": "Looking for the port on the console…",
+  "Port non trouvé : recopie-le ci-dessous.": "Port not found: copy it in below.",
+  "Android ouvre deux services : celui de l'appairage, qui ne vit que le temps de la fenêtre du code, et celui de la connexion, ouvert tant que le débogage sans fil l'est. Deux services, deux ports.": "Android opens two services: the pairing one, which lives only as long as the code window is up, and the connection one, open for as long as wireless debugging is. Two services, two ports."
 }

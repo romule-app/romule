@@ -12,6 +12,19 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Fixed
 
+- **The sweep was switched off on the very path that needed it.** Two releases
+  ago it was disabled after a pairing, to spare an eight-second wait — reasoning
+  from the premise that the reader could simply read the number off the console.
+  They can, but that is the step being complained about. It is back, and no
+  longer costs the wait: it sweeps OUTWARD from the pairing port and stops at
+  the first answer. Android hands both ports out of the same ephemeral pool
+  moments apart, so they are usually neighbours and the search ends within a few
+  hundred ports instead of thirty-five thousand — hundredths of a second in
+  practice.
+
+  It also carries on in the BACKGROUND from step 4, without blocking anything.
+  Whoever can read the number beats it; whoever cannot no longer has to.
+
 - **The one address certain to be worth trying was the only one never tried.**
   On a good many devices the pairing port and the connection port are the same
   number — so the address just typed is the answer. `candidats()` stripped the
@@ -143,6 +156,12 @@ change it. Breaking changes are always listed under **Changed** with the reason.
   scripted adb, and all three fail without the fix.
 
 ### Changed
+
+- **Why there are two ports is now said, rather than worked around.** Android's
+  wireless debugging exposes two services: `_adb-tls-pairing`, alive only while
+  the code window is up, and `_adb-tls-connect`, the daemon itself. Two
+  services, two random ports. The step said the second was "not the one you just
+  typed", which is true and explains nothing.
 
 - **Nothing can be typed while a pairing or a connection is in flight.** The
   fields stayed live and the buttons pressable, so pressing twice sent a second

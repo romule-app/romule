@@ -472,6 +472,35 @@ def test_le_balayage_trouve_un_port_qui_repond():
         srv.close()
 
 
+def test_le_balayage_part_du_port_d_appairage():
+    """Android hands the pairing port and the connection port out of the same
+    pool moments apart. Sweeping outward from the one we know turns a search of
+    thirty-five thousand ports into one that answers in the first few hundred —
+    which is what makes it bearable in the pairing's own response."""
+    import socket as _s
+    srv = _s.socket()
+    srv.bind(("127.0.0.1", 0))
+    srv.listen(1)
+    port = srv.getsockname()[1]
+    try:
+        import time as _t
+        debut = _t.monotonic()
+        vu = d.ports_ouverts("127.0.0.1", autour=port - 5, budget=3.0)
+        assert port in vu, vu
+        assert _t.monotonic() - debut < 1.0, "le voisinage n'est pas balaye d'abord"
+    finally:
+        srv.close()
+
+
+def test_l_ordre_des_ports_s_ecarte_du_repere():
+    vu = list(d._ordre_des_ports(100, 110, 105))[:5]
+    assert vu == [105, 104, 106, 103, 107], vu
+    # No hint: the plain range, in order.
+    assert list(d._ordre_des_ports(100, 103, None)) == [100, 101, 102, 103]
+    # A hint outside the range says nothing about it.
+    assert list(d._ordre_des_ports(100, 102, 9)) == [100, 101, 102]
+
+
 def test_le_balayage_est_borne_dans_le_temps():
     """TEST-NET-1 answers nothing, ever. The sweep is bounded by a budget and
     not by its own size: an unbounded one is a hang, and a hang in a wizard is

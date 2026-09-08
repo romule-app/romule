@@ -44,6 +44,21 @@ simple « connectée ».
     deviner : il faut le lire sur l'écran de la console. Sur une installation
     directe, la découverte marche et l'étape 4 ne s'affiche presque jamais.
 
+!!! info "Pourquoi deux ports ?"
+    Le débogage sans fil d'Android expose **deux services**, chacun sur son
+    propre port tiré au hasard :
+
+    - `_adb-tls-pairing` n'existe que pendant que la fenêtre du code est
+      affichée. Il sert à échanger un certificat TLS, vérifié par le code à six
+      chiffres, puis il se ferme ;
+    - `_adb-tls-connect` est le démon adb lui-même. Il reste ouvert tant que le
+      débogage sans fil l'est, et n'accepte que les certificats obtenus à
+      l'appairage.
+
+    Les deux ports viennent de la même réserve éphémère et sont attribués à
+    quelques instants d'intervalle : ils sont donc souvent voisins, ce dont
+    Romule se sert pour retrouver le second sans le demander.
+
 !!! warning "Deux adresses, deux ports"
     C'est le point où l'on se trompe. La fenêtre du code donne un port
     d'appairage, jetable ; l'écran de débogage sans fil en donne un autre, celui

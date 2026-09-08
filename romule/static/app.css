@@ -3575,3 +3575,13 @@ body.compact .filters{margin-bottom:2px}
   .pairbox.occupe .pairoccupe::before{animation:none}
   .pairbox.occupe .pairoccupe{animation:none}
 }
+
+/* The background port search. Deliberately quiet: it must not read as something
+   to wait for, because typing the number off the console is always faster. */
+.wcherche{display:none;align-items:center;gap:8px;margin:10px 0 0;
+  font-size:12px;color:var(--mute)}
+.wcherche:not(:empty){display:flex}
+.wcherche::before{content:'';width:11px;height:11px;flex:none;border-radius:50%;
+  border:2px solid color-mix(in srgb, var(--mute) 35%, transparent);
+  border-top-color:var(--mute);animation:tourne .8s linear infinite}
+@media (prefers-reduced-motion:reduce){.wcherche::before{animation:none}}

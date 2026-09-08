@@ -410,11 +410,17 @@
                 console affiche. Ferme la fenêtre du code — derrière elle,
                 l'écran de débogage sans fil montre sa propre ligne
                 « Adresse IP et port ».</p>
-              <div class="wpath">Ce port n'est pas celui de l'appairage, qui ne
-                sert qu'une fois.</div>
+              <div class="wpath">Android ouvre deux services : celui de
+                l'appairage, qui ne vit que le temps de la fenêtre du code, et
+                celui de la connexion, ouvert tant que le débogage sans fil
+                l'est. Deux services, deux ports.</div>
               <p class="wmdns">Romule ne peut pas le deviner d'ici : la console
                 l'annonce en mDNS, qui ne traverse pas le réseau d'un
                 conteneur.</p>
+              <!-- The search carries on while you read, and says so here.
+                   Discreet on purpose: it must not look like something to wait
+                   for, because typing the number is always faster. -->
+              <div class="wcherche" id="conn-cherche" aria-live="polite"></div>
               <label class="wfield">
                 <span>Adresse IP et port, lue sur l'écran de débogage sans fil</span>
                 <input type="text" id="conn-addr" placeholder="192.168.1.42:5555"

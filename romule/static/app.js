@@ -5058,6 +5058,12 @@ const app = {
         c.value = a.value.split(':')[0] + ':';
       }
       if (c) c.focus();
+      // And the search keeps going, quietly, while you read. It is the answer
+      // to "is there no way to skip this step" — there is, it just takes a few
+      // seconds longer than the pairing itself. Nothing is blocked: whoever can
+      // read the number off the console beats it, and whoever cannot does not
+      // have to.
+      this.chercherEnFond();
     }
   },
   // Validates as you go: the user sees what is missing before failing.
@@ -5160,6 +5166,26 @@ const app = {
     return /^\d{1,3}(\.\d{1,3}){3}:\d{1,5}$/.test(a) ? a : '';
   },
 
+  // The background search. `PAIR_FOND` is a generation counter, not a flag: a
+  // result that lands after the reader has already connected by hand belongs to
+  // a question nobody is asking any more.
+  async chercherEnFond() {
+    const hote = ($('pair-addr') || {}).value || '';
+    if (!hote.includes(':')) return;
+    const mien = ++PAIR_FOND;
+    const ligne = $('conn-cherche');
+    if (ligne) R.texte(ligne, t('Recherche du port sur la console…'));
+    let r = {};
+    try { r = await api('/api/wifi-retrouver', {hote}); } catch (e) { r = {}; }
+    if (mien !== PAIR_FOND) return;
+    if (ligne) R.texte(ligne, r.ok ? '' : t('Port non trouvé : recopie-le ci-dessous.'));
+    if (!r.ok) return;
+    toast(r.message, 'ok');
+    this.wizStep(5);
+    await this.detect();
+    await renderConnOk();
+  },
+
   // The same search the server runs after a pairing, on demand. A search that
   // failed once is worth one press — wireless debugging may have been switched
   // on since — and the alternative is sending the reader back to the console
@@ -5193,6 +5219,7 @@ const app = {
   },
 
   async wifiConnect(addr) {
+    PAIR_FOND++;                 // retires any background search still running
     say('Connexion…');
     pairOccupe(true, t('Connexion à la console…'));
     let r;
@@ -7230,6 +7257,8 @@ async function renderConnOk() {
 // someone reads step 4 sent them back to step 1, with the address they were
 // halfway through copying still in the field but no longer on screen.
 let PAIR_ETAPE = 1;
+// Generation of the background port search — see `chercherEnFond`.
+let PAIR_FOND = 0;
 
 // The panel while something is in flight. Pairing and connecting each take a
 // few seconds, and until now nothing said so: the fields stayed live, the

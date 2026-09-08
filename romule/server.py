@@ -1910,14 +1910,18 @@ class Handler(BaseHTTPRequestHandler):
             # that was just paired.
             addr, essayees = (None, [])
             if ok:
-                # No sweep HERE. It costs up to eight seconds, and the reader
-                # is standing in front of the console with the number on its
-                # screen: making them wait for a search they could answer
-                # instantly is the wrong trade. The fast sources only — what adb
-                # already knows, mDNS, 5555 — and the sweep stays one press away
-                # on step 4, for whoever cannot read the number.
-                addr, essayees = device.relier_apres_appairage(cible,
-                                                               scruter=False)
+                # The sweep IS the answer here — the two ports really are
+                # different, and mDNS cannot reach a container — so it runs.
+                # But it starts from the pairing port and stops at the first
+                # answer: Android hands both out of the same pool moments
+                # apart, so the search usually ends within a few hundred ports
+                # rather than thirty-five thousand.
+                #
+                # A short budget all the same: whatever has not answered in
+                # three seconds is looked for again in the background, from the
+                # step that asks, where waiting costs nobody anything.
+                addr, essayees = device.relier_apres_appairage(
+                    cible, budget_scrutation=3.0)
             if addr:
                 CFG["wifi_addr"] = addr
                 config.save_config(CFG)
