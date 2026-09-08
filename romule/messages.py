@@ -487,3 +487,7 @@ SV_APPAIREE_PORT_INCONNU_LOG = (
     'Appairée, mais aucune adresse de connexion trouvée (essayées : %s).')
 SV_CONNEXION_DEMANDEE = 'Connexion sans fil demandée vers %s'
 SV_CONNEXION_REFUSEE_ADR = 'Connexion refusée vers %s : %s'
+D_CONSOLE_DEJA_RANGEE = 'Console déjà rangée : rien à déplacer.'
+D_RANGES_GUD_CONSOLE = (
+    '%d fichier(s) rangé(s) en GAMES / UPDATE / DLC sur la console.')
+ACCES_RESEAU_DESACTIVE = 'Accès réseau désactivé.'
