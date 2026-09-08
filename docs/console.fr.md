@@ -83,9 +83,18 @@ Romule le détecte, et l'affiche une fois connecté :
 ```
 
 Change-le dans **Réglages → Ta console** si ton émulateur range les jeux
-ailleurs. Le réglage **Dossier des ROMs** est le parent de toutes les autres
-plateformes, chacune dans son sous-dossier (`GBA`, `SNES`, `PS2`…). Laissé
-vide, il est déduit du dossier Switch.
+ailleurs.
+
+Le **Dossier des ROMs** — le parent de toutes les autres plateformes, chacune
+dans son sous-dossier — est cherché de la même façon, en **reconnaissant les
+noms de dossiers** : `gba`, `snes`, mais aussi `PS1` pour la PlayStation ou
+`Sega` pour la Mega Drive. Le dossier retenu est celui qui en contient le plus,
+et il en faut au moins deux : un dossier `Wii` isolé ne prouve rien.
+
+C'est ce qui évite d'avoir à taper le chemin. Le déduire du dossier Switch — son
+parent — n'était juste que sur les consoles rangeant tout côte à côte ; ailleurs,
+toutes les plateformes comptaient zéro et le sélecteur de la bibliothèque
+n'affichait plus leurs nombres.
 
 ## Une plateforme que Romule ne connaît pas
 

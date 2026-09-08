@@ -834,6 +834,55 @@ def detect_games_dir():
     return best
 
 
+def detect_roms_root(cfg=None, profondeur=4):
+    """The folder holding the OTHER platforms' folders, on the console.
+
+    The Switch folder has been detected since the beginning; the ROMs root was
+    guessed from it — the parent of `.../Switch` — and typed by hand whenever
+    that guess was wrong. Which is most of the time: a console with 133 games
+    filed under `Emulation/roms/` shows a Switch folder at
+    `/storage/emulated/0/Switch` and nothing else where Romule looked, so every
+    other platform counted zero and the selector stopped saying how many.
+
+    Recognising a folder is something `systems.platform_for_folder` already
+    does, aliases included — "PS1" for PSX, "Sega" for the Mega Drive. So the
+    answer is simply: which directory has the most children it recognises?
+
+    Two at least. One folder named `PC` or `Wii` proves nothing; two together
+    are a ROMs root.
+    """
+    if state() != "device":
+        return None
+    from . import systems
+    par_parent = {}
+    for v in volumes():
+        cmd = ("find %s -maxdepth %d -type d 2>/dev/null"
+               % (_q(v["path"]), int(profondeur)))
+        for ligne in _shell(cmd, timeout=120).splitlines():
+            chemin = ligne.strip().rstrip("/")
+            if not chemin or "/" not in chemin:
+                continue
+            parent, nom = chemin.rsplit("/", 1)
+            cle = systems.platform_for_folder(nom, cfg)
+            # `switch` is excluded on purpose: its folder is detected on its
+            # own, and counting it would make `/storage/emulated/0` win with a
+            # single match on installations that keep it apart.
+            if cle and cle != "switch":
+                par_parent.setdefault(parent, {})[cle] = nom
+    if not par_parent:
+        return None
+    # The most platforms; on a tie the shallowest path, which is the one a
+    # person would call the root.
+    parent, trouves = max(par_parent.items(),
+                          key=lambda kv: (len(kv[1]), -kv[0].count("/")))
+    if len(trouves) < 2:
+        return None
+    # The names actually seen, so `device_dir` finds "PS1" when it expects
+    # "PSX".
+    systems.remember_folders(trouves.values())
+    return parent
+
+
 def _tree_folders():
     return sorted(set(config.LAYOUT_FOLDER.values()))  # GAMES, UPDATE, DLC
 

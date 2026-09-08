@@ -1680,5 +1680,10 @@
   "Rappel mis de côté. La prochaine version le redira.": "Reminder put aside. The next version will say so.",
   "Recherche du port sur la console…": "Looking for the port on the console…",
   "Port non trouvé : recopie-le ci-dessous.": "Port not found: copy it in below.",
-  "Android ouvre deux services : celui de l'appairage, qui ne vit que le temps de la fenêtre du code, et celui de la connexion, ouvert tant que le débogage sans fil l'est. Deux services, deux ports.": "Android opens two services: the pairing one, which lives only as long as the code window is up, and the connection one, open for as long as wireless debugging is. Two services, two ports."
+  "Android ouvre deux services : celui de l'appairage, qui ne vit que le temps de la fenêtre du code, et celui de la connexion, ouvert tant que le débogage sans fil l'est. Deux services, deux ports.": "Android opens two services: the pairing one, which lives only as long as the code window is up, and the connection one, open for as long as wireless debugging is. Two services, two ports.",
+  "Racine des ROMs détectée sur la console : %s": "ROMs root detected on the console: %s",
+  "Aucune racine de ROMs trouvée : indique-la dans Réglages → Ta console.": "No ROMs root found: set it in Settings → Your console.",
+  "Chercher la racine des ROMs": "Look for the ROMs root",
+  "Le dossier parent de toutes tes plateformes sur la console (chacune y a son sous-dossier : GBA, SNES, PS2…). Romule le cherche tout seul en reconnaissant les noms de dossiers ; ce champ n'est là que pour le corriger.": "The parent folder of all your platforms on the console (each has its own subfolder there: GBA, SNES, PS2…). Romule finds it on its own by recognising folder names; this field is only here to correct it.",
+  "Chercher": "Look"
 }

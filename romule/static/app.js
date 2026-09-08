@@ -5568,6 +5568,11 @@ const app = {
       try {
         if (DATA.config && DATA.config.device_dir) await this.explore();
         else await this.detectDir();   // no folder known: we look for it
+        // The other platforms, once and quietly. Their root was guessed from
+        // the Switch folder and typed by hand when the guess was wrong — which
+        // is why every platform but the Switch counted zero in the library's
+        // selector, on a console holding a hundred games.
+        if (!(DATA.config || {}).roms_root) await this.detectRoms(true);
         await this.loadNand();         // the NAND state only means something once connected
       } finally {
         this._lectureConsole = null;
@@ -5586,6 +5591,27 @@ const app = {
     }
     return r.config;
   },
+  // The OTHER platforms' root on the console. Run right after the Switch
+  // folder, because the two answer the same question — where are the games —
+  // and only one of them was ever asked.
+  async detectRoms(silencieux) {
+    const r = await api('/api/device-detect-roms', {});
+    if (!r || !r.racine) {
+      if (!silencieux) {
+        toast(t('Aucune racine de ROMs trouvée : indique-la dans Réglages → '
+                + 'Ta console.'), 'warn');
+      }
+      return null;
+    }
+    // The setting was written server-side: the browser's copy has to catch up,
+    // and the platform counts are computed from it.
+    DATA.config = Object.assign({}, DATA.config, {roms_root: r.racine});
+    fillSettings();
+    await this.loadSystems();
+    if (!silencieux) toast(tpl('Racine des ROMs : %s', r.racine), 'ok');
+    return r.racine;
+  },
+
   async detectDir() {
     say('Recherche du dossier de jeux...');
     const r = await api('/api/device-detect-dir', {});
@@ -7944,7 +7970,7 @@ const ACTES = new Set([
   'libConfirm', 'mkTree', 'onbGo', 'onbFindConsole',
   'onbChooseFolder', 'onbCreateAccount', 'onbOpenAccess', 'onbPrev',
   'onbScan', 'onbTestSgdb', 'onbTestIgdb', 'setLang', 'toggleNotification',
-  'onbLien', 'onbAutreLien', 'wifiRetrouver',
+  'onbLien', 'onbAutreLien', 'wifiRetrouver', 'detectRoms',
   'signOut',
   'onbScanConsole', 'onbNext', 'openGame',
   'openOnConsole', 'organize', 'forgetFolder', 'forgetTransfer',

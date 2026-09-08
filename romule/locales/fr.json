@@ -1680,5 +1680,10 @@
   "Rappel mis de côté. La prochaine version le redira.": "Rappel mis de côté. La prochaine version le redira.",
   "Recherche du port sur la console…": "Recherche du port sur la console…",
   "Port non trouvé : recopie-le ci-dessous.": "Port non trouvé : recopie-le ci-dessous.",
-  "Android ouvre deux services : celui de l'appairage, qui ne vit que le temps de la fenêtre du code, et celui de la connexion, ouvert tant que le débogage sans fil l'est. Deux services, deux ports.": "Android ouvre deux services : celui de l'appairage, qui ne vit que le temps de la fenêtre du code, et celui de la connexion, ouvert tant que le débogage sans fil l'est. Deux services, deux ports."
+  "Android ouvre deux services : celui de l'appairage, qui ne vit que le temps de la fenêtre du code, et celui de la connexion, ouvert tant que le débogage sans fil l'est. Deux services, deux ports.": "Android ouvre deux services : celui de l'appairage, qui ne vit que le temps de la fenêtre du code, et celui de la connexion, ouvert tant que le débogage sans fil l'est. Deux services, deux ports.",
+  "Racine des ROMs détectée sur la console : %s": "Racine des ROMs détectée sur la console : %s",
+  "Aucune racine de ROMs trouvée : indique-la dans Réglages → Ta console.": "Aucune racine de ROMs trouvée : indique-la dans Réglages → Ta console.",
+  "Chercher la racine des ROMs": "Chercher la racine des ROMs",
+  "Le dossier parent de toutes tes plateformes sur la console (chacune y a son sous-dossier : GBA, SNES, PS2…). Romule le cherche tout seul en reconnaissant les noms de dossiers ; ce champ n'est là que pour le corriger.": "Le dossier parent de toutes tes plateformes sur la console (chacune y a son sous-dossier : GBA, SNES, PS2…). Romule le cherche tout seul en reconnaissant les noms de dossiers ; ce champ n'est là que pour le corriger.",
+  "Chercher": "Chercher"
 }
