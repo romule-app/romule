@@ -312,12 +312,42 @@ def _avec_reseau(faux, fn):
         d._run, time.sleep = vrai_run, vrai_sleep
 
 
+def test_candidats_essaie_d_abord_l_adresse_appairee():
+    """The one candidate certain to be worth a try was the only one never tried.
+
+    On a good many devices the pairing port and the connection port are the same
+    number; `candidats` stripped the port on its very first line, so the wizard
+    went on asking for a port the reader had already typed — which then worked
+    when typed a second time.
+    """
+    faux = _AdbReseau(mdns=["192.0.2.4:41111"])
+    liste = _avec_reseau(faux, lambda: d.candidats("192.0.2.4:42653"))
+    assert liste[0] == "192.0.2.4:42653", liste
+
+
+def test_relier_reussit_avec_le_port_de_l_appairage():
+    faux = _AdbReseau(mdns=[], acceptees=["192.0.2.4:42653"])
+    addr, essayees = _avec_reseau(
+        faux, lambda: d.relier_apres_appairage("192.0.2.4:42653", attente=0.4))
+    assert addr == "192.0.2.4:42653", (addr, essayees)
+    # And without ever reaching the sweep, which costs seconds.
+    assert essayees == ["192.0.2.4:42653"], essayees
+
+
+def test_candidats_ignore_une_adresse_sans_port():
+    faux = _AdbReseau(mdns=[])
+    liste = _avec_reseau(faux, lambda: d.candidats("192.0.2.4"))
+    assert liste == ["192.0.2.4:5555"], liste
+
+
 def test_candidats_prefere_la_console_appairee():
     """`discover()[0]` was taken as the answer. On a network with two consoles
     that is a coin toss, and the wrong side connects to somebody else's."""
     faux = _AdbReseau(mdns=["192.0.2.9:41000", "192.0.2.4:41111"])
     liste = _avec_reseau(faux, lambda: d.candidats("192.0.2.4:37105"))
-    assert liste[0] == "192.0.2.4:41111", liste
+    # Past the paired address itself, which always comes first.
+    reste = [a for a in liste if a != "192.0.2.4:37105"]
+    assert reste[0] == "192.0.2.4:41111", liste
 
 
 def test_candidats_reutilise_ce_qu_adb_sait_deja():
@@ -326,7 +356,8 @@ def test_candidats_reutilise_ce_qu_adb_sait_deja():
     That is what makes a reconnection after a restart ask nothing."""
     faux = _AdbReseau(liste=[("192.0.2.4:41111", "offline")], mdns=[])
     liste = _avec_reseau(faux, lambda: d.candidats("192.0.2.4:37105"))
-    assert liste[0] == "192.0.2.4:41111", liste
+    reste = [a for a in liste if a != "192.0.2.4:37105"]
+    assert reste[0] == "192.0.2.4:41111", liste
 
 
 def test_relier_apres_appairage_trouve_sans_rien_demander():
@@ -357,7 +388,8 @@ def test_relier_apres_appairage_abandonne_proprement():
         faux, lambda: d.relier_apres_appairage("192.0.2.4:37105", attente=0.4,
                                                scruter=False))
     assert addr is None, addr
-    assert essayees == ["192.0.2.4:5555"], essayees
+    # The paired address first, the default port last: nothing else is known.
+    assert essayees == ["192.0.2.4:37105", "192.0.2.4:5555"], essayees
 
 
 def test_usb_dit_ce_que_le_port_montre():
@@ -470,7 +502,8 @@ def test_le_balayage_essaie_d_abord_les_ports_voisins_de_l_appairage():
     finally:
         d.ports_ouverts = vrai
     assert addr == "192.0.2.4:37200", (addr, essayees)
-    balayes = [a for a in essayees if a != "192.0.2.4:5555"]
+    balayes = [a for a in essayees
+               if a not in ("192.0.2.4:5555", "192.0.2.4:37105")]
     assert balayes[0] == "192.0.2.4:37200", balayes
 
 

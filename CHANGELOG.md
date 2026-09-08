@@ -12,6 +12,17 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Fixed
 
+- **The one address certain to be worth trying was the only one never tried.**
+  On a good many devices the pairing port and the connection port are the same
+  number — so the address just typed is the answer. `candidats()` stripped the
+  port on its very first line and worked from the host alone, which is why the
+  wizard went on asking for a port the reader had already entered, and why
+  entering it a second time worked. Every other source in that function had
+  been written to work around an obvious one that was missing.
+
+  It is tried first now, before adb's own list, before mDNS, before 5555 and
+  long before the sweep. On the reporter's console it is the whole answer.
+
 - **A flat refusal from `adb connect` was taken as a verdict.** Right after a
   pairing, adbd on the console is re-binding its connection port and answers
   nothing for a second or two. Romule gave up there — so the same address,
