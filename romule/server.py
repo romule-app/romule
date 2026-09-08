@@ -1910,8 +1910,14 @@ class Handler(BaseHTTPRequestHandler):
             # that was just paired.
             addr, essayees = (None, [])
             if ok:
-                JOB.log(messages.SV_RECHERCHE_PORT)
-                addr, essayees = device.relier_apres_appairage(cible)
+                # No sweep HERE. It costs up to eight seconds, and the reader
+                # is standing in front of the console with the number on its
+                # screen: making them wait for a search they could answer
+                # instantly is the wrong trade. The fast sources only — what adb
+                # already knows, mDNS, 5555 — and the sweep stays one press away
+                # on step 4, for whoever cannot read the number.
+                addr, essayees = device.relier_apres_appairage(cible,
+                                                               scruter=False)
             if addr:
                 CFG["wifi_addr"] = addr
                 config.save_config(CFG)
@@ -2203,7 +2209,7 @@ class Handler(BaseHTTPRequestHandler):
                       "oidc_issuer", "oidc_client_id", "oidc_client_secret",
                       "oidc_scopes", "oidc_redirect", "oidc_emails",
                       "oidc_groupes", "oidc_admin_groupes", "emulateur",
-                      "maj_check", "schedule"):
+                      "maj_check", "maj_vue", "schedule"):
                 if k in d:
                     CFG[k] = d[k]
             # The terminal follows the interface: changing the language in the

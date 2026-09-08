@@ -1672,5 +1672,10 @@
   "Port introuvable. Vérifie que le débogage sans fil est toujours actif sur la console, puis recopie son « Adresse IP et port ».": "Port introuvable. Vérifie que le débogage sans fil est toujours actif sur la console, puis recopie son « Adresse IP et port ».",
   "Chercher le port": "Chercher le port",
   "Recherche du port…": "Recherche du port…",
-  "Port introuvable.": "Port introuvable."
+  "Port introuvable.": "Port introuvable.",
+  "Un instant…": "Un instant…",
+  "Connexion à la console…": "Connexion à la console…",
+  "Recherche du port sur la console… (jusqu'à 10 s)": "Recherche du port sur la console… (jusqu'à 10 s)",
+  "Ne plus me le rappeler": "Ne plus me le rappeler",
+  "Rappel mis de côté. La prochaine version le redira.": "Rappel mis de côté. La prochaine version le redira."
 }

@@ -476,11 +476,23 @@ def connect(addr, timeout=20, attente=8.0):
     """
     if not addr:
         return (False, messages.ADRESSE_MANQUANTE)
-    rc, out, err = _run(["connect", addr], timeout=timeout, targeted=False)
-    msg = (out + err).strip().splitlines()
-    msg = msg[-1] if msg else ""
+
+    def _tenter():
+        rc, out, err = _run(["connect", addr], timeout=timeout, targeted=False)
+        lignes = (out + err).strip().splitlines()
+        return lignes[-1] if lignes else ""
+
+    msg = _tenter()
     if "connected" not in msg.lower() or "cannot" in msg.lower():
-        return (False, msg or messages.D_LIEN_ABSENT)
+        # A flat refusal right after a pairing is the ordinary case, not a
+        # verdict: adbd on the console is re-binding its connection port, and
+        # for a second or two it answers nothing. Giving up there is what made
+        # people type the very same address again and watch it work — which is
+        # a bug report where the reader has already done the debugging.
+        time.sleep(1.2)
+        msg = _tenter()
+        if "connected" not in msg.lower() or "cannot" in msg.lower():
+            return (False, msg or messages.D_LIEN_ABSENT)
 
     etat = _attendre_pret(addr, attente)
     if etat != "device":

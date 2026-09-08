@@ -172,16 +172,20 @@ class _AdbListe:
     """
 
     def __init__(self, etat, apres_reprise=None,
-                 connect="connected to 192.0.2.4:5555"):
+                 connect="connected to 192.0.2.4:5555",
+                 adresse="192.0.2.4:5555"):
         self.etat = etat
         self.apres_reprise = apres_reprise
         self.connect = connect
+        # The address `adb devices` lists. Hard-coding it made a test connect to
+        # one address and read the state of another.
+        self.adresse = adresse
         self.appels = []
 
     def __call__(self, args, timeout=60, targeted=True):
         self.appels.append(list(args))
         if args[0] == "devices":
-            corps = ("192.0.2.4:5555\t%s\n" % self.etat) if self.etat else ""
+            corps = ("%s\t%s\n" % (self.adresse, self.etat)) if self.etat else ""
             return (0, "List of devices attached\n" + corps, "")
         if args[0] == "disconnect" and self.apres_reprise:
             self.etat = self.apres_reprise
@@ -240,6 +244,31 @@ def test_connect_refuse_quand_adb_dit_non():
     faux = _AdbListe("device", connect="cannot connect to 192.0.2.4:5555")
     ok, _ = _avec_liste(faux, lambda: d.connect("192.0.2.4:5555", attente=0.5))
     assert not ok
+    # Refused twice before being believed: once is not a verdict.
+    assert len([a for a in faux.appels if a[0] == "connect"]) == 2, faux.appels
+
+
+def test_connect_reessaie_un_refus_franc():
+    """Right after a pairing, adbd on the console is re-binding its connection
+    port and answers nothing for a second or two. Giving up there is what made
+    people type the very same address again and watch it work — a bug report in
+    which the reader has already done the debugging."""
+    class _Capricieux(_AdbListe):
+        def __init__(self):
+            _AdbListe.__init__(self, "device", adresse="192.0.2.4:42653")
+            self.essais = 0
+
+        def __call__(self, args, timeout=60, targeted=True):
+            if args[0] == "connect":
+                self.appels.append(list(args))
+                self.essais += 1
+                return (0, "failed to connect to 192.0.2.4:42653", "") \
+                    if self.essais == 1 else (0, "connected to 192.0.2.4:42653", "")
+            return _AdbListe.__call__(self, args, timeout, targeted)
+
+    faux = _Capricieux()
+    ok, _ = _avec_liste(faux, lambda: d.connect("192.0.2.4:42653", attente=0.5))
+    assert ok, "le second essai doit compter"
 
 
 class _AdbReseau:

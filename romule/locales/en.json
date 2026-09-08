@@ -1672,5 +1672,10 @@
   "Port introuvable. Vérifie que le débogage sans fil est toujours actif sur la console, puis recopie son « Adresse IP et port ».": "Port not found. Check that wireless debugging is still on, then copy the console's “IP address and Port”.",
   "Chercher le port": "Look for the port",
   "Recherche du port…": "Looking for the port…",
-  "Port introuvable.": "Port not found."
+  "Port introuvable.": "Port not found.",
+  "Un instant…": "One moment…",
+  "Connexion à la console…": "Connecting to the console…",
+  "Recherche du port sur la console… (jusqu'à 10 s)": "Looking for the port on the console… (up to 10 s)",
+  "Ne plus me le rappeler": "Stop reminding me",
+  "Rappel mis de côté. La prochaine version le redira.": "Reminder put aside. The next version will say so."
 }

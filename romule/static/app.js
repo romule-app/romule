@@ -1407,8 +1407,18 @@ async function loadUpdate() {
   const r = await api('/api/maj', null, true);
   if (!r || r.error) return;
   MAJ = r;
+  majPuce();
+}
+
+// Shown while there is a newer version AND it has not been acknowledged. The
+// pill had no way of being put down: reading the note changed nothing, so it
+// stayed on the header for as long as you chose not to upgrade — which turns an
+// invitation into a nag.
+function majPuce() {
   const b = $('majpuce');
-  if (b) b.hidden = !r.disponible;
+  if (!b) return;
+  const vue = (DATA.config || {}).maj_vue || '';
+  b.hidden = !(MAJ && MAJ.disponible) || (!!MAJ.version && vue === MAJ.version);
 }
 
 // The notes come from GitHub: this is text WRITTEN BY SOMEONE ELSE. So it
@@ -2476,6 +2486,10 @@ function renderConn(d) {
   renderLib();
   const el = $('conn');
   const i = CONN_INFO || {};
+  // How fresh the versions database is. It used to sit in the header among the
+  // console's own facts, where it answers a question nobody asked while looking
+  // at a console, and it repeated the word already there beside it. It moves
+  // into the tooltip.
   const h = DATA.stats ? DATA.stats.versions_h : null;
   const vers = h == null ? ''
     : h < 1 ? t('base des versions à l\'instant')
@@ -2485,14 +2499,14 @@ function renderConn(d) {
     const faits = [c.kind === 'usb' ? 'USB' : 'Wi-Fi'];
     if (c.depuis != null) faits.push(duree(c.depuis));
     if (i.android) faits.push('Android ' + i.android);
-    if (vers) faits.push(vers);
     el.className = 'conn on';
     el.innerHTML = '<span class="cdot on"></span>' +
       '<span class="cnom">' + esc(i.name || 'Console') + '</span>' +
       batterieHtml(BATTERIE) +
       '<span class="cfaits">' + faits.map(esc).join('<i>·</i>') + '</span>';
-    el.title = 'Connectée ' + (c.kind === 'usb' ? 'par câble USB' : 'en Wi-Fi') +
-               (c.serial ? ' — ' + c.serial : '');
+    el.title = [t('Connectée') + ' ' +
+                (c.kind === 'usb' ? t('par câble USB') : t('en Wi-Fi')),
+                c.serial, vers].filter(Boolean).join(' — ');
   } else {
     el.className = 'conn off';
     el.innerHTML = '<span class="cdot off"></span>' +
@@ -5082,7 +5096,10 @@ const app = {
     const addr = cAddr.value.trim(), code = cCode.value.trim();
     if (!addr || !code) return toast(t('Recopie l\'adresse et le code affichés sur la console.'), 'warn');
     say('Association en cours…');
-    const r = await api('/api/wifi-pair', {addr, code});
+    pairOccupe(true, t('Association en cours…'));
+    let r;
+    try { r = await api('/api/wifi-pair', {addr, code}); }
+    finally { pairOccupe(false); }
     if (r.ok && r.addr) {
       // Paired AND connected: the port was found without asking. Straight to
       // the conclusion, which shows what the console answered.
@@ -5150,7 +5167,12 @@ const app = {
   async wifiRetrouver() {
     const hote = ($('pair-addr') || {}).value || ($('conn-addr') || {}).value || '';
     say(t('Recherche du port…'));
-    const r = await api('/api/wifi-retrouver', {hote});
+    // The one that really takes seconds: it asks the console which of its ports
+    // answer. Saying so beats a frozen panel with no explanation.
+    pairOccupe(true, t('Recherche du port sur la console… (jusqu\'à 10 s)'));
+    let r;
+    try { r = await api('/api/wifi-retrouver', {hote}); }
+    finally { pairOccupe(false); }
     if (!r.ok) return toast(r.message || t('Port introuvable.'), 'warn');
     toast(r.message, 'ok');
     this.wizStep(5);
@@ -5172,7 +5194,10 @@ const app = {
 
   async wifiConnect(addr) {
     say('Connexion…');
-    const r = await api('/api/wifi-connect', addr ? {addr} : {});
+    pairOccupe(true, t('Connexion à la console…'));
+    let r;
+    try { r = await api('/api/wifi-connect', addr ? {addr} : {}); }
+    finally { pairOccupe(false); }
     if (!r.ok) return toast(r.message || t('Connexion impossible.'), 'err');
     toast(t('Console connectée sans fil.'), 'ok');
     // The panel does not vanish and it does not stay on its form either: it
@@ -5840,9 +5865,20 @@ const app = {
         ? '<div class="notesmaj">' + markdownLeger(MAJ.notes) + '</div>'
         : '<p class="lead">' + esc(t('Aucune note de version publiée.')) + '</p>',
       fermer: t('Plus tard'),
-      actions: [{libelle: t('Voir la publication'), principal: true, faire: () => {
-        if (MAJ.url) window.open(MAJ.url, '_blank', 'noopener');
-      }}],
+      actions: [
+        // Acknowledging is not refusing the update: the version stays
+        // available, the header simply stops saying so.
+        {libelle: t('Ne plus me le rappeler'), faire: async () => {
+          await app.saveField('maj_vue', MAJ.version || '');
+          majPuce();
+          // No promise of a place to find it again: there is no « About »
+          // screen, and inventing one in a toast is worse than saying
+          // nothing. What is true is that the next version will say so.
+          toast(t('Rappel mis de côté. La prochaine version le redira.'), 'ok');
+        }},
+        {libelle: t('Voir la publication'), principal: true, faire: () => {
+          if (MAJ.url) window.open(MAJ.url, '_blank', 'noopener');
+        }}],
     });
   },
 
@@ -6762,19 +6798,13 @@ function onbConsoleCorps(c) {
     // this apart from the pairing step's own success line — which says only
     // that the pairing worked, and was read as meaning everything had.
     const k = c.console || {};
-    const faits = [
-      [t('Lien'), c.device === 'wifi' ? 'Wi-Fi' : 'USB'],
-      [t('Adresse'), k.adresse || ''],
-      [t('Android'), k.android ? 'Android ' + k.android : ''],
-      [t('Batterie'), k.batterie == null ? '' : k.batterie + ' %'],
-      [t('Depuis'), k.depuis == null ? '' : duree(k.depuis)],
-    ].filter(x => x[1]);
+    const faits = consoleFaits({kind: c.device, serial: k.adresse,
+                                depuis: k.depuis},
+                               {android: k.android}, k.batterie);
     return '<div class="onblie">' +
       '<div class="onblietete"><span class="onbliecoche">✓</span>' +
         '<b>' + esc(k.nom || t('Console reliée')) + '</b></div>' +
-      '<dl class="onbfaits">' + faits.map(x =>
-        '<div><dt>' + esc(x[0]) + '</dt>' +
-        '<dd data-i18n-skip>' + esc(x[1]) + '</dd></div>').join('') + '</dl>' +
+      renderFaits(faits) +
       '<p class="onbnote">Le dossier de jeux repéré sur la console :</p>' +
       '<div class="onbchemin" data-i18n-skip>' + esc(c.device_dir || '') + '</div>' +
       '<div class="onbliebar">' +
@@ -7141,6 +7171,36 @@ function onbValeur(id) {
 // steps, same handlers, same validation, by construction.
 let PAIR_MAISON = null;
 
+// The facts a connected console answers with, in one place: the wizard's step
+// and the panel's conclusion showed the same things and drifted apart at once —
+// `battery()` returns an OBJECT, and one of the two pasted it into a string,
+// which is how « Batterie [object Object] » reached the screen.
+//
+// The label already says « Android », so the value is the version alone; and the
+// address is the one fact worth its full width, since it is what you compare
+// with the console's own screen.
+function consoleFaits(conn, infos, batterie) {
+  const c = conn || {}, i = infos || {};
+  // The opening tag is written out, not assembled: `verifier-classes.py` reads
+  // literal class attributes, and a class built from a key is a class nobody
+  // can grep — the stylesheet rule then gets reported as dead.
+  return [
+    ['<div>', t('Lien'), c.kind === 'usb' ? 'USB' : 'Wi-Fi'],
+    ['<div class="fait-adresse">', t('Adresse'), c.serial || ''],
+    ['<div>', t('Android'), i.android || ''],
+    ['<div>', t('Batterie'),
+     (batterie && batterie.pourcent != null) ? batterie.pourcent + ' %' : ''],
+    ['<div>', t('Depuis'), c.depuis == null ? '' : duree(c.depuis)],
+  ].filter(x => x[2]);
+}
+
+function renderFaits(faits) {
+  return '<dl class="onbfaits">' + faits.map(x =>
+    x[0] + '<dt>' + esc(x[1]) + '</dt>' +
+    '<dd data-i18n-skip>' + esc(x[2]) + '</dd></div>').join('') + '</dl>';
+}
+
+
 // What the console answered, in the panel's last step. Read from `/api/device`
 // rather than from the configuration: the point of showing a name and a battery
 // level is that neither can be there unless the console replied.
@@ -7156,19 +7216,10 @@ async function renderConnOk() {
       esc(t('La console ne répond plus.')) + '</p>';
     return;
   }
-  const faits = [
-    [t('Lien'), c.kind === 'usb' ? 'USB' : 'Wi-Fi'],
-    [t('Adresse'), c.serial || ''],
-    [t('Android'), i.android ? 'Android ' + i.android : ''],
-    [t('Batterie'), d.batterie == null ? '' : d.batterie + ' %'],
-    [t('Depuis'), c.depuis == null ? '' : duree(c.depuis)],
-  ].filter(x => x[1]);
   el.innerHTML =
     '<div class="onblietete"><span class="onbliecoche">✓</span><b>' +
       esc(i.name || t('Console reliée')) + '</b></div>' +
-    '<dl class="onbfaits">' + faits.map(x =>
-      '<div><dt>' + esc(x[0]) + '</dt><dd data-i18n-skip>' + esc(x[1]) +
-      '</dd></div>').join('') + '</dl>';
+    renderFaits(consoleFaits(c, i, d.batterie));
   translateDOM(el);
 }
 
@@ -7179,6 +7230,30 @@ async function renderConnOk() {
 // someone reads step 4 sent them back to step 1, with the address they were
 // halfway through copying still in the field but no longer on screen.
 let PAIR_ETAPE = 1;
+
+// The panel while something is in flight. Pairing and connecting each take a
+// few seconds, and until now nothing said so: the fields stayed live, the
+// buttons stayed pressable, and pressing twice sent a second `adb connect` into
+// the middle of the first — which adb answers by refusing both.
+function pairOccupe(oui, quoi) {
+  const p = $('pairwrap');
+  if (!p) return;
+  R.classe(p, 'occupe', oui);
+  p.querySelectorAll('input, button').forEach(el => {
+    if (oui) {
+      // Remembered per element: some are disabled for their own reasons —
+      // `#pairgo` until the fields validate — and must stay so afterwards.
+      if (el.dataset.avant === undefined) el.dataset.avant = el.disabled ? '1' : '';
+      el.disabled = true;
+    } else if (el.dataset.avant !== undefined) {
+      el.disabled = el.dataset.avant === '1';
+      delete el.dataset.avant;
+    }
+  });
+  const m = $('pairoccupe');
+  if (m) R.texte(m, oui ? (quoi || t('Un instant…')) : '');
+}
+
 
 function pairPreter(slot) {
   const panneau = $('pairwrap');
