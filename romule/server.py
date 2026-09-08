@@ -1256,6 +1256,7 @@ class Handler(BaseHTTPRequestHandler):
         # --- changent la liaison a la console
         "/api/wifi-pair",
         "/api/wifi-connect",
+        "/api/wifi-retrouver",
         "/api/wifi-switch",
         "/api/wifi-forget",
         # --- choose where the service reads and writes on the host
@@ -1909,6 +1910,7 @@ class Handler(BaseHTTPRequestHandler):
             # that was just paired.
             addr, essayees = (None, [])
             if ok:
+                JOB.log(messages.SV_RECHERCHE_PORT)
                 addr, essayees = device.relier_apres_appairage(cible)
             if addr:
                 CFG["wifi_addr"] = addr
@@ -1941,6 +1943,26 @@ class Handler(BaseHTTPRequestHandler):
                 JOB.log(langue.phrase(messages.SV_CONNEXION_REFUSEE_ADR,
                                       addr or "(vide)", msg), "warn")
             self._json({"ok": ok, "addr": addr, "message": msg})
+
+        elif p == "/api/wifi-retrouver":
+            # The same search as after a pairing, on demand. Offered because a
+            # search that failed once is worth one press: wireless debugging may
+            # have been switched on since, or the console may have rejoined the
+            # network. The alternative — sending the reader back to the console
+            # for a third number — is the step people give up on.
+            hote = (d.get("hote") or CFG.get("wifi_addr") or "").strip()
+            JOB.log(messages.SV_RECHERCHE_PORT)
+            addr, essayees = device.relier_apres_appairage(hote)
+            if addr:
+                CFG["wifi_addr"] = addr
+                config.save_config(CFG)
+                JOB.log(langue.phrase(messages.SV_CONSOLE_PRETE, addr), "ok")
+            else:
+                JOB.log(langue.phrase(messages.SV_APPAIREE_PORT_INCONNU_LOG,
+                                      ", ".join(essayees) or "-"), "warn")
+            self._json({"ok": bool(addr), "addr": addr, "found": essayees,
+                        "message": (messages.SV_CONSOLE_PRETE % addr) if addr
+                        else messages.SV_PORT_INTROUVABLE})
 
         elif p == "/api/wifi-discover":
             self._json({"found": device.discover()})

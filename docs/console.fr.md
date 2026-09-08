@@ -19,9 +19,12 @@ réglages contiennent le même assistant pas à pas. En résumé :
    quand elle se ferme. Elle affiche un code à six chiffres et une adresse du
    type `192.168.1.42:37105`.
 3. **Dans Romule** — saisis cette adresse et ce code, puis valide
-   l'appairage. Romule essaie ensuite de se connecter tout seul : un lien laissé
-   par une session précédente, ce que les consoles annoncent en mDNS, puis le
-   port 5555. Si l'une de ces pistes aboutit, il n'y a rien de plus à faire.
+   l'appairage. Romule cherche ensuite le port de connexion tout seul : un lien
+   laissé par une session précédente, ce que les consoles annoncent en mDNS, le
+   port 5555, et enfin la console elle-même — en regardant lesquels de ses ports
+   répondent. C'est cette dernière piste qui fait marcher l'appairage dans un
+   conteneur, où la découverte ne peut jamais aboutir. La recherche est bornée à
+   huit secondes.
 4. **Sur la console** *(seulement si aucune piste n'a abouti)* — ferme la
    fenêtre du code. L'écran de débogage sans fil
    affiche derrière elle **sa propre ligne « Adresse IP et port »**, et ce

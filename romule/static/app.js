@@ -5084,12 +5084,12 @@ const app = {
     say('Association en cours…');
     const r = await api('/api/wifi-pair', {addr, code});
     if (r.ok && r.addr) {
+      // Paired AND connected: the port was found without asking. Straight to
+      // the conclusion, which shows what the console answered.
       toast(r.message, 'ok');
-      // Lent to the wizard, the panel must not be hidden: the step around it
-      // would stay, empty. The wizard redraws itself on the next health read
-      // and shows the connected console.
-      if (!pairPrete()) $('pairwrap').style.display = 'none';
-      this.detect();
+      this.wizStep(5);
+      await this.detect();
+      await renderConnOk();
     } else if (r.ok) {
       // Paired, and adb still cannot say at which address to connect. The
       // server has already tried what it knows — a link left by a previous
@@ -5141,6 +5141,21 @@ const app = {
     if (/^\d{1,5}$/.test(a) && h) a = h + ':' + a;          // the port alone
     if (a.endsWith(':') && h) a = '';                       // nothing typed yet
     return /^\d{1,3}(\.\d{1,3}){3}:\d{1,5}$/.test(a) ? a : '';
+  },
+
+  // The same search the server runs after a pairing, on demand. A search that
+  // failed once is worth one press — wireless debugging may have been switched
+  // on since — and the alternative is sending the reader back to the console
+  // for a third number, which is the step people give up on.
+  async wifiRetrouver() {
+    const hote = ($('pair-addr') || {}).value || ($('conn-addr') || {}).value || '';
+    say(t('Recherche du port…'));
+    const r = await api('/api/wifi-retrouver', {hote});
+    if (!r.ok) return toast(r.message || t('Port introuvable.'), 'warn');
+    toast(r.message, 'ok');
+    this.wizStep(5);
+    await this.detect();
+    await renderConnOk();
   },
 
   async wifiConnectField() {
@@ -7825,7 +7840,7 @@ const ACTES = new Set([
   'libConfirm', 'mkTree', 'onbGo', 'onbFindConsole',
   'onbChooseFolder', 'onbCreateAccount', 'onbOpenAccess', 'onbPrev',
   'onbScan', 'onbTestSgdb', 'onbTestIgdb', 'setLang', 'toggleNotification',
-  'onbLien', 'onbAutreLien',
+  'onbLien', 'onbAutreLien', 'wifiRetrouver',
   'signOut',
   'onbScanConsole', 'onbNext', 'openGame',
   'openOnConsole', 'organize', 'forgetFolder', 'forgetTransfer',

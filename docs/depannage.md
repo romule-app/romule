@@ -121,6 +121,21 @@ Docker. Romule supplies neither the tool's keys nor any way to obtain them.
 4. Under Docker with bridge networking, USB is not visible. Use Wi-Fi pairing,
    or see [Installation](installation.md#networking).
 
+## Pairing succeeds, then a port is asked for again
+
+This is the most frequent question, and a fair one: the port you typed *was*
+right — it was the pairing one. The **connection** port is a different number,
+which only the console shows, on a different screen.
+
+Romule now looks for it on its own, and asks only as a last resort. If step 4
+appears anyway, the **Look for the port** button runs the search again: the
+console may have rejoined the network since, or wireless debugging may have just
+been switched back on.
+
+If it fails again, the console is answering on no port at all: check that
+**wireless debugging is still on** — some devices turn it off when the console
+sleeps — then copy the “IP address and Port” line from its screen.
+
 ## “Console connected”, but nothing in the header
 
 It was a lie, and it lasted. `adb connect` prints “connected to

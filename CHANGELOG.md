@@ -12,6 +12,28 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Fixed
 
+- **Pairing asked for a third number, and that is the step people gave up on.**
+  You copy an address and a code from the console's pairing dialog, press the
+  button — and the interface sends you back to the console for a different port,
+  on a different screen. It reads as "the port I typed was ignored", because
+  from where the reader sits nothing distinguishes the two.
+
+  So it is no longer asked for unless everything else has failed. After a
+  successful pairing Romule looks for the connection port itself: what adb
+  already lists for that host, what mDNS announced, port 5555 — and then, when
+  none of those answer, the host that was just paired with is asked directly by
+  seeing which of its ports reply. That last one is what makes it work inside a
+  container, where multicast does not cross the bridge and discovery can never
+  succeed.
+
+  The sweep is bounded by time rather than by scope — eight seconds, over the
+  ephemeral range Android picks from, on one host the user has just named and
+  paired with. An unbounded search in a wizard is indistinguishable from a
+  crash, so that bound has its own test.
+
+  Step 4 also gained a **Chercher le port** button: a search that failed once is
+  worth one press.
+
 - **A refresh sent the pairing panel back to its first step.** `pairPreter`
   reset it to step 1 every time the wizard lent it — and the wizard rebuilds its
   own markup on every health read, so a refresh landing while someone reads

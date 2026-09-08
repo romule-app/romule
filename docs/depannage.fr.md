@@ -128,6 +128,22 @@ aucun moyen de se les procurer.
 4. Sous Docker en réseau *bridge*, l'USB n'est pas visible. Utilise
    l'appairage Wi-Fi, ou voir [Installation](installation.md#reseau).
 
+## L'appairage réussit, puis on me redemande un port
+
+C'est la question qui revient le plus, et elle est légitime : le port saisi
+*était* le bon — celui de l'appairage. Le port de **connexion** en est un autre,
+que seule la console affiche, sur un autre écran.
+
+Romule le cherche désormais tout seul, et ne le demande qu'en dernier recours.
+Si l'étape 4 apparaît quand même, le bouton **Chercher le port** relance la
+recherche : la console a peut-être rejoint le réseau depuis, ou le débogage sans
+fil vient d'être rallumé.
+
+Si elle échoue encore, c'est que la console ne répond sur aucun port : vérifie
+que le **débogage sans fil est toujours actif** — il se coupe quand la console
+se met en veille sur certains appareils — puis recopie la ligne « Adresse IP et
+port » de son écran.
+
 ## « Console connectée », mais rien dans l'en-tête
 
 C'était un mensonge, et il a duré. `adb connect` écrit « connected to

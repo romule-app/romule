@@ -318,10 +318,15 @@ def test_relier_apres_appairage_essaie_le_port_par_defaut_en_dernier():
 
 
 def test_relier_apres_appairage_abandonne_proprement():
-    """Nothing works: the port really does have to be read off the console."""
+    """Nothing works: the port really does have to be read off the console.
+
+    `scruter=False` so the suite does not spend the sweep's budget waiting on an
+    address that answers nothing — the sweep has its own tests.
+    """
     faux = _AdbReseau(mdns=[])
     addr, essayees = _avec_reseau(
-        faux, lambda: d.relier_apres_appairage("192.0.2.4:37105", attente=0.4))
+        faux, lambda: d.relier_apres_appairage("192.0.2.4:37105", attente=0.4,
+                                               scruter=False))
     assert addr is None, addr
     assert essayees == ["192.0.2.4:5555"], essayees
 
@@ -358,6 +363,68 @@ def test_usb_le_dit_quand_le_port_n_est_pas_visible():
     finally:
         d.adb_available, config.in_container = vrai_adb, vrai_cont
         os.path.isdir = vrai_isdir
+
+
+def test_le_balayage_trouve_un_port_qui_repond():
+    """The console announces its wireless-debugging port over mDNS, and
+    multicast does not cross a Docker bridge. Asking the host directly is what
+    replaces the third number the reader was being sent to fetch."""
+    import socket as _s
+    srv = _s.socket()
+    srv.bind(("127.0.0.1", 0))
+    srv.listen(1)
+    port = srv.getsockname()[1]
+    try:
+        ouverts = d.ports_ouverts("127.0.0.1", debut=port, fin=port,
+                                  budget=2.0, delai=0.4)
+        assert ouverts == [port], ouverts
+    finally:
+        srv.close()
+
+
+def test_le_balayage_est_borne_dans_le_temps():
+    """TEST-NET-1 answers nothing, ever. The sweep is bounded by a budget and
+    not by its own size: an unbounded one is a hang, and a hang in a wizard is
+    indistinguishable from a crash."""
+    import time as _t
+    debut = _t.monotonic()
+    d.ports_ouverts("192.0.2.1", debut=30000, fin=65535, budget=1.0)
+    ecoule = _t.monotonic() - debut
+    assert ecoule < 4.0, "balayage non borne : %.1fs" % ecoule
+
+
+def test_le_balayage_ignore_un_hote_vide():
+    assert d.ports_ouverts("") == []
+
+
+def test_relier_bascule_sur_le_balayage_quand_rien_d_autre_ne_marche():
+    faux = _AdbReseau(mdns=[], acceptees=["192.0.2.4:41111"])
+    vrai = d.ports_ouverts
+    d.ports_ouverts = lambda h, **kw: [41111]
+    try:
+        addr, essayees = _avec_reseau(
+            faux, lambda: d.relier_apres_appairage("192.0.2.4:37105",
+                                                   attente=0.4))
+    finally:
+        d.ports_ouverts = vrai
+    assert addr == "192.0.2.4:41111", (addr, essayees)
+    # The default port is tried BEFORE the sweep: one round trip beats a scan.
+    assert essayees.index("192.0.2.4:5555") < essayees.index("192.0.2.4:41111")
+
+
+def test_relier_peut_se_passer_du_balayage():
+    """`scruter=False` for callers that must answer at once — a startup
+    reconnection must not hold the service for eight seconds."""
+    faux = _AdbReseau(mdns=[])
+    appelee = []
+    vrai = d.ports_ouverts
+    d.ports_ouverts = lambda h, **kw: appelee.append(h) or []
+    try:
+        _avec_reseau(faux, lambda: d.relier_apres_appairage(
+            "192.0.2.4:37105", attente=0.4, scruter=False))
+    finally:
+        d.ports_ouverts = vrai
+    assert appelee == [], appelee
 
 
 def _run():
