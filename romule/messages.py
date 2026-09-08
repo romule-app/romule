@@ -473,3 +473,15 @@ D_LIEN_NON_AUTORISE = (
 D_LIEN_ABSENT = (
     "adb a dit « connecté », puis la console n'est apparue dans aucune liste. "
     "L'adresse répond mais ce n'est pas une console en débogage sans fil.")
+
+
+# ------------------------------------------- the USB port, seen from the wizard
+USB_PRET = 'Console détectée : %s.'
+USB_AUTORISATION = "Console branchée, en attente de ton autorisation sur son écran."
+USB_AUCUNE = 'Aucune console vue sur le port USB.'
+USB_INVISIBLE = "Le port USB n'est pas visible depuis ce conteneur."
+SV_APPAIREE_PORT_INCONNU = (
+    "Appairée. Il reste son port de connexion, que seule la console "
+    'affiche.')
+SV_APPAIREE_PORT_INCONNU_LOG = (
+    'Appairée, mais aucune adresse de connexion trouvée (essayées : %s).')

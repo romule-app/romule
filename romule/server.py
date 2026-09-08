@@ -1898,20 +1898,32 @@ class Handler(BaseHTTPRequestHandler):
             ok, msg = device.pair(cible, d.get("code", "").strip())
             if not ok:
                 JOB.log(langue.phrase(messages.SV_APPAIRAGE_REFUSE, msg), "warn")
-            found = device.discover() if ok else []
-            addr = None
-            if ok and found:
-                cok, cmsg = device.connect(found[0])
-                if cok:
-                    addr = found[0]
-                    CFG["wifi_addr"] = addr
-                    config.save_config(CFG)
-                    msg = "Appairee et connectee (%s)." % addr
-                    JOB.log(langue.phrase(messages.SV_CONSOLE_PRETE, addr), "ok")
-                else:
-                    msg = "Appairee, mais connexion refusee : %s" % cmsg
-                    JOB.log(langue.phrase(messages.SV_APPAIREE_CONNEXION_KO, cmsg), "warn")
-            self._json({"ok": ok, "addr": addr, "found": found, "message": msg})
+            # Connecting is a DIFFERENT port, and only the console's screen
+            # shows it — but it does not always have to be typed. adb often
+            # knows it already: from a link left by a previous session, or from
+            # what the consoles announce over mDNS. Not looking was why a
+            # successful pairing always ended on "il reste à la connecter".
+            #
+            # The old code took `discover()[0]`, which on a network with two
+            # consoles could be the OTHER one. `candidats` filters on the host
+            # that was just paired.
+            addr, essayees = (None, [])
+            if ok:
+                addr, essayees = device.relier_apres_appairage(cible)
+            if addr:
+                CFG["wifi_addr"] = addr
+                config.save_config(CFG)
+                msg = messages.SV_CONSOLE_PRETE % addr
+                JOB.log(langue.phrase(messages.SV_CONSOLE_PRETE, addr), "ok")
+            elif ok:
+                msg = messages.SV_APPAIREE_PORT_INCONNU
+                JOB.log(langue.phrase(messages.SV_APPAIREE_PORT_INCONNU_LOG,
+                                      ", ".join(essayees) or "-"), "warn")
+            self._json({"ok": ok, "addr": addr, "found": essayees,
+                        "message": msg,
+                        # The wizard says something different when the network
+                        # itself cannot carry the announcement.
+                        "mdns": not _in_container()})
 
         elif p == "/api/wifi-connect":
             addr = (d.get("addr") or CFG.get("wifi_addr") or "").strip()
@@ -2399,6 +2411,11 @@ def _health():
             "library": len(LIB.files),
             "versions": bool(LIB.versions),
             "device": conn["kind"],
+            # What the USB port has to say, for the step that asks how the
+            # console is connected. Offering "with a cable" while saying
+            # nothing about whether a cable would be seen is asking someone to
+            # find out by failing.
+            "usb": device.usb_state(),
             "device_dir": CFG.get("device_dir", ""),
             "lan": bool(CFG.get("lan_access")),
             "token": bool(config.TOKEN),

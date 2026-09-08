@@ -12,6 +12,19 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Fixed
 
+- **A successful pairing always ended on "still to be connected".** The server
+  ran mDNS discovery and, if that found nothing, gave up — which reads as a
+  contradiction the moment the console's own dialog has just closed: the
+  pairing DID work. It now tries what adb already knows before asking: a link
+  left by a previous session on that host, whose port is still valid as long as
+  wireless debugging stays on; what mDNS announced FOR THAT HOST; then port
+  5555, for a console set up with `adb tcpip`. The old code took
+  `discover()[0]`, which on a network with two consoles could be the other one.
+
+  When nothing works — the ordinary case in a container, where multicast does
+  not cross the bridge — the step now opens by confirming the pairing, names
+  the single thing left, and says why it cannot be guessed from here.
+
 - **The console was never actually connected, and three screens said different
   things.** `adb connect` prints "connected to 192.168.1.42:5555" and exits 0
   even when the console then sits at `offline` or `unauthorized` — states
@@ -38,6 +51,14 @@ change it. Breaking changes are always listed under **Changed** with the reason.
   scripted adb, and all three fail without the fix.
 
 ### Changed
+
+- **The USB card said nothing about the USB port.** Offering "with a cable"
+  while saying nothing about whether a cable would even be seen is asking
+  someone to find out by failing — and inside a container it never is, unless
+  `/dev/bus/usb` was mapped. The card now carries one line of live state:
+  the console detected and its name, a console waiting for the prompt on its
+  own screen, nothing plugged in, or a port this machine cannot see. The card
+  the machine can actually honour is marked with a border, not a colour block.
 
 - **The console step asked nothing and showed everything.** Both ways of
   plugging a console in were stacked on one screen — a search button that finds

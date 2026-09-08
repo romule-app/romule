@@ -3,6 +3,7 @@
 Run with:  python3 -m romule.tests.test_device
 """
 
+import os
 import sys
 from pathlib import Path
 
@@ -239,6 +240,125 @@ def test_connect_refuse_quand_adb_dit_non():
     faux = _AdbListe("device", connect="cannot connect to 192.0.2.4:5555")
     ok, _ = _avec_liste(faux, lambda: d.connect("192.0.2.4:5555", attente=0.5))
     assert not ok
+
+
+class _AdbReseau:
+    """A fake adb with a device list, an mDNS answer, and connect outcomes."""
+
+    def __init__(self, liste=(), mdns=(), acceptees=()):
+        self.liste = list(liste)          # (serial, state)
+        self.mdns = list(mdns)
+        self.acceptees = set(acceptees)   # addresses that reach `device`
+        self.appels = []
+
+    def __call__(self, args, timeout=60, targeted=True):
+        self.appels.append(list(args))
+        if args[0] == "devices":
+            corps = "".join("%s\t%s\n" % (s, e) for s, e in self.liste)
+            return (0, "List of devices attached\n" + corps, "")
+        if args[0] == "mdns":
+            return (0, "".join("adb-X\t_adb-tls-connect._tcp\t%s\n" % a
+                               for a in self.mdns), "")
+        if args[0] == "connect":
+            addr = args[1]
+            if addr in self.acceptees:
+                if not any(s == addr for s, _ in self.liste):
+                    self.liste.append((addr, "device"))
+                else:
+                    self.liste = [(s, "device" if s == addr else e)
+                                  for s, e in self.liste]
+                return (0, "connected to %s" % addr, "")
+            return (0, "failed to connect to %s" % addr, "")
+        return (0, "", "")
+
+
+def _avec_reseau(faux, fn):
+    import time
+    vrai_run, vrai_sleep = d._run, time.sleep
+    d._run = faux
+    time.sleep = lambda s: None
+    try:
+        return fn()
+    finally:
+        d._run, time.sleep = vrai_run, vrai_sleep
+
+
+def test_candidats_prefere_la_console_appairee():
+    """`discover()[0]` was taken as the answer. On a network with two consoles
+    that is a coin toss, and the wrong side connects to somebody else's."""
+    faux = _AdbReseau(mdns=["192.0.2.9:41000", "192.0.2.4:41111"])
+    liste = _avec_reseau(faux, lambda: d.candidats("192.0.2.4:37105"))
+    assert liste[0] == "192.0.2.4:41111", liste
+
+
+def test_candidats_reutilise_ce_qu_adb_sait_deja():
+    """The connection port holds as long as wireless debugging stays on, so an
+    entry left by a previous session — even `offline` — carries the right port.
+    That is what makes a reconnection after a restart ask nothing."""
+    faux = _AdbReseau(liste=[("192.0.2.4:41111", "offline")], mdns=[])
+    liste = _avec_reseau(faux, lambda: d.candidats("192.0.2.4:37105"))
+    assert liste[0] == "192.0.2.4:41111", liste
+
+
+def test_relier_apres_appairage_trouve_sans_rien_demander():
+    faux = _AdbReseau(mdns=["192.0.2.4:41111"], acceptees=["192.0.2.4:41111"])
+    addr, _ = _avec_reseau(
+        faux, lambda: d.relier_apres_appairage("192.0.2.4:37105", attente=0.4))
+    assert addr == "192.0.2.4:41111", addr
+
+
+def test_relier_apres_appairage_essaie_le_port_par_defaut_en_dernier():
+    """5555 is what a console listens on after `adb tcpip 5555`, never what
+    wireless debugging picks. Worth one refused round trip, last."""
+    faux = _AdbReseau(mdns=["192.0.2.4:41111"], acceptees=["192.0.2.4:5555"])
+    addr, essayees = _avec_reseau(
+        faux, lambda: d.relier_apres_appairage("192.0.2.4:37105", attente=0.4))
+    assert addr == "192.0.2.4:5555", (addr, essayees)
+    assert essayees.index("192.0.2.4:41111") < essayees.index("192.0.2.4:5555")
+
+
+def test_relier_apres_appairage_abandonne_proprement():
+    """Nothing works: the port really does have to be read off the console."""
+    faux = _AdbReseau(mdns=[])
+    addr, essayees = _avec_reseau(
+        faux, lambda: d.relier_apres_appairage("192.0.2.4:37105", attente=0.4))
+    assert addr is None, addr
+    assert essayees == ["192.0.2.4:5555"], essayees
+
+
+def test_usb_dit_ce_que_le_port_montre():
+    import os
+    vrai = d.adb_available
+    d.adb_available = lambda: True
+    try:
+        faux = _AdbReseau(liste=[("ABC123", "device")])
+        assert _avec_reseau(faux, d.usb_state)["etat"] == "pret"
+        faux = _AdbReseau(liste=[("ABC123", "unauthorized")])
+        assert _avec_reseau(faux, d.usb_state)["etat"] == "autorisation"
+        faux = _AdbReseau(liste=[])
+        assert _avec_reseau(faux, d.usb_state)["etat"] == "aucune"
+        # A wireless link is not the USB port: it used to be the same list.
+        faux = _AdbReseau(liste=[("192.0.2.4:41111", "device")])
+        assert _avec_reseau(faux, d.usb_state)["etat"] == "aucune"
+    finally:
+        d.adb_available = vrai
+
+
+def test_usb_le_dit_quand_le_port_n_est_pas_visible():
+    """Inside a container `/dev/bus/usb` is not mapped unless the operator said
+    so. A card inviting you to plug a cable in there is an invitation to fail."""
+    from romule import config
+    vrai_adb, vrai_cont = d.adb_available, config.in_container
+    vrai_isdir = os.path.isdir
+    d.adb_available = lambda: True
+    config.in_container = lambda: True
+    os.path.isdir = lambda p: False if p == "/dev/bus/usb" else vrai_isdir(p)
+    try:
+        faux = _AdbReseau(liste=[])
+        assert _avec_reseau(faux, d.usb_state)["etat"] == "invisible"
+    finally:
+        d.adb_available, config.in_container = vrai_adb, vrai_cont
+        os.path.isdir = vrai_isdir
 
 
 def _run():

@@ -5087,11 +5087,18 @@ const app = {
       if (!pairPrete()) $('pairwrap').style.display = 'none';
       this.detect();
     } else if (r.ok) {
-      // Paired, and adb cannot say at which address to connect — the ordinary
-      // case in a container, where mDNS reaches nothing. Telling the reader to
-      // type the connection address was only half an answer: there was nowhere
-      // to type it. The panel goes to the step that asks for it.
-      toast(t('Associée. Il reste à la connecter.'), 'ok');
+      // Paired, and adb still cannot say at which address to connect. The
+      // server has already tried what it knows — a link left by a previous
+      // session, what mDNS announced for that host — so what is left really
+      // does have to be read off the console's screen.
+      //
+      // The toast used to say « Il reste à la connecter », which reads as a
+      // contradiction the moment the console's own dialog has just closed: the
+      // pairing DID work. It now names the one thing missing.
+      toast(r.message || t('Associée. Il reste son port de connexion.'), 'ok');
+      // The step says whether the announcement could have reached us at all.
+      const bloc = $('wstep4');
+      if (bloc) bloc.dataset.mdns = r.mdns ? '1' : '0';
       this.wizStep(4);
     } else toast(r.message || t('Association refusée.'), 'err');
   },
@@ -6730,23 +6737,47 @@ function onbConsoleCorps(c) {
     'Pour l\'ajouter :</p>' +
     '<div class="onbchemin" data-i18n-skip>' + esc(c.remede_adb || '') + '</div>';
 
+  // What the USB port has to say, in ONE line. Offering « with a cable » while
+  // saying nothing about whether a cable would even be seen is asking someone
+  // to find out by failing — and inside a container it never is, unless the
+  // port was mapped.
+  const usb = c.usb || {};
+  // The class names are written OUT, not assembled from a key. `verifier-
+  // classes.py` reads literal class attributes, and that is the point of it: a
+  // class built by concatenation is a class nobody can grep, and the checker
+  // then reports the stylesheet rule as dead.
+  const USB_DIT = {
+    pret: ['<span class="onbcetat onbcetat-ok">',
+           tpl('Console détectée : %s.', usb.nom || 'console')],
+    autorisation: ['<span class="onbcetat onbcetat-attn">',
+                   t('Console branchée, en attente de ton autorisation sur son '
+                     + 'écran.')],
+    aucune: ['<span class="onbcetat onbcetat-non">',
+             t('Aucune console vue sur le port USB.')],
+    invisible: ['<span class="onbcetat onbcetat-non">',
+                t('Le port USB n\'est pas visible depuis ce conteneur.')],
+  };
+  const dit = USB_DIT[usb.etat] || USB_DIT.aucune;
+  const usbEtat = dit[0] + esc(dit[1]) + '</span>';
+
   if (!ONB.lien) {
     return '<p class="onbp">Romule transfère les jeux vers une console Android ' +
       'par adb. Comment est-elle reliée à cette machine ?</p>' + adbManquant +
       '<div class="onbchoix">' +
       // USB first: it is 2 to 5 times faster, and the honest default when the
       // machine can see the port at all.
-      '<button class="onbcarte" data-act="onbLien" data-arg="usb"' +
+      (usb.etat === 'pret'
+        ? '<button class="onbcarte onbcarte-vise" data-act="onbLien" data-arg="usb"'
+        : '<button class="onbcarte" data-act="onbLien" data-arg="usb"') +
         (c.adb ? '' : ' disabled') + '>' +
         '<span class="onbcicone">🔌</span>' +
         '<b>Avec un câble</b>' +
         '<span class="onbcdesc">USB. Deux à cinq fois plus rapide, et rien à ' +
-        'appairer.</span>' +
-        (c.container
-          ? '<span class="onbcnote">Depuis un conteneur, le port USB n\'est ' +
-            'visible que s\'il a été monté.</span>' : '') +
+        'appairer.</span>' + usbEtat +
       '</button>' +
-      '<button class="onbcarte" data-act="onbLien" data-arg="wifi"' +
+      (c.container
+        ? '<button class="onbcarte onbcarte-vise" data-act="onbLien" data-arg="wifi"'
+        : '<button class="onbcarte" data-act="onbLien" data-arg="wifi"') +
         (c.adb ? '' : ' disabled') + '>' +
         '<span class="onbcicone">📶</span>' +
         '<b>Sans câble</b>' +
@@ -6764,6 +6795,7 @@ function onbConsoleCorps(c) {
       '<p class="onbp">Branche la console, active le « débogage USB » dans ses ' +
       'options pour les développeurs, puis accepte la demande qui ' +
       's\'affiche sur son écran.</p>' + adbManquant +
+      '<div class="onbetatusb">' + usbEtat + '</div>' +
       '<div class="onbliebar">' +
       '<button class="go" data-act="onbFindConsole"' +
         (c.adb ? '' : ' disabled') + '>Chercher la console</button>' +
