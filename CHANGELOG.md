@@ -10,6 +10,18 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`adb pair` started the daemon itself, and raced it.** When no adb server is
+  running, `adb pair` forks one and the pairing handshake overlaps its startup;
+  adb then reports `protocol fault (couldn't read status message): Success` —
+  where `Success` is errno, not an outcome. In a container the daemon is cold
+  after every restart, so this is the ordinary case there rather than a rare
+  one. The daemon is now started first, on its own, and a protocol fault is
+  retried once. Nothing else is retried: a wrong code is the console's own
+  answer, and repeating it would say nothing new. Four tests cover it with a
+  scripted adb, and all three fail without the fix.
+
 ### Changed
 
 - **The terminal spoke French whatever the language setting said.** `ui_lang`

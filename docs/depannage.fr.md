@@ -128,6 +128,24 @@ aucun moyen de se les procurer.
 4. Sous Docker en réseau *bridge*, l'USB n'est pas visible. Utilise
    l'appairage Wi-Fi, ou voir [Installation](installation.md#reseau).
 
+## « protocol fault (couldn't read status message): Success »
+
+Le message d'adb pendant l'appairage. Le mot « Success » à la fin est un code
+d'erreur système, pas un résultat : il ne veut rien dire ici.
+
+Romule démarre désormais le démon adb avant d'appairer, puis retente une fois —
+la cause la plus fréquente était que `adb pair` lançait lui-même le démon et
+courait contre son propre démarrage. Si le message revient malgré tout :
+
+1. le code d'appairage n'est valable **qu'une fois et quelques minutes**.
+   Ferme la fenêtre sur la console, rouvre « Associer un appareil avec un
+   code » : tu obtiens un nouveau code **et un nouveau port** ;
+2. recopie les deux, ensemble. Le port de la fenêtre d'appairage change à
+   chaque ouverture ;
+3. vérifie que la console et Romule sont sur le même réseau. Depuis un
+   conteneur en mode *bridge*, c'est le cas si le port est publié, mais un
+   réseau invité ou un Wi-Fi avec isolation des clients ne laisse rien passer.
+
 ## Repartir de zéro pour retester l'installation
 
 L'état du service — configuration, comptes, jaquettes, jeton, « l'assistant a

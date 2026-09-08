@@ -95,6 +95,73 @@ def test_parse_devices_two():
     assert sum(1 for x in devs if d.is_wireless(x["serial"])) == 1
 
 
+class _FauxAdb:
+    """Records what was run, and answers a scripted line each time."""
+
+    def __init__(self, *reponses):
+        self.reponses = list(reponses)
+        self.appels = []
+
+    def __call__(self, cmd, **kw):
+        self.appels.append(list(cmd))
+        class R:
+            stdout = self.reponses.pop(0) if self.reponses else ""
+            stderr = ""
+            returncode = 0
+        return R()
+
+
+def _avec_faux(faux, fn):
+    """Run `fn` with adb replaced. Restored whatever happens: a stub left
+    behind poisons every test after it, and the one that fails is not the one
+    at fault."""
+    import subprocess
+    vrai_run, vrai_bin = subprocess.run, d._adb_binary
+    subprocess.run = faux
+    d._adb_binary = lambda: "/faux/adb"
+    try:
+        return fn()
+    finally:
+        subprocess.run, d._adb_binary = vrai_run, vrai_bin
+
+
+def test_pair_demarre_le_demon_avant():
+    """`adb pair` starting the daemon itself is what produced
+    "protocol fault (couldn't read status message): Success" — the handshake
+    racing the daemon's own startup. In a container the daemon is cold on every
+    restart, so the race is the ordinary case there."""
+    faux = _FauxAdb("", "Successfully paired to 192.0.2.4:5555")
+    ok, _ = _avec_faux(faux, lambda: d.pair("192.0.2.4:37105", "123456"))
+    assert ok, "un appairage reussi doit etre reconnu"
+    assert faux.appels[0][1] == "start-server", faux.appels[0]
+    assert faux.appels[1][1] == "pair", faux.appels[1]
+
+
+def test_pair_reessaie_une_fois_sur_protocol_fault():
+    faux = _FauxAdb("", "error: protocol fault (couldn't read status message): Success",
+                    "Successfully paired to 192.0.2.4:5555")
+    ok, _ = _avec_faux(faux, lambda: d.pair("192.0.2.4:37105", "123456"))
+    assert ok, "la seconde tentative doit compter"
+    pairs = [a for a in faux.appels if a[1] == "pair"]
+    assert len(pairs) == 2, pairs
+
+
+def test_pair_ne_reessaie_pas_une_autre_erreur():
+    """A wrong code is the console's own answer. Repeating it would spend the
+    reader's time and say nothing new."""
+    faux = _FauxAdb("", "failed to authenticate to 192.0.2.4:37105")
+    ok, msg = _avec_faux(faux, lambda: d.pair("192.0.2.4:37105", "000000"))
+    assert not ok
+    assert len([a for a in faux.appels if a[1] == "pair"]) == 1, faux.appels
+    assert "code" in msg.lower(), msg
+
+
+def test_pair_sans_adresse_ne_lance_rien():
+    faux = _FauxAdb()
+    ok, _ = _avec_faux(faux, lambda: d.pair("", "123456"))
+    assert not ok and faux.appels == [], faux.appels
+
+
 def _run():
     fns = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     failed = 0
