@@ -1667,5 +1667,10 @@
   "Il manque le port : le nombre après les deux points, lu sur l'écran de débogage sans fil.": "Il manque le port : le nombre après les deux points, lu sur l'écran de débogage sans fil.",
   "Accès réseau désactivé.": "Accès réseau désactivé.",
   "Console déjà rangée : rien à déplacer.": "Console déjà rangée : rien à déplacer.",
-  "%d fichier(s) rangé(s) en GAMES / UPDATE / DLC sur la console.": "%d fichier(s) rangé(s) en GAMES / UPDATE / DLC sur la console."
+  "%d fichier(s) rangé(s) en GAMES / UPDATE / DLC sur la console.": "%d fichier(s) rangé(s) en GAMES / UPDATE / DLC sur la console.",
+  "Appairage réussi. Recherche du port de connexion sur la console…": "Appairage réussi. Recherche du port de connexion sur la console…",
+  "Port introuvable. Vérifie que le débogage sans fil est toujours actif sur la console, puis recopie son « Adresse IP et port ».": "Port introuvable. Vérifie que le débogage sans fil est toujours actif sur la console, puis recopie son « Adresse IP et port ».",
+  "Chercher le port": "Chercher le port",
+  "Recherche du port…": "Recherche du port…",
+  "Port introuvable.": "Port introuvable."
 }

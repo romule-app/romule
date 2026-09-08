@@ -18,9 +18,11 @@ same step-by-step assistant. In short:
    with pairing code**. Leave the window open: the code expires when it closes.
    It shows a six-digit code and an address like `192.168.1.42:37105`.
 3. **In Romule** — enter that address and that code, then confirm the
-   pairing. Romule then tries to connect on its own: a link left by a previous
-   session, what the consoles announce over mDNS, then port 5555. If one of
-   those works, there is nothing more to do.
+   pairing. Romule then looks for the connection port on its own: a link left by
+   a previous session, what the consoles announce over mDNS, port 5555, and
+   finally the console itself — by seeing which of its ports reply. That last one
+   is what makes pairing work inside a container, where discovery can never
+   succeed. The search is bounded to eight seconds.
 4. **On the console** *(only if none of them worked)* — close the code window.
    The Wireless debugging screen
    behind it shows **its own “IP address and Port” line**, and it is not the

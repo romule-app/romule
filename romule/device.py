@@ -8,7 +8,9 @@ device); everything that talks to adb goes through `_run` / `_shell`.
 import hashlib
 import os
 import re
+import select
 import shutil
+import socket
 import subprocess
 import time
 from pathlib import Path
@@ -280,6 +282,67 @@ def _hote(addr):
     return str(addr or "").rsplit(":", 1)[0]
 
 
+# The range Android picks its wireless-debugging port from, and the shape of
+# the sweep. `lot` stays under the 1024 descriptors a process is commonly
+# allowed: asking for more raises `EMFILE` and finds nothing at all. `delai` is
+# generous for a LAN, where a closed port answers with a reset in milliseconds.
+def ports_ouverts(hote, debut=30000, fin=65535, budget=8.0, lot=800,
+                  delai=0.15):
+    """The TCP ports answering on this host, within the wireless-debugging range.
+
+    Why this exists
+    ---------------
+    Android announces its wireless-debugging port over mDNS, and multicast does
+    not cross a Docker bridge. From a container the port therefore cannot be
+    discovered — and the interface had no answer but to send the reader back to
+    the console's screen for a second number, after they had already copied one.
+    That is the step people gave up on.
+
+    So we look. The host is one the user has just typed and paired with, on
+    their own network, and the range is the ephemeral one Android picks from —
+    not a sweep of anything else. It is bounded in time rather than in scope: a
+    connection that has not answered within `budget` seconds is not the console
+    someone is waiting on.
+
+    Non-blocking sockets in batches, not one connection at a time: 35 000 ports
+    checked serially at a third of a second each would take three hours.
+    """
+    if not hote:
+        return []
+    ouverts = []
+    debut_t = time.monotonic()
+    port = debut
+    while port <= fin and time.monotonic() - debut_t < budget:
+        prises = {}
+        for p in range(port, min(port + lot, fin + 1)):
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.setblocking(False)
+            try:
+                s.connect_ex((hote, p))
+                prises[s] = p
+            except OSError:
+                s.close()
+        fin_lot = time.monotonic() + delai
+        while prises and time.monotonic() < fin_lot:
+            restant = max(0.0, fin_lot - time.monotonic())
+            try:
+                _, prets, _ = select.select([], list(prises), [], restant)
+            except (OSError, ValueError):
+                break
+            for s in prets:
+                p = prises.pop(s, None)
+                try:
+                    if s.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR) == 0:
+                        ouverts.append(p)
+                except OSError:
+                    pass
+                s.close()
+        for s in prises:
+            s.close()
+        port += lot
+    return ouverts
+
+
 def candidats(hote):
     """Addresses worth trying for this console, most likely first.
 
@@ -311,22 +374,39 @@ def candidats(hote):
     return vus + memes + autres + defaut
 
 
-def relier_apres_appairage(hote, attente=6.0):
+def relier_apres_appairage(hote, attente=6.0, scruter=True):
     """Connect the console just paired, without asking for its port.
 
     Returns (address, tried) — the address that worked, or None.
 
-    Pairing and connecting are two different ports, and only the console's own
-    screen shows the second one. But it does not always have to be typed: adb
-    often knows it already. Not looking was why a successful pairing always
-    ended on "il reste à la connecter", even on a machine where the console was
-    reachable.
+    Pairing and connecting use two different ports, and only the console's own
+    screen shows the second one. Asking for it is the step people gave up on:
+    they had just copied an address and a code, and were sent back to the
+    console for a third number.
+
+    So it is not asked for unless everything else has failed. adb often knows
+    it already; and when it does not — the ordinary case in a container, where
+    mDNS reaches nothing — the host the user has just paired with is asked
+    directly, by looking at which of its ports answer.
     """
     lien = connection()
     if lien.get("kind") == "wifi" and lien.get("serial"):
         return (lien["serial"], [])
     essayees = []
     for addr in candidats(hote)[:4]:
+        essayees.append(addr)
+        ok, _ = connect(addr, attente=attente)
+        if ok:
+            return (addr, essayees)
+    if not scruter:
+        return (None, essayees)
+    # A handful at most: several ports answer on any device, and each wrong one
+    # costs an adb round trip. Beyond a dozen we are guessing rather than
+    # looking, and the reader is better served by being asked.
+    for port in ports_ouverts(_hote(hote))[:12]:
+        addr = "%s:%d" % (_hote(hote), port)
+        if addr in essayees:
+            continue
         essayees.append(addr)
         ok, _ = connect(addr, attente=attente)
         if ok:
