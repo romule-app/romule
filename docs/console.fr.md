@@ -19,13 +19,22 @@ réglages contiennent le même assistant pas à pas. En résumé :
    quand elle se ferme. Elle affiche un code à six chiffres et une adresse du
    type `192.168.1.42:37105`.
 3. **Dans Romule** — saisis cette adresse et ce code, puis valide
-   l'appairage.
-4. **Sur la console** — ferme la fenêtre du code. L'écran de débogage sans fil
+   l'appairage. Romule essaie ensuite de se connecter tout seul : un lien laissé
+   par une session précédente, ce que les consoles annoncent en mDNS, puis le
+   port 5555. Si l'une de ces pistes aboutit, il n'y a rien de plus à faire.
+4. **Sur la console** *(seulement si aucune piste n'a abouti)* — ferme la
+   fenêtre du code. L'écran de débogage sans fil
    affiche derrière elle **sa propre ligne « Adresse IP et port »**, et ce
    n'est pas la même : le port d'appairage ne sert qu'une fois. Recopie
    celle-là dans Romule, puis **Connecter la console**.
 
 Une fois connectée, la console est reconnue toute seule ensuite.
+
+!!! note "Sous Docker, l'étape 4 est la règle"
+    La console annonce son port de connexion en **mDNS**, et le multicast ne
+    traverse pas le pont Docker. Depuis un conteneur, Romule ne peut donc pas le
+    deviner : il faut le lire sur l'écran de la console. Sur une installation
+    directe, la découverte marche et l'étape 4 ne s'affiche presque jamais.
 
 !!! warning "Deux adresses, deux ports"
     C'est le point où l'on se trompe. La fenêtre du code donne un port

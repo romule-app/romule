@@ -1641,5 +1641,17 @@
   "Chercher la console": "Chercher la console",
   "La console a accepté la connexion puis l'a laissée retomber. Le port de connexion change à chaque redémarrage du débogage sans fil : relis-le sur l'écran de la console. Si c'est le bon, coupe et rallume le débogage sans fil.": "La console a accepté la connexion puis l'a laissée retomber. Le port de connexion change à chaque redémarrage du débogage sans fil : relis-le sur l'écran de la console. Si c'est le bon, coupe et rallume le débogage sans fil.",
   "La console demande ton autorisation : regarde son écran et accepte « Autoriser le débogage USB ». Coche « Toujours autoriser » pour ne plus avoir à le refaire.": "La console demande ton autorisation : regarde son écran et accepte « Autoriser le débogage USB ». Coche « Toujours autoriser » pour ne plus avoir à le refaire.",
-  "adb a dit « connecté », puis la console n'est apparue dans aucune liste. L'adresse répond mais ce n'est pas une console en débogage sans fil.": "adb a dit « connecté », puis la console n'est apparue dans aucune liste. L'adresse répond mais ce n'est pas une console en débogage sans fil."
+  "adb a dit « connecté », puis la console n'est apparue dans aucune liste. L'adresse répond mais ce n'est pas une console en débogage sans fil.": "adb a dit « connecté », puis la console n'est apparue dans aucune liste. L'adresse répond mais ce n'est pas une console en débogage sans fil.",
+  "Console détectée : %s.": "Console détectée : %s.",
+  "Console branchée, en attente de ton autorisation sur son écran.": "Console branchée, en attente de ton autorisation sur son écran.",
+  "Aucune console vue sur le port USB.": "Aucune console vue sur le port USB.",
+  "Le port USB n'est pas visible depuis ce conteneur.": "Le port USB n'est pas visible depuis ce conteneur.",
+  "Le port de connexion": "Le port de connexion",
+  "L'appairage a réussi.": "L'appairage a réussi.",
+  "Il reste un seul nombre : le port de connexion, que seule la console affiche. Ferme la fenêtre du code — derrière elle, l'écran de débogage sans fil montre sa propre ligne « Adresse IP et port ».": "Il reste un seul nombre : le port de connexion, que seule la console affiche. Ferme la fenêtre du code — derrière elle, l'écran de débogage sans fil montre sa propre ligne « Adresse IP et port ».",
+  "Ce port n'est pas celui de l'appairage, qui ne sert qu'une fois.": "Ce port n'est pas celui de l'appairage, qui ne sert qu'une fois.",
+  "Romule ne peut pas le deviner d'ici : la console l'annonce en mDNS, qui ne traverse pas le réseau d'un conteneur.": "Romule ne peut pas le deviner d'ici : la console l'annonce en mDNS, qui ne traverse pas le réseau d'un conteneur.",
+  "Associée. Il reste son port de connexion.": "Associée. Il reste son port de connexion.",
+  "Appairée. Il reste son port de connexion, que seule la console affiche.": "Appairée. Il reste son port de connexion, que seule la console affiche.",
+  "Appairée, mais aucune adresse de connexion trouvée (essayées : %s).": "Appairée, mais aucune adresse de connexion trouvée (essayées : %s)."
 }

@@ -3474,7 +3474,6 @@ body.compact .filters{margin-bottom:2px}
 .onbcarte b{font-size:14px;color:var(--text)}
 .onbcicone{font-size:22px;line-height:1}
 .onbcdesc{font-size:12px;line-height:1.5;color:var(--mute)}
-.onbcnote{font-size:11.5px;line-height:1.45;color:var(--amber)}
 
 /* The chosen path arrives; it does not appear. Which one you picked is worth
    half a second of movement, because the screen changed underneath. */
@@ -3497,3 +3496,38 @@ body.compact .filters{margin-bottom:2px}
 @media (prefers-reduced-motion:reduce){
   .onbcarte,.onbvoie,.onblie,.onbliecoche{transition:none;animation:none}
 }
+
+/* Step 4 opens by CONFIRMING the pairing. It used to open on "this is not the
+   port you just typed", which reads as a contradiction at the moment the
+   console's own dialog has just closed — the pairing did work, and saying so
+   first is what removes the doubt. */
+.wok{display:flex;align-items:center;gap:8px;margin:0 0 8px;
+  font-size:13.5px;color:var(--green)}
+.wok::before{content:'✓';display:inline-flex;align-items:center;
+  justify-content:center;width:20px;height:20px;flex:none;border-radius:50%;
+  background:color-mix(in srgb, var(--green) 22%, transparent);
+  font-size:12px;font-weight:700;
+  animation:coche .34s var(--ease) both}
+/* Only shown where the announcement genuinely cannot reach us. Elsewhere it
+   would explain a problem the reader does not have. */
+.wmdns{display:none;font-size:12px;line-height:1.55;color:var(--mute);
+  margin:8px 0 0}
+#wstep4[data-mdns="0"] .wmdns{display:block}
+@media (prefers-reduced-motion:reduce){.wok::before{animation:none}}
+
+/* The live state of the USB port, one line inside the card. A dot rather than a
+   coloured block: the card is a choice, not an alert, and three of the four
+   states are perfectly ordinary. */
+.onbcetat{display:flex;align-items:center;gap:7px;margin-top:2px;
+  font-size:11.5px;line-height:1.45;color:var(--mute)}
+.onbetatusb{margin:12px 0 0;padding:10px 12px;border-radius:10px;
+  background:var(--puits);border:1px solid var(--bord)}
+.onbetatusb .onbcetat{margin:0;font-size:12px}
+.onbcetat::before{content:'';width:7px;height:7px;flex:none;border-radius:50%;
+  background:currentColor;opacity:.85}
+.onbcetat-ok{color:var(--green)}
+.onbcetat-attn{color:var(--amber)}
+.onbcetat-non{color:var(--mute)}
+/* The card the machine can actually honour, marked without being pushy: a
+   border, not a colour block. */
+.onbcarte-vise{border-color:color-mix(in srgb, var(--amber) 55%, var(--bord))}

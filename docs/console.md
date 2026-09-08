@@ -18,13 +18,22 @@ same step-by-step assistant. In short:
    with pairing code**. Leave the window open: the code expires when it closes.
    It shows a six-digit code and an address like `192.168.1.42:37105`.
 3. **In Romule** — enter that address and that code, then confirm the
-   pairing.
-4. **On the console** — close the code window. The Wireless debugging screen
+   pairing. Romule then tries to connect on its own: a link left by a previous
+   session, what the consoles announce over mDNS, then port 5555. If one of
+   those works, there is nothing more to do.
+4. **On the console** *(only if none of them worked)* — close the code window.
+   The Wireless debugging screen
    behind it shows **its own “IP address and Port” line**, and it is not the
    same one: the pairing port is used only once. Copy that one into Romule,
    then **Connect the console**.
 
 Once connected, the console is recognised on its own from then on.
+
+!!! note "Under Docker, step 4 is the rule"
+    The console announces its connection port over **mDNS**, and multicast does
+    not cross the Docker bridge. From a container Romule therefore cannot guess
+    it: it has to be read off the console's screen. On a direct install
+    discovery works, and step 4 almost never appears.
 
 !!! warning "Two addresses, two ports"
     This is where it goes wrong. The code window gives a pairing port, good for

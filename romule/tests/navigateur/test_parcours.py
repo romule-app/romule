@@ -197,6 +197,21 @@ def main():
         t("l'etape demande d'abord comment la console est reliee",
           n.js("document.querySelectorAll('#onboard .onbcarte').length") == 2,
           n.js("document.querySelectorAll('#onboard .onbcarte').length"))
+        # The USB card says what the port shows, in one line. Offering « with a
+        # cable » while saying nothing about whether a cable would even be seen
+        # is asking someone to find out by failing.
+        t("la carte USB dit ce que le port montre",
+          n.js("!!document.querySelector('#onboard .onbcarte .onbcetat')"))
+        for etat, attendu in (("pret", "onbcetat-ok"),
+                              ("autorisation", "onbcetat-attn"),
+                              ("invisible", "onbcetat-non")):
+            vu = n.js("onbConsoleCorps({adb: true, usb: {etat: '%s', nom: 'RP5'}})"
+                      % etat)
+            t("l'etat USB %s a sa couleur" % etat, attendu in (vu or ""),
+              (vu or "")[:80])
+        t("une console vue met la carte USB en avant",
+          "onbcarte-vise" in (n.js("onbConsoleCorps({adb: true,"
+                                   " usb: {etat: 'pret', nom: 'RP5'}})") or ""))
         t("et ne montre aucun champ d'appairage avant qu'on ait choisi",
           not n.js("!!document.querySelector('#onb-pair-slot')"))
         n.js("app.onbLien('usb')")

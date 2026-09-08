@@ -382,18 +382,27 @@
             <div class="wnum">4</div>
             <div class="wbody">
               <div class="wtitle"><span class="ou ou-console">Sur la console</span>
-                L'autre adresse, celle de la connexion</div>
+                Le port de connexion</div>
               <!-- Every sentence here is ONE text node, so it is ONE catalogue
                    key. A `<b>` or an `<em>` placed inside a sentence cuts it into
                    fragments, and the emphasised words stay in French inside an
-                   English page — which is what happened to the two sentences
-                   below before this. Emphasis is allowed around a WHOLE
-                   sentence, never around a word within one. -->
-              <p>L'association est faite. Ferme la fenêtre du code : l'écran de
-                débogage sans fil affiche derrière elle sa propre ligne
+                   English page. Emphasis is allowed around a WHOLE sentence,
+                   never around a word within one. -->
+              <!-- This used to open by denying the port just typed, which
+                   reads as a contradiction at the exact moment the console's
+                   own dialog has closed: the pairing DID work. Confirming that
+                   first, then naming the one thing left, costs a line and
+                   removes the doubt. -->
+              <p class="wok">L'appairage a réussi.</p>
+              <p>Il reste un seul nombre : le port de connexion, que seule la
+                console affiche. Ferme la fenêtre du code — derrière elle,
+                l'écran de débogage sans fil montre sa propre ligne
                 « Adresse IP et port ».</p>
-              <div class="wpath"><b>Ce n'est pas le port que tu viens de saisir :
-                celui de l'appairage ne sert qu'une fois.</b></div>
+              <div class="wpath">Ce port n'est pas celui de l'appairage, qui ne
+                sert qu'une fois.</div>
+              <p class="wmdns">Romule ne peut pas le deviner d'ici : la console
+                l'annonce en mDNS, qui ne traverse pas le réseau d'un
+                conteneur.</p>
               <label class="wfield">
                 <span>Adresse IP et port, lue sur l'écran de débogage sans fil</span>
                 <input type="text" id="conn-addr" placeholder="192.168.1.42:5555"

@@ -249,6 +249,91 @@ def discover():
     return found
 
 
+def usb_state():
+    """What the USB port has to say, for the step that asks how to connect.
+
+    Four answers and no more, because the card showing them has room for one
+    line: ready (and which console), waiting for the prompt on the console's
+    screen, nothing plugged in, or a port this machine cannot see at all.
+
+    The last one is the honest answer inside a container: `/dev/bus/usb` is not
+    mapped unless the operator said so, and a card inviting you to plug a cable
+    in there is an invitation to fail.
+    """
+    from . import config
+    if not adb_available():
+        return {"etat": "invisible", "nom": ""}
+    if config.in_container() and not os.path.isdir("/dev/bus/usb"):
+        return {"etat": "invisible", "nom": ""}
+    filaires = [d for d in devices() if not is_wireless(d.get("serial") or "")]
+    pret = [d for d in filaires if d.get("state") == "device"]
+    if pret:
+        d = pret[0]
+        return {"etat": "pret",
+                "nom": d.get("model") or d.get("device") or d.get("serial") or ""}
+    if any(d.get("state") == "unauthorized" for d in filaires):
+        return {"etat": "autorisation", "nom": ""}
+    return {"etat": "aucune", "nom": ""}
+
+
+def _hote(addr):
+    return str(addr or "").rsplit(":", 1)[0]
+
+
+def candidats(hote):
+    """Addresses worth trying for this console, most likely first.
+
+    `discover()` alone is not enough, and taking its first answer is worse than
+    not answering: it may name ANOTHER console on the network. Three sources,
+    in order of how much they know:
+
+      * what adb already lists for that host — a link from a previous session,
+        possibly `offline`, whose port is still the right one. The connection
+        port holds as long as wireless debugging stays on, so this is what makes
+        a reconnection after a restart work without asking anything;
+      * what the consoles announce over mDNS, FILTERED to this host;
+      * the rest of what mDNS announced, last, for the case where the pairing
+        address and the connection address differ by more than their port.
+    """
+    hote = _hote(hote)
+    vus, annonces = [], discover()
+    for d in devices():
+        s = d.get("serial") or ""
+        if ":" in s and _hote(s) == hote and s not in vus:
+            vus.append(s)
+    memes = [a for a in annonces if _hote(a) == hote and a not in vus]
+    autres = [a for a in annonces if _hote(a) != hote]
+    # Last, and only last: 5555 is the port a console listens on when someone
+    # ran `adb tcpip 5555`, not the one wireless debugging picks — that one is
+    # random. It costs a single refused round trip when it is wrong, and it is
+    # the whole answer when it is right.
+    defaut = ["%s:5555" % hote] if hote and "%s:5555" % hote not in vus else []
+    return vus + memes + autres + defaut
+
+
+def relier_apres_appairage(hote, attente=6.0):
+    """Connect the console just paired, without asking for its port.
+
+    Returns (address, tried) — the address that worked, or None.
+
+    Pairing and connecting are two different ports, and only the console's own
+    screen shows the second one. But it does not always have to be typed: adb
+    often knows it already. Not looking was why a successful pairing always
+    ended on "il reste à la connecter", even on a machine where the console was
+    reachable.
+    """
+    lien = connection()
+    if lien.get("kind") == "wifi" and lien.get("serial"):
+        return (lien["serial"], [])
+    essayees = []
+    for addr in candidats(hote)[:4]:
+        essayees.append(addr)
+        ok, _ = connect(addr, attente=attente)
+        if ok:
+            return (addr, essayees)
+    return (None, essayees)
+
+
 def _etat_de(addr):
     """The state adb gives this address, or None when it lists it at all."""
     for d in devices():

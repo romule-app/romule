@@ -1641,5 +1641,17 @@
   "Chercher la console": "Look for the console",
   "La console a accepté la connexion puis l'a laissée retomber. Le port de connexion change à chaque redémarrage du débogage sans fil : relis-le sur l'écran de la console. Si c'est le bon, coupe et rallume le débogage sans fil.": "The console accepted the connection and then let it drop. The connection port changes every time wireless debugging restarts: read it again on the console's screen. If it is the right one, turn wireless debugging off and on again.",
   "La console demande ton autorisation : regarde son écran et accepte « Autoriser le débogage USB ». Coche « Toujours autoriser » pour ne plus avoir à le refaire.": "The console is asking for your permission: look at its screen and accept “Allow USB debugging”. Tick “Always allow” so you do not have to do it again.",
-  "adb a dit « connecté », puis la console n'est apparue dans aucune liste. L'adresse répond mais ce n'est pas une console en débogage sans fil.": "adb said “connected”, and then the console appeared in no list. The address answers, but it is not a console in wireless debugging."
+  "adb a dit « connecté », puis la console n'est apparue dans aucune liste. L'adresse répond mais ce n'est pas une console en débogage sans fil.": "adb said “connected”, and then the console appeared in no list. The address answers, but it is not a console in wireless debugging.",
+  "Console détectée : %s.": "Console detected: %s.",
+  "Console branchée, en attente de ton autorisation sur son écran.": "Console plugged in, waiting for your permission on its screen.",
+  "Aucune console vue sur le port USB.": "No console seen on the USB port.",
+  "Le port USB n'est pas visible depuis ce conteneur.": "The USB port is not visible from this container.",
+  "Le port de connexion": "The connection port",
+  "L'appairage a réussi.": "Pairing succeeded.",
+  "Il reste un seul nombre : le port de connexion, que seule la console affiche. Ferme la fenêtre du code — derrière elle, l'écran de débogage sans fil montre sa propre ligne « Adresse IP et port ».": "One number is left: the connection port, which only the console shows. Close the code window — behind it, the wireless debugging screen shows its own “IP address and Port” line.",
+  "Ce port n'est pas celui de l'appairage, qui ne sert qu'une fois.": "This port is not the pairing one, which is used only once.",
+  "Romule ne peut pas le deviner d'ici : la console l'annonce en mDNS, qui ne traverse pas le réseau d'un conteneur.": "Romule cannot guess it from here: the console announces it over mDNS, which does not cross a container's network.",
+  "Associée. Il reste son port de connexion.": "Paired. Its connection port is still needed.",
+  "Appairée. Il reste son port de connexion, que seule la console affiche.": "Paired. Its connection port is left, and only the console shows it.",
+  "Appairée, mais aucune adresse de connexion trouvée (essayées : %s).": "Paired, but no connection address found (tried: %s)."
 }
