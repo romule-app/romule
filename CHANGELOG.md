@@ -12,6 +12,24 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Fixed
 
+- **The library's selector stopped saying how many games each platform holds.**
+  It shows a count only for platforms that were found, and only the Switch ever
+  was: the ROMs root was GUESSED from the Switch folder — its parent — which is
+  right on a console that keeps everything side by side and wrong on every
+  console filing its games under `Emulation/roms`. So it had to be typed by
+  hand in the settings, and until it was, every other platform counted zero.
+
+  It is detected now, the same way the Switch folder always has been, and by
+  recognising what is already known: `systems.platform_for_folder` maps a folder
+  name to a platform, aliases included — `PS1` for the PlayStation, `Sega` for
+  the Mega Drive. The directory holding the most recognised children wins, and
+  at least two are required: a lone `Wii` folder proves nothing, and answering
+  with a wrong root would point every platform into it.
+
+  It runs on connection, silently, when the setting is empty; the settings field
+  gains a **Chercher** button beside it, and stays for correcting the answer
+  rather than supplying it.
+
 - **The sweep was switched off on the very path that needed it.** Two releases
   ago it was disabled after a pairing, to spare an eight-second wait — reasoning
   from the premise that the reader could simply read the number off the console.

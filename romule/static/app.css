@@ -3585,3 +3585,10 @@ body.compact .filters{margin-bottom:2px}
   border:2px solid color-mix(in srgb, var(--mute) 35%, transparent);
   border-top-color:var(--mute);animation:tourne .8s linear infinite}
 @media (prefers-reduced-motion:reduce){.wcherche::before{animation:none}}
+
+/* A field and the button that fills it. They belong on one line: the button
+   answers the question the field asks, and a `flex` basis inside a column would
+   become a height — which is how the login fields once grew to 260 px. */
+.setctl-duo{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.setctl-duo input{flex:1 1 220px;width:auto;min-width:0}
+.setctl-duo button{flex:0 0 auto}

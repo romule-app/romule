@@ -1257,6 +1257,9 @@ class Handler(BaseHTTPRequestHandler):
         "/api/wifi-pair",
         "/api/wifi-connect",
         "/api/wifi-retrouver",
+        # Writes `roms_root`, unlike the plain Switch-folder detection
+        # next to it, which only answers.
+        "/api/device-detect-roms",
         "/api/wifi-switch",
         "/api/wifi-forget",
         # --- choose where the service reads and writes on the host
@@ -1832,6 +1835,20 @@ class Handler(BaseHTTPRequestHandler):
 
         elif p == "/api/device-detect-dir":
             self._json({"dir": device.detect_games_dir()})
+
+        elif p == "/api/device-detect-roms":
+            # The OTHER platforms' root. Guessing it from the Switch folder —
+            # its parent — is right only when the console keeps everything side
+            # by side, and wrong on every console that files its ROMs under
+            # `Emulation/roms`. It was then typed by hand, or not at all: every
+            # platform counted zero and the library's selector stopped saying
+            # how many games each held.
+            racine = device.detect_roms_root(CFG)
+            if racine and racine != (CFG.get("roms_root") or "").strip():
+                CFG["roms_root"] = racine
+                config.save_config(CFG)
+                JOB.log(langue.phrase(messages.SV_RACINE_ROMS, racine), "ok")
+            self._json({"racine": racine})
 
         # ---- setting up access on the console
         elif p == "/api/emulateur-detecter":

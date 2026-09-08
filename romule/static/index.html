@@ -455,10 +455,15 @@
         <div class="setrow" style="margin-top:14px">
           <div class="setlab"><b>Dossier des ROMs</b>
             <span>Le dossier parent de toutes tes plateformes sur la console
-              (chacune y a son sous-dossier : GBA, SNES, PS2…).
-              Laisse vide pour le déduire du dossier Switch.</span></div>
-          <div class="setctl"><input type="text" id="s-romsroot"
-                 placeholder="/storage/…/emulation/ROMs"></div>
+              (chacune y a son sous-dossier : GBA, SNES, PS2…). Romule le
+              cherche tout seul en reconnaissant les noms de dossiers ; ce champ
+              n'est là que pour le corriger.</span></div>
+          <!-- Detecting it is the normal way; typing it is the exception. The
+               button sits with the field rather than in the analysis bar
+               below, because it answers the question the field asks. -->
+          <div class="setctl setctl-duo"><input type="text" id="s-romsroot"
+                 placeholder="/storage/…/emulation/ROMs">
+            <button class="ghost" data-act="detectRoms">Chercher</button></div>
         </div>
 
         <!-- What the tool REALLY finds on the console: the user no longer has

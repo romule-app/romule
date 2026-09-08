@@ -566,6 +566,90 @@ def test_relier_peut_se_passer_du_balayage():
     assert appelee == [], appelee
 
 
+class _AdbArbre:
+    """A fake console with a directory tree."""
+
+    def __init__(self, dossiers, volumes=("/storage/emulated/0",)):
+        self.dossiers = list(dossiers)
+        self.volumes = list(volumes)
+
+    def shell(self, cmd, timeout=60):
+        if cmd.startswith("find "):
+            racine = cmd.split()[1].strip("'")
+            return "\n".join(x for x in self.dossiers if x.startswith(racine))
+        return ""
+
+
+def _avec_arbre(arbre, fn):
+    vrai_shell, vrai_vol, vrai_etat = d._shell, d.volumes, d.state
+    d._shell = arbre.shell
+    d.volumes = lambda: [{"path": p} for p in arbre.volumes]
+    d.state = lambda: "device"
+    try:
+        return fn()
+    finally:
+        d._shell, d.volumes, d.state = vrai_shell, vrai_vol, vrai_etat
+
+
+def test_la_racine_des_roms_est_celle_qui_a_le_plus_de_plateformes():
+    """The Switch folder was detected; the ROMs root was GUESSED from it — the
+    parent of `.../Switch` — and typed by hand whenever the guess was wrong.
+    Which is most of the time: a console filing its games under `Emulation/roms`
+    made every other platform count zero, and the selector stopped saying how
+    many games each held."""
+    arbre = _AdbArbre([
+        "/storage/emulated/0",
+        "/storage/emulated/0/Switch",
+        "/storage/emulated/0/Download",
+        "/storage/emulated/0/Emulation",
+        "/storage/emulated/0/Emulation/roms",
+        "/storage/emulated/0/Emulation/roms/gba",
+        "/storage/emulated/0/Emulation/roms/snes",
+        "/storage/emulated/0/Emulation/roms/n64",
+    ])
+    vu = _avec_arbre(arbre, lambda: d.detect_roms_root({}))
+    assert vu == "/storage/emulated/0/Emulation/roms", vu
+
+
+def test_la_racine_des_roms_reconnait_les_alias():
+    """"PS1" for PSX, "Sega" for the Mega Drive: `platform_for_folder` already
+    knows them, and that is the whole reason this reads folder names rather than
+    looking for a fixed path."""
+    arbre = _AdbArbre([
+        "/sdcard", "/sdcard/roms", "/sdcard/roms/PS1", "/sdcard/roms/Sega",
+    ], volumes=("/sdcard",))
+    vu = _avec_arbre(arbre, lambda: d.detect_roms_root({}))
+    assert vu == "/sdcard/roms", vu
+
+
+def test_un_seul_dossier_ne_fait_pas_une_racine():
+    """A lone `PC` or `Wii` proves nothing, and answering with a wrong root is
+    worse than answering nothing: every platform would then point into it."""
+    arbre = _AdbArbre(["/storage/emulated/0", "/storage/emulated/0/Wii"])
+    assert _avec_arbre(arbre, lambda: d.detect_roms_root({})) is None
+
+
+def test_la_racine_des_roms_ignore_le_dossier_switch():
+    """Counting it would hand the whole of internal storage the win on any
+    console that keeps the Switch apart from the rest."""
+    arbre = _AdbArbre([
+        "/storage/emulated/0", "/storage/emulated/0/Switch",
+        "/storage/emulated/0/roms", "/storage/emulated/0/roms/gba",
+        "/storage/emulated/0/roms/psp",
+    ])
+    vu = _avec_arbre(arbre, lambda: d.detect_roms_root({}))
+    assert vu == "/storage/emulated/0/roms", vu
+
+
+def test_sans_console_la_detection_ne_devine_rien():
+    vrai = d.state
+    d.state = lambda: "offline"
+    try:
+        assert d.detect_roms_root({}) is None
+    finally:
+        d.state = vrai
+
+
 def _run():
     fns = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     failed = 0

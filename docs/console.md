@@ -80,9 +80,18 @@ Romule detects it, and shows it once connected:
 ```
 
 Change it in **Settings → Your console** if your emulator keeps games
-elsewhere. The **ROMs folder** setting is the parent of every other platform,
-each in its own subfolder (`GBA`, `SNES`, `PS2`…). Left empty, it is derived
-from the Switch folder.
+elsewhere.
+
+The **ROMs folder** — the parent of every other platform, each in its own
+subfolder — is found the same way, by **recognising folder names**: `gba`,
+`snes`, but also `PS1` for the PlayStation or `Sega` for the Mega Drive. The
+folder holding the most of them wins, and at least two are needed: a lone `Wii`
+folder proves nothing.
+
+That is what saves typing the path. Deriving it from the Switch folder — its
+parent — was right only on consoles that keep everything side by side;
+elsewhere every platform counted zero, and the library's selector stopped
+showing their numbers.
 
 ## A platform Romule does not know
 
