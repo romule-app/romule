@@ -11,6 +11,8 @@ import threading
 from datetime import datetime
 
 from . import console
+from . import langue
+from . import messages
 
 # Log: we write on every event (a message lost in a crash is worth nothing),
 # and rotate the file by size — standard practice, better than a periodic
@@ -104,7 +106,11 @@ class JobRunner:
         # it `docker logs romule` showed only the startup banner: everything
         # that happened afterwards existed for a browser only — that is, for
         # nobody on a server administered over ssh.
-        console.event(entree["m"], level, self.module)
+        # `line`, not `entree["m"]`: the buffer holds the French — the browser
+        # translates it client-side and its catalogue is keyed on French — while
+        # the terminal needs the sentence UNASSEMBLED, so it can translate the
+        # template before placing the values into it.
+        console.event(line, level, self.module)
         if self.logfile:
             try:
                 _rotate(self.logfile)
@@ -187,7 +193,7 @@ class JobRunner:
                 fn(*args)
             except Exception as exc:  # a crashing task must not freeze the interface
                 err = str(exc)
-                self.log("Erreur : %s" % exc)
+                self.log(langue.phrase(messages.J_ERREUR, exc))
             finally:
                 with self._lock:
                     self.running = False
@@ -219,7 +225,7 @@ class JobRunner:
                     notify.send(notify.TASK_EVENTS.get(label, evt),
                                 "Romule — %s" % label, resume, level)
                 except Exception as exc:      # never fatal: this is a convenience
-                    console.event("Notification impossible : %s" % exc,
+                    console.event(langue.phrase(messages.J_NOTIF_KO, exc),
                                       "warn", "notifs")
 
         threading.Thread(target=wrap, daemon=True).start()

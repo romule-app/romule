@@ -21,6 +21,7 @@ from pathlib import Path
 
 from . import config, device, profiles
 from . import messages
+from . import langue
 
 # The configuration paths come from the profile: every emulator files its
 # settings its own way, and some — Ryujinx — use a format this tool cannot
@@ -125,7 +126,7 @@ def _write(path, text, job):
     rc, out, err = device._run(["push", str(tmp), path], timeout=120)
     tmp.unlink(missing_ok=True)
     if rc != 0:
-        job.log("Ecriture impossible : %s" % ((err or out).strip().splitlines() or [""])[-1])
+        job.log(langue.phrase(messages.E_ECRITURE_KO, ((err or out).strip().splitlines() or [""])[-1]))
         return False
     device.open_permissions(path)
     return True
@@ -184,7 +185,7 @@ def write_config(changements, job, tid=None):
     n = apply_changes(data, changements, par_jeu=bool(tid))
     if not _write(path, dump(data), job):
         return False
-    job.log("%d reglage(s) applique(s) %s." % (n, ("au jeu %s" % tid) if tid else "globalement"))
+    job.log(langue.phrase(messages.E_APPLIQUES, n, ("au jeu %s" % tid) if tid else "globalement"))
     job.log(messages.EDEN_SAUVEGARDE)
     return True
 
@@ -215,8 +216,7 @@ def _drop_locales(data, job=None):
                 garde.append(("%s\\use_global" % racine, "true"))
             paires[:] = garde
     if retires and job:
-        job.log("%d reglage(s) propre(s) a l'appareil d'origine ignore(s) "
-                "(pilote GPU) : le tien reste utilise." % retires, "warn")
+        job.log(langue.phrase(messages.E_PROPRES_APPAREIL, retires), "warn")
     return retires
 
 
@@ -242,8 +242,7 @@ def write_raw(contenu, job, tid):
     if not _write(path, dump(data), job):
         return False
     surcharges = contenu.count("use_global=false")
-    job.log("Configuration appliquee : %d section(s), %d reglage(s) specifique(s)."
-            % (len(data), surcharges))
+    job.log(langue.phrase(messages.E_CONF_APPLIQUEE, len(data), surcharges))
     job.log(messages.EDEN_SAUVEGARDE)
     return True
 
@@ -297,7 +296,7 @@ def restore_backup(tid, filename, job):
         return True
     if not _write(path, text, job):
         return False
-    job.log("Configuration restauree (%s)." % filename.rsplit("_", 1)[-1])
+    job.log(langue.phrase(messages.E_CONF_RESTAUREE, filename.rsplit("_", 1)[-1]))
     return True
 
 

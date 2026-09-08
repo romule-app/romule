@@ -18,6 +18,7 @@ import urllib.request
 
 from . import config, meta, net
 from . import messages
+from . import langue
 
 BASE = "https://www.emuready.com/api/mobile/trpc"
 CACHE = config.ROOT / "_emuready-cache.json"
@@ -236,7 +237,7 @@ def sync(games, cfg, job, force=False):
         _save(c)
         job.tick()
     job.set_detail("")
-    job.log("Compatibilite mise a jour pour %d jeu(x)." % neufs)
+    job.log(langue.phrase(messages.EM_COMPAT, neufs))
     return c
 
 

@@ -211,8 +211,13 @@ def main(argv):
     # behind it, and that is exactly what the token model turned out to be.
     t("aucun jeton n'est engendre", not jeton_des_journaux(), journaux[-300:])
     t("aucun secret ne voyage dans une adresse", "?token=" not in journaux)
+    # In ENGLISH: `ui_lang` defaults to `en`, and the terminal follows it. It
+    # used to write French into `docker logs` whatever the setting said — read
+    # by the one person who cannot open the interface. The French is still
+    # accepted here, for a run pinned with ROMULE_LANG=fr.
     t("le terminal previent que rien n'est protege",
-      "PERSONNE N'A ENCORE CHOISI" in journaux, journaux[-400:])
+      "NOBODY HAS CHOSEN" in journaux.upper()
+      or "PERSONNE N'A ENCORE CHOISI" in journaux, journaux[-400:])
 
     code, sante = http("/api/health")
     t("depuis l'hote, le service repond", code == 200, code)

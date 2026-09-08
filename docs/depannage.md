@@ -121,6 +121,32 @@ Docker. Romule supplies neither the tool's keys nor any way to obtain them.
 4. Under Docker with bridge networking, USB is not visible. Use Wi-Fi pairing,
    or see [Installation](installation.md#networking).
 
+## Starting over to test the install from scratch
+
+The service's state — configuration, accounts, cover art, token, "the assistant
+has been seen" — lives in the named volume `romule-donnees`. **Your games are
+not in it**: they are in the folder you mounted on `/library`, and nothing here
+touches it.
+
+```sh
+docker compose down -v          # stops AND removes the data volume
+docker compose up               # comes back up on a fresh install
+```
+
+The `-v` is the whole point: `docker compose down` on its own keeps the volume,
+and you find the assistant already done, the access already chosen, the accounts
+already there.
+
+To see what is about to go before doing it:
+
+```sh
+docker volume ls | grep romule
+```
+
+If you mounted a host folder instead of the named volume, `-v` leaves it alone —
+that is a `docker-compose.yml` choice, and the folder then has to be emptied by
+hand.
+
 ## Pairing succeeded, but the console will not connect
 
 Nearly always the same cause: the address entered to connect is the one from the

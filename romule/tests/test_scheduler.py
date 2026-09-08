@@ -56,8 +56,14 @@ class Fake:
         return self.now
 
     def make(self):
+        # `str()` on the way in, exactly as `JobRunner.log` does: a sentence
+        # carrying values arrives unassembled — template on one side, values on
+        # the other — so that the terminal can translate it before placing them.
+        # A double that stored the object instead of its text would be testing
+        # something the real logger never sees.
         return scheduler.Scheduler(self.read, self.save_state, self.start,
-                                   self.logged.append, self.clock)
+                                   lambda m: self.logged.append(str(m)),
+                                   self.clock)
 
 
 def test_presets_are_read():
@@ -116,8 +122,10 @@ def test_a_running_task_is_skipped_not_queued():
     f = Fake(schedule={"scan": "hourly"}, busy=True)
     started = f.make().tick()
     t("nothing is started while a task runs", started == [], started)
+    # The French is the catalogue KEY, so it is what the logger holds; the
+    # terminal translates it on the way out.
     t("the skip is said out loud",
-      any("skipped" in m for m in f.logged), f.logged)
+      any("ignorée" in m for m in f.logged), f.logged)
     # And the due time is NOT remembered as run: the next pass, once free, must
     # still do it. A skipped night that also counts as done is a night lost.
     t("the skipped task stays due", not f.cfg["schedule_state"].get("scan"))

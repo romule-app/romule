@@ -38,6 +38,7 @@ working exactly as before.
 | `ROMULE_CHROME` | — | Chrome binary for the browser test suite |
 | `ROMULE_SCRYPT_PARALLELE` | `2` | How many password hashes may run at once. scrypt deliberately costs ~128 MiB each; without a cap, a handful of parallel sign-in attempts would exhaust the server's memory and turn a protection into a lever. |
 | `ROMULE_LOG` | `normal` | How much Romule writes to the **terminal** — `quiet`, `normal`, `verbose`, `debug`, `json`. Unrelated to the Log panel in the interface: this is what `docker logs` and a systemd journal show. See [Reading the logs](#reading-the-logs). |
+| `ROMULE_LANG` | the interface's **Language** setting | The language of the **terminal**: the startup banner, the log, and the `romule` commands. It follows the interface by default — so English on a fresh install. This variable wins, for the case where the interface is precisely what cannot be reached. See [Reading the logs](#reading-the-logs). |
 | `NO_COLOR` | — | Any value turns off colour, per the [no-color.org](https://no-color.org) convention. Colour is also off automatically when the output is not a terminal. |
 | `ROMULE_ADB` | `adb` on the `PATH` | Path to the `adb` binary. A path that does not exist means “no console”, which is how the test suite stays independent of what is plugged in. |
 
@@ -87,6 +88,12 @@ The **Log panel** in the interface tells whoever is looking at their library
 what it is currently doing. The **terminal** is where you find out why a
 service will not start, on a machine where nobody can open a browser — a
 container, a NAS, an ssh session. `ROMULE_LOG` controls the second one only.
+
+The terminal speaks the **same language as the interface**. It did not: it wrote
+French whatever the setting said, while that setting defaults to `en` — an
+English interface whose `docker logs` came out in French, read by exactly the
+person who cannot open the interface. `ROMULE_LANG=fr` forces French without
+changing the interface.
 
 | Value | What you get |
 |---|---|

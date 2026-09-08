@@ -128,6 +128,31 @@ aucun moyen de se les procurer.
 4. Sous Docker en réseau *bridge*, l'USB n'est pas visible. Utilise
    l'appairage Wi-Fi, ou voir [Installation](installation.md#reseau).
 
+## Repartir de zéro pour retester l'installation
+
+L'état du service — configuration, comptes, jaquettes, jeton, « l'assistant a
+déjà été vu » — vit dans le volume nommé `romule-donnees`. **Tes jeux n'y sont
+pas** : ils sont dans le dossier que tu as monté sur `/library`, et rien ici
+n'y touche.
+
+```sh
+docker compose down -v          # arrête ET supprime le volume de données
+docker compose up               # redémarre sur une installation neuve
+```
+
+Le `-v` est tout le sujet : `docker compose down` seul garde le volume, et tu
+retrouves l'assistant déjà fait, l'accès déjà choisi, les comptes déjà là.
+
+Pour vérifier ce qui va disparaître avant de le faire :
+
+```sh
+docker volume ls | grep romule
+```
+
+Si tu as monté un dossier de l'hôte au lieu du volume nommé, `-v` ne le touche
+pas — c'est un choix de `docker-compose.yml`, et il faut alors vider ce dossier
+à la main.
+
 ## L'appairage a réussi, mais la console ne se connecte pas
 
 Presque toujours la même cause : l'adresse saisie pour se connecter est celle de

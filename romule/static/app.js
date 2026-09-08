@@ -6238,7 +6238,11 @@ const app = {
         '<div class="auditc a-' + c.niveau + '">'
         + '<span class="auditn">' + esc(libelle[c.niveau]) + '</span>'
         + '<div><b>' + esc(c.titre) + '</b>'
-        + '<div class="odesc">' + esc(c.constat) + '</div>'
+        // The model when the finding carries numbers: `constat` is already
+        // assembled, and an assembled sentence is not a catalogue key.
+        + '<div class="odesc">' + esc(c.constat_modele
+            ? tpl(c.constat_modele, ...(c.constat_valeurs || []))
+            : c.constat) + '</div>'
         + (c.remede ? '<div class="oaide">' + esc(c.remede) + '</div>' : '')
         + '</div></div>').join('')
       + '</div>';

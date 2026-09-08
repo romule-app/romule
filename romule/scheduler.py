@@ -36,6 +36,8 @@ still look at in the morning.
 
 import threading
 import time
+from . import langue
+from . import messages
 
 # The schedulable tasks: the name stored in the configuration, and the label
 # shown in the interface. Each one is REVERSIBLE — it reads, files, converts or
@@ -147,7 +149,7 @@ class Scheduler:
                 # Skipped, not queued. Saying so matters: without this line the
                 # only trace of a missed night is a `schedule_state` that did
                 # not move, which nobody reads.
-                self.log("Scheduled task skipped, another is running: %s" % name)
+                self.log(langue.phrase(messages.SC_IGNOREE, name))
         if started:
             self.save_state(state)
         return started
@@ -165,7 +167,7 @@ class Scheduler:
                 state[name] = self.clock()
                 started.append(name)
             else:
-                self.log("Startup task skipped, another is running: %s" % name)
+                self.log(langue.phrase(messages.SC_DEMARRAGE_IGNOREE, name))
         if started:
             self.save_state(state)
         return started
@@ -183,7 +185,7 @@ class Scheduler:
                 try:
                     self.tick()
                 except Exception as exc:
-                    self.log("Scheduler error: %s" % exc)
+                    self.log(langue.phrase(messages.SC_ERREUR, exc))
 
         self._thread = threading.Thread(target=loop, name="scheduler",
                                         daemon=True)

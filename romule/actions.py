@@ -5,8 +5,8 @@ import subprocess
 import zipfile
 from pathlib import Path
 
-from . import (config, convert, device, edenconf, emuready, integrity, nand,
-               saves, systems, titleid, trash)
+from . import (config, convert, device, edenconf, emuready, integrity, langue,
+               nand, saves, systems, titleid, trash)
 from . import messages
 
 
@@ -97,7 +97,7 @@ def _extract_one(archive, job):
                             shutil.copyfileobj(src, out)
                         n += 1
         except (zipfile.BadZipFile, OSError) as exc:
-            job.log("  Archive illisible : %s" % exc)
+            job.log(langue.phrase(messages.A_ARCHIVE_ILLISIBLE, exc))
             return (False, 0)
         return (True, n)
 
@@ -122,7 +122,7 @@ def _extract_one(archive, job):
                 shutil.move(str(p), str(config.IMPORT / p.name))
                 n += 1
     except (OSError, subprocess.SubprocessError) as exc:
-        job.log("  Extraction impossible : %s" % exc)
+        job.log(langue.phrase(messages.A_EXTRACTION_KO, exc))
         ok = False
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
@@ -141,12 +141,12 @@ def _extract_archives(job):
             break
         for a in archives:
             done.add(str(a))
-            job.log("Decompression de %s..." % a.name)
+            job.log(langue.phrase(messages.A_DECOMPRESSION, a.name))
             ok, n = _extract_one(a, job)
             if not ok:
                 continue  # error / no tool: leave it in _import
             if n:
-                job.log("  %d element(s) extrait(s)." % n)
+                job.log(langue.phrase(messages.A_ELEMENTS_EXTRAITS, n))
                 trash.move([str(a)], "archive decompressee", job.log)
             else:
                 job.log(messages.ARCHIVE_SANS_JEU)
@@ -205,26 +205,26 @@ def assign_imports(cfg, job, assignments):
     for chemin, cle in (assignments or {}).items():
         src = Path(chemin)
         if not src.is_file() or str(src.parent) != str(config.IMPORT):
-            job.log("Ignore (hors du depot) : %s" % src.name, "warn")
+            job.log(langue.phrase(messages.A_HORS_DEPOT, src.name), "warn")
             continue
         try:
             dest_dir = systems.local_dir(cle, cfg)
         except Exception:
-            job.log("Plateforme inconnue pour %s : %s" % (src.name, cle), "warn")
+            job.log(langue.phrase(messages.A_PLATEFORME_INCONNUE, src.name, cle), "warn")
             continue
         dest_dir.mkdir(parents=True, exist_ok=True)
         dest = dest_dir / src.name
         if dest.exists():
-            job.log("Deja present : %s" % src.name, "warn")
+            job.log(langue.phrase(messages.A_DEJA_PRESENT, src.name), "warn")
             continue
         try:
             shutil.move(str(src), str(dest))
-            job.log("Range : %s -> %s/" % (src.name, systems.get_cfg(cle, cfg)["folder"]))
+            job.log(langue.phrase(messages.A_RANGE, src.name, systems.get_cfg(cle, cfg)["folder"]))
             ranges.append(str(dest))
             n += 1
         except OSError as exc:
-            job.log("Impossible de ranger %s : %s" % (src.name, exc), "error")
-    job.log("%d fichier(s) classe(s) a la main." % n)
+            job.log(langue.phrase(messages.A_RANGEMENT_KO, src.name, exc), "error")
+    job.log(langue.phrase(messages.A_CLASSES_MAIN, n))
     _entries_for_new(ranges, cfg, job)
     return n
 
@@ -235,11 +235,11 @@ def _entries_for_new(paths, cfg, job):
     nouveaux = [Path(c) for c in (paths or [])]
     if not nouveaux:
         return
-    job.log("Recherche des fiches de %d nouveau(x) jeu(x)…" % len(nouveaux))
+    job.log(langue.phrase(messages.A_FICHES_RECHERCHE, len(nouveaux)))
     faits = 0
     for p in nouveaux:
         if not job.checkpoint():
-            job.log("Fiches interrompues (%d/%d)." % (faits, len(nouveaux)), "warn")
+            job.log(langue.phrase(messages.A_FICHES_INTERROMPUES, faits, len(nouveaux)), "warn")
             return
         job.set_detail(p.name[:48])
         tid = titleid.from_name(p.name)
@@ -252,9 +252,9 @@ def _entries_for_new(paths, cfg, job):
             covers.fetch(titleid.tid_base(tid) if tid else "", p.name, cfg)
             faits += 1
         except Exception as exc:
-            job.log("Fiche indisponible pour %s : %s" % (p.name[:40], exc), "warn")
+            job.log(langue.phrase(messages.A_FICHE_INDISPO, p.name[:40], exc), "warn")
     job.set_detail("")
-    job.log("%d fiche(s) recuperee(s) sur %d." % (faits, len(nouveaux)))
+    job.log(langue.phrase(messages.A_FICHES_RECUP, faits, len(nouveaux)))
 
 
 def _explain_ambiguous(items, job):
@@ -267,12 +267,9 @@ def _explain_ambiguous(items, job):
         cands = item.get("candidats") or []
         ext = Path(item["name"]).suffix or "(sans extension)"
         if len(cands) > 1:
-            job.log("%s reste dans le dépôt : l'extension %s est partagée par %s. "
-                    "Range-le dans le dossier voulu."
-                    % (item["name"], ext, ", ".join(cands[:5])), "warn")
+            job.log(langue.phrase(messages.A_DEPOT_AMBIGU, item["name"], ext, ", ".join(cands[:5])), "warn")
         else:
-            job.log("%s reste dans le dépôt : aucune plateforme ne reconnaît %s."
-                    % (item["name"], ext), "warn")
+            job.log(langue.phrase(messages.A_DEPOT_INCONNU, item["name"], ext), "warn")
 
 
 def import_files(lib, cfg, job, convert_after=True):
@@ -310,14 +307,14 @@ def import_files(lib, cfg, job, convert_after=True):
         outdir.mkdir(parents=True, exist_ok=True)
         dest = outdir / src.name
         if dest.exists():
-            job.log("Deja present, ignore : %s" % src.name)
+            job.log(langue.phrase(messages.A_DEJA_IGNORE, src.name))
             continue
         try:
             shutil.move(str(src), str(dest))
-            job.log("Range : %s -> %s/" % (src.name, dest_sub))
+            job.log(langue.phrase(messages.A_RANGE, src.name, dest_sub))
             moved.append(str(dest))
         except OSError as exc:
-            job.log("Impossible de ranger %s : %s" % (src.name, exc))
+            job.log(langue.phrase(messages.A_RANGEMENT_KO, src.name, exc))
 
     # ROMs from other consoles sitting in _import: each goes to its folder
     for s in systems.list_all(cfg):          # hand-added platforms included
@@ -337,10 +334,10 @@ def import_files(lib, cfg, job, convert_after=True):
                 continue
             try:
                 shutil.move(str(p), str(dest))
-                job.log("Range : %s -> %s/" % (p.name, s["folder"]))
+                job.log(langue.phrase(messages.A_RANGE, p.name, s["folder"]))
                 moved.append(str(dest))
             except OSError as exc:
-                job.log("Impossible de ranger %s : %s" % (p.name, exc))
+                job.log(langue.phrase(messages.A_RANGEMENT_KO, p.name, exc))
 
     # What is left that we could not place: say so, rather than let it sit in
     # _import unexplained. An extension like .iso is claimed by seven
@@ -357,11 +354,11 @@ def import_files(lib, cfg, job, convert_after=True):
     _auto_nand(lib, cfg, job, moved)
     todo = [p for p in moved if Path(p).suffix.lower() in config.COMPRESSED]
     if convert_after and todo:
-        job.log("Conversion des %d fichier(s) importe(s)..." % len(todo))
+        job.log(langue.phrase(messages.A_CONVERSION_IMPORTES, len(todo)))
         convert.run(todo, cfg["jobs"], convert.default_threads(),
                     True, lib.maxkey, job)
     else:
-        job.log("Import termine (%d fichier(s))." % len(moved))
+        job.log(langue.phrase(messages.A_IMPORT_TERMINE, len(moved)))
     lib.scan(log=job.log)
 
 
@@ -415,16 +412,16 @@ def import_system_files(lib, cfg, job, sys_key):
             continue
         dest = dest_dir / p.name
         if dest.exists():
-            job.log("Deja present, ignore : %s" % p.name)
+            job.log(langue.phrase(messages.A_DEJA_IGNORE, p.name))
             continue
         try:
             shutil.move(str(p), str(dest))
-            job.log("Range : %s -> %s/" % (p.name, s["folder"]))
+            job.log(langue.phrase(messages.A_RANGE, p.name, s["folder"]))
             moved += 1
         except OSError as exc:
-            job.log("Impossible de ranger %s : %s" % (p.name, exc))
+            job.log(langue.phrase(messages.A_RANGEMENT_KO, p.name, exc))
     _clean_import_dirs()
-    job.log("%d fichier(s) range(s) dans %s." % (moved, s["name"]))
+    job.log(langue.phrase(messages.A_RANGES_DANS, moved, s["name"]))
 
 
 # --------------------------------------------------------------- integrite / saves
@@ -443,7 +440,7 @@ def verify_library(lib, cfg, job, deep=False, sys_key=None, budget_gb=None):
     if not files:
         job.log(messages.RIEN_A_VERIFIER)
         return
-    job.log("Verification de %d fichier(s)%s…" % (len(files), " (approfondie)" if deep else ""))
+    job.log(langue.phrase(messages.A_VERIF, len(files), " (approfondie)" if deep else ""))
     integrity.check(files, job, deep,
                     budget_bytes=int(budget_gb * 2 ** 30) if budget_gb else None)
 
@@ -464,12 +461,11 @@ def sync_meta(lib, cfg, job):
         job.log(messages.FICHES_SWITCH_EN_CACHE)
     job.set_total(len(a_faire))
     if a_faire:
-        job.log("Recuperation de %d fiche(s) Switch en %s..."
-                % (len(a_faire), cfg.get("meta_lang", "fr")))
+        job.log(langue.phrase(messages.A_FICHES_SWITCH, len(a_faire), cfg.get("meta_lang", "fr")))
     ok = 0
     for tid in a_faire:
         if not job.checkpoint():
-            job.log("Interrompu (%d/%d)." % (ok, len(a_faire)))
+            job.log(langue.phrase(messages.A_INTERROMPU, ok, len(a_faire)))
             return
         d = meta.fetch(tid, cfg)
         if d and d.get("name"):
@@ -478,7 +474,7 @@ def sync_meta(lib, cfg, job):
         job.tick()
     if a_faire:
         job.set_detail("")
-        job.log("%d fiche(s) Switch recuperee(s) sur %d." % (ok, len(a_faire)))
+        job.log(langue.phrase(messages.A_FICHES_SWITCH_BILAN, ok, len(a_faire)))
 
     # The other platforms have no title ID: their official title comes from
     # SteamGridDB, the same source as the cover art.
@@ -495,7 +491,7 @@ def sync_meta(lib, cfg, job):
     # A cached entry WITHOUT a summary is not a finished entry: the first ones
     # were created before IGDB was configured, and treating them as done
     # condemned those games never to have a description.
-    langue = (cfg.get("meta_lang") or "fr").strip().lower()
+    code_langue = (cfg.get("meta_lang") or "fr").strip().lower()
     avec_resume = igdb.configure(cfg)
 
     def a_completer(name):
@@ -506,23 +502,21 @@ def sync_meta(lib, cfg, job):
             return True
         # An English summary while the user reads French: the entry is
         # incomplete, even though it looks filled in.
-        return (langue not in ("", "en")
+        return (code_langue not in ("", "en")
                 and bool(f.get("resume"))
-                and not str(f.get("source_resume", "")).endswith(langue))
+                and not str(f.get("source_resume", "")).endswith(code_langue))
 
     tous = list(dict.fromkeys(noms))
     restants = [n for n in tous if a_completer(n)]
     if not restants:
-        job.log("Fiches des autres plateformes : les %d sont completes." % len(tous))
+        job.log(langue.phrase(messages.A_AUTRES_COMPLETES, len(tous)))
         return
     job.set_total(len(restants))
-    job.log("%d jeu(x) sur les autres plateformes : recherche du titre%s…"
-            % (len(restants), " et du résumé" if avec_resume else ""))
+    job.log(langue.phrase(messages.A_AUTRES_RECHERCHE, len(restants), " et du résumé" if avec_resume else ""))
     trouves = resumes = 0
     for n in restants:
         if not job.checkpoint():
-            job.log("Interrompu : %d fiche(s) traitee(s) sur %d."
-                    % (trouves, len(restants)), "warn")
+            job.log(langue.phrase(messages.A_INTERROMPU_FICHES, trouves, len(restants)), "warn")
             return
         d = meta.entry_for_name(n, cfg)
         if d and d.get("nom"):
@@ -530,18 +524,16 @@ def sync_meta(lib, cfg, job):
             resumes += 1 if d.get("resume") else 0
             job.set_detail(d["nom"][:48])
         else:
-            job.log("Aucune fiche trouvee : %s" % n[:64], "warn")
+            job.log(langue.phrase(messages.A_AUCUNE_FICHE, n[:64]), "warn")
         job.tick()
     job.set_detail("")
     dans_la_langue = sum(
         1 for n in restants
         if str((meta.entry_for_name(n, cfg, network=False) or {}).get("source_resume", ""))
-        .endswith(langue))
-    job.log("%d titre(s) sur %d, dont %d avec un resume (%d en %s)."
-            % (trouves, len(restants), resumes, dans_la_langue, langue))
+        .endswith(code_langue))
+    job.log(langue.phrase(messages.A_TITRES_BILAN, trouves, len(restants), resumes, dans_la_langue, code_langue))
     if avec_resume and resumes < trouves:
-        job.log("%d jeu(x) sans resume : IGDB ne les connait pas sous ce nom."
-                % (trouves - resumes), "warn")
+        job.log(langue.phrase(messages.A_SANS_RESUME, trouves - resumes), "warn")
 
 
 def analyse_device(lib, cfg, job):
@@ -561,7 +553,7 @@ def analyse_device(lib, cfg, job):
 
     plateformes = systems.list_all(cfg)
     job.set_total(len(plateformes))
-    job.log("Analyse de %s (%d plateforme(s) connues)." % (racine, len(plateformes)))
+    job.log(langue.phrase(messages.A_ANALYSE_DE, racine, len(plateformes)))
     trouvees, total, vides = 0, 0, []
     for s in plateformes:
         if not job.checkpoint():
@@ -576,13 +568,13 @@ def analyse_device(lib, cfg, job):
         if fichiers:
             trouvees += 1
             total += len(fichiers)
-            job.log("  %-20s %4d jeu(x)  %s" % (s["name"], len(fichiers), dossier))
+            job.log(langue.phrase(messages.A_LIGNE_PLATEFORME, s["name"], len(fichiers), dossier))
         else:
             vides.append(s["name"])
         job.tick()
 
     job.set_detail("")
-    job.log("%d plateforme(s) avec des jeux, %d jeu(x) au total." % (trouvees, total))
+    job.log(langue.phrase(messages.A_PLATEFORMES_BILAN, trouvees, total))
     if vides:
         job.log("Sans jeu (dossier absent ou vide) : %s" % ", ".join(vides[:12])
                 + (" …" if len(vides) > 12 else ""), "warn")
@@ -598,16 +590,16 @@ def apply_eden_profile(lib, cfg, job, name, tid=None):
     """Applique un profil enregistre a la config globale ou a un jeu."""
     prof = edenconf.profile_read(name)
     if not prof:
-        job.log("Profil introuvable : %s" % name)
+        job.log(langue.phrase(messages.A_PROFIL_INTROUVABLE, name))
         return
-    job.log("Application du profil « %s »…" % name)
+    job.log(langue.phrase(messages.A_PROFIL_APPLIQUE, name))
     edenconf.write_config(prof.get("valeurs", {}), job, tid or None)
 
 
 def emuready_sync(lib, cfg, job, force=False):
     """Fetch the games' compatibility status from EmuReady."""
     bases = [f for f in lib.files if f["type"] == "BASE" and f["tid"]]
-    job.log("Consultation d'EmuReady pour %d jeu(x)…" % len(bases))
+    job.log(langue.phrase(messages.A_EMUREADY, len(bases)))
     emuready.sync(bases, cfg, job, force)
 
 
@@ -616,12 +608,12 @@ def emuready_apply(lib, cfg, job, listing_id, tid):
     try:
         contenu = emuready.config_of(listing_id)
     except Exception as exc:
-        job.log("Configuration indisponible : %s" % exc)
+        job.log(langue.phrase(messages.A_CONF_INDISPO, exc))
         return
     if not contenu.strip():
         job.log(messages.RAPPORT_SANS_CONFIG)
         return
-    job.log("Configuration recuperee (%d octets)." % len(contenu))
+    job.log(langue.phrase(messages.A_CONF_RECUP, len(contenu)))
     edenconf.write_raw(contenu, job, tid)
 
 
@@ -646,8 +638,7 @@ def _auto_nand(lib, cfg, job, paths):
     restants = [c for c in cibles if etats.get(c, {}).get("etat") in ("absent", "partiel")]
     if not restants:
         return
-    job.log("Activation automatique de %d mise(s) a jour / DLC dans l'emulateur."
-            % len(restants))
+    job.log(langue.phrase(messages.A_ACTIVATION_AUTO, len(restants)))
     nand.install(restants, job)
 
 
@@ -663,27 +654,26 @@ def deploy_games(lib, cfg, job, to_send, to_enable, configs=None):
     etapes = 2 + (1 if configs else 0)
 
     if to_send:
-        job.log("Etape 1/%d — copie de %d fichier(s) vers la console." % (etapes, len(to_send)))
+        job.log(langue.phrase(messages.A_ETAPE1_COPIE, etapes, len(to_send)))
         device.push(to_send, cfg["device_dir"], job,
                     cfg.get("verify_mode", "size"), cfg.get("push_layout", "type"),
                     cfg.get("incremental", True), _known_types(lib))
     else:
-        job.log("Etape 1/%d — aucun fichier a copier." % etapes)
+        job.log(langue.phrase(messages.A_ETAPE1_RIEN, etapes))
     if not job.checkpoint():
         return
 
     if to_enable:
-        job.log("Etape 2/%d — activation de %d mise(s) a jour / DLC dans l'emulateur."
-                % (etapes, len(to_enable)))
+        job.log(langue.phrase(messages.A_ETAPE2_ACTIVATION, etapes, len(to_enable)))
         nand.install(to_enable, job)
     else:
-        job.log("Etape 2/%d — rien a activer." % etapes)
+        job.log(langue.phrase(messages.A_ETAPE2_RIEN, etapes))
     if not job.checkpoint():
         return
 
     poses = 0
     if configs:
-        job.log("Etape 3/%d — reglages recommandes pour %d jeu(x)." % (etapes, len(configs)))
+        job.log(langue.phrase(messages.A_ETAPE3_REGLAGES, etapes, len(configs)))
         for c in configs:
             if not job.checkpoint():
                 return
@@ -691,16 +681,15 @@ def deploy_games(lib, cfg, job, to_send, to_enable, configs=None):
             try:
                 contenu = emuready.config_of(c.get("listing_id"))
             except Exception as exc:
-                job.log("  %s : configuration indisponible (%s)" % (tid, exc), "warn")
+                job.log(langue.phrase(messages.A_CONF_INDISPO_DE, tid, exc), "warn")
                 continue
             if not contenu.strip():
-                job.log("  %s : rapport sans configuration." % tid, "warn")
+                job.log(langue.phrase(messages.A_RAPPORT_SANS_CONF, tid), "warn")
             elif edenconf.write_raw(contenu, job, tid):
                 poses += 1
 
     if configs and poses < len(configs):
-        job.log("Termine, mais %d reglage(s) sur %d n'ont pas pu etre appliques."
-                % (len(configs) - poses, len(configs)), "warn")
+        job.log(langue.phrase(messages.A_REGLAGES_PARTIELS, len(configs) - poses, len(configs)), "warn")
     else:
         job.log(messages.CONSOLE_A_JOUR, "ok")
 
@@ -745,13 +734,13 @@ def reorganize_local(lib, cfg, job):
         dst.parent.mkdir(parents=True, exist_ok=True)
         try:
             shutil.move(str(src), str(dst))
-            job.log("Range : %s -> %s/" % (src.name, folder))
+            job.log(langue.phrase(messages.A_RANGE, src.name, folder))
             moved += 1
         except (OSError, shutil.Error) as exc:
-            job.log("Echec (%s) : %s" % (src.name, exc))
+            job.log(langue.phrase(messages.A_ECHEC, src.name, exc))
         job.tick()
     _clean_empty_dirs()
-    job.log("%d fichier(s) range(s) en GAMES / UPDATE / DLC." % moved)
+    job.log(langue.phrase(messages.A_RANGES_GUD, moved))
     lib.scan(log=job.log)
 
 

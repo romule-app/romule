@@ -165,8 +165,14 @@ t("et l'acces n'est pas encore choisi",
   sante["checks"].get("acces_choisi") is False, sante["checks"])
 
 # Said out loud: an open installation that says nothing is a trap.
+#
+# In ENGLISH, because that is what `ui_lang` defaults to and therefore what the
+# ordinary installation prints. The terminal used to speak French whatever the
+# setting said — an English interface writing French to `docker logs`, read by
+# the one person who cannot open the interface.
 t("le terminal previent que rien n'est protege",
-  "PERSONNE N'A ENCORE CHOISI" in sortie, sortie[-400:])
+  "NOBODY HAS CHOSEN" in sortie.upper() or "PERSONNE N'A ENCORE CHOISI" in sortie,
+  sortie[-400:])
 t("et dit ou repondre", "assistant" in sortie.lower(), sortie[-400:])
 # No secret is invented any more.
 t("aucun jeton n'est engendre", not jeton_de(sortie) and "?token=" not in sortie)

@@ -15,6 +15,7 @@ from pathlib import Path
 
 from . import config, nsztool
 from . import messages
+from . import langue
 
 REGISTRY = config.ROOT / "_integrity.json"
 
@@ -105,8 +106,7 @@ def check(files, job, deep=False, budget_bytes=None):
                 break
             kept.append(f)
             running += f.get("size", 0)
-        job.log("Verification tournante : %d fichier(s) sur %d, %.1f Go."
-                % (len(kept), len(files), running / 2 ** 30))
+        job.log(langue.phrase(messages.I_TOURNANTE, len(kept), len(files), running / 2 ** 30))
         files = kept
     job.set_total(len(files))
     changed, missing, verified = [], [], 0
@@ -119,7 +119,7 @@ def check(files, job, deep=False, budget_bytes=None):
         rel = f.get("rel") or p.name
         if not p.is_file():
             missing.append(rel)
-            job.log("MANQUANT : %s" % rel)
+            job.log(langue.phrase(messages.I_MANQUANT, rel))
             job.tick()
             continue
 
@@ -133,11 +133,11 @@ def check(files, job, deep=False, budget_bytes=None):
         replaced = old and old.get("mtime") is not None and old["mtime"] != mtime
         if old and old.get("sha1") != digest and old.get("size") == size and not replaced:
             changed.append(rel)
-            job.log("CORROMPU : contenu different, taille ET date inchangees — %s" % rel)
+            job.log(langue.phrase(messages.I_CORROMPU, rel))
         elif old and old.get("sha1") != digest and replaced:
-            job.log("Remplace depuis la derniere verification : %s" % rel)
+            job.log(langue.phrase(messages.I_REMPLACE, rel))
         elif old and old.get("sha1") != digest:
-            job.log("Modifie (taille differente, normal si tu l'as replaced) : %s" % rel)
+            job.log(langue.phrase(messages.I_MODIFIE, rel))
         else:
             verified += 1
 
@@ -151,13 +151,12 @@ def check(files, job, deep=False, budget_bytes=None):
             ok, msg = deep_verify(p)
             if not ok:
                 changed.append(rel)
-                job.log("Conteneur invalide : %s (%s)" % (rel, msg))
+                job.log(langue.phrase(messages.I_CONTENEUR, rel, msg))
         job.tick()
 
     _save(reg)
     job.set_detail("")
-    job.log("Verification terminee : %d fichier(s) sains, %d suspect(s), %d manquant(s)."
-            % (verified, len(changed), len(missing)))
+    job.log(langue.phrase(messages.I_TERMINEE, verified, len(changed), len(missing)))
     if changed:
         job.log("A recuperer a nouveau : " + ", ".join(changed[:10]))
     return {"verified": verified, "changed": changed, "missing": missing}

@@ -12,6 +12,30 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Changed
 
+- **The terminal spoke French whatever the language setting said.** `ui_lang`
+  defaults to `en` — "the language of a public self-hosted project" — so the
+  ordinary installation showed an English interface and wrote French to
+  `docker logs`, read by exactly the person who cannot open the interface.
+
+  It now speaks the same language, through the same catalogues the browser
+  uses. 258 sentences moved into `messages.py`, accented, and both catalogues
+  gained their English. `ROMULE_LANG` overrides the setting, for the case where
+  the interface is precisely what cannot be reached.
+
+  The subtle half is interpolation. `"Rangé : %s" % nom` produces a string no
+  catalogue can hold, so such a sentence could never be translated and nothing
+  said so. `langue.Phrase` keeps the template and its values apart until the
+  last moment: the terminal translates then assembles, while `str()` still
+  gives the French — which the browser's journal and the log file need, since
+  the browser's own catalogue is keyed on French. `verifier-journal.py` now
+  reads every call site and refuses both shapes: a sentence that is not a
+  catalogue key, and one assembled before translation. It found one the sweep
+  had missed on its first run.
+
+  The `romule` commands went the same way, and their paragraphs are no longer
+  hard-wrapped by hand: cuts chosen for the French landed mid-clause in any
+  other language, so `cli.dire()` translates first and wraps last.
+
 - **Pairing said what to do next, with nowhere to do it.** The Wi-Fi assistant
   stopped at three steps: it announced « Associée. Saisis maintenant son adresse
   avec le port de connexion » and offered no field to type it in. The panel now
