@@ -12,11 +12,38 @@ import json
 import os
 import shutil
 import sys
+import textwrap
 import time
 from pathlib import Path
 
-from . import __version__, config, console, convert, device, scan, versions
+from . import __version__, config, console, convert, device, langue, scan, versions
+from . import messages
 from .jobs import JobRunner
+
+
+def dire(phrase, *valeurs):
+    """One paragraph: translated, then wrapped for the terminal.
+
+    The paragraphs used to be printed one hard-wrapped line at a time. Two
+    things followed. Each line was its own catalogue key, so a sentence cut at
+    62 characters had to be translated in pieces no translator could reorder;
+    and the cuts, chosen for the French, landed mid-clause in any other
+    language. Here the sentence is whole and the wrapping happens last, where
+    it belongs.
+
+    A line starting with spaces is a command to type: it is printed as it is,
+    because rewrapping it would break the thing the reader is meant to copy.
+    """
+    texte = langue.t(phrase)
+    if valeurs:
+        texte = texte % valeurs
+    for para in texte.split("\n"):
+        if not para.strip():
+            print()
+        elif para.startswith(" ") or para.startswith("\t"):
+            print(para)
+        else:
+            print(textwrap.fill(para, 78))
 
 
 def _print_log(msg):
@@ -77,7 +104,7 @@ def cmd_push(args):
     paths = [f["path"] for f in lib.files
              if f["ext"] in ("nsp", "xci") and _match(f, args.only)]
     if not paths:
-        print("Aucun .nsp/.xci a envoyer.")
+        dire(messages.CLI_RIEN_A_ENVOYER)
         return
     print("Envoi vers %s (appareil : %s)"
           % (cfg["device_dir"], device.state() or "non connecte"))
@@ -103,7 +130,7 @@ def cmd_device(args):
     inf = device.info()
     if not inf.get("connected"):
         print("Aucune console prete (etat : %s)." % (inf.get("state") or "non connectee"))
-        print("Branche le handheld en USB et autorise le debogage.")
+        dire(messages.CLI_BRANCHE_USB)
         return
     print("Console : %s  (Android %s, serie %s)"
           % (inf["name"], inf["android"], inf["serial"]))
@@ -152,15 +179,12 @@ def cmd_access(args):
         cfg["acces_choisi"] = True
         cfg["auth_mode"] = "aucun"
         config.save_config(cfg)
-        print("Acces ouvert SANS MOT DE PASSE.")
+        dire(messages.CLI_ACCES_OUVERT)
         if etait:
-            print("L'authentification (%s) est DESACTIVEE." % mode)
-            print("Les comptes existent toujours : `romule access close` la")
-            print("remet en service.")
+            dire(messages.CLI_AUTH_DESACTIVEE, mode)
+            dire(messages.CLI_COMPTES_INTACTS)
         print()
-        print("Tout appareil capable de joindre cette adresse a tous les")
-        print("droits — y compris derriere un proxy inverse. Redemarre le")
-        print("service pour que ce soit pris en compte.")
+        dire(messages.CLI_TOUS_LES_DROITS)
         return
 
     if action == "close":
@@ -173,17 +197,16 @@ def cmd_access(args):
         if not auth.enabled(cfg) and accounts.count():
             cfg["auth_mode"] = "interne"
         if not auth.enabled(cfg):
-            print("Refuse : aucun compte ni SSO utilisable.")
+            dire(messages.CLI_REFUS_SANS_COMPTE)
             print()
-            print("Fermer l'acces maintenant enfermerait tout le monde dehors,")
-            print("toi compris. Cree d'abord un compte :")
+            dire(messages.CLI_ENFERMER_DEHORS)
             print("    romule user create toi@exemple.fr")
             return 1
         cfg["lan_access"] = False
         cfg["acces_choisi"] = True
         config.save_config(cfg)
-        print("Acces sans mot de passe desactive.")
-        print("Il faut desormais se connecter. Redemarre le service.")
+        dire(messages.CLI_ACCES_FERME)
+        dire(messages.CLI_SE_CONNECTER)
         return
 
     protege = []
@@ -192,19 +215,18 @@ def cmd_access(args):
     if (cfg.get("jeton_auto") or "").strip() or config.TOKEN:
         protege.append("jeton")
     if cfg.get("lan_access"):
-        print("Acces : OUVERT sans mot de passe.")
+        dire(messages.CLI_ETAT_OUVERT)
     elif protege:
-        print("Acces : protege par %s." % ", ".join(protege))
+        dire(messages.CLI_ETAT_PROTEGE, ", ".join(protege))
     elif not cfg.get("acces_choisi"):
-        print("Acces : PERSONNE N'A ENCORE CHOISI.")
+        dire(messages.CLI_ETAT_NON_CHOISI)
         print()
-        print("L'installation repond a tout le monde jusqu'a ce que l'etape")
-        print("« Ton acces » de l'assistant soit renseignee.")
+        dire(messages.CLI_REPOND_A_TOUS)
     else:
-        print("Acces : cette machine seulement.")
+        dire(messages.CLI_ETAT_LOCAL)
     print()
-    print("  romule access open     ouvrir sans mot de passe")
-    print("  romule access close    exiger une connexion")
+    dire(messages.CLI_AIDE_OPEN)
+    dire(messages.CLI_AIDE_CLOSE)
 
 
 def cmd_token(args):
@@ -231,28 +253,24 @@ def cmd_token(args):
         # about is a lock-out.
         cfg["jeton_annonce"] = False
         config.save_config(cfg)
-        print("Nouveau jeton d'acces :")
+        dire(messages.CLI_JETON_NOUVEAU)
         print()
         print("  %s" % jeton)
         print()
-        print("L'ancien ne fonctionne plus. Les navigateurs qui l'avaient")
-        print("retenu redemanderont celui-ci au prochain chargement.")
-        print("Redemarre le service pour qu'il le prenne en compte.")
+        dire(messages.CLI_JETON_ANCIEN_MORT)
         return
 
     jeton = (cfg.get("jeton_auto") or "").strip() or config.env("TOKEN", "").strip()
     if not jeton:
-        print("Aucun jeton d'acces.")
+        dire(messages.CLI_JETON_AUCUN)
         print()
-        print("Il n'en est engendre un que lorsque le service ecoute sur le")
-        print("reseau sans compte ni SSO — sur cette machine seulement, il n'y")
-        print("a rien a proteger. `romule token reset` en pose un quand meme.")
+        dire(messages.CLI_JETON_QUAND)
         return
-    print("Jeton d'acces :")
+    dire(messages.CLI_JETON_ACTUEL)
     print()
     print("  %s" % jeton)
     print()
-    print("Colle-le dans l'ecran d'accueil de l'interface.")
+    dire(messages.CLI_JETON_OU_COLLER)
 
 
 def cmd_apikey(args):
@@ -267,28 +285,27 @@ def cmd_apikey(args):
 
     if action == "create":
         fiche, cle = apikeys.create(args.nom)
-        print("Cle creee : %s" % fiche["nom"])
+        dire(messages.CLI_CLE_CREEE, fiche["nom"])
         print()
         print("  %s" % cle)
         print()
         # It is only stored hashed: not a stylistic precaution, but what makes
         # a leak of the state file harmless. The price is that it cannot be
         # shown again, and that has to be said here.
-        print("Note-la maintenant : elle n'est conservee que sous forme")
-        print("d'empreinte et ne pourra pas etre reaffichee.")
+        dire(messages.CLI_CLE_NOTE_LA)
         return
 
     if action == "revoke":
         if apikeys.revoke(args.id):
-            print("Cle %s revoquee." % args.id)
+            dire(messages.CLI_CLE_REVOQUEE, args.id)
         else:
-            print("Aucune cle active avec cet identifiant : %s" % args.id)
+            dire(messages.CLI_CLE_INCONNUE, args.id)
             sys.exit(1)
         return
 
     cles = apikeys.list_all(with_revoked=bool(getattr(args, "all", False)))
     if not cles:
-        print("Aucune cle. `romule apikey create <nom>` en cree une.")
+        dire(messages.CLI_CLE_AUCUNE)
         return
     print("%-18s %-14s %-24s %s" % ("ID", "PREFIXE", "NOM", "DERNIER USAGE"))
     for k in cles:
@@ -330,28 +347,26 @@ def _check_root():
         try:
             config.ROOT.mkdir(parents=True, exist_ok=True)
         except OSError as exc:
-            print("Impossible de creer le dossier de donnees : %s" % exc)
+            dire(messages.CLI_ROOT_CREATION_KO, exc)
             print("    %s" % config.ROOT)
             sys.exit(1)
     if not os.access(config.ROOT, os.W_OK):
-        print("Le dossier de donnees n'est pas inscriptible :")
+        dire(messages.CLI_ROOT_LECTURE_SEULE)
         print("    %s" % config.ROOT)
-        print("Romule y ecrit sa configuration, ses comptes et ses journaux.")
+        dire(messages.CLI_ROOT_A_QUOI)
         if config.in_container():
-            print("En conteneur, c'est presque toujours l'identifiant du")
-            print("proprietaire : l'image tourne sous 1000:1000.")
+            dire(messages.CLI_ROOT_CONTENEUR)
             print("    chown -R 1000:1000 <le dossier de l'hote>")
-            print("ou adapte `user:` dans docker-compose.yml a ton identifiant")
-            print("(`id -u` / `id -g`). Un volume nomme evite la question.")
+            dire(messages.CLI_ROOT_CONTENEUR_SUITE)
         sys.exit(1)
     souci = config.root_looks_wrong()
     if not souci:
         return
-    print("Le dossier de donnees designe %s :" % souci)
+    dire(messages.CLI_ROOT_DESIGNE, souci)
     print("    %s" % config.ROOT)
-    print("Indique un dossier de donnees explicite :")
+    dire(messages.CLI_ROOT_EXPLICITE)
     print("    ROMULE_ROOT=/chemin/vers/les/donnees python3 -m romule")
-    print("Le dossier des JEUX, lui, se choisit dans l'interface.")
+    dire(messages.CLI_ROOT_JEUX_AILLEURS)
     sys.exit(1)
 
 
@@ -486,7 +501,7 @@ def cmd_user(args):
     if action == "list":
         liste = accounts.list_all()
         if not liste:
-            print("Aucun compte. Le premier cree sera administrateur.")
+            dire(messages.CLI_AUCUN_COMPTE_PREMIER)
             return
         print("%-34s %-20s %-6s %-6s %s"
               % ("EMAIL", "NOM", "ADMIN", "2FA", "DERNIERE CONNEXION"))
@@ -510,7 +525,7 @@ def cmd_user(args):
         try:
             u = accounts.create(args.email, mdp, args.nom or "")
         except ValueError as exc:
-            print("Refuse : %s" % exc)
+            dire(messages.CLI_REFUSE, exc)
             return 1
         print("Compte cree : %s%s" % (u["email"], "  (administrateur)" if premier else ""))
         if premier:
@@ -522,10 +537,9 @@ def cmd_user(args):
             cfg["lan_access"] = False
             cfg["acces_choisi"] = True
             config.save_config(cfg)
-            print("Authentification interne activee. Redemarre le service.")
+            dire(messages.CLI_AUTH_INTERNE_ACTIVEE)
         elif not auth.enabled(config.load_config()):
-            print("Note : l'authentification n'est pas active "
-                  "(Reglages > Acces, ou `romule access close`).")
+            dire(messages.CLI_AUTH_INACTIVE)
         return
 
     if action == "passwd":
@@ -535,23 +549,23 @@ def cmd_user(args):
         try:
             u = accounts.reset_password(args.email, mdp)
         except ValueError as exc:
-            print("Refuse : %s" % exc)
+            dire(messages.CLI_REFUSE, exc)
             return 1
-        print("Mot de passe repose pour %s." % u["email"])
+        dire(messages.CLI_MDP_REPOSE, u["email"])
         # Two consequences the user needs to know BEFORE wondering why they
         # were logged out everywhere.
-        print("Toutes les sessions ouvertes de ce compte sont invalidees.")
-        print("Le compteur d'echecs et le blocage eventuel sont remis a zero.")
+        dire(messages.CLI_SESSIONS_INVALIDEES)
+        dire(messages.CLI_COMPTEUR_REMIS)
         return
 
     if action == "admin":
         try:
             u = accounts.by_email(args.email)
         except ValueError as exc:
-            print("Refuse : %s" % exc)
+            dire(messages.CLI_REFUSE, exc)
             return 1
         if not u:
-            print("Aucun compte avec cette adresse.")
+            dire(messages.CLI_COMPTE_INCONNU)
             return 1
         vise = not args.retirer
         try:
@@ -559,39 +573,39 @@ def cmd_user(args):
         except ValueError as exc:
             # "The last administrator cannot be removed": an instance nobody
             # can administer is repaired by hand, in a file.
-            print("Refuse : %s" % exc)
+            dire(messages.CLI_REFUSE, exc)
             return 1
-        print("%s %s administrateur."
-              % (u["email"], "est desormais" if vise else "n'est plus"))
+        dire(messages.CLI_EST_ADMIN if vise else messages.CLI_NEST_PLUS_ADMIN,
+             u["email"])
         return
 
     if action == "totp-off":
         try:
             avait = accounts.disable_totp(args.email)
         except ValueError as exc:
-            print("Refuse : %s" % exc)
+            dire(messages.CLI_REFUSE, exc)
             return 1
         if avait:
-            print("Second facteur retire pour %s." % args.email)
+            dire(messages.CLI_2FA_RETIRE, args.email)
         else:
-            print("Ce compte n'avait pas de second facteur actif.")
+            dire(messages.CLI_2FA_ABSENT)
         return
 
     if action == "rm":
         u = accounts.by_email(args.email)
         if not u:
-            print("Aucun compte avec cette adresse.")
+            dire(messages.CLI_COMPTE_INCONNU)
             return 1
         if not args.oui:
-            print("Ceci supprimera definitivement %s." % u["email"])
-            print("Relance avec --oui pour confirmer.")
+            dire(messages.CLI_SUPPRESSION_DEFINITIVE, u["email"])
+            dire(messages.CLI_CONFIRMER_OUI)
             return 1
         try:
             accounts.delete(u["id"])
         except ValueError as exc:
-            print("Refuse : %s" % exc)
+            dire(messages.CLI_REFUSE, exc)
             return 1
-        print("Compte supprime : %s" % u["email"])
+        dire(messages.CLI_COMPTE_SUPPRIME, u["email"])
         return
 
 
@@ -732,11 +746,27 @@ def cmd_doctor(args):
     ligne("ROMULE_LOG", console.STYLE)
     ligne("Styles", ", ".join(console.STYLES))
     print()
-    print("Colle ce rapport dans un ticket : il ne contient ni mot de passe,")
-    print("ni cle, ni adresse de webhook.")
+    dire(messages.CLI_RAPPORT_SANS_SECRET)
+
+
+def _choisir_langue():
+    """The language, before the first line is printed.
+
+    Read from the configuration when it can be read, and never at the cost of a
+    command failing: `_check_root` runs right after and exists precisely for the
+    case where the data folder cannot be read at all.
+    """
+    voulue = config.env("LANG", "").strip()
+    if not voulue:
+        try:
+            voulue = str(config.load_config().get("ui_lang") or "")
+        except Exception:
+            voulue = ""
+    langue.choisir(voulue)
 
 
 def main(argv):
+    _choisir_langue()
     _check_root()
     _check_token()
     _report_legacy_vars()

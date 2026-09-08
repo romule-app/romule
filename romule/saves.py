@@ -11,6 +11,7 @@ from datetime import datetime
 
 from . import config, device
 from . import messages
+from . import langue
 
 def candidates():
     """Where to look for saves, from the most specific to the most general.
@@ -88,22 +89,22 @@ def backup(job, cfg=None):
         if not job.checkpoint():
             job.log(messages.SAUVEGARDE_INTERROMPUE)
             break
-        job.log("Recuperation de %s…" % d)
+        job.log(langue.phrase(messages.S_RECUPERATION, d))
         sub = dest / d.strip("/").replace("/", "_")
         sub.mkdir(parents=True, exist_ok=True)
         rc, out, err = device._run(["pull", d, str(sub)], timeout=3600)
         if rc == 0:
             n = sum(1 for _ in sub.rglob("*") if _.is_file())
-            job.log("  %d fichier(s) sauvegarde(s)." % n)
+            job.log(langue.phrase(messages.S_SAUVEGARDES, n))
             ok += 1
         else:
-            job.log("  Echec : %s" % ((err or out).strip().splitlines() or [""])[-1])
+            job.log(langue.phrase(messages.S_ECHEC, ((err or out).strip().splitlines() or [""])[-1]))
         job.tick()
 
     if not ok:
         job.log(messages.RIEN_SAUVEGARDE)
         return None
-    job.log("Sauvegardes enregistrees dans _saves/%s" % dest.name)
+    job.log(langue.phrase(messages.S_ENREGISTREES, dest.name))
     return str(dest.relative_to(config.ROOT))
 
 

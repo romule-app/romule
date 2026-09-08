@@ -18,6 +18,7 @@ from pathlib import Path
 
 from . import config, device, profiles
 from . import messages
+from . import langue
 
 # These paths depend on the chosen emulator: they can no longer be module
 # constants. They used to be, pinned to Eden, which made every other emulator
@@ -133,7 +134,7 @@ def backup_state(job):
     (folder / ("registered_%s.txt" % horo)).write_text(liste, encoding="utf-8")
     (folder / ("title.keys_%s" % horo)).write_text(cles, encoding="utf-8")
     n = len([l for l in liste.splitlines() if l.strip()])
-    job.log("Etat sauvegarde : %d fichier(s) deja dans la NAND (_eden-backup/)." % n)
+    job.log(langue.phrase(messages.N_ETAT_SAUVE, n))
     return horo
 
 
@@ -193,8 +194,7 @@ def install(paths, job):
         job.log(messages.CONSOLE_NON_CONNECTEE)
         return
     if not device._shell("[ -d %s ] && echo 1" % device._q(folder())).strip():
-        job.log("%s introuvable sur la console (%s)."
-                % (profiles.active()["nom"], profiles.package() or "paquet inconnu"))
+        job.log(langue.phrase(messages.N_INTROUVABLE, profiles.active()["nom"], profiles.package() or "paquet inconnu"))
         return
 
     backup_state(job)
@@ -211,15 +211,15 @@ def install(paths, job):
                 job.log(messages.INSTALL_INTERROMPUE)
                 break
             src = Path(p)
-            job.log("Lecture de %s…" % src.name)
+            job.log(langue.phrase(messages.N_LECTURE_DE, src.name))
             try:
                 contenu = read_pfs0(src)
             except Incomplete as exc:
-                job.log("  ignore, telechargement incomplet : %s" % exc, "warn")
+                job.log(langue.phrase(messages.N_INCOMPLET, exc), "warn")
                 job.tick()
                 continue
             except (ValueError, OSError, struct.error) as exc:
-                job.log("  ignore, fichier illisible : %s" % exc, "warn")
+                job.log(langue.phrase(messages.N_ILLISIBLE, exc), "warn")
                 job.tick()
                 continue
 
@@ -232,9 +232,7 @@ def install(paths, job):
                     f = extract(src, (nom, off, taille), tmp)
                     local = f.stat().st_size
                     if local != taille:
-                        job.log("  ECHEC %s : donnees incompletes dans l'archive "
-                                "(%.1f Mo lus sur %.1f attendus)"
-                                % (nom[:20] + "…", local / 1048576, taille / 1048576))
+                        job.log(langue.phrase(messages.N_ECHEC_INCOMPLET, nom[:20] + "…", local / 1048576, taille / 1048576))
                         f.unlink(missing_ok=True)
                         continue
                     rc, out, err = device._run(["push", str(f), registered() + "/"], timeout=3600)
@@ -242,15 +240,12 @@ def install(paths, job):
                     if rc == 0 and distant == taille:
                         poses += 1
                         device.open_permissions(registered() + "/" + nom)
-                        job.log("  installe %s (%.1f Mo)" % (nom[:20] + "…", taille / 1048576))
+                        job.log(langue.phrase(messages.N_INSTALLE, nom[:20] + "…", taille / 1048576))
                     else:
                         # never leave partial content in the NAND: Eden would
                         # load it and the game would crash.
                         device.remote_rm(registered() + "/" + nom)
-                        job.log("  ECHEC %s : %s" % (nom[:20] + "…",
-                                "copie incomplete (%s sur %s octets), retiree de la console"
-                                % (distant, taille) if rc == 0
-                                else ((err or out).strip().splitlines() or ["transfert refuse"])[-1]))
+                        job.log(langue.phrase(messages.N_ECHEC, nom[:20] + "…", "copie incomplete (%s sur %s octets), retiree de la console" % (distant, taille) if rc == 0 else ((err or out).strip().splitlines() or ["transfert refuse"])[-1]))
                     f.unlink(missing_ok=True)
                 elif bas.endswith(".tik"):
                     f = extract(src, (nom, off, taille), tmp)
@@ -267,8 +262,7 @@ def install(paths, job):
             reste.unlink(missing_ok=True)
         tmp.rmdir()
 
-    job.log("Termine : %d fichier(s) installe(s), %d deja present(s), %d cle(s) de titre."
-            % (poses, ignores, len(nouvelles_cles)))
+    job.log(langue.phrase(messages.N_TERMINE, poses, ignores, len(nouvelles_cles)))
     if poses:
         job.log(messages.RELANCE_EDEN)
 
@@ -296,4 +290,4 @@ def _merge_title_keys(new_keys, job):
     device._run(["push", str(local), title_keys()], timeout=120)
     device.open_permissions(title_keys())
     local.unlink(missing_ok=True)
-    job.log("Cles de titre : %d ajoutee(s) dans title.keys." % ajout)
+    job.log(langue.phrase(messages.N_CLES_TITRE, ajout))

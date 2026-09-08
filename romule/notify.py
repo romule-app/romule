@@ -27,6 +27,8 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
 from . import config, console, net
+from . import langue
+from . import messages
 
 # The notifiable events. The label is what the user sees in the settings; the
 # key is what gets STORED in each destination, so a key never changes name —
@@ -259,9 +261,9 @@ def _attempt(target, data, headers):
     # know which one failed.
     name = target["nom"] or target["service"]
     if sent:
-        console.event("Notification envoyee a %s" % name, "debug", "notify")
+        console.event(langue.phrase(messages.NO_ENVOYEE, name), "debug", "notify")
     else:
-        console.event("Notification vers %s echouee (%s)" % (name, reason),
+        console.event(langue.phrase(messages.NO_ECHOUEE, name, reason),
                       "warn", "notify")
     return sent
 

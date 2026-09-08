@@ -82,6 +82,7 @@ SEULS = set((
     "terminee terminees echouee echouees introuvable introuvables"
 ).split())
 BALISE = re.compile(r"<[^>]*>")
+_CODE_HTML = re.compile(r"<code\b[^>]*>.*?</code>", re.S | re.I)
 MOT = re.compile(r"[a-zA-ZÀ-ÿ']{2,}")
 
 
@@ -277,6 +278,17 @@ def morceaux_de_texte(litteral):
     """
     if "<" not in litteral and ">" not in litteral:
         return [litteral]
+    # What a `<code>` holds is a command to type, not a sentence to translate —
+    # the same rule the HTML reader already applies. Without it, growing the
+    # catalogue eventually turns every command into a false positive: adding
+    # `romule access close    exiger une connexion` taught the vocabulary the
+    # words `access` and `close`, and the command itself was then reported as
+    # untranslated French.
+    # Its CONTENT goes, its tags stay: at runtime a `<code>` splits the text
+    # into separate nodes, so the surrounding fragments are the keys, and
+    # removing the element whole would glue them into a sentence that never
+    # exists on the page.
+    litteral = _CODE_HTML.sub("<code></code>", litteral)
     bouts = []
     for m in BALISE.split(litteral):
         # A literal can start or end in the MIDDLE of a tag — when an
@@ -451,6 +463,14 @@ def autotest():
          True),
         ("un fragment HTML sans texte est ignore",
          "el.innerHTML = '<div class=\"jempty\"></div>';", False),
+        # A `<code>` holds a command to type. The HTML reader has always known
+        # that; the JS side did not, and every command became a false positive
+        # as soon as the catalogue had learnt its words elsewhere.
+        ("une commande dans un <code>, en JS, est ignoree",
+         "el.innerHTML = '<code>romule access close</code>';", False),
+        ("mais la phrase autour ne l'est pas",
+         "el.innerHTML = 'Une phrase absente du catalogue.<code>romule x</code>';",
+         True),
         # The vocabulary comes from the catalogue itself: a sentence with no
         # accent and no function word is recognised if its words have already
         # served elsewhere.

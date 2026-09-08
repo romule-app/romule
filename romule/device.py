@@ -15,6 +15,7 @@ from pathlib import Path
 
 from . import config, titleid
 from . import messages
+from . import langue
 
 SD_RE = re.compile(r"^[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}$")
 _GAME_FIND = (r"\( -iname '*.nsp' -o -iname '*.xci' "
@@ -598,7 +599,7 @@ def organize(device_dir, job, types=None):
             job.tick()
             continue
         _shell("mv %s %s" % (_q(g["path"]), _q(dst)))
-        job.log("Range : %s -> %s/" % (g["name"], folder))
+        job.log(langue.phrase(messages.D_RANGE, g["name"], folder))
         moved += 1
         job.tick()
     # remove per-game folders that became empty (except GAMES/UPDATE/DLC)
@@ -653,12 +654,12 @@ def remove(paths, job):
     for p in paths:
         _run(["shell", "rm -f %s" % _q(p)])
         if remote_size(p) is None:
-            job.log("Supprime : %s" % p.rsplit("/", 1)[-1])
+            job.log(langue.phrase(messages.D_SUPPRIME, p.rsplit("/", 1)[-1]))
             n += 1
         else:
-            job.log("Echec suppression : %s" % p)
+            job.log(langue.phrase(messages.D_ECHEC_SUPPR, p))
         job.tick()
-    job.log("%d fichier(s) supprime(s) de la console." % n)
+    job.log(langue.phrase(messages.D_SUPPRIMES, n))
 
 
     _invalidate_cache()
@@ -715,10 +716,10 @@ def _send_one(local, remote_dir, remote, size, verify_mode, job, attempts=2):
         # failure: remove the partial file so no truncated game is left behind
         remote_rm(remote)
         if attempt < attempts:
-            job.log("  echec (%s) — nouvelle tentative…" % (msg or "inconnu"))
+            job.log(langue.phrase(messages.D_ECHEC_RETRY, msg or "inconnu"))
             time.sleep(2)
         else:
-            job.log("  ECHEC definitif : %s" % (msg or "inconnu"))
+            job.log(langue.phrase(messages.D_ECHEC_FINAL, msg or "inconnu"))
     return "fail"
 
 
@@ -755,18 +756,18 @@ def pull(remote_paths, job):
     got = []
     for rp in remote_paths:
         if not job.checkpoint():
-            job.log("Recuperation interrompue (%d fichier(s) recu(s))." % len(got))
+            job.log(langue.phrase(messages.D_RECUP_INTERROMPUE, len(got)))
             break
         name = rp.rsplit("/", 1)[-1]
         dest = config.IMPORT / name
-        job.log("Recuperation : %s" % name)
+        job.log(langue.phrase(messages.D_RECUPERATION, name))
         rc, out, err = _run(["pull", rp, str(dest)], timeout=7200)
         if rc == 0 and dest.exists():
-            job.log("  recu (%.1f Mo)" % (dest.stat().st_size / 1048576))
+            job.log(langue.phrase(messages.D_RECU_MO, dest.stat().st_size / 1048576))
             got.append(str(dest))
         else:
             msg = (err or out or "").strip().splitlines()
-            job.log("  ECHEC : %s" % (msg[-1] if msg else "adb pull"))
+            job.log(langue.phrase(messages.D_ECHEC, msg[-1] if msg else "adb pull"))
         job.tick()
     return got
 
@@ -775,7 +776,7 @@ def push_generic(paths, target_dir, job, verify=True, incremental=True):
     """Send ROMs (non-Switch systems) into a single folder on the console."""
     st = state()
     if st != "device":
-        job.log("Aucun appareil adb pret (etat : %s)." % (st or "non connecte"))
+        job.log(langue.phrase(messages.D_AUCUN_APPAREIL, st or "non connecte"))
         return
     base = target_dir.rstrip("/")
     if not base:
@@ -800,7 +801,7 @@ def push_generic(paths, target_dir, job, verify=True, incremental=True):
             todo.append(f)
     nskip = len(paths) - len(todo)
     if nskip:
-        job.log("%d fichier(s) deja sur la console, ignore(s)." % nskip)
+        job.log(langue.phrase(messages.D_DEJA_CONSOLE, nskip))
     job.set_total(len(todo))
     if not todo:
         job.log(messages.RIEN_A_ENVOYER)
@@ -809,20 +810,20 @@ def push_generic(paths, target_dir, job, verify=True, incremental=True):
     okc = 0
     for f in todo:
         if not job.checkpoint():
-            job.log("Transfert interrompu (%d/%d)." % (okc, len(todo)))
+            job.log(langue.phrase(messages.D_INTERROMPU, okc, len(todo)))
             return
-        job.log("Envoi : %s" % f.name)
+        job.log(langue.phrase(messages.D_ENVOI, f.name))
         res = _send_one(f, base, base + "/" + f.name, f.stat().st_size,
                         "size" if verify else "none", job)
         if res == "gone":
-            job.log("Console deconnectee — transfert arrete (%d/%d envoyes)." % (okc, len(todo)))
+            job.log(langue.phrase(messages.D_DECONNECTEE, okc, len(todo)))
             job.log(messages.REBRANCHE_LA)
             return
         if res == "ok":
-            job.log("OK  %s" % f.name)
+            job.log(langue.phrase(messages.D_OK, f.name))
             okc += 1
         job.tick()
-    job.log("Transfert termine (%d/%d) vers %s." % (okc, len(todo), base))
+    job.log(langue.phrase(messages.D_TERMINE, okc, len(todo), base))
 
 
     _invalidate_cache()
@@ -988,7 +989,7 @@ def push(paths, device_dir, job, verify_mode="size", layout="type", incremental=
     verification (none | size | hash). Incremental skips identical files."""
     st = state()
     if st != "device":
-        job.log("Aucun appareil adb pret (etat : %s)." % (st or "non connecte"))
+        job.log(langue.phrase(messages.D_AUCUN_APPAREIL, st or "non connecte"))
         job.log(messages.BRANCHE_EN_USB)
         return
 
@@ -998,9 +999,9 @@ def push(paths, device_dir, job, verify_mode="size", layout="type", incremental=
     nskip = sum(1 for it in items if it["skip"] and not it.get("broken"))
     job.set_total(len(todo))
     if nskip:
-        job.log("%d fichier(s) deja presents a l'identique, ignore(s)." % nskip)
+        job.log(langue.phrase(messages.D_IDENTIQUES, nskip))
     for it in casses:
-        job.log("Refuse : %s est incomplet — %s" % (it["name"], it["broken"]), "error")
+        job.log(langue.phrase(messages.D_REFUSE_INCOMPLET, it["name"], it["broken"]), "error")
     if casses:
         job.log(messages.FICHIER_INCOMPLET, "warn")
     if not todo:
@@ -1019,23 +1020,22 @@ def push(paths, device_dir, job, verify_mode="size", layout="type", incremental=
 
     for it in todo:
         if not job.checkpoint():
-            job.log("Transfert interrompu (%d/%d envoyes)." % (okc, len(todo)))
+            job.log(langue.phrase(messages.D_INTERROMPU_ENVOYES, okc, len(todo)))
             job.log(messages.REPRISE_PROPOSEE, "warn")
             return
         if it["remote_dir"] not in made:
             _shell("mkdir -p %s" % _q(it["remote_dir"]))
             made.add(it["remote_dir"])
-        job.log("Envoi : %s  ->  %s/" % (it["name"], it["folder"]))
+        job.log(langue.phrase(messages.D_ENVOI_VERS, it["name"], it["folder"]))
         res = _send_one(it["local"], it["remote_dir"], it["remote"], it["size"],
                         verify_mode, job)
         if res == "gone":
-            job.log("Console deconnectee — transfert arrete (%d/%d envoyes)."
-                    % (okc, len(todo)))
+            job.log(langue.phrase(messages.D_DECONNECTEE, okc, len(todo)))
             job.log(messages.REBRANCHE_LA)
             job.set_detail("")
             return
         if res == "ok":
-            job.log("OK  %s" % it["name"])
+            job.log(langue.phrase(messages.D_OK, it["name"]))
             transfers.mark_done(it["local"])
             okc += 1
             done_bytes += it["size"]
@@ -1049,7 +1049,7 @@ def push(paths, device_dir, job, verify_mode="size", layout="type", incremental=
                        % (_human(int(speed)), _human(remaining), round(eta / 60)))
 
     job.set_detail("")
-    job.log("Transfert termine (%d/%d) vers %s." % (okc, len(todo), device_dir))
+    job.log(langue.phrase(messages.D_TERMINE, okc, len(todo), device_dir))
     if okc == len(todo):
         transfers.finish()          # nothing to resume
     _invalidate_cache()

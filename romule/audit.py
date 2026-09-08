@@ -35,8 +35,25 @@ from . import config, net
 LEVELS = {"grave": 3, "alerte": 2, "info": 1, "bon": 0}
 
 
-def _c(level, title, finding, remedy=""):
-    return {"niveau": level, "titre": title, "constat": finding, "remede": remedy}
+def _c(level, title, finding, remedy="", valeurs=None):
+    """One audit finding.
+
+    `valeurs` keeps a finding carrying NUMBERS translatable. Assembling it here
+    — `"Les %d en-têtes sont posés." % n` — produces a sentence no catalogue can
+    hold, so the interface had nothing to look up and showed French inside an
+    English page. The template travels alongside, and the browser resolves it
+    with `tpl()` the way it does everywhere else.
+
+    `constat` stays the assembled French: the terminal prints it, and a client
+    that has never heard of `constat_modele` still reads something true.
+    """
+    fiche = {"niveau": level, "titre": title,
+             "constat": (finding % tuple(valeurs)) if valeurs else finding,
+             "remede": remedy}
+    if valeurs:
+        fiche["constat_modele"] = finding
+        fiche["constat_valeurs"] = list(valeurs)
+    return fiche
 
 
 # ------------------------------------------------------------------ posture
@@ -66,7 +83,7 @@ def _access(cfg):
                       "ROMULE_TOKEN, ou coupe l'acces reseau."))
     elif not actif:
         out.append(_c("info", "Acces local uniquement",
-                      "Aucune authentification, mais rien n'est expose : seul "
+                      "Aucune authentification, mais rien n'est exposé : seul "
                       "127.0.0.1 peut se connecter."))
     else:
         out.append(_c("bon", "Authentification active",
@@ -196,9 +213,9 @@ def _code():
     out += _innerhtml()
     if not out:
         out.append(_c("bon", "Motifs dangereux",
-                      "Aucun des %d motifs surveilles n'apparait dans le code, "
-                      "et aucune donnee n'est injectee en innerHTML sans "
-                      "echappement." % len(interdits)))
+                      "Aucun des %d motifs surveillés n'apparaît dans le code, "
+                      "et aucune donnée n'est injectée en innerHTML sans "
+                      "échappement.", valeurs=[len(interdits)]))
     return out
 
 
@@ -259,8 +276,8 @@ def _headers():
         return [_c("alerte", "En-tetes de securite manquants",
                    "Absents du serveur : %s." % ", ".join(manque),
                    "Voir _security_headers() dans server.py.")]
-    return [_c("bon", "En-tetes de securite", "Les %d en-tetes sont poses."
-               % len(attendus))]
+    return [_c("bon", "En-têtes de sécurité", "Les %d en-têtes sont posés.",
+               valeurs=[len(attendus)])]
 
 
 def _csp():
@@ -290,7 +307,7 @@ def _csp():
                    "L'inline est autorise sans restreindre les origines.",
                    "Ajouter default-src 'self'.")]
     return [_c("bon", "Politique de contenu stricte",
-               "Aucun script en ligne autorise.")]
+               "Aucun script en ligne autorisé.")]
 
 
 def _csrf():
@@ -332,9 +349,9 @@ def _python(offline):
             return [_c("grave", "Python en fin de vie",
                        "La serie %s ne recoit plus de correctifs de securite." % v,
                        "Passe a une serie encore maintenue.")]
-        return [_c("bon", "Version de Python",
-                   "%s — serie maintenue%s."
-                   % (detail, " jusqu'au %s" % fin if isinstance(fin, str) else ""))]
+        return [_c("bon", "Version de Python", "%s — série maintenue%s.",
+                   valeurs=[detail,
+                            " jusqu'au %s" % fin if isinstance(fin, str) else ""])]
     return [_c("info", "Version de Python",
                detail + " — serie inconnue du referentiel.")]
 
@@ -400,8 +417,8 @@ def _api_keys():
     except Exception:
         return []
     if not cles:
-        return [_c("bon", "Aucune cle d'API",
-                   "Aucune cle n'est active : l'API n'est atteignable par "
+        return [_c("bon", "Aucune clé d'API",
+                   "Aucune clé n'est active : l'API n'est atteignable par "
                    "personne.")]
     jamais = [k for k in cles if not k.get("dernier_usage")]
     detail = "%d cle(s) active(s) : %s." % (

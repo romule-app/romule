@@ -28,7 +28,8 @@ from urllib.parse import parse_qs, unquote
 
 from . import (access_log, accounts, actions, apikeys, apiv1, audit, auth,
                backup, browse, config, console, covers, device, duplicates,
-               edenconf, emuready, igdb, integrity, meta, nand, net, notify,
+               edenconf, emuready, igdb, integrity, langue, meta, nand, net,
+               notify,
                nsztool, profiles, qr, saves, scan, systems, titleid, transfers,
                consoles, report, scheduler, trash, updates, versions,
                views)
@@ -217,7 +218,7 @@ class Handler(BaseHTTPRequestHandler):
                 ms = (time.monotonic() - debut) * 1000
                 code = self._code or 0
                 console.event(
-                    "%-4s %-3d %6.1fms %s" % (self.command, code, ms, self.path),
+                    langue.phrase(messages.SV_ACCES_LIGNE, self.command, code, ms, self.path),
                     "error" if code >= 500 else "warn" if code >= 400 else "debug",
                     "http", client=self.client_address[0] if self.client_address else "?")
 
@@ -791,9 +792,9 @@ class Handler(BaseHTTPRequestHandler):
                     CFG, params, auth.transit(self.headers.get("Cookie")),
                     self._return_base())
             except Exception as exc:
-                JOB.log("Connexion refusee : %s" % exc, "warn")
+                JOB.log(langue.phrase(messages.SV_CONNEXION_REFUSEE, exc), "warn")
                 return self._login_page(str(exc)) or True
-            JOB.log("Connexion de %s" % (qui.get("nom") or qui.get("sub")))
+            JOB.log(langue.phrase(messages.SV_CONNEXION, qui.get("nom") or qui.get("sub")))
             access_log.record("connexion", self.client_address[0],
                                 qui.get("email") or qui.get("sub"), "sso")
             self.send_response(302)
@@ -838,11 +839,10 @@ class Handler(BaseHTTPRequestHandler):
             access_log.record("refus", self.client_address[0], email, str(exc))
             return self._login_page(str(exc), 401, email, second=True)
         except ValueError as exc:
-            JOB.log("Connexion refusee pour %s depuis %s : %s"
-                    % (email or "(vide)", self.client_address[0], exc), "warn")
+            JOB.log(langue.phrase(messages.SV_CONNEXION_REFUSEE_DE, email or "(vide)", self.client_address[0], exc), "warn")
             access_log.record("refus", self.client_address[0], email, str(exc))
             return self._login_page(str(exc), 401, email)
-        JOB.log("Connexion de %s depuis %s" % (u["email"], self.client_address[0]))
+        JOB.log(langue.phrase(messages.SV_CONNEXION_DEPUIS, u["email"], self.client_address[0]))
         access_log.record("connexion", self.client_address[0], u["email"], "interne")
         self.send_response(302)
         self.send_header("Location", "/")
@@ -866,7 +866,7 @@ class Handler(BaseHTTPRequestHandler):
         propose = (champs.get("jeton") or [""])[0].strip()
         if not (propose and config.TOKEN
                 and hmac.compare_digest(propose, config.TOKEN)):
-            JOB.log("Jeton refuse depuis %s" % self.client_address[0], "warn")
+            JOB.log(langue.phrase(messages.SV_JETON_REFUSE, self.client_address[0]), "warn")
             access_log.record("refus", self.client_address[0], "", "jeton")
             return self._token_page("Ce jeton ne correspond pas.", 401)
         access_log.record("connexion", self.client_address[0], "", "jeton")
@@ -969,8 +969,7 @@ class Handler(BaseHTTPRequestHandler):
             if jours:
                 n, octets = trash.purge(jours, JOB.log)
                 if n:
-                    JOB.log("Purge automatique : %d lot(s), %.1f Go liberes"
-                            % (n, octets / 2 ** 30))
+                    JOB.log(langue.phrase(messages.SV_PURGE, n, octets / 2 ** 30))
             self._json({"items": trash.listing(), "resume": trash.summary(),
                         "jours": jours})
         elif p == "/api/health":
@@ -1005,7 +1004,7 @@ class Handler(BaseHTTPRequestHandler):
             # search-by-name uses when the file carries no title ID.
             self._cover(self.path[len("/cover/"):])
         else:
-            JOB.log("Route GET inconnue : %s" % p)
+            JOB.log(langue.phrase(messages.SV_GET_INCONNUE, p))
             self._json({"error": "route inconnue : " + p}, 404)
 
     def _cover(self, rest):
@@ -1071,7 +1070,7 @@ class Handler(BaseHTTPRequestHandler):
                     left -= len(chunk)
         except OSError as exc:
             return self._json({"error": str(exc)}, 500)
-        JOB.log("Recu par glisser-deposer : %s" % name)
+        JOB.log(langue.phrase(messages.SV_RECU_DEPOT, name))
         self._json({"message": name, "size": dest.stat().st_size})
 
     def _admin_required(self):
@@ -1196,8 +1195,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._deny()
         # Every POST changes state: we require that it comes from this page.
         if not self._same_origin():
-            JOB.log("POST rejete sur %s : origine %s"
-                    % (self.path, self.headers.get("Origin") or "?"), "warn")
+            JOB.log(langue.phrase(messages.SV_POST_REJETE, self.path, self.headers.get("Origin") or "?"), "warn")
             return self._json({"error": messages.ORIGINE_INATTENDUE}, 403)
         chemin = self.path.partition("?")[0]
         if chemin.startswith(apiv1.PREFIX):
@@ -1210,16 +1208,16 @@ class Handler(BaseHTTPRequestHandler):
         try:
             d = self._payload()
         except (ValueError, OSError) as exc:
-            JOB.log("Requete invalide sur %s : %s" % (p, exc))
+            JOB.log(langue.phrase(messages.SV_REQUETE_INVALIDE, p, exc))
             return self._json({"error": messages.REQUETE_INVALIDE}, 400)
         refus = self._admin_only_for(p)
         if refus:
-            JOB.log("%s refuse : %s" % (p, refus), "warn")
+            JOB.log(langue.phrase(messages.SV_REFUSE, p, refus), "warn")
             return self._json({"error": refus}, 403)
         try:
             self._post_route(p, d)
         except Exception as exc:
-            JOB.log("Erreur serveur sur %s : %s" % (p, exc))
+            JOB.log(langue.phrase(messages.SV_ERREUR_SERVEUR, p, exc))
             self._json({"error": "%s : %s" % (p, exc)}, 500)
 
     # The role model said "only an administrator changes the configuration,
@@ -1366,8 +1364,7 @@ class Handler(BaseHTTPRequestHandler):
                           "actif": True})
             CFG["notif_destinations"] = liste
             config.save_config(CFG)
-            JOB.log("Destination de notification ajoutee : %s"
-                    % (d.get("nom") or notify.guess(url)))
+            JOB.log(langue.phrase(messages.SV_DESTINATION_AJOUTEE, d.get("nom") or notify.guess(url)))
             self._json({"destinations": [_notif_public(x)
                                          for x in notify.destinations(CFG)]})
 
@@ -1456,7 +1453,7 @@ class Handler(BaseHTTPRequestHandler):
 
         elif p == "/api/cle-creer":
             fiche, cle = apikeys.create(d.get("nom") or "")
-            JOB.log("Cle d'API creee : %s" % fiche["nom"])
+            JOB.log(langue.phrase(messages.SV_API_CREEE, fiche["nom"]))
             # The plaintext key goes out HERE and only once: it is stored as a
             # digest and nothing else.
             self._json({"cle": fiche, "secret": cle})
@@ -1465,7 +1462,7 @@ class Handler(BaseHTTPRequestHandler):
             cid = str(d.get("id") or "")
             fait = apikeys.revoke(cid)
             if fait:
-                JOB.log("Cle d'API revoquee : %s" % cid)
+                JOB.log(langue.phrase(messages.SV_API_REVOQUEE, cid))
             self._json({"ok": fait})
 
         elif p == "/api/convert":
@@ -1548,7 +1545,7 @@ class Handler(BaseHTTPRequestHandler):
                                 auth.internal_session(accounts.by_id(u["id"])),
                                 self._secure()))]
                 JOB.log(messages.AUTH_ACTIVEE)
-            JOB.log("Compte cree : %s" % u["email"])
+            JOB.log(langue.phrase(messages.SV_COMPTE_CREE, u["email"]))
             access_log.record("compte", self.client_address[0], u["email"], "creation")
             self._json({"message": "Compte cree pour %s." % u["email"],
                         "compte": u, "comptes": accounts.list_all()},
@@ -1572,7 +1569,7 @@ class Handler(BaseHTTPRequestHandler):
                 accounts.change_password(u["id"], d.get("ancien", ""), d.get("nouveau", ""))
             except ValueError as exc:
                 return self._json({"error": str(exc)}, 400)
-            JOB.log("Mot de passe change : %s" % u["email"])
+            JOB.log(langue.phrase(messages.SV_MDP_CHANGE, u["email"]))
             access_log.record("compte", self.client_address[0], u["email"],
                                 "mot de passe change")
             # The current session was signed before the change: we hand THIS
@@ -1611,7 +1608,7 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 prep["qr"] = qr.svg(prep["uri"])
             except Exception as exc:      # the key alone still works
-                JOB.log("QR non genere : %s" % exc, "warn")
+                JOB.log(langue.phrase(messages.SV_QR_KO, exc), "warn")
             self._json(prep)
 
         elif p == "/api/compte-totp-activer":
@@ -1724,7 +1721,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"error": str(exc)}, 400)
             CFG.clear()
             CFG.update(config.load_config())
-            JOB.log("Configuration restauree : %s" % ", ".join(remis), "warn")
+            JOB.log(langue.phrase(messages.SV_CONF_RESTAUREE, ", ".join(remis)), "warn")
             self._json({"message": "Restauré : %s. L'état précédent a été "
                                    "sauvegardé avant." % ", ".join(remis),
                         "lots": backup.listing()})
@@ -1769,7 +1766,7 @@ class Handler(BaseHTTPRequestHandler):
                     f.unlink(); n += 1
                 except OSError:
                     pass
-            JOB.log("%d fiche(s) oubliee(s) : elles seront retelechargees." % n)
+            JOB.log(langue.phrase(messages.SV_FICHES_OUBLIEES, n))
             self._json({"message": "%d fiche(s) à retélécharger." % n})
 
         elif p == "/api/meta-sync":
@@ -1815,7 +1812,7 @@ class Handler(BaseHTTPRequestHandler):
             CFG["library_path"] = ("" if config.LUDO == config.ROOT
                                    else str(config.LUDO))
             config.save_config(CFG)
-            JOB.log("Ludotheque : %s" % config.LUDO)
+            JOB.log(langue.phrase(messages.SV_LUDO, config.LUDO))
             self._json(_lib_response())
 
         elif p == "/api/device-games":
@@ -1847,7 +1844,7 @@ class Handler(BaseHTTPRequestHandler):
             if trouve:
                 CFG["emulateur_paquet"] = trouve
                 config.save_config(CFG)
-                JOB.log("Emulateur detecte sur la console : %s" % trouve)
+                JOB.log(langue.phrase(messages.SV_EMULATEUR_DETECTE, trouve))
             self._json({"paquet": trouve})
 
         elif p == "/api/health":
@@ -1875,7 +1872,7 @@ class Handler(BaseHTTPRequestHandler):
                 url = _public_url(ip)
                 ok, msg = device.open_url(url)
                 if ok:
-                    JOB.log("Interface ouverte sur la console : %s" % url)
+                    JOB.log(langue.phrase(messages.SV_INTERFACE_CONSOLE, url))
                 self._json({"ok": ok, "url": url,
                             "message": msg or ("Ouvert sur la console : %s" % url)})
 
@@ -1885,7 +1882,7 @@ class Handler(BaseHTTPRequestHandler):
             if ok:
                 CFG["wifi_addr"] = addr
                 config.save_config(CFG)
-                JOB.log("Console basculee en wifi : %s" % addr)
+                JOB.log(langue.phrase(messages.SV_BASCULE_WIFI, addr))
             self._json({"ok": ok, "addr": addr, "message": msg})
 
         elif p == "/api/wifi-pair":
@@ -1897,10 +1894,10 @@ class Handler(BaseHTTPRequestHandler):
             # secret, and the journal is shown in the interface and attached to
             # bug reports.
             cible = d.get("addr", "").strip()
-            JOB.log("Appairage sans fil demandé vers %s" % (cible or "(vide)"))
+            JOB.log(langue.phrase(messages.SV_APPAIRAGE_DEMANDE, cible or "(vide)"))
             ok, msg = device.pair(cible, d.get("code", "").strip())
             if not ok:
-                JOB.log("Appairage refusé : %s" % msg, "warn")
+                JOB.log(langue.phrase(messages.SV_APPAIRAGE_REFUSE, msg), "warn")
             found = device.discover() if ok else []
             addr = None
             if ok and found:
@@ -1910,11 +1907,10 @@ class Handler(BaseHTTPRequestHandler):
                     CFG["wifi_addr"] = addr
                     config.save_config(CFG)
                     msg = "Appairee et connectee (%s)." % addr
-                    JOB.log("Console appairée et connectée (%s)." % addr, "ok")
+                    JOB.log(langue.phrase(messages.SV_CONSOLE_PRETE, addr), "ok")
                 else:
                     msg = "Appairee, mais connexion refusee : %s" % cmsg
-                    JOB.log("Appairée, mais la connexion a été refusée : %s"
-                            % cmsg, "warn")
+                    JOB.log(langue.phrase(messages.SV_APPAIREE_CONNEXION_KO, cmsg), "warn")
             self._json({"ok": ok, "addr": addr, "found": found, "message": msg})
 
         elif p == "/api/wifi-connect":
@@ -2167,6 +2163,11 @@ class Handler(BaseHTTPRequestHandler):
                       "maj_check", "schedule"):
                 if k in d:
                     CFG[k] = d[k]
+            # The terminal follows the interface: changing the language in the
+            # settings must not leave `docker logs` in the previous one until
+            # the next restart.
+            if "ui_lang" in d:
+                langue.choisir(CFG.get("ui_lang"))
             # Switching the authentication OFF is a decision about ACCESS, and
             # half of it locked people out. `auth_mode` went to "aucun",
             # `lan_access` stayed false, and a service listening on 0.0.0.0 then
@@ -2227,7 +2228,7 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.write(body)
 
         else:
-            JOB.log("Route POST inconnue : %s (serveur a jour ?)" % p)
+            JOB.log(langue.phrase(messages.SV_POST_INCONNUE, p))
             self._json({"error": "route inconnue : " + p}, 404)
 
     def _api_v1(self, chemin, methode):
@@ -2238,7 +2239,7 @@ class Handler(BaseHTTPRequestHandler):
         try:
             reponse = apiv1.router(chemin, params, methode, _context_v1())
         except Exception as exc:
-            JOB.log("Erreur API v1 sur %s : %s" % (chemin, exc), "warn")
+            JOB.log(langue.phrase(messages.SV_ERREUR_APIV1, chemin, exc), "warn")
             # The exception message is not returned: it often carries an
             # absolute path, hence the server's directory tree.
             return self._json({"error": "internal_error",
@@ -2533,8 +2534,9 @@ def _reconnect_wifi():
     if not addr or device.connection()["kind"]:
         return
     ok, msg = device.connect(addr, timeout=8)
-    print("Console    : %s" % ("retrouvee en wifi (%s)" % addr if ok
-                               else "pas en wifi (%s)" % msg))
+    console.say(langue.phrase(messages.SV_CONSOLE_RETROUVEE, addr) if ok
+                else langue.phrase(messages.SV_CONSOLE_PAS_WIFI, msg),
+                "ok" if ok else "warn", "device")
 
 
 def _startup_audit():
@@ -2546,17 +2548,16 @@ def _startup_audit():
     try:
         r = audit.run(CFG, offline=True)
     except Exception as exc:                  # a broken audit does not break the tool
-        JOB.log("Audit de securite indisponible : %s" % exc, "warn")
+        JOB.log(langue.phrase(messages.SV_AUDIT_KO, exc), "warn")
         return
     for c in r["controles"]:
         if c["niveau"] == "grave":
-            JOB.log("Securite — %s : %s" % (c["titre"], c["constat"]), "error")
+            JOB.log(langue.phrase(messages.SV_SECURITE_POINT, c["titre"], c["constat"]), "error")
         elif c["niveau"] == "alerte":
-            JOB.log("Securite — %s : %s" % (c["titre"], c["constat"]), "warn")
+            JOB.log(langue.phrase(messages.SV_SECURITE_POINT, c["titre"], c["constat"]), "warn")
     n = r["resume"]["grave"] + r["resume"]["alerte"]
     if n:
-        console.say("Securite : %d point(s) a regarder — `python3 -m romule.audit`"
-                    % n, "warn", "audit")
+        console.say(langue.phrase(messages.SV_SECURITE_POINTS, n), "warn", "audit")
     else:
         console.say(messages.SECURITE_OK, "ok", "audit")
 
@@ -2618,17 +2619,19 @@ def _startup_facts(url, ip, auto_token):
     converting nothing". So they are said at startup rather than being
     available somewhere.
     """
-    modes = {"aucun": "aucune", "interne": "comptes internes", "oidc": "OpenID Connect"}
+    T = langue.t
+    modes = {"aucun": T(messages.B_ACCES_AUCUNE),
+             "interne": T(messages.B_ACCES_INTERNE),
+             "oidc": "OpenID Connect"}
     outils = [n for n, present in (("adb", bool(adb_hint())),
                                    ("nsz", nsztool.available()),
                                    ("unar", bool(shutil.which("unar"))),
                                    ("7z", bool(shutil.which("7z") or shutil.which("7zz"))))
               if present]
     faits = [
-        ("Version", "%s   Python %d.%d.%d sur %s"
-         % (__version__, sys.version_info[0], sys.version_info[1],
-            sys.version_info[2], sys.platform)),
-        ("Interface", "%s   (Ctrl+C pour arreter)" % url),
+        (messages.B_VERSION, T(messages.B_VERSION_VAL)
+         % (__version__, "%d.%d.%d" % sys.version_info[:3], sys.platform)),
+        (messages.B_INTERFACE, T(messages.B_INTERFACE_VAL) % url),
     ]
     # The line follows what the SOCKET does, not the `lan_access` setting. The
     # two diverge in the most common case: in a container Romule listens on
@@ -2636,40 +2639,39 @@ def _startup_facts(url, ip, auto_token):
     # the banner announced "Network: disabled" two lines above the address you
     # had just been invited to enter by.
     if _listen_address() == "127.0.0.1":
-        faits.append(("Reseau", "cette machine seulement — ROMULE_BIND=0.0.0.0, "
-                                "ROMULE_LAN=1 ou un jeton, puis redemarrer"))
+        faits.append((messages.B_RESEAU, T(messages.B_RESEAU_LOCAL)))
     else:
         # In a container without ROMULE_PUBLIC_HOST there is no address to
         # give. Saying so beats printing the bridge address, which is what
         # sent people to an address that does not answer.
-        faits.append(("Reseau", _public_url(ip) + "   (telephone, console, tablette)"
-                      if ip else
-                      "port %d publie — declare ROMULE_PUBLIC_HOST pour que "
-                      "Romule sache sous quelle adresse on l'atteint"
-                      % config.PORT))
+        faits.append((messages.B_RESEAU,
+                      T(messages.B_RESEAU_PUBLIE) % _public_url(ip) if ip
+                      else T(messages.B_RESEAU_SANS_HOTE) % config.PORT))
     faits += [
-        ("Acces", modes.get(CFG.get("auth_mode"), CFG.get("auth_mode"))
-         + (" + jeton" if config.TOKEN and not auto_token else "")
-         + (" + jeton engendre" if auto_token else "")),
-        ("Comptes", "%d" % accounts.count()),
-        ("Ludotheque", "%s   (%s)"
-         % (config.LUDO, "imposee par ROMULE_LIBRARY" if config.LIBRARY_FORCED
-            else "modifiable depuis l'interface")),
+        (messages.B_ACCES, modes.get(CFG.get("auth_mode"), CFG.get("auth_mode"))
+         + (T(messages.B_ACCES_JETON) if config.TOKEN and not auto_token else "")
+         + (T(messages.B_ACCES_JETON_ENGENDRE) if auto_token else "")),
+        (messages.B_COMPTES, "%d" % accounts.count()),
+        (messages.B_LUDO, "%s   (%s)"
+         % (config.LUDO, T(messages.B_LUDO_IMPOSEE) if config.LIBRARY_FORCED
+            else T(messages.B_LUDO_MODIFIABLE))),
     ]
     # The two folders are only distinguished when they differ: otherwise you
     # go looking for your configuration in the games folder, or the reverse.
     if config.LUDO != config.ROOT:
-        faits.append(("Donnees", "%s   (configuration, comptes, jaquettes)"
-                      % config.ROOT))
+        faits.append((messages.B_DONNEES,
+                      T(messages.B_DONNEES_VAL) % config.ROOT))
     faits += [
-        ("Depot", "%s   (glisse tes fichiers ici)" % config.IMPORT),
-        ("Journal", str(config.LOGFILE)),
-        ("Outils", ", ".join(outils) if outils else
-         "aucun — conversion et console indisponibles"),
-        ("Jaquettes", CFG.get("cover_provider", "nlib")
+        (messages.B_DEPOT, T(messages.B_DEPOT_VAL) % config.IMPORT),
+        (messages.B_JOURNAL, str(config.LOGFILE)),
+        (messages.B_OUTILS, ", ".join(outils) if outils
+         else T(messages.B_OUTILS_AUCUN)),
+        (messages.B_JAQUETTES, CFG.get("cover_provider", "nlib")
          + (" + IGDB" if (CFG.get("igdb_client_id") or "").strip() else "")),
-        ("Journalisation", "ROMULE_LOG=%s   (quiet, normal, verbose, debug, json)"
-         % console.STYLE),
+        # No prose: the styles are literal values you type into an environment
+        # variable, and translating them would make the line wrong.
+        (messages.B_JOURNALISATION,
+         "ROMULE_LOG=%s   (quiet, normal, verbose, debug, json)" % console.STYLE),
     ]
     return faits
 
@@ -2682,13 +2684,20 @@ def serve(open_browser=True):
     try:
         config.IMPORT.mkdir(exist_ok=True)
     except OSError as exc:
-        JOB.log("Depot indisponible (%s) : %s" % (config.IMPORT, exc), "warn")
+        JOB.log(langue.phrase(messages.SV_DEPOT_KO, config.IMPORT, exc), "warn")
     # Accounts created before roles existed carry none: without this catch-up,
     # an existing installation would find itself with no administrator after
     # the upgrade.
     accounts.refresh_roles()
     JOB.notify_end = bool(CFG.get("notify", True))
     auto_token = _first_run_token()
+    # The terminal speaks the same language as the interface. It spoke French
+    # whatever `ui_lang` said, which defaults to `en` — so the ordinary
+    # installation showed an English interface and wrote French to
+    # `docker logs`, read by exactly the person who cannot open the interface.
+    # ROMULE_LANG wins over the setting: it is the lever for the case where
+    # the interface cannot be reached to change it.
+    langue.choisir(config.env("LANG", "") or CFG.get("ui_lang"))
     url = "http://127.0.0.1:%d" % config.PORT
     ip = _lan_ip()
     console.banner(_startup_facts(url, ip, auto_token))
@@ -2714,9 +2723,10 @@ def serve(open_browser=True):
         # The window this design accepts, said out loud rather than left to be
         # discovered. It closes on the wizard's access step.
         console.say(messages.ACCES_NON_CHOISI, "warn", "acces")
-        console.say("Ouvre %s et reponds a l'etape « Ton acces » de "
-                    "l'assistant." % (_public_url(ip)
-                                      or "http://localhost:%d" % config.PORT),
+        # `langue.t(TEMPLATE) % url`, never `langue.t(TEMPLATE % url)`: the
+        # second asks the catalogue for a sentence that only exists once the
+        # address is known, so it would never be translated.
+        console.say(langue.phrase(messages.ADRESSE_OUVRE_ASSISTANT, _public_url(ip) or "http://localhost:%d" % config.PORT),
                     "warn", "acces")
         if not ip:
             console.say(messages.ADRESSE_HOTE_CONTENEUR, "warn", "acces")
@@ -2752,4 +2762,7 @@ def serve(open_browser=True):
         stop()
     finally:
         srv.server_close()
-        print("Arrete.")
+        # Through the terminal sink like everything else: a `print` here spoke
+        # French whatever the setting said, and was the last line of
+        # `docker logs`.
+        console.say(messages.SV_ARRETE)

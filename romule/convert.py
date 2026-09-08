@@ -6,6 +6,7 @@ from pathlib import Path
 
 from . import nsztool
 from . import messages
+from . import langue
 
 
 def run(paths, jobs, threads, precheck, maxkey, job, verify=True):
@@ -15,12 +16,11 @@ def run(paths, jobs, threads, precheck, maxkey, job, verify=True):
 
     todo = []
     if precheck and maxkey:
-        job.log("Controle des master keys (%d fichier(s))..." % len(paths))
+        job.log(langue.phrase(messages.C_MASTER_KEYS, len(paths)))
         for p in paths:
             need = nsztool.required_master_key(p)
             if need is not None and need > maxkey:
-                job.log("EXCLU %s : exige master_key_%d, tu as %d"
-                        % (Path(p).name, need, maxkey))
+                job.log(langue.phrase(messages.C_EXCLU, Path(p).name, need, maxkey))
             else:
                 todo.append(p)
     else:
@@ -37,19 +37,19 @@ def run(paths, jobs, threads, precheck, maxkey, job, verify=True):
         if not job.checkpoint():
             return
         src = Path(p)
-        job.log("Conversion : %s" % src.name)
+        job.log(langue.phrase(messages.C_CONVERSION, src.name))
         ok, tgt, err = nsztool.convert(src, src.parent, tpj, verify)
         if ok:
-            job.log("OK  %s (%.1f Mo)" % (tgt.name, tgt.stat().st_size / 1048576))
+            job.log(langue.phrase(messages.C_OK_MO, tgt.name, tgt.stat().st_size / 1048576))
             converted.append(str(src))
         else:
-            job.log("ECHEC %s : %s" % (src.name, err))
+            job.log(langue.phrase(messages.C_ECHEC, src.name, err))
         job.tick()
 
     with ThreadPoolExecutor(max_workers=jobs) as ex:
         list(ex.map(one, todo))
 
-    job.log("Conversion terminee (%d/%d)." % (len(converted), len(todo)))
+    job.log(langue.phrase(messages.C_CONVERSION_FINIE, len(converted), len(todo)))
     return converted
 
 

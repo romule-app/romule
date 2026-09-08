@@ -30,6 +30,8 @@ import sys
 import threading
 import time
 
+from . import langue
+
 # Increasing order of severity. `debug` is the lowest: it only shows for the
 # styles that ask for it.
 LEVELS = ("debug", "info", "ok", "warn", "error")
@@ -120,20 +122,39 @@ def banner(facts):
     line reading "Console:" followed by nothing teaches less than its absence.
     """
     if STYLE == "json":
+        # The JSON keys stay French and stay stable: they are field names a
+        # collector may already be filtering on, so they are DATA, not prose.
         event("demarrage", **{k.lower().replace(" ", "_"): v
                                   for k, v in facts if v})
         return
     if STYLE == "quiet":
         return
     sys.stdout.write(_c(_BANNER, "gold"))
-    width = max((len(k) for k, v in facts if v), default=0)
-    for key, value in facts:
+    # Translated before the width is measured: « Ludothèque » and « Library »
+    # are not the same length, and aligning on the French would leave the
+    # English banner ragged.
+    faits = [(langue.t(k), v) for k, v in facts]
+    width = max((len(k) for k, v in faits if v), default=0)
+    for key, value in faits:
         if not value:
             continue
         sys.stdout.write("  %s %s\n" % (_c((key + " ").ljust(width + 1) + ":", "grey"),
                                         value))
     sys.stdout.write("\n")
     sys.stdout.flush()
+
+
+def _dire(message):
+    """The sentence in the terminal's language.
+
+    A `langue.Phrase` carries its values apart from its template, so it is
+    translated and only then assembled. Anything else is a whole sentence, and
+    the catalogue is asked for it directly — which is why a call site writing a
+    sentence with nothing to interpolate needs to do nothing at all.
+    """
+    if isinstance(message, langue.Phrase):
+        return message.traduite()
+    return langue.t(str(message))
 
 
 def event(message, level="info", module="", **fields):
@@ -149,7 +170,7 @@ def event(message, level="info", module="", **fields):
         with _LOCK:
             if STYLE == "json":
                 d = {"t": time.strftime("%FT%T"), "level": level,
-                     "message": str(message)}
+                     "message": _dire(message)}
                 if module:
                     d["module"] = module
                 d.update(fields)
@@ -166,6 +187,12 @@ _LABEL = {"debug": "DEBUG", "info": "INFO ", "ok": "OK   ",
 
 
 def _line(message, level, module, fields):
+    # Translated HERE rather than at every call site: a sentence written whole,
+    # with no interpolation, needs nothing from its caller. What a call site
+    # does have to do is keep the TEMPLATE as the key when there are values to
+    # place — `langue.t(MSG) % path`, never `langue.t(MSG % path)`, which asks
+    # the catalogue for a sentence that exists only once the path is known.
+    message = _dire(message)
     parts = [_c(time.strftime("%H:%M:%S"), "grey"),
              _c(_LABEL.get(level, "INFO "), level)]
     if STYLE == "debug":
