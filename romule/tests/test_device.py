@@ -512,6 +512,19 @@ def test_le_balayage_est_borne_dans_le_temps():
     assert ecoule < 4.0, "balayage non borne : %.1fs" % ecoule
 
 
+def test_le_balayage_refuse_une_adresse_publique():
+    """The bound that keeps the sweep from being a port scanner by proxy: the
+    target comes from the client, and an unclaimed installation answers
+    everybody. A handheld sits on a private network by definition, so refusing
+    the rest costs no legitimate case — Tailscale's 100.64/10 included."""
+    assert d.ports_ouverts("8.8.8.8", debut=80, fin=80, budget=0.5) == []
+    assert d.ports_ouverts("console.example.com", debut=80, fin=80, budget=0.5) == []
+    assert d._hote_scrutable("192.0.2.22")
+    assert d._hote_scrutable("100.64.0.1")
+    assert d._hote_scrutable("127.0.0.1")
+    assert not d._hote_scrutable("8.8.8.8")
+
+
 def test_le_balayage_ignore_un_hote_vide():
     assert d.ports_ouverts("") == []
 

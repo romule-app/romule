@@ -319,6 +319,28 @@ def _ordre_des_ports(debut, fin, autour):
     return suite()
 
 
+def _hote_scrutable(hote):
+    """Only a PRIVATE address may be swept.
+
+    The sweep exists to find a handheld's connection port, and a handheld sits
+    on the local network by definition. Without this bound the server was a
+    port scanner by proxy: `/api/wifi-pair` takes the target from the client,
+    and on an unclaimed installation — open to everybody by design, and loudly
+    said to be — anybody who could reach the page could have this host sweep
+    thirty-five thousand TCP ports of any machine on the internet.
+
+    `is_private` covers RFC 1918, loopback and link-local; 100.64.0.0/10 is
+    added by hand for the Tailscale-style overlays it serves, which Python
+    counts as neither private nor global.
+    """
+    import ipaddress
+    try:
+        ip = ipaddress.ip_address(str(hote or "").strip())
+    except ValueError:
+        return False                       # a hostname is not a console screen
+    return ip.is_private or ip in ipaddress.ip_network("100.64.0.0/10")
+
+
 def ports_ouverts(hote, debut=None, fin=None, budget=8.0, lot=800, delai=0.25,
                   autour=None):
     """The TCP ports answering on this host, within the wireless-debugging range.
@@ -337,7 +359,7 @@ def ports_ouverts(hote, debut=None, fin=None, budget=8.0, lot=800, delai=0.25,
     connection that has not answered within `budget` seconds is not the console
     someone is waiting on.
     """
-    if not hote:
+    if not hote or not _hote_scrutable(hote):
         return []
     debut = _PLAGE_ADB[0] if debut is None else debut
     fin = _PLAGE_ADB[1] if fin is None else fin

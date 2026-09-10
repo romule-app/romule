@@ -8,6 +8,18 @@ and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 Romule is at `0.x`: the HTTP API is **not** stable yet, and a minor release may
 change it. Breaking changes are always listed under **Changed** with the reason.
 
+## [Unreleased]
+
+### Security
+
+- **The connection-port sweep only accepts private addresses.** Its target
+  comes from the client, and an unclaimed installation answers everybody by
+  design: anybody who could reach the page could have the server sweep
+  thirty-five thousand TCP ports of any machine on the internet. A handheld
+  sits on the local network by definition, so bounding the sweep to RFC 1918,
+  loopback, link-local and 100.64.0.0/10 (Tailscale-style overlays) costs no
+  legitimate case. Found by a security pass over the routes added this cycle.
+
 ## [0.4.0] — 2026-09-10
 
 ### Fixed
