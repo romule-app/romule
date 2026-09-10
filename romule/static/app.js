@@ -4440,32 +4440,19 @@ function syncSetDesc() {
   // user might go looking for. We merely say it is inactive with the chosen
   // source.
   const prov = $('s-coverprov').value;
-  const marquer = (row, actif, quand) => {
-    // Hidden, not greyed. A greyed row still asks to be read, and the two it
-    // governs — the SteamGridDB key, the URL template — mean nothing until
-    // their provider is the one selected.
-    $(row).hidden = !actif;
-    $(row).classList.toggle('inactive', !actif);
-    // This text was rendered by `content: attr(data-note)` in CSS: it is then
-    // NEVER a text node, so neither the observer nor any tool can see it — and
-    // it could not be translated. It becomes a real element, filled through
-    // `textContent`.
-    const cible = $(row).querySelector('.setlab span');
-    let note = cible && cible.querySelector('.setnote');
-    if (cible && !note) {
-      note = document.createElement('span');
-      note.className = 'setnote';
-      cible.appendChild(note);
-    }
-    if (note) {
-      note.textContent = actif ? ''
-        // `quand` is itself a label: leaving it raw showed "— used only with
-        // “URL personnalisée”", half translated.
-        : tpl('— utilisée seulement avec « %s »', t(quand));
-    }
-  };
-  marquer('row-sgkey', prov === 'steamgriddb', 'SteamGridDB');
-  marquer('row-coverurl', prov === 'custom', 'URL personnalisée');
+  // Hidden, not greyed, and nothing to explain. A greyed row still asks to be
+  // read, so the two it governs — the SteamGridDB key, the URL template — are
+  // taken off screen until their provider is the one selected.
+  //
+  // The note that used to sit beside them — `used only with X` — went
+  // with the greying: it justified a row you could see. It was also assembled
+  // before translation — one text node made of a translated template and a
+  // translated label, and the result is a key no catalogue holds, so it showed
+  // half in English and half in French. The same defect the server-side
+  // sentences were purged of.
+  const marquer = (row, actif) => { $(row).hidden = !actif; };
+  marquer('row-sgkey', prov === 'steamgriddb');
+  marquer('row-coverurl', prov === 'custom');
 }
 function fillSettings() {
   const c = DATA.config || {};

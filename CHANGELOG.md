@@ -10,6 +10,15 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ## [Unreleased]
 
+### Fixed
+
+- **A settings note showed half in English and half in French.** « — utilisée
+  seulement avec « URL personnalisée » » was assembled from a translated
+  template and a translated label, and the result is a text node no catalogue
+  holds — the same defect the server's own sentences were purged of, on the
+  client side. The note went entirely: it justified a row you could SEE, and
+  those rows are hidden now.
+
 ### Security
 
 - **The published screenshots showed the author's real library again.** Thirty-
