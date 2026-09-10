@@ -34,10 +34,11 @@ change it. Breaking changes are always listed under **Changed** with the reason.
   new examples go to RFC 5737 (192.0.2.0/24), which exists for this. The
   self-test pins the exact shape that got through.
 
-- **The author's first name left the test fixtures.** Seventeen occurrences of
-  « Alex » and `alex@example.org` across eight files become « Alex » and
-  `alex@example.org` — a name belonging to nobody and a domain RFC 2606
-  reserves for the purpose.
+- **The author's first name left the test fixtures.** Seventeen occurrences
+  across eight files, in account names and e-mail addresses. They now read
+  « Alex » and `alex@example.org` — a name belonging to nobody, and a domain
+  RFC 2606 reserves for the purpose. Naming the old value here would have put
+  it straight back.
 
 - **The connection-port sweep only accepts private addresses.** Its target
   comes from the client, and an unclaimed installation answers everybody by
