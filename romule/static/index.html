@@ -309,8 +309,7 @@
             <h3>Connecter la console sans câble</h3>
             <button class="ghost" data-act="togglePairing">Fermer</button>
           </div>
-          <p class="lead">Le Wi-Fi évite le câble, mais reste 2 à 5× plus lent pour
-            les gros transferts. À faire une seule fois : ensuite la console est
+          <p class="lead">À faire une seule fois : ensuite la console est
             reconnue toute seule.</p>
           <div class="wizprog"><i id="wizbar"></i></div>
 
@@ -411,21 +410,14 @@
                    read as "everything is done", which left a reader
                    wondering why the header still showed no console. -->
               <p class="wok">Appairage fait. Il reste la connexion.</p>
-              <p>Il reste un seul nombre : le port de connexion, que seule la
-                console affiche. Ferme la fenêtre du code — derrière elle,
-                l'écran de débogage sans fil montre sa propre ligne
-                « Adresse IP et port ».</p>
-              <div class="wpath">Android ouvre deux services : celui de
-                l'appairage, qui ne vit que le temps de la fenêtre du code, et
-                celui de la connexion, ouvert tant que le débogage sans fil
-                l'est. Deux services, deux ports.</div>
-              <p class="wmdns">Romule ne peut pas le deviner d'ici : la console
-                l'annonce en mDNS, qui ne traverse pas le réseau d'un
-                conteneur.</p>
-              <!-- The search carries on while you read, and says so here.
-                   Discreet on purpose: it must not look like something to wait
-                   for, because typing the number is always faster. -->
-              <div class="wcherche" id="conn-cherche" aria-live="polite"></div>
+              <!-- One instruction. This step carried five paragraphs — why
+                   Android has two ports, why mDNS cannot cross a bridge, a
+                   live search line — and the reader has ONE thing to do: read
+                   a line off the console and type it. The why lives in the
+                   documentation. -->
+              <p>Ferme la fenêtre du code : derrière elle, l'écran de débogage
+                sans fil affiche « Adresse IP et port ». Recopie-la ici — son
+                port n'est pas celui que tu viens de saisir.</p>
               <label class="wfield">
                 <span>Adresse IP et port, lue sur l'écran de débogage sans fil</span>
                 <input type="text" id="conn-addr" placeholder="192.168.1.42:5555"
@@ -433,7 +425,6 @@
               </label>
               <div class="bar">
                 <button class="ghost" data-act="wizStep" data-val="3">Retour</button>
-                <button class="ghost" data-act="wifiRetrouver">Chercher le port</button>
                 <button class="go" data-act="wifiConnectField">Connecter la console</button>
               </div>
             </div>
@@ -457,39 +448,31 @@
           </div>
         </div>
 
-        <div class="setrow" style="margin-top:14px">
-          <div class="setlab"><b>Dossier des ROMs</b>
-            <span>Le dossier parent de toutes tes plateformes sur la console
-              (chacune y a son sous-dossier : GBA, SNES, PS2…). Romule le
-              cherche tout seul en reconnaissant les noms de dossiers ; ce champ
-              n'est là que pour le corriger.</span></div>
-          <!-- Detecting it is the normal way; typing it is the exception. The
-               button sits with the field rather than in the analysis bar
-               below, because it answers the question the field asks. -->
+      <div id="organizewrap" hidden></div>
+      </div>
+
+      <!-- Its own group. The games folder and the platform census were folded
+           into « Mes consoles », where their two buttons — « Chercher »,
+           « Analyser la console » — read as more console plumbing. They answer
+           a different question: not HOW the console is reached, but WHAT it
+           holds. -->
+      <div class="setgroup">
+        <div class="setgt">Jeux sur la console</div>
+        <div class="setrow">
+          <div class="setlab"><b>Dossier des jeux</b>
+            <span>Le dossier parent de toutes tes plateformes (chacune y a son
+              sous-dossier : GBA, SNES, PS2…). Romule le trouve tout seul ; ce
+              champ n'est là que pour le corriger.</span></div>
           <div class="setctl setctl-duo"><input type="text" id="s-romsroot"
                  placeholder="/storage/…/emulation/ROMs">
-            <button class="ghost" data-act="detectRoms">Chercher</button></div>
+            <button class="ghost" data-act="detectRoms">Détecter</button></div>
         </div>
-
-        <!-- What the tool REALLY finds on the console: the user no longer has
-             to guess which folders exist or which ones are empty. -->
         <div class="bar" style="margin-top:10px">
-          <button class="go" data-act="fullAnalysis">Analyser la console</button>
+          <button class="go" data-act="fullAnalysis">Recompter les jeux</button>
           <button class="ghost" data-act="addPlatform">Ajouter une plateforme…</button>
         </div>
         <div class="platforms" id="plateformes"></div>
         <div id="tree" class="tree" hidden></div>
-      <div id="organizewrap" hidden></div>
-      <div id="browserwrap" style="display:none">
-          <p class="lead" style="margin-top:12px"><b id="browsecible">Choisir un dossier</b> —
-            navigue jusqu'au dossier voulu, puis valide.</p>
-          <div class="bar">
-            <button class="go" data-act="useDir">Utiliser ce dossier</button>
-            <button class="ghost" data-act="browse">Rafraîchir</button>
-          </div>
-          <div id="crumb" class="crumb"></div>
-          <div id="browser"></div>
-        </div>
       </div>
 
       <div class="setgroup" id="groupe-console">
@@ -1175,6 +1158,24 @@
 <div class="toasts" id="toasts"></div>
 <div class="modal" id="modal" data-act="closeGame"></div>
 <div class="modal" id="dialog" data-act="closeDialog"></div>
+<!-- Folder navigation, wherever it is asked for: a MODAL, not a panel pushed
+     into the page. Three callers used to reposition one panel — the wizard
+     borrowed it, the storage list moved it, the platform row found it two
+     screens away — and each move was a chance for the click to look dead. A
+     modal has no position to get wrong, and the page underneath keeps its
+     layout. The confirm button sits BELOW the listing: you go somewhere, you
+     look at what is there, then you confirm. -->
+<div class="modal" id="navmodal" data-act="closeNav">
+  <div class="obox navbox">
+    <div class="navtete"><b id="browsecible">Choisir un dossier</b>
+      <button class="ghost" data-act="navFermer">Fermer</button></div>
+    <div id="crumb" class="crumb"></div>
+    <div id="browser"></div>
+    <div class="bar">
+      <button class="go" data-act="useDir">Choisir ce dossier</button>
+    </div>
+  </div>
+</div>
 <script src="/reactive.js"></script>
 <script src="/app.js"></script>
 </body></html>

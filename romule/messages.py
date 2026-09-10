@@ -491,11 +491,4 @@ D_CONSOLE_DEJA_RANGEE = 'Console déjà rangée : rien à déplacer.'
 D_RANGES_GUD_CONSOLE = (
     '%d fichier(s) rangé(s) en GAMES / UPDATE / DLC sur la console.')
 ACCES_RESEAU_DESACTIVE = 'Accès réseau désactivé.'
-SV_RECHERCHE_PORT = (
-    'Appairage réussi. Recherche du port de connexion sur la console…')
-SV_PORT_INTROUVABLE = (
-    "Port introuvable. Vérifie que le débogage sans fil est toujours "
-    'actif sur la console, puis recopie son « Adresse IP et port ».')
 SV_RACINE_ROMS = 'Racine des ROMs détectée sur la console : %s'
-SV_PORT_INTROUVABLE_LOG = (
-    'Port de connexion introuvable (essayées : %s).')

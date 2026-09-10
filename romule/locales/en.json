@@ -1702,5 +1702,13 @@
   "L'icône officielle de chaque jeu, récupérée automatiquement.": "Each game's official icon, fetched automatically.",
   "Icône officielle du jeu — sans configuration": "The game's official icon — no configuration",
   "Recherche des dossiers de jeux sur la console…": "Looking for the games folders on the console…",
-  "depuis": "for"
+  "depuis": "for",
+  "À faire une seule fois : ensuite la console est reconnue toute seule.": "Done once: the console is recognised on its own afterwards.",
+  "Jeux sur la console": "Games on the console",
+  "Le dossier parent de toutes tes plateformes (chacune y a son sous-dossier : GBA, SNES, PS2…). Romule le trouve tout seul ; ce champ n'est là que pour le corriger.": "The parent folder of all your platforms (each has its own subfolder there: GBA, SNES, PS2…). Romule finds it on its own; this field is only here to correct it.",
+  "Recompter les jeux": "Recount the games",
+  "Choisir ce dossier": "Choose this folder",
+  "Déconnecter": "Disconnect",
+  "Choisir le dossier des jeux": "Choose the games folder",
+  "Ferme la fenêtre du code : derrière elle, l'écran de débogage sans fil affiche « Adresse IP et port ». Recopie-la ici — son port n'est pas celui que tu viens de saisir.": "Close the code window: behind it, the wireless debugging screen shows “IP address and Port”. Copy it in here — its port is not the one you just typed."
 }

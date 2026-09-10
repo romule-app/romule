@@ -1256,7 +1256,6 @@ class Handler(BaseHTTPRequestHandler):
         # --- changent la liaison a la console
         "/api/wifi-pair",
         "/api/wifi-connect",
-        "/api/wifi-retrouver",
         # Writes `roms_root`, unlike the plain Switch-folder detection
         # next to it, which only answers.
         "/api/device-detect-roms",
@@ -1970,29 +1969,6 @@ class Handler(BaseHTTPRequestHandler):
                 JOB.log(langue.phrase(messages.SV_CONNEXION_REFUSEE_ADR,
                                       addr or "(vide)", msg), "warn")
             self._json({"ok": ok, "addr": addr, "message": msg})
-
-        elif p == "/api/wifi-retrouver":
-            # The same search as after a pairing, on demand. Offered because a
-            # search that failed once is worth one press: wireless debugging may
-            # have been switched on since, or the console may have rejoined the
-            # network. The alternative — sending the reader back to the console
-            # for a third number — is the step people give up on.
-            hote = (d.get("hote") or CFG.get("wifi_addr") or "").strip()
-            addr, essayees = device.relier_apres_appairage(hote)
-            if addr:
-                CFG["wifi_addr"] = addr
-                config.save_config(CFG)
-                JOB.log(langue.phrase(messages.SV_CONSOLE_PRETE, addr), "ok")
-            else:
-                # Its OWN sentence. This search runs again in the background
-                # from step 4, seconds after the pairing logged its outcome:
-                # repeating the pairing's wording made every failed pairing
-                # read as two failed pairings.
-                JOB.log(langue.phrase(messages.SV_PORT_INTROUVABLE_LOG,
-                                      ", ".join(essayees) or "-"), "warn")
-            self._json({"ok": bool(addr), "addr": addr, "found": essayees,
-                        "message": (messages.SV_CONSOLE_PRETE % addr) if addr
-                        else messages.SV_PORT_INTROUVABLE})
 
         elif p == "/api/wifi-discover":
             self._json({"found": device.discover()})
