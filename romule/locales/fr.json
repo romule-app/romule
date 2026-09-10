@@ -208,7 +208,6 @@
   "Source des jaquettes": "Source des jaquettes",
   "Jaquettes verticales de qualité. Nécessite une clé API.": "Jaquettes verticales de qualité. Nécessite une clé API.",
   "SteamGridDB — clé API requise": "SteamGridDB — clé API requise",
-  "Icônes Switch — sans configuration": "Icônes Switch — sans configuration",
   "URL personnalisée": "URL personnalisée",
   "Modèle d'URL": "Modèle d'URL",
   "Ton propre modèle d'URL.": "Ton propre modèle d'URL.",
@@ -553,7 +552,6 @@
   "Catalan": "Catalan",
   "Active EmuReady pour analyser ta ludothèque.": "Active EmuReady pour analyser ta ludothèque.",
   "Rien à signaler.": "Rien à signaler.",
-  "Icône officielle par title ID, sans configuration.": "Icône officielle par title ID, sans configuration.",
   "Aucun doublon repéré.": "Aucun doublon repéré.",
   "Bienvenue dans Romule": "Bienvenue dans Romule",
   "Accès protégé": "Accès protégé",
@@ -1700,5 +1698,9 @@
   "Dossier des jeux — toutes les plateformes": "Dossier des jeux — toutes les plateformes",
   "Pas encore trouvé — cherche, ou choisis-le à la main.": "Pas encore trouvé — cherche, ou choisis-le à la main.",
   "Chercher le dossier des jeux": "Chercher le dossier des jeux",
-  "Chaque console garde ses propres réglages : sa connexion et ses dossiers. Tout ce qui suit appartient à celle choisie ici.": "Chaque console garde ses propres réglages : sa connexion et ses dossiers. Tout ce qui suit appartient à celle choisie ici."
+  "Chaque console garde ses propres réglages : sa connexion et ses dossiers. Tout ce qui suit appartient à celle choisie ici.": "Chaque console garde ses propres réglages : sa connexion et ses dossiers. Tout ce qui suit appartient à celle choisie ici.",
+  "L'icône officielle de chaque jeu, récupérée automatiquement.": "L'icône officielle de chaque jeu, récupérée automatiquement.",
+  "Icône officielle du jeu — sans configuration": "Icône officielle du jeu — sans configuration",
+  "Recherche des dossiers de jeux sur la console…": "Recherche des dossiers de jeux sur la console…",
+  "depuis": "depuis"
 }

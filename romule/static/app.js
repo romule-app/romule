@@ -2496,8 +2496,10 @@ function renderConn(d) {
             : t('base des versions il y a %d h').replace('%d', h);
 
   if (c.kind) {
+    // No age in the strip: `à l'instant` next to the battery answered a
+    // question nobody asks while glancing at a header. It lives in the
+    // tooltip, with the address and the versions database.
     const faits = [c.kind === 'usb' ? 'USB' : 'Wi-Fi'];
-    if (c.depuis != null) faits.push(duree(c.depuis));
     if (i.android) faits.push('Android ' + i.android);
     el.className = 'conn on';
     el.innerHTML = '<span class="cdot on"></span>' +
@@ -2506,6 +2508,7 @@ function renderConn(d) {
       '<span class="cfaits">' + faits.map(esc).join('<i>·</i>') + '</span>';
     el.title = [t('Connectée') + ' ' +
                 (c.kind === 'usb' ? t('par câble USB') : t('en Wi-Fi')),
+                c.depuis != null ? t('depuis') + ' ' + duree(c.depuis) : '',
                 c.serial, vers].filter(Boolean).join(' — ');
   } else {
     el.className = 'conn off';
@@ -3702,7 +3705,7 @@ const SET_DESC = {
   'd-verify': {size: 'Rapide, suffisant dans la plupart des cas.',
                hash: 'Sûr mais plus lent : relit chaque fichier des deux côtés.',
                none: 'Aucun contrôle. Le plus rapide.'},
-  'd-cover': {nlib: 'Icône officielle par title ID, sans configuration.',
+  'd-cover': {nlib: 'L\'icône officielle de chaque jeu, récupérée automatiquement.',
               steamgriddb: 'Jaquettes verticales de qualité. Nécessite une clé API.',
               custom: 'Ton propre modèle d\'URL.'},
 };
@@ -5633,11 +5636,19 @@ const app = {
       try {
         if (DATA.config && DATA.config.device_dir) await this.explore();
         else await this.detectDir();   // no folder known: we look for it
-        // The other platforms, once and quietly. Their root was guessed from
-        // the Switch folder and typed by hand when the guess was wrong — which
-        // is why every platform but the Switch counted zero in the library's
-        // selector, on a console holding a hundred games.
-        if (!(DATA.config || {}).roms_root) await this.detectRoms(true);
+        // The other platforms, once and with the step saying so: their root
+        // was guessed from the Switch folder and typed by hand when the guess
+        // was wrong — which is why every platform but the Switch counted zero
+        // in the library's selector, on a console holding a hundred games.
+        if (!(DATA.config || {}).roms_root) {
+          ONB.chercheDossiers = true;
+          if ($('onboard').classList.contains('open')) renderOnboard();
+          try { await this.detectRoms(true); }
+          finally {
+            ONB.chercheDossiers = false;
+            if ($('onboard').classList.contains('open')) renderOnboard();
+          }
+        }
         await this.loadNand();         // the NAND state only means something once connected
       } finally {
         this._lectureConsole = null;
@@ -5753,13 +5764,21 @@ const app = {
       toast(libelleSysteme(CIBLE_PARCOURS) + ' : ' + BROWSE_PATH, 'ok');
     }
     $('browserwrap').style.display = 'none';
+    // Wherever it was lent — the wizard's slot, the storage list — it goes
+    // home, so the next opener finds it where its own markup expects it.
+    if (ONB.parcours) { ONB.parcours = null; renderOnboard(); }
+    else navRendre();
     updatePlatformSettings();       // the path shown follows immediately
     await this.detectPlatforms(true);
-    // Lent to the wizard: put it away and redraw the step, which now has a
-    // folder to show.
-    if (ONB.parcours) { ONB.parcours = null; renderOnboard(); }
   },
-  setDpath(p) { BROWSE_PATH = p; this.tab('settings'); $('browserwrap').style.display = ''; this.browse(p); },
+  setDpath(p) {
+    BROWSE_PATH = p;
+    this.tab('settings');
+    // Under the storage that was clicked, not two screens lower.
+    navPlacerApres($('device'));
+    $('browserwrap').style.display = '';
+    this.browse(p);
+  },
 
   // ---- where the games are, on the machine hosting the service
   libOpen(depart) {
@@ -6929,35 +6948,36 @@ let ONB = {i: 0, sens: 1, occupe: false, resultatScan: null,
 // console with a hundred GBA and PSX games looked empty.
 function onbDossiers(c) {
   const cfg = DATA.config || {};
-  // The borrowed browser lands UNDER the row whose « Changer » was pressed,
-  // not at the bottom of the step: it answers that row's question, and putting
-  // it after the platform grid made the click appear to do nothing until the
-  // reader scrolled.
+  // While the folders are being looked for, say so and say nothing else: a row
+  // reading `pas encore trouvé` DURING the search reports a failure that has
+  // not happened.
+  if (ONB.chercheDossiers) {
+    return '<div class="onbcherche">' +
+      esc(t('Recherche des dossiers de jeux sur la console…')) + '</div>';
+  }
+  // The borrowed browser lands UNDER the row whose button was pressed, not at
+  // the bottom of the step: it answers that row's question.
   const slot = cible =>
     ONB.parcours === cible ? '<div id="onb-browse-slot"></div>' : '';
-  const ligne = (titre, chemin, cible, absent) =>
-    '<div class="onbdoss">' +
-      '<div class="onbdosst">' + esc(titre) + '</div>' +
-      (chemin
-        ? '<div class="onbchemin" data-i18n-skip>' + esc(chemin) + '</div>'
-        : '<div class="onbdossvide">' + esc(absent) + '</div>') +
-      '<button class="lien" data-act="onbParcourir" data-arg="' + esc(cible) +
-        '">' + esc(chemin ? t('Changer') : t('Choisir')) + '</button>' +
-    '</div>' + slot(cible);
-  // The generic root FIRST: Romule serves every platform, and this step led
-  // with a Switch path as if the rest were an afterthought. The Switch keeps a
-  // row — its emulator reads a folder of its own, that is a fact of the
-  // console, not of this tool — but it comes second and is named as the
-  // platform it is.
+  // ONE row. The Switch folder is a per-platform detail like `PS2/` or `GBA/`:
+  // it was detected on connection, it is adjustable in the settings, and a
+  // wizard step that asked about it was a Switch tool talking. What the reader
+  // decides here is the games root; everything under it is shown, not asked.
   return '<div class="onbdosss">' +
-    ligne(t('Dossier des jeux — toutes les plateformes'), cfg.roms_root || '',
-          'roms', t('Pas encore trouvé — cherche, ou choisis-le à la main.')) +
-    ligne('Nintendo Switch', c.device_dir || '', 'switch',
-          t('Aucun dossier repéré.')) +
+    '<div class="onbdoss">' +
+      '<div class="onbdosst">' + esc(t('Dossier des jeux — toutes les plateformes')) + '</div>' +
+      (cfg.roms_root
+        ? '<div class="onbchemin" data-i18n-skip>' + esc(cfg.roms_root) + '</div>'
+        : '<div class="onbdossvide">' +
+          esc(t('Pas encore trouvé — cherche, ou choisis-le à la main.')) + '</div>') +
+      '<button class="lien" data-act="onbParcourir" data-arg="roms">' +
+        esc(cfg.roms_root ? t('Changer') : t('Choisir')) + '</button>' +
+    '</div>' + slot('roms') +
     '</div>' +
-    '<div class="onbliebar">' +
+    (cfg.roms_root ? '' :
+      '<div class="onbliebar">' +
       '<button class="ghost" data-act="detectRoms">Chercher le dossier des jeux</button>' +
-    '</div>' +
+      '</div>') +
     onbPlateformes();
 }
 
@@ -6999,14 +7019,10 @@ function onbConsoleCorps(c) {
       '<div class="onblietete"><span class="onbliecoche">✓</span>' +
         '<b>' + esc(k.nom || t('Console reliée')) + '</b></div>' +
       renderFaits(faits) +
+      // No « Recenser » button and no « Relier autrement »: the platform grid
+      // below already IS the census, refreshed by the detection, and changing
+      // how the console is linked is a settings matter once one is connected.
       onbDossiers(c) +
-      '<div class="onbliebar">' +
-        '<button class="ghost" data-act="onbScanConsole"' +
-          (ONB.occupe ? ' disabled' : '') + '>' +
-          (ONB.occupe ? 'Lecture…' : 'Recenser les jeux de la console') + '</button>' +
-        '<button class="lien" data-act="onbAutreLien">Relier autrement</button>' +
-      '</div>' +
-      (ONB.consoleScan ? renderConsoleScan(ONB.consoleScan) : '') +
       '</div>';
   }
 
@@ -7470,6 +7486,17 @@ function navPreter(slot) {
   if (!w || !slot) return;
   if (!NAV_MAISON) NAV_MAISON = {parent: w.parentNode, apres: w.nextSibling};
   slot.appendChild(w);
+}
+
+// The settings-side variant: the browser lands right AFTER a given block —
+// the storage list, the ROMs row — instead of where the markup happens to put
+// it. Clicking a volume opened a browser two screens lower, which reads as a
+// click that did nothing.
+function navPlacerApres(noeud) {
+  const w = $('browserwrap');
+  if (!w || !noeud) return;
+  if (!NAV_MAISON) NAV_MAISON = {parent: w.parentNode, apres: w.nextSibling};
+  noeud.insertAdjacentElement('afterend', w);
 }
 
 function navRendre() {

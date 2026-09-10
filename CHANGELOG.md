@@ -12,6 +12,32 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Fixed
 
+- **The wizard's console step stopped asking about the Switch at all.** Its
+  folder is a per-platform detail like `PS2/` or `GBA/`: detected on
+  connection, adjustable in the settings, and a wizard row asking about it was
+  a Switch tool talking. One generic row remains — the games root — and while
+  the detection runs, the step says so with a spinner instead of reporting
+  « pas encore trouvé » about a search still in flight. The census button and
+  « Relier autrement » are gone from the connected card: the platform grid
+  below already is the census, and relinking is a settings matter.
+
+- **« à l'instant » left the header.** The link's age answered a question
+  nobody asks while glancing at a header; it lives in the console's tooltip
+  now, with the address and the versions-database freshness.
+
+- **Three settings leads sat flush against their frame.** An inline shorthand
+  margin erased the group's 18 px inset — a shorthand resets every side it
+  does not name. The server games-folder row also aligns its path box with its
+  button instead of stacking them.
+
+- **« Icônes Switch — sans configuration » named a platform where it should
+  name a behaviour.** The cover source now reads « Icône officielle du jeu —
+  sans configuration ».
+
+- **Clicking a storage volume opened the folder browser two screens lower.**
+  The browser now lands right under the storage list — the same borrowed-panel
+  mechanic the wizard uses — and goes home once a folder is chosen.
+
 - **One log, two languages.** The terminal followed the interface's language
   setting — a rule this project chose, and the wrong one. The banner printed in
   English at startup, then the first person to pick French in the wizard

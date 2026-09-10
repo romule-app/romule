@@ -334,32 +334,39 @@ def main():
           "onblie" in (lie or ""), (lie or "")[:90])
         t("et plus aucun champ d'appairage",
           "onb-pair-slot" not in (lie or "") and "conn-addr" not in (lie or ""))
-        t("elle nomme le dossier repere sur la console",
-          "/storage/emulated/0/Switch" in (lie or ""))
-        # Romule is not a Switch tool: only the Switch folder was ever shown
-        # here, so a console holding a hundred GBA and PSX games looked empty.
-        t("elle montre AUSSI la racine des autres plateformes",
-          "onbdosss" in (lie or "") and (lie or "").count("onbdoss\"") >= 2,
+        t("elle ne mene plus par un chemin Switch",
+          "/storage/emulated/0/Switch" not in (lie or ""))
+        # ONE generic row: the Switch folder is a per-platform detail, and a
+        # wizard step that asked about it was a Switch tool talking.
+        # One folder row, and none of it addressed to the Switch: its name may
+        # appear in the platform GRID below — that is where it belongs.
+        t("l'etape demande la racine generique et rien d'autre",
+          (lie or "").count("onbdoss\"") == 1
+          and 'data-arg="switch"' not in (lie or ""),
           (lie or "").count("onbdoss\""))
-        t("et laisse aller chercher chaque dossier",
+        t("et laisse aller la chercher a la main",
           "onbParcourir" in (lie or ""))
-        # The borrowed browser lands UNDER the row whose « Changer » was
-        # pressed. At the bottom of the step, the click appeared to do nothing
-        # until the reader scrolled.
+        t("sans bouton de recensement ni de relien",
+          "onbScanConsole" not in (lie or "")
+          and "onbAutreLien" not in (lie or ""))
+        # While the detection runs, the step says so instead of reporting a
+        # failure that has not happened.
+        occ = n.js("(() => { ONB.chercheDossiers = true;"
+                   " const h = onbConsoleCorps({device:'wifi', adb:true,"
+                   "   device_dir:'/x', console:{}});"
+                   " ONB.chercheDossiers = false; return h; })()")
+        t("pendant la recherche, l'etape le dit",
+          "onbcherche" in (occ or "") and "onbdossvide" not in (occ or ""),
+          (occ or "")[:80])
+        # The borrowed browser lands UNDER the row whose button was pressed.
         sous = n.js("(() => { ONB.parcours = 'roms';"
                     " const h = onbConsoleCorps({device:'wifi', adb:true,"
                     "   device_dir:'/x', console:{}});"
                     " ONB.parcours = null;"
-                    " const i = h.indexOf('onb-browse-slot');"
-                    " const doss = [];"
-                    " let k = -1;"
-                    " while ((k = h.indexOf('class=\"onbdoss\"', k + 1)) !== -1)"
-                    "   doss.push(k);"
-                    " return {slot: i, rangs: doss}; })()")
+                    " return {slot: h.indexOf('onb-browse-slot'),"
+                    "         rang: h.indexOf('class=\"onbdoss\"')}; })()")
         t("le navigateur se place sous la ligne demandee",
-          bool(sous) and len(sous.get("rangs", [])) == 2
-          and sous["rangs"][0] < sous["slot"] < sous["rangs"][1],
-          sous)
+          bool(sous) and sous["slot"] > sous["rang"] >= 0, sous)
         # The same grid as the settings, from the same function.
         pf = n.js("(() => { PLATFORMS = [{key:'gba', name:'Game Boy Advance',"
                   " folder:'GBA', count:12, bytes:1024}];"
@@ -369,7 +376,6 @@ def main():
           "pfgrille" in (pf or "") and ">12<" in (pf or ""), (pf or "")[:100])
         t("et portent un logo", "pflogo" in (pf or ""))
         n.js("(() => { PLATFORMS = []; })()")
-        t("et laisse relier autrement", "onbAutreLien" in (lie or ""))
         t("le panneau est revenu aux reglages, pas detruit",
           n.js("document.querySelectorAll('#pairwrap').length") == 1,
           n.js("document.querySelectorAll('#pairwrap').length"))

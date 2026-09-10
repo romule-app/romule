@@ -208,7 +208,6 @@
   "Source des jaquettes": "Cover source",
   "Jaquettes verticales de qualité. Nécessite une clé API.": "Good vertical covers. Needs an API key.",
   "SteamGridDB — clé API requise": "SteamGridDB — API key required",
-  "Icônes Switch — sans configuration": "Switch icons — no setup needed",
   "URL personnalisée": "Custom URL",
   "Modèle d'URL": "URL template",
   "Ton propre modèle d'URL.": "Your own URL template.",
@@ -553,7 +552,6 @@
   "Catalan": "Catalan",
   "Active EmuReady pour analyser ta ludothèque.": "Turn on EmuReady to analyse your library.",
   "Rien à signaler.": "Nothing to report.",
-  "Icône officielle par title ID, sans configuration.": "Official artwork by title ID, no setup needed.",
   "Aucun doublon repéré.": "No duplicates found.",
   "Bienvenue dans Romule": "Welcome to Romule",
   "Accès protégé": "Access protected",
@@ -1700,5 +1698,9 @@
   "Dossier des jeux — toutes les plateformes": "Games folder — every platform",
   "Pas encore trouvé — cherche, ou choisis-le à la main.": "Not found yet — search, or pick it by hand.",
   "Chercher le dossier des jeux": "Look for the games folder",
-  "Chaque console garde ses propres réglages : sa connexion et ses dossiers. Tout ce qui suit appartient à celle choisie ici.": "Each console keeps its own settings: its connection and its folders. Everything below belongs to the one chosen here."
+  "Chaque console garde ses propres réglages : sa connexion et ses dossiers. Tout ce qui suit appartient à celle choisie ici.": "Each console keeps its own settings: its connection and its folders. Everything below belongs to the one chosen here.",
+  "L'icône officielle de chaque jeu, récupérée automatiquement.": "Each game's official icon, fetched automatically.",
+  "Icône officielle du jeu — sans configuration": "The game's official icon — no configuration",
+  "Recherche des dossiers de jeux sur la console…": "Looking for the games folders on the console…",
+  "depuis": "for"
 }
