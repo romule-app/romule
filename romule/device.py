@@ -834,6 +834,27 @@ def detect_games_dir():
     return best
 
 
+def _find_exts(cfg=None):
+    """A `find` expression matching every ROM extension we know.
+
+    Built from the platform table rather than written out: a platform declared
+    by hand carries its own extensions, and they must be looked for too.
+    """
+    from . import systems
+    exts = sorted({e.lower() for e in systems.accepted_exts(cfg)
+                   if e.startswith(".") and len(e) <= 6})
+    if not exts:
+        return _GAME_FIND
+    dedans = " -o ".join("-iname '*%s'" % e for e in exts)
+    return r"\( %s \)" % dedans
+
+
+# The extensions that mean "Switch". Its folder is detected on its own, and
+# counting it here would hand the whole of internal storage the win on any
+# console that keeps it apart from the rest.
+_EXTS_SWITCH = (".nsp", ".xci", ".nsz", ".xcz")
+
+
 def detect_roms_root(cfg=None, profondeur=4):
     """The folder holding the OTHER platforms' folders, on the console.
 
@@ -844,42 +865,68 @@ def detect_roms_root(cfg=None, profondeur=4):
     `/storage/emulated/0/Switch` and nothing else where Romule looked, so every
     other platform counted zero and the selector stopped saying how many.
 
-    Recognising a folder is something `systems.platform_for_folder` already
-    does, aliases included — "PS1" for PSX, "Sega" for the Mega Drive. So the
-    answer is simply: which directory has the most children it recognises?
+    Two ways of recognising a platform folder, because either alone is blind:
 
-    Two at least. One folder named `PC` or `Wii` proves nothing; two together
-    are a ROMs root.
+      * by NAME — `systems.platform_for_folder` knows `gba`, and the aliases
+        too: `PS1` for the PlayStation, `Sega` for the Mega Drive. Cheap, and it
+        works on an empty folder;
+      * by CONTENT — a folder holding game files IS a platform folder, whatever
+        it is called. `Nintendo - Game Boy Advance` and `psx-eur` say nothing by
+        their names, and this is the only thing that finds them.
+
+    What the second one does NOT try to do is say WHICH platform: `.cue` and
+    `.iso` are claimed by every disc console at once. It does not need to —
+    finding the ROOT only requires knowing that a child holds games.
+
+    The winner is the directory with the most such children, and two are the
+    minimum: a lone `Wii` folder proves nothing, and answering with a wrong root
+    would point every platform into it.
     """
     if state() != "device":
         return None
     from . import systems
+    # parent -> {child folder name: the platform key when it is known}
     par_parent = {}
+
     for v in volumes():
+        racine = v["path"].rstrip("/")
         cmd = ("find %s -maxdepth %d -type d 2>/dev/null"
-               % (_q(v["path"]), int(profondeur)))
+               % (_q(racine), int(profondeur)))
         for ligne in _shell(cmd, timeout=120).splitlines():
             chemin = ligne.strip().rstrip("/")
             if not chemin or "/" not in chemin:
                 continue
             parent, nom = chemin.rsplit("/", 1)
             cle = systems.platform_for_folder(nom, cfg)
-            # `switch` is excluded on purpose: its folder is detected on its
-            # own, and counting it would make `/storage/emulated/0` win with a
-            # single match on installations that keep it apart.
             if cle and cle != "switch":
-                par_parent.setdefault(parent, {})[cle] = nom
+                par_parent.setdefault(parent, {})[nom] = cle
+
+        cmd = ("find %s -maxdepth %d -type f %s 2>/dev/null"
+               % (_q(racine), int(profondeur) + 2, _find_exts(cfg)))
+        for ligne in _shell(cmd, timeout=180).splitlines():
+            fichier = ligne.strip()
+            if not fichier or fichier.count("/") < 2:
+                continue
+            if fichier.lower().endswith(_EXTS_SWITCH):
+                continue
+            dossier, _ = fichier.rsplit("/", 1)
+            parent, nom = dossier.rsplit("/", 1)
+            if systems.platform_for_folder(nom, cfg) == "switch":
+                continue
+            par_parent.setdefault(parent, {}).setdefault(
+                nom, systems.platform_for_folder(nom, cfg))
+
     if not par_parent:
         return None
-    # The most platforms; on a tie the shallowest path, which is the one a
-    # person would call the root.
+    # The most platform folders; on a tie the shallowest path, which is the one
+    # a person would call the root.
     parent, trouves = max(par_parent.items(),
                           key=lambda kv: (len(kv[1]), -kv[0].count("/")))
     if len(trouves) < 2:
         return None
     # The names actually seen, so `device_dir` finds "PS1" when it expects
     # "PSX".
-    systems.remember_folders(trouves.values())
+    systems.remember_folders(trouves)
     return parent
 
 

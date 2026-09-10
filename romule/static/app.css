@@ -3592,3 +3592,33 @@ body.compact .filters{margin-bottom:2px}
 .setctl-duo{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .setctl-duo input{flex:1 1 220px;width:auto;min-width:0}
 .setctl-duo button{flex:0 0 auto}
+
+/* The platform logo. A silhouette per family — a home pad, a handheld, an
+   arcade cabinet, a screen — tinted per maker. Not the real marks: shipping
+   those would mean shipping somebody's trademark, and a recognisable shape in
+   the right colour does what a logo is wanted for, which is telling one row
+   from another at a glance. */
+.pflogo{display:block;width:26px;height:26px;margin-bottom:4px;color:var(--pf);
+  opacity:.92}
+.pflogo svg{width:100%;height:100%;display:block}
+/* A card that is not a button: same shape, nothing to press. */
+div.pfcard{border:1px solid var(--line);background:var(--surface-2);
+  cursor:default}
+@media (prefers-reduced-motion:no-preference){
+  .pfcard{transition:border-color .18s var(--ease), transform .18s var(--ease)}
+  button.pfcard:hover{transform:translateY(-2px)}
+}
+
+/* The two folders the console holds, side by side. Only the Switch one was ever
+   shown here, which is why a console with a hundred GBA and PSX games looked
+   empty: Romule is not a Switch tool. */
+.onbdosss{display:flex;flex-direction:column;gap:10px;margin:14px 0 0}
+.onbdoss{display:grid;grid-template-columns:1fr auto;gap:4px 12px;
+  align-items:center;padding:12px;border:1px solid var(--bord);
+  border-radius:10px;background:var(--puits)}
+.onbdosst{grid-column:1 / -1;font-size:11.5px;color:var(--mute)}
+.onbdoss .onbchemin{margin:0;min-width:0;overflow-wrap:anywhere}
+.onbdossvide{font-size:12.5px;color:var(--amber)}
+.onbdoss .lien{justify-self:end;font-size:12px}
+.onbpf{margin:16px 0 0}
+.onbpf .onbdosst{margin-bottom:8px}

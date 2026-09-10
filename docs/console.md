@@ -65,6 +65,19 @@ which makes it worth more than a plain “connected”.
     Two to five times slower than USB for large transfers. Fine for a few
     games, noticeable for a full library.
 
+### When folder names say nothing
+
+Recognising `gba` or `PS1` works on a console that names them that way, and
+finds nothing at all on one filing games under `Nintendo - Game Boy Advance` or
+`psx-eur`. So Romule looks at the **contents** too: a folder holding game files
+IS a platform folder, whatever it is called.
+
+Finding the root does not require knowing WHICH platform — just as well, since
+`.cue` and `.iso` are claimed by every disc console at once.
+
+And when none of that works, both the wizard and the settings let you **browse
+the console** and point at the folder by hand.
+
 ## USB
 
 Plug the console in with debugging enabled and press **Detect**. Under Docker,

@@ -2741,6 +2741,78 @@ function groupDeviceGames(games) {
 
 // What the console really holds. Clicking a row switches the library to that
 // platform: the setting becomes a starting point, not a dead end.
+// ------------------------------------------------- platforms, shown once
+//
+// The same grid is wanted in two places — the settings, and the wizard's
+// console step — and two copies of it would drift the way the console card and
+// the panel's conclusion did. So it is written once here and called twice.
+//
+// The logos are SILHOUETTES, not brands: a home pad, a handheld, an arcade
+// cabinet, a screen, drawn as paths and tinted per maker. Shipping the real
+// marks would mean shipping somebody's trademark, and a recognisable shape plus
+// the right colour does the job a logo is wanted for — telling one row from
+// another at a glance.
+const PF_FAMILLE = {
+  nes: ['maison', '#c9483a'], snes: ['maison', '#8e6bbf'],
+  n64: ['maison', '#3f8fd0'], gamecube: ['maison', '#6c5bc0'],
+  wii: ['maison', '#9fb6c6'], wiiu: ['maison', '#5b9bd5'],
+  switch: ['maison', '#e0483c'],
+  gb: ['portable', '#8ca06a'], gba: ['portable', '#6f5fd0'],
+  nds: ['portable', '#9aa6b2'], '3ds': ['portable', '#d04a6a'],
+  psx: ['maison', '#8d96a3'], ps2: ['maison', '#2f6fb0'],
+  ps3: ['maison', '#4a5b6e'], psp: ['portable', '#3f4a5a'],
+  psvita: ['portable', '#2b3340'],
+  megadrive: ['maison', '#3f7fbf'], saturn: ['maison', '#5a5fa8'],
+  dreamcast: ['maison', '#d9663a'],
+  xbox: ['maison', '#5aa04a'], xbox360: ['maison', '#7bbf5a'],
+  arcade: ['arcade', '#c08a3a'], pc: ['ecran', '#7a8794'],
+};
+
+const PF_SILHOUETTE = {
+  // A home controller: two grips, a cross, two buttons.
+  maison: '<path d="M5 8h14a4 4 0 0 1 3.9 3.1l1 5A3 3 0 0 1 21 20a3 3 0 0 1-2.4-1.2L17 16.6H7l-1.6 2.2A3 3 0 0 1 3 20a3 3 0 0 1-2.9-3.9l1-5A4 4 0 0 1 5 8Z"/>'
+    + '<path d="M7.4 11v3.2M5.8 12.6H9M16.2 11.8h.01M18.2 13.4h.01" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" fill="none"/>',
+  // A handheld: a slab with a screen.
+  portable: '<rect x="4" y="3" width="16" height="18" rx="3"/>'
+    + '<rect x="6.6" y="5.6" width="10.8" height="7.6" rx="1.2" fill="#0b0b0e" opacity=".55"/>'
+    + '<path d="M8 16.8v2.2M6.9 17.9h2.2M15.4 16.9h.01M17 18.2h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/>',
+  // An arcade cabinet.
+  arcade: '<path d="M6 2h12a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-1l.6 2H6.4l.6-2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z"/>'
+    + '<rect x="6.6" y="4.6" width="10.8" height="7" rx="1" fill="#0b0b0e" opacity=".55"/>'
+    + '<path d="M9 15.4v1.8M14.6 15.6h.01" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" fill="none"/>',
+  ecran: '<rect x="2.5" y="4" width="19" height="12.5" rx="2"/>'
+    + '<rect x="4.6" y="6" width="14.8" height="8.5" rx="1" fill="#0b0b0e" opacity=".55"/>'
+    + '<path d="M8 20h8M12 16.5V20" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" fill="none"/>',
+};
+
+function logoPlateforme(cle) {
+  const [famille, teinte] = PF_FAMILLE[cle] || ['ecran', 'var(--mute)'];
+  return '<span class="pflogo" style="--pf:' + esc(teinte) + '" aria-hidden="true">' +
+    '<svg viewBox="0 0 24 24" fill="currentColor">' +
+    (PF_SILHOUETTE[famille] || PF_SILHOUETTE.ecran) + '</svg></span>';
+}
+
+// One platform card. `lien` decides what a click does — the settings open the
+// platform's detail, the wizard has nothing to open.
+function carteePlateforme(s, cliquable) {
+  const dedans =
+    logoPlateforme(s.key) +
+    '<span class="pfname">' + esc(s.name) + '</span>' +
+    '<span class="pfn">' + esc(s.count) + '</span>' +
+    (s.bytes != null ? '<span class="pfsize">' + esc(fmt(s.bytes)) + '</span>' : '') +
+    '<span class="pfdir" data-i18n-skip>' + esc(s.folder || '') + '/</span>';
+  if (!cliquable) return '<div class="pfcard">' + dedans + '</div>';
+  return '<button class="pfcard' + (s.key === PF_OUVERTE ? ' on' : '') +
+    '" data-act="openPlatform" data-arg="' + esc(s.key) + '" title="' +
+    esc(tpl('Détail de %s', s.name)) + '">' + dedans + '</button>';
+}
+
+function grillePlateformes(liste, cliquable) {
+  return '<div class="pfgrille">' +
+    liste.map(s => carteePlateforme(s, cliquable)).join('') + '</div>';
+}
+
+
 function renderPlatforms(r) {
   const el = $('plateformes');
   if (!el) return;
@@ -2757,15 +2829,7 @@ function renderPlatforms(r) {
     return;
   }
   PLATFORMS = p;
-  el.innerHTML = '<div class="pfgrille">' + p.map(s =>
-    '<button class="pfcard' + (s.key === PF_OUVERTE ? ' on' : '') +
-    '" data-act="openPlatform" data-arg="' + esc(s.key) + '" ' +
-    'title="' + esc(tpl('Détail de %s', s.name)) + '">' +
-      '<span class="pfname">' + esc(s.name) + '</span>' +
-      '<span class="pfn">' + s.count + '</span>' +
-      '<span class="pfsize">' + fmt(s.bytes) + '</span>' +
-      '<span class="pfdir">' + esc(s.folder) + '/</span>' +
-    '</button>').join('') + '</div>' +
+  el.innerHTML = grillePlateformes(p, true) +
     '<div class="mono" style="margin-top:8px">' +
     tpl('%s {plateforme|plateformes} sous %s', p.length,
            '<code>' + esc(r.racine) + '</code>') + ' · ' +
@@ -5466,9 +5530,10 @@ const app = {
     document.body.appendChild(fini);
     setTimeout(() => fini.remove(), 1100);
     el.classList.remove('open');
-    // The pairing panel goes home, or the settings would find an empty space
-    // where their own wizard used to be.
+    // Both borrowed panels go home, or the settings would find empty space
+    // where their own controls used to be.
     pairRendre();
+    navRendre();
   },
   async showOnboard() { await this.checkHealth(true); },
 
@@ -5594,6 +5659,14 @@ const app = {
   // The OTHER platforms' root on the console. Run right after the Switch
   // folder, because the two answer the same question — where are the games —
   // and only one of them was ever asked.
+  // Browse the console from the wizard. The same browser the settings use,
+  // borrowed: someone whose folders Romule cannot recognise must still be able
+  // to point at them.
+  onbParcourir(cible) {
+    ONB.parcours = (cible === 'switch' || cible === 'roms') ? cible : 'roms';
+    renderOnboard();
+  },
+
   async detectRoms(silencieux) {
     const r = await api('/api/device-detect-roms', {});
     if (!r || !r.racine) {
@@ -5608,6 +5681,8 @@ const app = {
     DATA.config = Object.assign({}, DATA.config, {roms_root: r.racine});
     fillSettings();
     await this.loadSystems();
+    await this.detectPlatforms(true);
+    if ($('onboard').classList.contains('open')) renderOnboard();
     if (!silencieux) toast(tpl('Racine des ROMs : %s', r.racine), 'ok');
     return r.racine;
   },
@@ -5679,7 +5754,10 @@ const app = {
     }
     $('browserwrap').style.display = 'none';
     updatePlatformSettings();       // the path shown follows immediately
-    this.detectPlatforms();
+    await this.detectPlatforms(true);
+    // Lent to the wizard: put it away and redraw the step, which now has a
+    // folder to show.
+    if (ONB.parcours) { ONB.parcours = null; renderOnboard(); }
   },
   setDpath(p) { BROWSE_PATH = p; this.tab('settings'); $('browserwrap').style.display = ''; this.browse(p); },
 
@@ -6829,6 +6907,8 @@ let ONB = {i: 0, sens: 1, occupe: false, resultatScan: null,
            // button that finds nothing in a container, and four pairing steps
            // below it — so the reader had to work out which half was theirs.
            lien: null,
+           // Which folder the borrowed browser is picking, or null.
+           parcours: null,
            // One verdict per provider: a single line for both said nothing
            // about WHICH of the two had answered.
            sgdb: null, igdb: null};
@@ -6843,6 +6923,46 @@ let ONB = {i: 0, sens: 1, occupe: false, resultatScan: null,
 //
 // So: ask how it is plugged in, show that path alone, and replace the whole
 // thing with the console once there is one.
+// Where the games are, on the console. Both folders, because Romule is not a
+// Switch tool: the Switch one holds `.nsp` and friends, the ROMs root holds
+// every other platform — and only the first was ever shown here, which is why a
+// console with a hundred GBA and PSX games looked empty.
+function onbDossiers(c) {
+  const cfg = DATA.config || {};
+  const ligne = (titre, chemin, cible, absent) =>
+    '<div class="onbdoss">' +
+      '<div class="onbdosst">' + esc(titre) + '</div>' +
+      (chemin
+        ? '<div class="onbchemin" data-i18n-skip>' + esc(chemin) + '</div>'
+        : '<div class="onbdossvide">' + esc(absent) + '</div>') +
+      '<button class="lien" data-act="onbParcourir" data-arg="' + esc(cible) +
+        '">' + esc(chemin ? t('Changer') : t('Choisir')) + '</button>' +
+    '</div>';
+  return '<div class="onbdosss">' +
+    ligne(t('Jeux Switch'), c.device_dir || '', 'switch',
+          t('Aucun dossier repéré.')) +
+    ligne(t('Toutes les autres plateformes'), cfg.roms_root || '', 'roms',
+          t('Pas encore trouvée — cherche, ou choisis-la à la main.')) +
+    '</div>' +
+    '<div class="onbliebar">' +
+      '<button class="ghost" data-act="detectRoms">Chercher la racine des ROMs</button>' +
+    '</div>' +
+    onbPlateformes();
+}
+
+// The same grid as the settings, from the same function. It was in one place
+// only, so the wizard could say "connected" and never say what had been found.
+function onbPlateformes() {
+  if (!PLATFORMS.length) return '';
+  const jeux = PLATFORMS.reduce((n, s) => n + (s.count || 0), 0);
+  return '<div class="onbpf">' +
+    '<div class="onbdosst">' +
+      esc(tpl('%s {plateforme|plateformes}, %s {jeu|jeux}',
+              PLATFORMS.length, jeux)) + '</div>' +
+    grillePlateformes(PLATFORMS, false) + '</div>';
+}
+
+
 function onbConsoleCorps(c) {
   if (c.device) {
     // The EVIDENCE, not the claim. « Console reliée. » asks to be believed;
@@ -6858,8 +6978,7 @@ function onbConsoleCorps(c) {
       '<div class="onblietete"><span class="onbliecoche">✓</span>' +
         '<b>' + esc(k.nom || t('Console reliée')) + '</b></div>' +
       renderFaits(faits) +
-      '<p class="onbnote">Le dossier de jeux repéré sur la console :</p>' +
-      '<div class="onbchemin" data-i18n-skip>' + esc(c.device_dir || '') + '</div>' +
+      onbDossiers(c) +
       '<div class="onbliebar">' +
         '<button class="ghost" data-act="onbScanConsole"' +
           (ONB.occupe ? ' disabled' : '') + '>' +
@@ -6867,6 +6986,9 @@ function onbConsoleCorps(c) {
         '<button class="lien" data-act="onbAutreLien">Relier autrement</button>' +
       '</div>' +
       (ONB.consoleScan ? renderConsoleScan(ONB.consoleScan) : '') +
+      // Lent, not copied — see `pairPreter` for why a second copy is a defect
+      // waiting to happen.
+      '<div id="onb-browse-slot"></div>' +
       '</div>';
   }
 
@@ -7087,19 +7209,29 @@ function onbEtapes(h) {
     {
       cle: 'fin', titre: 'C\'est prêt', requis: null,
       sous: 'Le reste se règle depuis les réglages, quand le besoin se présente.',
+      // Romule handles every platform, and this page read as a Switch tool's
+      // farewell: two of its three lines were about `.nsz` and Eden. What is
+      // true of all of them comes first; the Switch-only note is kept, named as
+      // such, and only when there is something to say.
       corps: () =>
         '<ul class="onbliste">' +
-        '<li><b>Jeux compressés</b>' +
-          '<span class="onbdesc">' + (c.nsz
-            ? 'L\'outil nsz est installé : les .nsz et .xcz seront convertis.'
-            : 'Les .nsz et .xcz demandent l\'outil nsz et un fichier prod.keys, ' +
-              'à fournir dans les réglages.') + '</span></li>' +
+        '<li><b>Toutes tes plateformes</b>' +
+          '<span class="onbdesc">' + esc(t('Chaque console a son dossier sur '
+            + 'la tienne, et son propre réglage : Réglages → Console et '
+            + 'émulateur. Une plateforme absente de la liste se déclare à la '
+            + 'main.')) + '</span></li>' +
         '<li><b>Émulateur</b>' +
           '<span class="onbdesc">' + t('Romule vise %s par défaut. Réglages → Ta console.')
             .replace('%s', esc(emulatorName(c.emulateur))) + '</span></li>' +
         '<li><b>Accès à distance</b>' +
           '<span class="onbdesc">Ouvrir la ludothèque depuis le téléphone ou ' +
           'l\'extérieur se règle dans Réglages → Accès.</span></li>' +
+        (c.nsz ? '' :
+          '<li><b>Jeux Switch compressés</b>' +
+          '<span class="onbdesc">' + esc(t('Les .nsz et .xcz demandent l\'outil '
+            + 'nsz et un fichier prod.keys, à fournir dans les réglages. Sans '
+            + 'eux, les autres plateformes fonctionnent normalement.')) +
+          '</span></li>') +
         '</ul>',
     },
   ];
@@ -7310,6 +7442,27 @@ function pairOccupe(oui, quoi) {
 }
 
 
+// The folder browser is lent the same way the pairing panel is, and for the
+// same reason: the wizard needs it, the settings own it, and a second copy
+// would drift. `onbParcourir` opens it inside the step.
+let NAV_MAISON = null;
+
+function navPreter(slot) {
+  const w = $('browserwrap');
+  if (!w || !slot) return;
+  if (!NAV_MAISON) NAV_MAISON = {parent: w.parentNode, apres: w.nextSibling};
+  slot.appendChild(w);
+}
+
+function navRendre() {
+  const w = $('browserwrap');
+  if (!w || !NAV_MAISON) return;
+  NAV_MAISON.parent.insertBefore(w, NAV_MAISON.apres);
+  w.style.display = 'none';
+  NAV_MAISON = null;
+}
+
+
 function pairPreter(slot) {
   const panneau = $('pairwrap');
   if (!panneau || !slot) return;
@@ -7345,8 +7498,9 @@ function renderOnboard() {
   if (!HEALTH) { el.classList.remove('open'); pairRendre(); return; }
   onbRetenir();
   // Before the innerHTML below, never after: it would take the settings'
-  // pairing panel down with it.
+  // pairing panel — and the folder browser — down with it.
   pairRendre();
+  navRendre();
   const etapes = onbEtapes(HEALTH);
   ONB.i = Math.max(0, Math.min(etapes.length - 1, ONB.i));
   const e = etapes[ONB.i];
@@ -7399,6 +7553,8 @@ function renderOnboard() {
     '</div>';
   const slot = $('onb-pair-slot');
   if (slot) pairPreter(slot);
+  const nav = $('onb-browse-slot');
+  if (nav && ONB.parcours) { navPreter(nav); app.browseServer(ONB.parcours); }
   translateDOM(el);
   el.classList.add('open');
 }
@@ -7970,7 +8126,7 @@ const ACTES = new Set([
   'libConfirm', 'mkTree', 'onbGo', 'onbFindConsole',
   'onbChooseFolder', 'onbCreateAccount', 'onbOpenAccess', 'onbPrev',
   'onbScan', 'onbTestSgdb', 'onbTestIgdb', 'setLang', 'toggleNotification',
-  'onbLien', 'onbAutreLien', 'wifiRetrouver', 'detectRoms',
+  'onbLien', 'onbAutreLien', 'wifiRetrouver', 'detectRoms', 'onbParcourir',
   'signOut',
   'onbScanConsole', 'onbNext', 'openGame',
   'openOnConsole', 'organize', 'forgetFolder', 'forgetTransfer',

@@ -336,6 +336,22 @@ def main():
           "onb-pair-slot" not in (lie or "") and "conn-addr" not in (lie or ""))
         t("elle nomme le dossier repere sur la console",
           "/storage/emulated/0/Switch" in (lie or ""))
+        # Romule is not a Switch tool: only the Switch folder was ever shown
+        # here, so a console holding a hundred GBA and PSX games looked empty.
+        t("elle montre AUSSI la racine des autres plateformes",
+          "onbdosss" in (lie or "") and (lie or "").count("onbdoss\"") >= 2,
+          (lie or "").count("onbdoss\""))
+        t("et laisse aller chercher chaque dossier",
+          "onbParcourir" in (lie or ""))
+        # The same grid as the settings, from the same function.
+        pf = n.js("(() => { PLATFORMS = [{key:'gba', name:'Game Boy Advance',"
+                  " folder:'GBA', count:12, bytes:1024}];"
+                  " return onbConsoleCorps({device:'wifi', adb:true,"
+                  " device_dir:'/x', console:{}}); })()")
+        t("les plateformes sont listees avec leur nombre",
+          "pfgrille" in (pf or "") and ">12<" in (pf or ""), (pf or "")[:100])
+        t("et portent un logo", "pflogo" in (pf or ""))
+        n.js("(() => { PLATFORMS = []; })()")
         t("et laisse relier autrement", "onbAutreLien" in (lie or ""))
         t("le panneau est revenu aux reglages, pas detruit",
           n.js("document.querySelectorAll('#pairwrap').length") == 1,
