@@ -495,7 +495,9 @@
 
       <div id="pf-specifique">
       <div class="setgroup platform-group" data-plateforme="switch">
-        <div class="setgt">Nintendo Switch <span class="scope">spécifique</span></div>
+        <!-- These groups only show when their platform is selected: the titles
+             describe the CONTENT, they no longer repeat the platform. -->
+        <div class="setgt">Transferts</div>
 
         <!-- The folder is set once, in "Folder on the console" just above: it
              held for every platform, the Switch included. Keeping a duplicate
@@ -531,7 +533,7 @@
         
       </div>
       <div class="setgroup platform-group" data-plateforme="switch">
-        <div class="setgt">Réglages communautaires <span class="scope">Switch</span><span class="beta">bêta</span></div>
+        <div class="setgt">Compatibilité communautaire <span class="beta">bêta</span></div>
 
         <div class="setrow">
           <div class="setlab"><b>Utiliser EmuReady</b>
@@ -542,7 +544,7 @@
         </div>
 
         <div class="setrow" id="row-erdev">
-          <div class="setlab"><b>Ta console</b>
+          <div class="setlab"><b>Modèle exact</b>
             <span id="erdev-help">Facultatif : précise ton modèle pour des notes fiables.
               Sans lui, les notes viennent d'autres appareils.</span></div>
           <div class="setctl">
@@ -559,7 +561,7 @@
         </div>
       </div>
       <div class="setgroup platform-group" data-plateforme="switch">
-        <div class="setgt">Sauvegardes de jeu <span class="scope">Switch</span></div>
+        <div class="setgt">Sauvegardes de jeu</div>
         <p class="lead" style="margin:12px 18px 10px">Tes progressions sont irremplaçables :
           un jeu se réinstalle, pas 200 h de partie. Chaque sauvegarde est datée,
           rien n'est jamais écrasé.</p>
@@ -575,16 +577,19 @@
            CONSOLE first, and the emulator is one of the things that console
            has. Sitting above the console selector, it read as a setting of the
            whole tool. -->
-      <div class="setgroup">
+      <!-- ONE emulator group, not two blocks both titled « Émulateur ». The
+           profile choice only means something for the Switch engine — the
+           other platforms run whatever reads their folder — so the whole
+           group is scoped to it, and the advanced table folds inside. -->
+      <div class="setgroup platform-group" data-plateforme="switch">
         <div class="setgt">Émulateur</div>
         <p class="lead" style="margin:12px 18px 10px">Il détermine où l'outil dépose les
           jeux et où il lit les sauvegardes. Seul Eden est vérifié sur matériel
           réel ; les autres profils sont fournis tels quels.</p>
         <div id="choixemulateur" class="bar"></div>
-      </div>
 
-      <details class="setgroup platform-group" data-plateforme="switch" id="edengroup">
-        <summary class="setgt">Émulateur <span class="scope">Switch</span><span class="beta">bêta</span></summary>
+      <details class="sousbloc" id="edengroup">
+        <summary>Réglages avancés <span class="beta">bêta</span></summary>
         <p class="lead" style="margin:10px 18px">Réglages de l'émulateur pour tous les jeux.
           Pour un jeu précis, ouvre sa fiche depuis la liste : c'est là que vivent
           ses réglages et ceux recommandés par la communauté.</p>
@@ -607,6 +612,7 @@
         <div id="ec-profiles"></div>
       </details>
       </div>
+      </div><!-- /pf-specifique -->
 
       </section>
 

@@ -12,6 +12,33 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Fixed
 
+- **Adding a console resumed the previous one's pairing.** The pairing panel
+  remembers its step and its fields across re-renders — the right behaviour
+  within one pairing, and the wrong one across consoles: « Sans câble » opened
+  on the first console's step 4, its address still in the field. The connect
+  dialog now starts from step 1 with blank fields, on a freshly selected entry
+  whose settings are blank too.
+
+- **« Nintendo Switch » showed no count in the library selector.** Its count
+  came from `GAMES`, which follows the VIEW: on another platform it held that
+  platform's games. The scan's own figure does not move with the view.
+
+### Changed
+
+- **Adding a console asks for nothing.** The name dialog is gone: a name typed
+  before the console has answered is a guess, and the console says its own —
+  « Ma console » becomes « AYN Thor » on first contact.
+
+- **« Console et émulateur », reorganised.** The platform-scoped groups only
+  appear when their platform is selected, so their titles stopped repeating it:
+  « Nintendo Switch spécifique » is « Transferts », « Réglages communautaires
+  Switchbêta » is « Compatibilité communautaire (bêta) » — the badges also
+  gained the space they were missing. The two blocks both titled « Émulateur »
+  are one group, scoped to the Switch since the profile only means something
+  for its engine, with the advanced table folded inside as « Réglages
+  avancés ». The EmuReady row « Ta console » — the name of a whole settings
+  tab — is « Modèle exact ».
+
 - **The folder navigator worked once and never again.** Closing an overlay
   emptied its markup — right for dialogs built at open time, fatal for a modal
   whose content is static: the second opening added `open` to a hollow shell.

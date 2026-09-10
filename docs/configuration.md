@@ -199,6 +199,12 @@ change that, and only the first is yours to set.
 
 ### Several consoles
 
+“Ajouter une console” asks for no name: it opens the connection straight away —
+cable or Wi-Fi — on a blank entry, and the console takes the name it announces
+(“AYN Thor”) on first contact. Each console keeps its own settings: selecting
+one under “Console pilotée” shows its own.
+
+
 An Odin and a Retroid are two consoles, not one setting overwritten twice.
 
 | Key | Default | What it does |
