@@ -153,6 +153,13 @@ All of these are edited from the interface. The names are the keys stored in
     group demotes them at their next session, not in the middle of the current
     one. See [Roles and access](roles.md).
 
+### About
+
+The last settings tab: the installed version and whether a newer one exists,
+its release notes, the source repository and its releases — the AGPL wants a
+reachable instance's code accessible — and the tools the server found (`adb`,
+`nsz`, `prod.keys`).
+
 ### Your console
 
 | Key | Default | Meaning |

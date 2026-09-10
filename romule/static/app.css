@@ -3637,3 +3637,38 @@ div.pfcard{border:1px solid var(--line);background:var(--surface-2);
   gap:12px;margin-bottom:12px}
 .navtete b{font-size:15px;color:var(--text)}
 #navmodal #browser{max-height:52vh;overflow:auto;margin:10px 0}
+
+/* Above the onboarding (z 60): the navigator is called FROM the wizard, and a
+   modal opened behind its caller reads as a click that did nothing. */
+#navmodal{z-index:70}
+#connectmodal{z-index:62}
+/* The class beat the attribute: `display:inline-flex` overrides the UA's
+   `[hidden]{display:none}`, so the dismiss button hid nothing. */
+.majpuce[hidden]{display:none}
+.vol{cursor:default}
+
+/* The ROMs-root row: the path is the content here, so it takes the width the
+   row can give instead of an input's default 200-and-some pixels. */
+.setctl-large{flex:1 1 auto}
+.setctl-large input{flex:1 1 320px}
+
+/* The add-platform icon picker: the four silhouettes, the chosen one framed,
+   and the colour beside them. The preview IS the choice — the button shows
+   exactly what the card will show. */
+.apchoix{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0 0}
+.apopt{display:flex;align-items:center;justify-content:center;width:40px;
+  height:40px;border:1px solid var(--bord);border-radius:9px;cursor:pointer;
+  background:var(--puits);color:var(--mute)}
+.apopt svg{width:20px;height:20px}
+.apopt.on{border-color:var(--amber);color:var(--amber)}
+.apcouleur{display:flex;align-items:center;gap:8px;margin-left:auto;
+  font-size:12px;color:var(--mute)}
+.apcouleur input{width:34px;height:28px;padding:2px;border:1px solid var(--bord);
+  border-radius:7px;background:var(--puits);cursor:pointer}
+
+/* A link dressed as a button: the About tab points at GitHub, and a bare blue
+   underline next to real buttons reads as a different kind of thing. */
+.btnlien{display:inline-flex;align-items:center;padding:7px 14px;
+  border:1px solid var(--bord);border-radius:9px;background:var(--puits);
+  color:var(--text);font-size:12.5px;text-decoration:none;cursor:pointer}
+.btnlien:hover{border-color:var(--amber)}

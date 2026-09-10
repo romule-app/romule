@@ -271,7 +271,7 @@
       <!-- The page is over 4 000 px long: without a table of contents, you
            hunt. The five entries answer "what am I setting right now?", not the
            code's internal structure. -->
-      <nav class="setnav" id="setnav" aria-label="Sections des réglages"><a href="#sec-console">Ta console</a><a href="#sec-biblio">Ta bibliothèque</a><a href="#sec-entretien">Entretien</a><a href="#sec-acces">Accès</a><a href="#sec-interface">Interface</a><span class="setnav-state" id="savehint" role="status" aria-live="polite"></span></nav>
+      <nav class="setnav" id="setnav" aria-label="Sections des réglages"><a href="#sec-console">Ta console</a><a href="#sec-biblio">Ta bibliothèque</a><a href="#sec-entretien">Entretien</a><a href="#sec-acces">Accès</a><a href="#sec-interface">Interface</a><a href="#sec-apropos">À propos</a><span class="setnav-state" id="savehint" role="status" aria-live="polite"></span></nav>
 
       <section class="setsection" id="sec-console">
         <h3 class="sectitre">Ta console</h3>
@@ -463,12 +463,15 @@
             <span>Le dossier parent de toutes tes plateformes (chacune y a son
               sous-dossier : GBA, SNES, PS2…). Romule le trouve tout seul ; ce
               champ n'est là que pour le corriger.</span></div>
-          <div class="setctl setctl-duo"><input type="text" id="s-romsroot"
+          <!-- One analyse button below; this row only says WHERE. « Détecter »
+               next to the recount button was two names for halves of one
+               intention, and nobody could tell them apart. -->
+          <div class="setctl setctl-duo setctl-large"><input type="text" id="s-romsroot"
                  placeholder="/storage/…/emulation/ROMs">
-            <button class="ghost" data-act="detectRoms">Détecter</button></div>
+            <button class="ghost" data-act="parcourirRoms">Parcourir…</button></div>
         </div>
         <div class="bar" style="margin-top:10px">
-          <button class="go" data-act="fullAnalysis">Recompter les jeux</button>
+          <button class="go" data-act="fullAnalysis">Analyser la console</button>
           <button class="ghost" data-act="addPlatform">Ajouter une plateforme…</button>
         </div>
         <div class="platforms" id="plateformes"></div>
@@ -984,6 +987,33 @@
 
       </section>
 
+      <section class="setsection" id="sec-apropos">
+        <div class="setgroup">
+          <div class="setgt">À propos</div>
+          <div class="setrow">
+            <div class="setlab"><b>Version</b>
+              <span id="ap-version">—</span></div>
+            <div class="setctl"><button class="ghost" data-act="showUpdate"
+                id="ap-notes" hidden>Notes de version</button></div>
+          </div>
+          <div class="setrow">
+            <div class="setlab"><b>Code source</b>
+              <span>Romule est publié sous licence AGPL-3.0 : le code de cette
+                instance est public, corrections bienvenues.</span></div>
+            <div class="setctl"><a class="ghost btnlien" id="ap-source"
+                target="_blank" rel="noopener">GitHub</a>
+              <a class="ghost btnlien" id="ap-releases" target="_blank"
+                rel="noopener">Publications</a></div>
+          </div>
+          <div class="setrow">
+            <div class="setlab"><b>Outils sur le serveur</b>
+              <span>Ce que Romule a trouvé pour convertir et piloter.</span></div>
+            <div class="setctl"><span class="mono" id="ap-outils"
+                data-i18n-skip>—</span></div>
+          </div>
+        </div>
+      </section>
+
       <section class="setsection" id="sec-interface">
         <h3 class="sectitre">Interface</h3>
         <p class="sectxt">L'affichage, et les réglages qu'on touche rarement.</p>
@@ -1165,6 +1195,15 @@
      modal has no position to get wrong, and the page underneath keeps its
      layout. The confirm button sits BELOW the listing: you go somewhere, you
      look at what is there, then you confirm. -->
+<!-- Connecting a console, as a dialog. The wizard's console step and this
+     share the pairing panel through `pairPreter`: one panel, three homes. -->
+<div class="modal" id="connectmodal" data-act="closeConnect">
+  <div class="obox navbox">
+    <div class="navtete"><b>Connecter la console</b>
+      <button class="ghost" data-act="connectFermer">Fermer</button></div>
+    <div id="connect-corps"></div>
+  </div>
+</div>
 <div class="modal" id="navmodal" data-act="closeNav">
   <div class="obox navbox">
     <div class="navtete"><b id="browsecible">Choisir un dossier</b>
