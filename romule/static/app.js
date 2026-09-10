@@ -5529,7 +5529,15 @@ const app = {
     // where their own wizard used to be.
     pairRendre();
   },
-  async showOnboard() { await this.checkHealth(true); },
+  // `checkHealth(true)` refreshes the wizard; it no longer OPENS it, since a
+  // settings change forces a refresh and that was enough to summon the
+  // assistant over a configured installation. Opening is this function's whole
+  // job, so it now says so — the command palette's « see the state of the
+  // installation » had quietly stopped doing anything.
+  async showOnboard() {
+    await this.checkHealth(true);
+    renderOnboard();
+  },
 
   // The way out, reachable from the header on every screen. It lived in the
   // account card of the settings only.

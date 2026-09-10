@@ -416,6 +416,20 @@ def main():
                " && p.style.display === 'none'; })()"))
 
         # The connect dialog: the same pairing panel, third home.
+        # `showOnboard` is what the command palette calls. It used to be a bare
+        # `checkHealth(true)`, and the day `force` stopped opening the wizard —
+        # rightly, since a settings change forces a refresh — this quietly
+        # stopped doing anything at all. Found while taking a screenshot of it.
+        print("   -- l'assistant s'ouvre a la demande --")
+        n.js("app.closeOnboard()")
+        time.sleep(0.6)
+        n.js("app.showOnboard()")
+        time.sleep(1.5)
+        t("showOnboard ouvre vraiment l'assistant",
+          n.js("$('onboard').classList.contains('open')"))
+        n.js("app.closeOnboard()")
+        time.sleep(0.5)
+
         print("   -- la modale de connexion --")
         n.js("app.closeOnboard()")
         time.sleep(0.6)

@@ -178,18 +178,121 @@ def _fiche(chemin, titre):
     }), encoding="utf-8")
 
 
+# Each shot: a file name, the viewport, and what to do before firing. The
+# list is the contract — a screen added to the README is added HERE, not taken
+# by hand, so the next refresh cannot quietly reintroduce a real library.
+# `setSort('nom')` on every library shot: the default sorts by state, which
+# puts everything still to transfer first — that is the right order to WORK in,
+# and the wrong one to photograph, since it buries every cover at the bottom.
+PRISES = [
+    ("bibliotheque", 1600, 1100, 2, "app.tab('jeux'); app.setSort('nom')", True),
+    ("fiche", 1500, 1000, 2,
+     "app.tab('jeux'); (function(){const c=document.querySelector('#lib .gcard');"
+     "if (c) app.openGame(c.dataset.key);})()", False),
+    ("console", 1500, 1250, 2,
+     "app.closeGame(); app.tab('settings');"
+     "document.querySelector(\"#setnav a[href='#sec-console']\").click();"
+     "app.detectPlatforms(true)", False),
+    ("sante", 1400, 950, 2,
+     "app.tab('jeux'); app.showMaintenance('sante')", False),
+    ("assistant", 1300, 1000, 2,
+     "app.closeDialog(); app.showOnboard()", False),
+    ("bureau", 1440, 900, 2,
+     "app.closeOnboard(); app.tab('jeux'); app.setSort('nom')", False),
+    # A handheld's screen is WIDE and short — 16:9 in the hand. Framing the
+    # phone shot in a handheld shell showed a portrait screen in a landscape
+    # shell, which is the one thing the picture is meant to explain.
+    ("portable", 960, 560, 2, "app.tab('jeux'); app.setSort('nom')", False),
+    ("telephone", 420, 880, 3, "app.tab('jeux'); app.setSort('nom')", False),
+]
+
+# The frames the old pictures had, drawn in CSS instead of Photoshop: a browser
+# chrome, a handheld shell, a phone shell. A mock-up that cannot be regenerated
+# is a mock-up that goes stale, and this one is rebuilt with the shots.
+COMPOSITION = """<!doctype html><meta charset="utf-8"><style>
+  body{margin:0;background:#0d0b10;font:14px/1.4 ui-monospace,Menlo,monospace;
+       color:#8d8492;padding:56px 48px;display:flex;gap:48px;
+       align-items:flex-end;justify-content:center}
+  .piece{display:flex;flex-direction:column;align-items:center;gap:14px}
+  .legende{letter-spacing:.16em;text-transform:uppercase;font-size:11px}
+  .legende b{color:#e0a340;font-weight:400}
+  /* A browser window: three dots and an address bar. */
+  .bureau{width:1080px;border-radius:14px;overflow:hidden;
+          border:1px solid #2a2630;background:#151219;
+          box-shadow:0 30px 80px rgba(0,0,0,.55)}
+  .barre{display:flex;align-items:center;gap:9px;padding:11px 14px;
+         background:#1b1720;border-bottom:1px solid #2a2630}
+  .pastille{width:11px;height:11px;border-radius:50%%}
+  .adresse{flex:1;margin-left:10px;padding:5px 12px;border-radius:7px;
+           background:#0f0d13;color:#6b6474;font-size:12px}
+  .bureau img,.ecran img{display:block;width:100%%}
+  /* A handheld: a wide screen between two grips. */
+  .portable{position:relative;padding:30px 92px;border-radius:44px;
+            background:linear-gradient(#2a2533,#1d1926);
+            border:1px solid #342e40;box-shadow:0 24px 60px rgba(0,0,0,.5)}
+  .portable::before,.portable::after{content:'';position:absolute;top:50%%;
+            width:52px;height:52px;border-radius:50%%;background:#12101a;
+            border:1px solid #3a3446;transform:translateY(-50%%)}
+  .portable::before{left:22px} .portable::after{right:22px}
+  .ecran{width:430px;border-radius:8px;overflow:hidden;background:#000}
+  .telephone{padding:14px;border-radius:42px;background:#1d1926;
+             border:1px solid #342e40;box-shadow:0 24px 60px rgba(0,0,0,.5)}
+  .telephone .ecran{width:250px;border-radius:30px}
+</style>
+<div class="piece">
+  <div class="bureau">
+    <div class="barre">
+      <span class="pastille" style="background:#e05a4f"></span>
+      <span class="pastille" style="background:#e0a340"></span>
+      <span class="pastille" style="background:#6fbf8b"></span>
+      <span class="adresse">romule.local:8787</span>
+    </div>
+    <img src="%(bureau)s" alt="">
+  </div>
+  <div class="legende">Desktop &mdash; <b>every platform at once</b></div>
+</div>
+<div class="piece">
+  <div class="portable"><div class="ecran"><img src="%(portable)s" alt=""></div></div>
+  <div class="legende">Handheld &mdash; <b>the d-pad walks the grid</b></div>
+</div>
+<div class="piece">
+  <div class="telephone"><div class="ecran"><img src="%(telephone)s" alt=""></div></div>
+  <div class="legende">Phone &mdash; <b>filters folded away</b></div>
+</div>
+"""
+
+
+def _data_uri(chemin):
+    import base64
+    return "data:image/jpeg;base64," + base64.b64encode(
+        Path(chemin).read_bytes()).decode("ascii")
+
+
+def _en_jpeg(png, qualite="80", cote_max=2000):
+    """JPEG, bounded. A retina full-page shot is 3200 px wide and close to a
+    megabyte; the README shows it at 900. `cote_max` is what keeps a repository
+    of pictures from outweighing its code."""
+    cible = png.with_suffix(".jpg")
+    subprocess.run(["sips", "-s", "format", "jpeg", "-s", "formatOptions",
+                    qualite, "-Z", str(cote_max), str(png), "--out",
+                    str(cible)], capture_output=True, check=True)
+    png.unlink()
+    return cible
+
+
 def main():
     from cdp import Navigateur
     racine = tempfile.mkdtemp(prefix="romule-captures-")
     semer(racine)
-    faux_adb = RACINE / "romule" / "tests" / "navigateur" / ".." / "faux_adb.py"
+    adb = RACINE / "outils" / "adb-vitrine.py"
     proc = subprocess.Popen(
         [sys.executable, "-m", "romule", "serve"], cwd=str(RACINE),
         env=dict(os.environ, ROMULE_ROOT=racine, ROMULE_WEB_PORT=str(PORT),
                  ROMULE_NO_BROWSER="1", ROMULE_LANG="en",
-                 ROMULE_ADB=str(faux_adb.resolve()), ROMULE_FAUX_ADB="aucune"),
+                 ROMULE_ADB=str(adb.resolve())),
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     url = "http://127.0.0.1:%d" % PORT
+    faites = {}
     try:
         import urllib.request
         for _ in range(60):
@@ -198,41 +301,60 @@ def main():
                 break
             except Exception:
                 time.sleep(0.5)
-        n = Navigateur(port=9488, largeur=1600, hauteur=1150, dpr=2,
+        SORTIE.mkdir(parents=True, exist_ok=True)
+        n = Navigateur(port=9488, largeur=1600, hauteur=1100, dpr=2,
                        assistant=True)
         try:
             n.aller(url, attente=6.0)
-            n.js("app.tab('jeux')")
+            n.js("app.detect()")
             time.sleep(3.0)
-            SORTIE.mkdir(parents=True, exist_ok=True)
-            n.capture(str(SORTIE / "bibliotheque.png"), pleine=True)
-            print("bibliotheque : capturee")
-            # The desktop viewport, without scrolling the whole page: what
-            # somebody actually sees when they open it.
-            n.cmd("Emulation.setDeviceMetricsOverride",
-                  {"width": 1440, "height": 900, "deviceScaleFactor": 2,
-                   "mobile": False})
-            time.sleep(1.5)
-            n.capture(str(SORTIE / "apercu-bureau.png"))
-            print("apercu-bureau : capturee")
-            n.cmd("Emulation.setDeviceMetricsOverride",
-                  {"width": 430, "height": 932, "deviceScaleFactor": 3,
-                   "mobile": True})
-            time.sleep(1.5)
-            n.capture(str(SORTIE / "apercu-portables.png"))
-            print("apercu-portables : capturee")
+            for nom, L, H, dpr, geste, pleine in PRISES:
+                n.cmd("Emulation.setDeviceMetricsOverride",
+                      {"width": L, "height": H, "deviceScaleFactor": dpr,
+                       "mobile": dpr >= 3})
+                time.sleep(0.8)
+                n.js(geste)
+                time.sleep(2.2)
+                png = SORTIE / (nom + ".png")
+                n.capture(str(png), pleine=pleine)
+                faites[nom] = _en_jpeg(png, "78", 1800)
+                print("  %-12s %d ko" % (nom, faites[nom].stat().st_size // 1024))
         finally:
             n.fermer()
+
+        # The three framed pieces, from the shots just taken.
+        page = Path(tempfile.mkdtemp()) / "composition.html"
+        page.write_text(COMPOSITION % {
+            "bureau": _data_uri(faites["bureau"]),
+            "portable": _data_uri(faites["portable"]),
+            "telephone": _data_uri(faites["telephone"]),
+        }, encoding="utf-8")
+        n = Navigateur(port=9489, largeur=2100, hauteur=1200, dpr=2,
+                       assistant=True)
+        try:
+            n.aller(page.as_uri(), attente=3.0)
+            # The viewport is resized to the CONTENT before firing: a full-page
+            # capture is at least as tall as the window, and the composition is
+            # shorter than that — which left a third of the picture black.
+            haut = n.js("Math.ceil(document.body.getBoundingClientRect().height)")
+            n.cmd("Emulation.setDeviceMetricsOverride",
+                  {"width": 2100, "height": int(haut or 1200),
+                   "deviceScaleFactor": 2, "mobile": False})
+            time.sleep(1.0)
+            png = SORTIE / "apercu.png"
+            n.capture(str(png), pleine=True)
+            cible = _en_jpeg(png, "82", 2600)
+            print("  %-12s %d ko" % ("apercu", cible.stat().st_size // 1024))
+        finally:
+            n.fermer()
+        # The framed picture replaces the two raw viewport shots.
+        for nom in ("bureau", "portable", "telephone"):
+            faites[nom].unlink(missing_ok=True)
+        for vieux in ("apercu-bureau.jpg", "apercu-portables.jpg"):
+            (SORTIE / vieux).unlink(missing_ok=True)
     finally:
         proc.terminate()
         shutil.rmtree(racine, ignore_errors=True)
-    for p in SORTIE.glob("*.png"):
-        cible = p.with_suffix(".jpg")
-        subprocess.run(["sips", "-s", "format", "jpeg", "-s", "formatOptions",
-                        "80", str(p), "--out", str(cible)],
-                       capture_output=True, check=True)
-        p.unlink()
-        print("%s : %d ko" % (cible.name, cible.stat().st_size // 1024))
     return 0
 
 

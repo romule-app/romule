@@ -4,7 +4,41 @@
 your files, fills in the cover art, and pushes titles to an Android handheld
 over adb.
 
-![The Romule library view](images/bibliotheque.jpg)
+![The same library on three screens: a desktop browser, a handheld and a
+phone](images/apercu.jpg)
+
+## A closer look
+
+<div class="grid cards" markdown>
+
+-   __The library__
+
+    ![The library grid](images/bibliotheque.jpg)
+
+    Every platform at once, or one at a time. Updates and DLC fold into the
+    game they belong to.
+
+-   __A game__
+
+    ![A game's detail view](images/fiche.jpg)
+
+    What you hold, which version, which files, and whether the console has it.
+
+-   __Your console__
+
+    ![The console settings](images/console.jpg)
+
+    Battery, storage and address, read from the console itself. Its games
+    folder is found, not typed.
+
+-   __What is wrong__
+
+    ![The library report](images/sante.jpg)
+
+    Broken files, orphaned DLC, duplicates, games with no details — each with
+    what to do about it.
+
+</div>
 
 !!! warning "Beta"
     Romule works and is used daily, but it is young, and several features are
