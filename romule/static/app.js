@@ -6929,6 +6929,12 @@ let ONB = {i: 0, sens: 1, occupe: false, resultatScan: null,
 // console with a hundred GBA and PSX games looked empty.
 function onbDossiers(c) {
   const cfg = DATA.config || {};
+  // The borrowed browser lands UNDER the row whose « Changer » was pressed,
+  // not at the bottom of the step: it answers that row's question, and putting
+  // it after the platform grid made the click appear to do nothing until the
+  // reader scrolled.
+  const slot = cible =>
+    ONB.parcours === cible ? '<div id="onb-browse-slot"></div>' : '';
   const ligne = (titre, chemin, cible, absent) =>
     '<div class="onbdoss">' +
       '<div class="onbdosst">' + esc(titre) + '</div>' +
@@ -6937,15 +6943,20 @@ function onbDossiers(c) {
         : '<div class="onbdossvide">' + esc(absent) + '</div>') +
       '<button class="lien" data-act="onbParcourir" data-arg="' + esc(cible) +
         '">' + esc(chemin ? t('Changer') : t('Choisir')) + '</button>' +
-    '</div>';
+    '</div>' + slot(cible);
+  // The generic root FIRST: Romule serves every platform, and this step led
+  // with a Switch path as if the rest were an afterthought. The Switch keeps a
+  // row — its emulator reads a folder of its own, that is a fact of the
+  // console, not of this tool — but it comes second and is named as the
+  // platform it is.
   return '<div class="onbdosss">' +
-    ligne(t('Jeux Switch'), c.device_dir || '', 'switch',
+    ligne(t('Dossier des jeux — toutes les plateformes'), cfg.roms_root || '',
+          'roms', t('Pas encore trouvé — cherche, ou choisis-le à la main.')) +
+    ligne('Nintendo Switch', c.device_dir || '', 'switch',
           t('Aucun dossier repéré.')) +
-    ligne(t('Toutes les autres plateformes'), cfg.roms_root || '', 'roms',
-          t('Pas encore trouvée — cherche, ou choisis-la à la main.')) +
     '</div>' +
     '<div class="onbliebar">' +
-      '<button class="ghost" data-act="detectRoms">Chercher la racine des ROMs</button>' +
+      '<button class="ghost" data-act="detectRoms">Chercher le dossier des jeux</button>' +
     '</div>' +
     onbPlateformes();
 }
@@ -6953,13 +6964,23 @@ function onbDossiers(c) {
 // The same grid as the settings, from the same function. It was in one place
 // only, so the wizard could say "connected" and never say what had been found.
 function onbPlateformes() {
-  if (!PLATFORMS.length) return '';
-  const jeux = PLATFORMS.reduce((n, s) => n + (s.count || 0), 0);
+  // The Switch is a platform like the others and belongs in the same grid:
+  // keeping it out is what made this screen read as a Switch tool with a
+  // sideline. Its games are already grouped in GAMES; PLATFORMS only ever
+  // carries what was found under the ROMs root.
+  const liste = PLATFORMS.slice();
+  const sw = SYSTEMS.find(x => x.key === 'switch');
+  if (sw && GAMES.length && !liste.some(x => x.key === 'switch')) {
+    liste.unshift({key: 'switch', name: sw.name, folder: sw.folder,
+                   count: GAMES.length, bytes: null});
+  }
+  if (!liste.length) return '';
+  const jeux = liste.reduce((n, s) => n + (s.count || 0), 0);
   return '<div class="onbpf">' +
     '<div class="onbdosst">' +
       esc(tpl('%s {plateforme|plateformes}, %s {jeu|jeux}',
-              PLATFORMS.length, jeux)) + '</div>' +
-    grillePlateformes(PLATFORMS, false) + '</div>';
+              liste.length, jeux)) + '</div>' +
+    grillePlateformes(liste, false) + '</div>';
 }
 
 
@@ -6986,9 +7007,6 @@ function onbConsoleCorps(c) {
         '<button class="lien" data-act="onbAutreLien">Relier autrement</button>' +
       '</div>' +
       (ONB.consoleScan ? renderConsoleScan(ONB.consoleScan) : '') +
-      // Lent, not copied — see `pairPreter` for why a second copy is a defect
-      // waiting to happen.
-      '<div id="onb-browse-slot"></div>' +
       '</div>';
   }
 

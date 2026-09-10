@@ -1978,14 +1978,17 @@ class Handler(BaseHTTPRequestHandler):
             # network. The alternative — sending the reader back to the console
             # for a third number — is the step people give up on.
             hote = (d.get("hote") or CFG.get("wifi_addr") or "").strip()
-            JOB.log(messages.SV_RECHERCHE_PORT)
             addr, essayees = device.relier_apres_appairage(hote)
             if addr:
                 CFG["wifi_addr"] = addr
                 config.save_config(CFG)
                 JOB.log(langue.phrase(messages.SV_CONSOLE_PRETE, addr), "ok")
             else:
-                JOB.log(langue.phrase(messages.SV_APPAIREE_PORT_INCONNU_LOG,
+                # Its OWN sentence. This search runs again in the background
+                # from step 4, seconds after the pairing logged its outcome:
+                # repeating the pairing's wording made every failed pairing
+                # read as two failed pairings.
+                JOB.log(langue.phrase(messages.SV_PORT_INTROUVABLE_LOG,
                                       ", ".join(essayees) or "-"), "warn")
             self._json({"ok": bool(addr), "addr": addr, "found": essayees,
                         "message": (messages.SV_CONSOLE_PRETE % addr) if addr
@@ -2233,11 +2236,6 @@ class Handler(BaseHTTPRequestHandler):
                       "maj_check", "maj_vue", "schedule"):
                 if k in d:
                     CFG[k] = d[k]
-            # The terminal follows the interface: changing the language in the
-            # settings must not leave `docker logs` in the previous one until
-            # the next restart.
-            if "ui_lang" in d:
-                langue.choisir(CFG.get("ui_lang"))
             # Switching the authentication OFF is a decision about ACCESS, and
             # half of it locked people out. `auth_mode` went to "aucun",
             # `lan_access` stayed false, and a service listening on 0.0.0.0 then
@@ -2813,13 +2811,13 @@ def serve(open_browser=True):
     accounts.refresh_roles()
     JOB.notify_end = bool(CFG.get("notify", True))
     auto_token = _first_run_token()
-    # The terminal speaks the same language as the interface. It spoke French
-    # whatever `ui_lang` said, which defaults to `en` — so the ordinary
-    # installation showed an English interface and wrote French to
-    # `docker logs`, read by exactly the person who cannot open the interface.
-    # ROMULE_LANG wins over the setting: it is the lever for the case where
-    # the interface cannot be reached to change it.
-    langue.choisir(config.env("LANG", "") or CFG.get("ui_lang"))
+    # The terminal speaks ENGLISH, whatever the interface speaks. Following
+    # `ui_lang` sounded right and produced worse: the banner printed in English
+    # at startup, then the first person to pick French in the wizard flipped
+    # every later line — one log, two languages, unreadable to both readers.
+    # A log is a technical document with a stable audience; the interface is
+    # not. `ROMULE_LANG=fr` opts the terminal into French, deliberately.
+    langue.choisir(config.env("LANG", ""))
     url = "http://127.0.0.1:%d" % config.PORT
     ip = _lan_ip()
     console.banner(_startup_facts(url, ip, auto_token))

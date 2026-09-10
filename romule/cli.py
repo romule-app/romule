@@ -750,19 +750,13 @@ def cmd_doctor(args):
 
 
 def _choisir_langue():
-    """The language, before the first line is printed.
+    """English unless ROMULE_LANG says otherwise — the same rule as the server.
 
-    Read from the configuration when it can be read, and never at the cost of a
-    command failing: `_check_root` runs right after and exists precisely for the
-    case where the data folder cannot be read at all.
+    The commands used to follow `ui_lang`, like the server did: the first
+    person to pick French in the wizard then flipped the language of every
+    later log line, and `docker logs` carried two languages in one stream.
     """
-    voulue = config.env("LANG", "").strip()
-    if not voulue:
-        try:
-            voulue = str(config.load_config().get("ui_lang") or "")
-        except Exception:
-            voulue = ""
-    langue.choisir(voulue)
+    langue.choisir(config.env("LANG", "").strip())
 
 
 def main(argv):

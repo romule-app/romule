@@ -343,6 +343,23 @@ def main():
           (lie or "").count("onbdoss\""))
         t("et laisse aller chercher chaque dossier",
           "onbParcourir" in (lie or ""))
+        # The borrowed browser lands UNDER the row whose « Changer » was
+        # pressed. At the bottom of the step, the click appeared to do nothing
+        # until the reader scrolled.
+        sous = n.js("(() => { ONB.parcours = 'roms';"
+                    " const h = onbConsoleCorps({device:'wifi', adb:true,"
+                    "   device_dir:'/x', console:{}});"
+                    " ONB.parcours = null;"
+                    " const i = h.indexOf('onb-browse-slot');"
+                    " const doss = [];"
+                    " let k = -1;"
+                    " while ((k = h.indexOf('class=\"onbdoss\"', k + 1)) !== -1)"
+                    "   doss.push(k);"
+                    " return {slot: i, rangs: doss}; })()")
+        t("le navigateur se place sous la ligne demandee",
+          bool(sous) and len(sous.get("rangs", [])) == 2
+          and sous["rangs"][0] < sous["slot"] < sous["rangs"][1],
+          sous)
         # The same grid as the settings, from the same function.
         pf = n.js("(() => { PLATFORMS = [{key:'gba', name:'Game Boy Advance',"
                   " folder:'GBA', count:12, bytes:1024}];"

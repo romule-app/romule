@@ -1582,13 +1582,16 @@ button.lien:hover:not(:disabled){color:var(--text)}
    The user sees what their console hosts, and reaches it in one click.
    ================================================================================ */
 .platforms{margin:12px 0}
-.pfgrille{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:8px}
-.pfcard{display:flex;flex-direction:column;align-items:flex-start;gap:2px;
-  padding:11px 12px;border-radius:10px;text-align:left;cursor:pointer;
+.pfgrille{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:6px}
+/* Compact on purpose: eleven platforms are a normal library, and at the old
+   size they filled two screens. The card answers three questions — which
+   console, how many games, how heavy — and needs no more room than that. */
+.pfcard{display:flex;flex-direction:column;align-items:flex-start;gap:1px;
+  padding:8px 10px;border-radius:9px;text-align:left;cursor:pointer;
   --btn-fond:var(--surface-2); --btn-fond-survol:var(--surface-3);
   --btn-trait:var(--line); --btn-trait-survol:var(--primary)}
-.pfname{font-family:var(--disp);font-size:13.5px;letter-spacing:.2px;color:var(--text)}
-.pfn{font-family:var(--disp);font-size:22px;line-height:1.1;color:var(--primary);
+.pfname{font-family:var(--disp);font-size:12px;letter-spacing:.2px;color:var(--text)}
+.pfn{font-family:var(--disp);font-size:17px;line-height:1.1;color:var(--primary);
   font-variant-numeric:tabular-nums}
 .pfsize,.pfdir{font-family:var(--mono);font-size:10px;color:var(--text-3)}
 .pfdir{opacity:.7}
@@ -3482,7 +3485,11 @@ body.compact .filters{margin-bottom:2px}
   margin:14px 0 0}
 
 /* Linked. The fields are gone — that is the whole point of this block. */
-.onblie{animation:enter .3s var(--ease)}
+/* Full width, or the platform grid collapses to one giant column: an
+   ancestor lays its children out with `align-items:flex-start`, and a
+   grid asked for its natural width answers with one track. */
+.onblie{animation:enter .3s var(--ease);width:100%}
+.onbpf,.onbdosss,.onbpf .pfgrille{width:100%}
 .onblietete{display:flex;align-items:center;gap:10px}
 .onblietete b{font-size:14px;color:var(--text)}
 .onbliecoche{display:inline-flex;align-items:center;justify-content:center;
@@ -3598,7 +3605,7 @@ body.compact .filters{margin-bottom:2px}
    those would mean shipping somebody's trademark, and a recognisable shape in
    the right colour does what a logo is wanted for, which is telling one row
    from another at a glance. */
-.pflogo{display:block;width:26px;height:26px;margin-bottom:4px;color:var(--pf);
+.pflogo{display:block;width:18px;height:18px;margin-bottom:3px;color:var(--pf);
   opacity:.92}
 .pflogo svg{width:100%;height:100%;display:block}
 /* A card that is not a button: same shape, nothing to press. */
