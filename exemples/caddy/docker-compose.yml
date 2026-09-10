@@ -1,7 +1,10 @@
 # Romule derriere Caddy, en une commande.
 #
 #     docker compose up -d
-#     docker compose logs romule     # l'adresse avec ton jeton d'acces
+#
+# Ouvre http://localhost/ : l'assistant de premier demarrage s'affiche, et
+# creer le premier compte revendique l'installation — apres quoi le reseau
+# est refuse sans session.
 #
 # Puis http://localhost/ — Caddy ecoute sur le port 80, Romule n'est PAS
 # publie : il n'est joignable que par le proxy. C'est le point de cet exemple.
@@ -32,26 +35,22 @@ services:
       ROMULE_ROOT: /data
       ROMULE_BASES: /library
 
-      # LE REGLAGE QUI COMPTE.
-      #
-      # Un proxy fait paraitre TOUTES les requetes comme venant de lui. Romule
-      # accorde tous les droits aux requetes locales : sans cette declaration,
-      # il ignore `X-Forwarded-For` — et une requete qui en porte un n'est pas
-      # non plus traitee comme locale. C'est volontaire : le defaut refuse.
+      # Un proxy fait paraitre TOUTES les requetes comme venant de lui.
+      # Cette declaration autorise Romule a croire `X-Forwarded-For`, et donc
+      # a consigner la VRAIE adresse de chaque client — dans le journal des
+      # connexions, et pour le blocage apres echecs repetes. Sans elle, tout
+      # le monde semblerait etre Caddy, et bloquer une adresse bloquerait tout
+      # le monde.
       #
       # La notation CIDR est acceptee, et c'est ce qu'il faut ici : Docker
       # attribue l'adresse de Caddy dynamiquement, et une adresse fixe serait
       # fausse au premier `docker compose down`.
       ROMULE_TRUSTED_PROXIES: 172.16.0.0/12
 
-      # Le service est desormais joignable par le reseau, a travers le proxy.
-      # Choisis TON mode d'acces :
-      #   - laisse ces deux lignes commentees et cree un compte dans
-      #     l'assistant : c'est le plus sur ;
-      #   - ROMULE_LAN=1 ouvre sans mot de passe. A ne faire que si Caddy
-      #     porte lui-meme une authentification devant.
+      # Le mode d'acces se choisit dans l'assistant au premier demarrage.
+      # ROMULE_LAN=1 ouvre sans mot de passe des le depart — a ne faire que
+      # si Caddy porte lui-meme une authentification devant.
       # ROMULE_LAN: "1"
-      # ROMULE_TOKEN: ""
 
       TZ: Europe/Paris
 
