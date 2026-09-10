@@ -1020,7 +1020,6 @@
   "Adresse de retour à déclarer chez le fournisseur :": "Redirect address to declare with the provider:",
   "Clés publiques": "Public keys",
   "— aucune, la signature ne pourra pas être vérifiée": "— none, the signature cannot be verified",
-  "— utilisée seulement avec « %s »": "— used only with “%s”",
   "moins d'une minute": "less than a minute",
   "nom@exemple.fr": "name@example.com",
   "annoncé": "advertised",
