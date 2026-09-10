@@ -253,7 +253,8 @@ jobs:
           # La sante et l'API refusent desormais une requete sans session ;
           # un second premier-compte aussi, sinon n'importe qui reprendrait
           # l'installation.
-          [ "$sante" = "403" ] || { echo "::error::health ouvert apres revendication ($sante)"; exit 1; }
+          # 401, pas 403 : « pas de session » est un defaut d'authentification.
+          [ "$sante" = "401" ] || { echo "::error::health ouvert apres revendication ($sante)"; exit 1; }
           deux=$(curl -s -o /dev/null -w '%{http_code}' -X POST \
                  -H 'Content-Type: application/json' \
                  -d '{"email":"pirate@example.invalid","mdp":"Vol42!aaaa"}' \
@@ -437,7 +438,7 @@ jobs:
             docker compose -p proxyci logs romule; exit 1; }
           sante=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1/api/health)
           echo "health apres revendication : HTTP $sante"
-          [ "$sante" = "403" ] || {
+          [ "$sante" = "401" ] || {
             echo "::error title=Proxy::health ouvert apres revendication ($sante)"; exit 1; }
 
       - name: Journaux
