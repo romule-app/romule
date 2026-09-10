@@ -180,26 +180,21 @@ jobs:
           docker logs romule
           exit 1
 
-      # `/api/health` n'est PAS public : un service joignable par le reseau le
-      # refuse sans jeton, et c'est voulu — il annonce la version, le mode
-      # d'authentification, le nombre de comptes et l'emplacement des cles.
-      # La sonde Docker, elle, interroge la boucle locale a l'INTERIEUR du
-      # conteneur, donc elle passe. C'est ce test qui affirmait le contraire.
-      - name: Sans jeton, la sante est refusee depuis le reseau
+      # Le modele d'acces est celui de Jellyfin et des *arr : une installation
+      # NON REVENDIQUEE repond a tout le monde et ouvre sur son assistant —
+      # c'est ce qui la rend installable depuis l'appareil qu'on tient. Creer
+      # le premier compte la revendique, et c'est SEULEMENT apres que le
+      # reseau est refuse sans session. Les controles suivent ces deux etats,
+      # dans cet ordre.
+      - name: Non revendiquee, la sante repond a tout le monde
         run: |
           code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8787/api/health)
-          echo "sans jeton : HTTP $code"
-          [ "$code" = "403" ] || { echo "::error::attendu 403, obtenu $code"; exit 1; }
+          echo "non revendiquee : HTTP $code"
+          [ "$code" = "200" ] || { echo "::error::attendu 200, obtenu $code"; exit 1; }
 
       - name: Le service repond, et il repond du bon
         run: |
-          jeton=$(docker logs romule 2>&1 | grep -o 'token=[A-Za-z0-9_-]*' | head -1 | cut -d= -f2)
-          if [ -z "$jeton" ]; then
-            echo "::error::aucun jeton d'acces dans le journal du conteneur"
-            docker logs romule
-            exit 1
-          fi
-          curl -fsS "http://127.0.0.1:8787/api/health?token=$jeton" | tee sante.json
+          curl -fsS "http://127.0.0.1:8787/api/health" | tee sante.json
           python3 - <<'PY'
           import json, sys
           d = json.load(open("sante.json"))
@@ -236,24 +231,35 @@ jobs:
           PY
 
       # Le blocage que ce test existe pour empecher : un conteneur joignable
-      # mais qui refuse tout le monde, sans moyen d'atteindre les reglages.
-      - name: Sans jeton, la page est refusee
+      # mais qui refuse tout le monde, sans moyen d'atteindre l'assistant.
+      - name: Non revendiquee, la page est servie
         run: |
           code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8787/)
-          echo "sans jeton : HTTP $code"
-          [ "$code" = "403" ] || { echo "::error::attendu 403, obtenu $code"; exit 1; }
-
-      - name: Avec le jeton du journal, la page est servie
-        run: |
-          jeton=$(docker logs romule 2>&1 | grep -o 'token=[A-Za-z0-9_-]*' | head -1 | cut -d= -f2)
-          if [ -z "$jeton" ]; then
-            echo "::error::aucun jeton d'acces dans le journal du conteneur"
-            docker logs romule
-            exit 1
-          fi
-          code=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:8787/?token=$jeton")
-          echo "avec jeton : HTTP $code"
+          echo "non revendiquee : HTTP $code"
           [ "$code" = "200" ] || { echo "::error::attendu 200, obtenu $code"; exit 1; }
+
+      # LA promesse du modele : creer le premier compte ferme la porte.
+      - name: Creer le premier compte revendique l'installation
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST \
+                 -H 'Content-Type: application/json' \
+                 -d '{"email":"ci@example.invalid","mdp":"UnMotDePasseCI!42"}' \
+                 http://127.0.0.1:8787/api/compte-creer)
+          echo "creation : HTTP $code"
+          [ "$code" = "200" ] || { echo "::error::creation du premier compte refusee ($code)"; exit 1; }
+          sante=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8787/api/health)
+          page=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8787/api/scan)
+          echo "apres revendication : health $sante, api $page"
+          # La sante et l'API refusent desormais une requete sans session ;
+          # un second premier-compte aussi, sinon n'importe qui reprendrait
+          # l'installation.
+          [ "$sante" = "403" ] || { echo "::error::health ouvert apres revendication ($sante)"; exit 1; }
+          deux=$(curl -s -o /dev/null -w '%{http_code}' -X POST \
+                 -H 'Content-Type: application/json' \
+                 -d '{"email":"pirate@example.invalid","mdp":"Vol42!aaaa"}' \
+                 http://127.0.0.1:8787/api/compte-creer)
+          echo "second premier compte : HTTP $deux"
+          [ "$deux" = "403" ] || { echo "::error::l installation revendiquee accepte un compte anonyme ($deux)"; exit 1; }
 
       - name: Le service ne tourne pas en root
         run: |
@@ -291,10 +297,9 @@ jobs:
             docker compose -p fumee logs
             exit 1
           fi
-          jeton=$(docker compose -p fumee logs romule 2>&1 \
-                  | grep -o 'token=[A-Za-z0-9_-]*' | head -1 | cut -d= -f2)
-          curl -s -c /tmp/pot -o /dev/null "http://127.0.0.1:8787/?token=$jeton"
-          curl -s -b /tmp/pot -H "Origin: http://127.0.0.1:8787" \
+          # Pile fraiche, non revendiquee : elle repond sans session — c'est
+          # le modele, pas une omission. L'Origin reste obligatoire (CSRF).
+          curl -s -H "Origin: http://127.0.0.1:8787" \
                -H "Content-Type: application/json" -d '{}' \
                http://127.0.0.1:8787/api/parcourir -o parcours.json
           python3 - <<'PY'
@@ -406,66 +411,34 @@ jobs:
           fi
           echo "pile saine apres ${i} tentatives"
 
-      # Trois cas, dont deux ne different que par un en-tete. C'est cette
-      # difference qui porte toute la promesse.
-      - name: Un client reellement local est reconnu a travers le proxy
-        run: |
-          code=$(docker exec romule-caddy wget -q -S -O /dev/null http://127.0.0.1/ 2>&1 \
-                 | grep -o 'HTTP/1.1 [0-9]*' | head -1 | grep -o '[0-9]*$')
-          echo "client local via Caddy : HTTP $code"
-          # Caddy voit son pair a 127.0.0.1 et l'ecrit dans X-Forwarded-For ;
-          # Romule, qui a le droit de croire ce proxy, lit donc un client local.
-          [ "$code" = "200" ] || {
-            echo "::error title=Proxy::un client local a travers le proxy declare devrait passer, recu $code"
-            docker compose -p proxyci logs romule; exit 1; }
-
-      - name: Un en-tete forge ne donne PAS les droits locaux
-        run: |
-          code=$(curl -s -o /dev/null -w '%{http_code}' \
-                 -H 'X-Forwarded-For: 127.0.0.1' http://127.0.0.1/)
-          echo "en-tete forge : HTTP $code"
-          # Caddy AJOUTE le pair reel a droite de la chaine. Romule la remonte
-          # par la droite : il lit l'adresse du client, pas celle qu'il a
-          # ecrite lui-meme. Si ce controle passe au vert avec 200, n'importe
-          # qui sur internet a les droits de la machine.
-          [ "$code" = "403" ] || {
-            echo "::error title=Proxy::un X-Forwarded-For forge a obtenu $code au lieu de 403"
-            docker compose -p proxyci logs romule; exit 1; }
-
-      - name: Un client externe ordinaire est refuse
+      # Les « droits locaux » sont morts avec le modele a jeton : une
+      # installation non revendiquee repond a tout le monde, revendiquee elle
+      # exige une session — quel que soit le chemin, proxy compris. Ce que la
+      # pile doit encore prouver : l'assistant est joignable A TRAVERS le
+      # proxy, la revendication y fonctionne, et la porte est fermee derriere.
+      - name: L assistant est joignable a travers le proxy
         run: |
           code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1/)
-          echo "client externe : HTTP $code"
-          [ "$code" = "403" ] || {
-            echo "::error title=Proxy::client externe : attendu 403, recu $code"; exit 1; }
-
-      # Le temoin negatif. Sans lui, les trois controles ci-dessus passeraient
-      # aussi sur un Romule qui refuse tout le monde — y compris a tort.
-      - name: Sans ROMULE_TRUSTED_PROXIES, plus rien n'est cru
-        working-directory: exemples/caddy
-        run: |
-          cat > /tmp/sans.yml <<'YML'
-          services:
-            romule:
-              image: romule:proxy
-              environment:
-                ROMULE_TRUSTED_PROXIES: ""
-          YML
-          docker compose -p proxyci -f docker-compose.yml -f /tmp/sans.yml up -d --no-build
-          for i in $(seq 1 90); do
-            etat=$(docker inspect -f '{{.State.Health.Status}}' romule 2>/dev/null || echo absent)
-            [ "$etat" = "healthy" ] && break
-            sleep 2
-          done
-          code=$(docker exec romule-caddy wget -q -S -O /dev/null http://127.0.0.1/ 2>&1 \
-                 | grep -o 'HTTP/1.1 [0-9]*' | head -1 | grep -o '[0-9]*$')
-          echo "meme client local, proxy NON declare : HTTP $code"
-          # Le meme client qui obtenait 200 doit maintenant etre refuse : c'est
-          # le reglage, et lui seul, qui autorise a croire l'en-tete.
-          [ "$code" = "403" ] || {
-            echo "::error title=Proxy::un relais non declare a ete cru ($code)"
+          echo "page via Caddy : HTTP $code"
+          [ "$code" = "200" ] || {
+            echo "::error title=Proxy::l assistant devrait repondre via le proxy, recu $code"
             docker compose -p proxyci logs romule; exit 1; }
-          echo "Le reglage est bien ce qui fait la difference : 200 avec, 403 sans."
+
+      - name: La revendication fonctionne a travers le proxy
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST \
+                 -H 'Origin: http://127.0.0.1' \
+                 -H 'Content-Type: application/json' \
+                 -d '{"email":"ci@example.invalid","mdp":"UnMotDePasseCI!42"}' \
+                 http://127.0.0.1/api/compte-creer)
+          echo "creation via Caddy : HTTP $code"
+          [ "$code" = "200" ] || {
+            echo "::error title=Proxy::creation du premier compte via le proxy refusee ($code)"
+            docker compose -p proxyci logs romule; exit 1; }
+          sante=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1/api/health)
+          echo "health apres revendication : HTTP $sante"
+          [ "$sante" = "403" ] || {
+            echo "::error title=Proxy::health ouvert apres revendication ($sante)"; exit 1; }
 
       - name: Journaux
         if: always()
