@@ -1695,5 +1695,10 @@
   "Toutes tes plateformes": "Every one of your platforms",
   "Chaque console a son dossier sur la tienne, et son propre réglage : Réglages → Console et émulateur. Une plateforme absente de la liste se déclare à la main.": "Each console has its own folder on yours, and its own settings: Settings → Console and emulator. A platform missing from the list can be declared by hand.",
   "Jeux Switch compressés": "Compressed Switch games",
-  "Les .nsz et .xcz demandent l'outil nsz et un fichier prod.keys, à fournir dans les réglages. Sans eux, les autres plateformes fonctionnent normalement.": "`.nsz` and `.xcz` need the nsz tool and a prod.keys file, both supplied in the settings. Without them, the other platforms work as usual."
+  "Les .nsz et .xcz demandent l'outil nsz et un fichier prod.keys, à fournir dans les réglages. Sans eux, les autres plateformes fonctionnent normalement.": "`.nsz` and `.xcz` need the nsz tool and a prod.keys file, both supplied in the settings. Without them, the other platforms work as usual.",
+  "Port de connexion introuvable (essayées : %s).": "Connection port not found (tried: %s).",
+  "Dossier des jeux — toutes les plateformes": "Games folder — every platform",
+  "Pas encore trouvé — cherche, ou choisis-le à la main.": "Not found yet — search, or pick it by hand.",
+  "Chercher le dossier des jeux": "Look for the games folder",
+  "Chaque console garde ses propres réglages : sa connexion et ses dossiers. Tout ce qui suit appartient à celle choisie ici.": "Each console keeps its own settings: its connection and its folders. Everything below belongs to the one chosen here."
 }

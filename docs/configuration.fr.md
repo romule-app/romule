@@ -39,7 +39,7 @@ seul dossier continue donc de fonctionner exactement comme avant.
 | `ROMULE_CHROME` | — | Binaire Chrome pour la famille de tests navigateur |
 | `ROMULE_SCRYPT_PARALLELE` | `2` | Combien de hachages de mot de passe peuvent tourner à la fois. scrypt coûte volontairement ~128 Mio chacun ; sans plafond, quelques tentatives de connexion en parallèle épuiseraient la mémoire du serveur et transformeraient une protection en levier. |
 | `ROMULE_LOG` | `normal` | Ce que Romule écrit dans le **terminal** — `quiet`, `normal`, `verbose`, `debug`, `json`. Sans rapport avec le panneau Journal de l'interface : c'est ce que montrent `docker logs` et un journal systemd. Voir [Lire les journaux](#lire-les-journaux). |
-| `ROMULE_LANG` | le réglage **Langue** de l'interface | La langue du **terminal** : bandeau de démarrage, journal, et les commandes `romule`. Elle suit l'interface par défaut — donc l'anglais sur une installation neuve. Cette variable l'emporte, pour le cas où l'interface n'est justement pas joignable. Voir [Lire les journaux](#lire-les-journaux). |
+| `ROMULE_LANG` | `en` | La langue du **terminal** : bandeau de démarrage, journal, et les commandes `romule`. L'anglais, quelle que soit la langue de l'interface — `ROMULE_LANG=fr` passe le terminal en français. Voir [Lire les journaux](#lire-les-journaux). |
 | `NO_COLOR` | — | N'importe quelle valeur éteint la couleur, selon la convention [no-color.org](https://no-color.org). Elle s'éteint aussi d'elle-même hors d'un terminal. |
 | `ROMULE_ADB` | `adb` dans le `PATH` | Chemin du binaire `adb`. Un chemin qui n'existe pas veut dire « pas de console », et c'est ainsi que la suite de tests reste indépendante de ce qui est branché. |
 
@@ -95,11 +95,13 @@ un service ne démarre pas, sur une machine où personne ne peut ouvrir de
 navigateur — un conteneur, un NAS, une session ssh. `ROMULE_LOG` ne règle que
 le second.
 
-Le terminal parle la **même langue que l'interface**. Ce n'était pas le cas : il
-écrivait en français quoi que dise le réglage, alors que celui-ci vaut `en` par
-défaut — une interface anglaise dont `docker logs` sortait du français, lu
-précisément par la personne qui ne peut pas ouvrir l'interface. `ROMULE_LANG=fr`
-force le français sans rien changer à l'interface.
+Le terminal parle **anglais**, quelle que soit la langue de l'interface. Le
+faire suivre le réglage de l'interface semblait juste et produisait pire : le
+bandeau sortait en anglais au démarrage, puis le premier qui choisissait le
+français dans l'assistant basculait toutes les lignes suivantes — un même
+journal, deux langues, illisible pour tout le monde. Un journal est un document
+technique au public stable ; l'interface, non. `ROMULE_LANG=fr` passe le
+terminal en français, délibérément et pour de bon.
 
 | Valeur | Ce que tu obtiens |
 |---|---|

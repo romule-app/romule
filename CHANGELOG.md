@@ -12,6 +12,38 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Fixed
 
+- **One log, two languages.** The terminal followed the interface's language
+  setting — a rule this project chose, and the wrong one. The banner printed in
+  English at startup, then the first person to pick French in the wizard
+  flipped every later line, and `docker logs` carried both languages in one
+  stream. The terminal now speaks English whatever the interface speaks; a log
+  is a technical document with a stable audience. `ROMULE_LANG=fr` opts into
+  French, deliberately.
+
+- **Every failed pairing logged as two failed pairings.** The background port
+  search reused the pairing's own sentence — « Appairée, mais aucune adresse de
+  connexion trouvée » — seconds after the pairing had already logged it. It has
+  its own words now.
+
+- **The wizard's console step led with a Switch path.** The generic games root
+  comes first, named for what it is; the Switch keeps a row — its emulator
+  reads a folder of its own — but second, and as the platform it is. The Switch
+  also joins the platform grid with its game count, instead of standing apart
+  from it.
+
+- **The borrowed folder browser opened at the bottom of the step.** Pressing
+  « Changer » appeared to do nothing until the reader scrolled: the browser now
+  lands directly under the row that asked for it.
+
+- **The platform grid collapsed to one giant column in the wizard.** An
+  ancestor lays its children out with `align-items:flex-start`, and a grid
+  asked for its natural width answers with one track. The cards are also half
+  their former size everywhere: eleven platforms are a normal library, and at
+  the old size they filled two screens.
+
+- **The « Mes consoles » lead overflowed its frame.** Three sentences explained
+  the design rather than the screen; one now says what the reader needs.
+
 - **The wizard's console step was a Switch tool's step.** It showed the Switch
   games folder and nothing else, so a console holding a hundred GBA and PSX
   games looked empty at the very moment it was being set up. It now shows BOTH

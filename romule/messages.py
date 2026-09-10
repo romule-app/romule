@@ -497,3 +497,5 @@ SV_PORT_INTROUVABLE = (
     "Port introuvable. Vérifie que le débogage sans fil est toujours "
     'actif sur la console, puis recopie son « Adresse IP et port ».')
 SV_RACINE_ROMS = 'Racine des ROMs détectée sur la console : %s'
+SV_PORT_INTROUVABLE_LOG = (
+    'Port de connexion introuvable (essayées : %s).')
