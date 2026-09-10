@@ -3598,6 +3598,9 @@ body.compact .filters{margin-bottom:2px}
    become a height — which is how the login fields once grew to 260 px. */
 .setctl-duo{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .setctl-duo input{flex:1 1 220px;width:auto;min-width:0}
+/* The path box next to its button: same line, same baseline. `.onbchemin`
+   carries its own vertical margin elsewhere; here the row aligns, not it. */
+.setctl-duo .onbchemin{flex:1 1 auto;margin:0;min-width:0}
 .setctl-duo button{flex:0 0 auto}
 
 /* The platform logo. A silhouette per family — a home pad, a handheld, an
@@ -3629,3 +3632,14 @@ div.pfcard{border:1px solid var(--line);background:var(--surface-2);
 .onbdoss .lien{justify-self:end;font-size:12px}
 .onbpf{margin:16px 0 0}
 .onbpf .onbdosst{margin-bottom:8px}
+
+/* The step while the folders are being looked for. One line and a spinner:
+   showing the « not found yet » row DURING the search reports a failure that
+   has not happened. */
+.onbcherche{display:flex;align-items:center;gap:10px;margin:14px 0 0;
+  padding:14px;border:1px solid var(--bord);border-radius:10px;
+  background:var(--puits);font-size:13px;color:var(--mute)}
+.onbcherche::before{content:'';width:13px;height:13px;flex:none;
+  border-radius:50%;border:2px solid color-mix(in srgb, var(--amber) 35%, transparent);
+  border-top-color:var(--amber);animation:tourne .8s linear infinite}
+@media (prefers-reduced-motion:reduce){.onbcherche::before{animation:none}}

@@ -287,7 +287,10 @@
         <!-- One sentence. The previous three explained the DESIGN — why two
              consoles are not one overwritten setting — which is this file's
              business, not the reader's, and it overflowed the group's frame. -->
-        <p class="lead" style="margin:0 0 12px; max-width:62ch">Chaque console
+        <!-- The shorthand margin ERASED the group's 18px inset — a shorthand
+             resets every side it does not name — so the sentence sat flush
+             against the frame. -->
+        <p class="lead" style="margin:12px 18px; max-width:62ch">Chaque console
           garde ses propres réglages : sa connexion et ses dossiers. Tout ce qui
           suit appartient à celle choisie ici.</p>
         <div id="consoles"></div>
@@ -491,7 +494,7 @@
 
       <div class="setgroup" id="groupe-console">
         <div class="setgt">Console et émulateur</div>
-        <p class="lead" style="margin:0 0 12px">Choisis une plateforme&nbsp;: seuls
+        <p class="lead" style="margin:12px 18px">Choisis une plateforme&nbsp;: seuls
           ses réglages s'affichent en dessous.</p>
 
         <div class="setrow">
@@ -571,7 +574,7 @@
       </div>
       <div class="setgroup platform-group" data-plateforme="switch">
         <div class="setgt">Sauvegardes de jeu <span class="scope">Switch</span></div>
-        <p class="lead" style="margin:0 0 10px">Tes progressions sont irremplaçables :
+        <p class="lead" style="margin:12px 18px 10px">Tes progressions sont irremplaçables :
           un jeu se réinstalle, pas 200 h de partie. Chaque sauvegarde est datée,
           rien n'est jamais écrasé.</p>
         <div class="bar">
@@ -588,7 +591,7 @@
            whole tool. -->
       <div class="setgroup">
         <div class="setgt">Émulateur</div>
-        <p class="lead" style="margin:0 0 10px">Il détermine où l'outil dépose les
+        <p class="lead" style="margin:12px 18px 10px">Il détermine où l'outil dépose les
           jeux et où il lit les sauvegardes. Seul Eden est vérifié sur matériel
           réel ; les autres profils sont fournis tels quels.</p>
         <div id="choixemulateur" class="bar"></div>
@@ -596,7 +599,7 @@
 
       <details class="setgroup platform-group" data-plateforme="switch" id="edengroup">
         <summary class="setgt">Émulateur <span class="scope">Switch</span><span class="beta">bêta</span></summary>
-        <p class="lead" style="margin:10px 0">Réglages de l'émulateur pour tous les jeux.
+        <p class="lead" style="margin:10px 18px">Réglages de l'émulateur pour tous les jeux.
           Pour un jeu précis, ouvre sa fiche depuis la liste : c'est là que vivent
           ses réglages et ceux recommandés par la communauté.</p>
         <!-- The three actions belong to the table they act on, and are drawn
@@ -637,7 +640,7 @@
             <span id="d-ludo">Le dossier que Romule analyse. La configuration, les
               comptes et les jaquettes restent dans le dossier de données du
               service, et ne bougent pas avec lui.</span></div>
-          <div class="setctl">
+          <div class="setctl setctl-duo">
             <div class="onbchemin mono" id="s-ludo">—</div>
             <button class="ghost" id="b-ludo" data-act="libOpen">Changer…</button>
           </div>
@@ -709,7 +712,7 @@
           <div class="setlab"><b>Source des jaquettes</b>
             <span id="d-cover">Images affichées dans la bibliothèque.</span></div>
           <div class="setctl"><select id="s-coverprov">
-            <option value="nlib">Icônes Switch — sans configuration</option>
+            <option value="nlib">Icône officielle du jeu — sans configuration</option>
             <option value="steamgriddb">SteamGridDB — clé API requise</option>
             <option value="custom">URL personnalisée</option>
           </select></div>
