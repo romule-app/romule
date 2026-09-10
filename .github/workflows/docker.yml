@@ -260,7 +260,11 @@ jobs:
                  -d '{"email":"pirate@example.invalid","mdp":"Vol42!aaaa"}' \
                  http://127.0.0.1:8787/api/compte-creer)
           echo "second premier compte : HTTP $deux"
-          [ "$deux" = "403" ] || { echo "::error::l installation revendiquee accepte un compte anonyme ($deux)"; exit 1; }
+          # 401 : la requete anonyme echoue a l'authentification avant meme
+          # d'atteindre la question du premier compte. Refusee, c'est le point.
+          case "$deux" in 401|403) : ;; *)
+            echo "::error::l installation revendiquee accepte un compte anonyme ($deux)"; exit 1;;
+          esac
 
       - name: Le service ne tourne pas en root
         run: |
