@@ -186,13 +186,13 @@ docker logs romule              # l'adresse à ouvrir
 ```
 
 !!! tip "Les étiquettes disponibles"
-    `latest` suit la dernière version publiée. `0.3.1` fige une version exacte
+    `latest` suit la dernière version publiée. `0.4.0` fige une version exacte
     et `0.3` en suit les correctifs — épingle l'une des deux si tu préfères
     choisir quand tu montes de version. L'image est multi-architecture
     (`amd64` et `arm64`) et ne demande aucune authentification.
 
     ```sh
-    docker pull ghcr.io/romule-app/romule:0.3.1
+    docker pull ghcr.io/romule-app/romule:0.4.0
     ```
 
     Tu peux aussi la construire toi-même : `docker compose up -d --build` rend

@@ -8,7 +8,7 @@ other platforms go through a per-file inventory. The target device and the
 emulator are profiles, not code (see profils.py).
 """
 
-__version__ = "0.3.1"
+__version__ = "0.4.0"
 
 # Romule is distributed under AGPL-3.0-or-later. The licence requires that a
 # user reaching the service OVER THE NETWORK be able to obtain its source: that
