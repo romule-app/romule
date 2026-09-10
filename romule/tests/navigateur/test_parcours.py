@@ -428,6 +428,24 @@ def main():
         time.sleep(0.6)
         t("la voie sans fil emprunte le panneau d'appairage",
           n.js("!!document.querySelector('#connect-pair-slot #pairwrap')"))
+        # Adding a SECOND console must not resume the first one's pairing:
+        # the panel remembers its step and fields across re-renders — right
+        # within one pairing, wrong across consoles.
+        n.js("(() => { $('pair-addr').value = '192.0.2.9:37105';"
+             " ONB.champs['pair-addr'] = '192.0.2.9:37105';"
+             " app.wizStep(4); app.connectFermer(); })()")
+        time.sleep(0.5)
+        n.js("app.ouvrirConnexion(); app.connectLien('wifi')")
+        time.sleep(0.6)
+        t("rouvrir pour une autre console repart de l'etape 1",
+          n.js("(() => { const e ="
+               " document.querySelector('#pairwrap .wstep.on');"
+               " return e && e.id; })()") == "wstep1",
+          n.js("(() => { const e ="
+               " document.querySelector('#pairwrap .wstep.on');"
+               " return e && e.id; })()"))
+        t("et les champs de l'ancienne console sont vides",
+          n.js("(($('pair-addr') || {}).value) || ''") == "")
         n.js("app.connectFermer()")
         time.sleep(0.6)
         t("fermer rend le panneau aux reglages",

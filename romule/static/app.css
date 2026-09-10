@@ -407,10 +407,9 @@ img.empty{visibility:hidden}
 
    They used to share the same class. A scope and a warning rendered identically
    teach the user to ignore both. */
-.scope,.beta{display:inline-block;font-family:var(--body);font-size:9.5px;
+.beta{display:inline-block;font-family:var(--body);font-size:9.5px;
   font-weight:700;text-transform:uppercase;letter-spacing:.08em;padding:2px 6px;
   border-radius:4px;vertical-align:middle;margin-left:6px}
-.scope{background:var(--info-doux);color:var(--indigo)}
 .beta{background:var(--primary-doux);color:var(--amber);
   border:1px solid var(--primary-halo)}
 /* pastille de compatibilite, en bas a droite de la jaquette */
@@ -3672,3 +3671,18 @@ div.pfcard{border:1px solid var(--line);background:var(--surface-2);
   border:1px solid var(--bord);border-radius:9px;background:var(--puits);
   color:var(--text);font-size:12.5px;text-decoration:none;cursor:pointer}
 .btnlien:hover{border-color:var(--amber)}
+
+/* Breathing room for the scope/beta badges: glued to the title they read as
+   one word — « Switchbêta ». */
+.beta{margin-left:7px}
+/* A folded sub-block inside a group: the advanced emulator table. A summary,
+   not a second group titled like the first. */
+.sousbloc{margin:4px 18px 14px;border:1px solid var(--bord);border-radius:10px;
+  background:var(--puits)}
+/* No `cursor:pointer`: the badge inside would inherit it and read as a fake
+   button to the inert-clickable sweep — the native summary is clickable
+   without the style, and the disclosure triangle carries the affordance. */
+.sousbloc>summary{padding:11px 14px;font-size:13px;
+  color:var(--text);list-style:revert}
+.sousbloc>summary:hover{color:var(--amber)}
+.sousbloc[open]>summary{border-bottom:1px solid var(--bord)}

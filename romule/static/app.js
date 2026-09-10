@@ -1299,7 +1299,10 @@ function renderSysSelect() {
   // The local count alone lied: most platforms only exist on the console. So we
   // keep the larger of the two (local, detected console).
   const compte = s => {
-    if (s.count === null) return GAMES.length;          // Switch : jeux regroupes
+    // `GAMES` follows the VIEW: on another platform it holds that platform's
+    // games, and the Switch entry then showed the wrong count or none. The
+    // scan's own figure does not move with the view.
+    if (s.count === null) return (DATA.stats && DATA.stats.base) || GAMES.length;
     const d = PLATFORMS.find(x => x.key === s.key);
     return Math.max(s.count || 0, d ? d.count : 0);
   };
@@ -2893,7 +2896,7 @@ function fillPlatformSelector() {
 
 function updatePlatformSettings() {
   const sys = SYSTEMS.find(x => x.key === PF_SETTINGS);
-  const propre = [...document.querySelectorAll('#pf-specifique [data-plateforme]')];
+  const propre = [...document.querySelectorAll('.platform-group')];
   let visibles = 0;
   propre.forEach(el => {
     const oui = el.dataset.plateforme === PF_SETTINGS;
@@ -5628,6 +5631,13 @@ const app = {
     if ($('onboard').classList.contains('open')) await this.checkHealth(true);
     if (d.info && d.info.connected) {
       annonce(tpl('Console détectée : %s', d.info.name), 'ok');
+      // A console still carrying the placeholder name takes the one it just
+      // answered with: « Ma console » becomes « AYN Thor » on first contact.
+      const active = (CONSOLES.devices || [])
+        .find(x => x.id === CONSOLES.active_device);
+      if (active && active.nom === 'Ma console' && d.info.name) {
+        await this._consoles('renommer', {id: active.id, nom: d.info.name});
+      }
       await this.loadConsole();
     } else {
       // Assembled, the sentence was translatable by no catalogue.
@@ -6246,6 +6256,18 @@ const app = {
   // `Ajouter une console` was missing: it created an entry and left the
   // reader in front of an unchanged screen.
   ouvrirConnexion() {
+    // A clean slate. The pairing panel remembers its step and its fields
+    // across re-renders — the right behaviour inside one pairing, and the
+    // wrong one across consoles: adding a second console reopened the panel
+    // on the FIRST one's step 4, its address still in the field.
+    PAIR_ETAPE = 1;
+    ['pair-addr', 'pair-code', 'conn-addr'].forEach(id => {
+      delete ONB.champs[id];
+      const el = $(id);
+      if (el) el.value = '';
+    });
+    const b = $('wstep4');
+    if (b) delete b.dataset.appaire;
     CONNECT_LIEN = null;
     $('connectmodal').classList.remove('closing');
     $('connectmodal').classList.add('open');
@@ -6265,17 +6287,16 @@ const app = {
     closeOverlay($('connectmodal'), false);
   },
 
+  // No name dialog. A name typed before the console has answered is a guess;
+  // the console SAYS its name — « AYN Thor » — the moment it connects, and
+  // `detect` takes it from there. Add means: a fresh entry, selected so the
+  // flat settings underneath are blank, then the connect dialog.
   async addConsole() {
-    dialogue({
-      titre: t('Ajouter une console'),
-      champs: [{id: 'nom', libelle: t('Nom'), valeur: ''}],
-      actions: [{libelle: t('Ajouter'), principal: true, faire: async (v) => {
-        await this._consoles('ajouter', {nom: (v.nom || '').trim()});
-        // Straight to connecting it: an entry with no link is a name in a
-        // list, and the screen otherwise looked like nothing had happened.
-        this.ouvrirConnexion();
-      }}],
-    });
+    const r = await this._consoles('ajouter', {nom: ''});
+    if (!r) return;
+    const neuve = (r.devices || [])[(r.devices || []).length - 1];
+    if (neuve) await this._consoles('choisir', {id: neuve.id});
+    this.ouvrirConnexion();
   },
 
   async renameConsole() {

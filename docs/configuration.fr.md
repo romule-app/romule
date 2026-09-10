@@ -208,6 +208,12 @@ toi.
 
 ### Plusieurs consoles
 
+« Ajouter une console » ne demande pas de nom : il ouvre directement la
+connexion — câble ou Wi-Fi — sur une fiche vierge, et la console prend le nom
+qu'elle annonce (« AYN Thor ») à son premier contact. Chaque console garde ses
+réglages : sélectionner l'une dans « Console pilotée » affiche les siens.
+
+
 Une Odin et un Retroid sont deux consoles, pas un réglage écrasé deux fois.
 
 | Clé | Défaut | Ce que ça fait |
