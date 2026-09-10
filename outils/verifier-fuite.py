@@ -173,7 +173,13 @@ def autotest():
         # The shape that got through for a week: a real subnet, copied from a
         # screenshot into a comment. It was reported — as one warning among
         # thirty, under a heading saying nothing was found.
-        ("i.css", b'/* coupe a 192.0.2.22 */', True),
+        # A private address that is neither allowed nor a documentation one.
+        # It must stay OUTSIDE the ranges this project rewrites: the fixture was
+        # written with a real subnet, and the history rewrite that removed that
+        # subnet edited the fixture too — leaving a test that asserted detection
+        # of an address now allowed. A test whose subject can be rewritten under
+        # it is not a test.
+        ("i.css", b'/* coupe a 192.168.77.13 */', True),
         ("j.py", b'assert scrutable("192.0.2.22")', False),
         ("f.py", b'# fuite:ok a documentation example\nk = "api_key: \'abcdef0123456789\'"', False),
     ]
