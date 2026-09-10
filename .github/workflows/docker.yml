@@ -152,7 +152,7 @@ jobs:
             echo "::error::trace de pile sur un dossier appartenant a un autre UID"
             exit 1
           fi
-          echo "$sortie" | grep -q "n'est pas inscriptible" \
+          echo "$sortie" | grep -qE "n'est pas inscriptible|is not writable" \
             || { echo "::error::pas de message explicite"; exit 1; }
 
           mkdir -p /tmp/interdit && chmod 500 /tmp/interdit
@@ -163,7 +163,7 @@ jobs:
             echo "::error::le service meurt sur une trace de pile au lieu d'expliquer"
             exit 1
           fi
-          echo "$sortie" | grep -q "n'est pas inscriptible" \
+          echo "$sortie" | grep -qE "n'est pas inscriptible|is not writable" \
             || { echo "::error::pas de message explicite"; exit 1; }
           echo "$sortie" | grep -q "1000:1000" \
             || { echo "::error::le remede n'est pas nomme"; exit 1; }
