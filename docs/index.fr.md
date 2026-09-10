@@ -4,7 +4,42 @@
 l'inventaire de tes fichiers, complète les jaquettes, et envoie les jeux vers
 une console portable Android par adb.
 
-![La bibliothèque de Romule](images/bibliotheque.jpg)
+![La même ludothèque sur trois écrans : un navigateur de bureau, une console
+portable et un téléphone](images/apercu.jpg)
+
+## De plus près
+
+<div class="grid cards" markdown>
+
+-   __La bibliothèque__
+
+    ![La grille des jeux](images/bibliotheque.jpg)
+
+    Toutes les plateformes d'un coup, ou une seule. Les mises à jour et les DLC
+    se replient dans le jeu auquel ils appartiennent.
+
+-   __Un jeu__
+
+    ![La fiche d'un jeu](images/fiche.jpg)
+
+    Ce que tu possèdes, en quelle version, quels fichiers, et si la console
+    l'a.
+
+-   __Ta console__
+
+    ![Les réglages de la console](images/console.jpg)
+
+    Batterie, stockage et adresse, lus sur la console elle-même. Son dossier de
+    jeux est trouvé, pas saisi.
+
+-   __Ce qui ne va pas__
+
+    ![Le rapport de la ludothèque](images/sante.jpg)
+
+    Fichiers incomplets, DLC orphelins, doublons, jeux sans fiche — chacun avec
+    ce qu'il faut en faire.
+
+</div>
 
 !!! warning "Bêta"
     Romule fonctionne et sert tous les jours, mais il est jeune, et plusieurs

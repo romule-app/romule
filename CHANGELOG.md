@@ -12,6 +12,26 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Fixed
 
+- **« Voir l'état de l'installation » had stopped opening anything.**
+  `showOnboard` was a bare `checkHealth(true)`, and the day `force` stopped
+  summoning the wizard — rightly, since a settings change forces a refresh —
+  this went silently inert. Found while photographing it. The walkthrough now
+  presses it.
+
+### Changed
+
+- **Five more screenshots, and the frames are drawn in CSS.** The README showed
+  two raw viewports; it now shows the library, a game's detail view, the
+  console settings, the health report and the assistant, plus one framed piece
+  — browser window, handheld shell, phone shell — composed by
+  `outils/captures.py` instead of Photoshop. A mock-up that cannot be
+  regenerated goes stale, and this one is rebuilt with the shots it frames.
+
+  `outils/adb-vitrine.py` stands in for a console with storage, a battery and a
+  tree of games, so the pictures show the interface doing its job rather than
+  its empty state. It is deliberately separate from the tests' fake adb: that
+  one must stay boring, this one may invent.
+
 - **A settings note showed half in English and half in French.** « — utilisée
   seulement avec « URL personnalisée » » was assembled from a translated
   template and a translated label, and the result is a text node no catalogue
