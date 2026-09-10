@@ -373,6 +373,29 @@ def main():
         t("elle se ferme sans toucher a l'etape",
           not n.js("$('navmodal').classList.contains('open')")
           and n.js("$('onboard').classList.contains('open')"))
+        # Closing must not gut it: its content is static markup, and emptying
+        # it on close is why the navigator used to work once and never again.
+        n.js("app.onbParcourir('roms')")
+        time.sleep(0.6)
+        t("elle se rouvre apres une fermeture",
+          n.js("$('navmodal').classList.contains('open')")
+          and n.js("!!$('browser')"))
+        n.js("app.navFermer()")
+        time.sleep(0.4)
+        # And it sits ABOVE the wizard: z 50 under the onboarding's 60 opened
+        # it behind its own caller.
+        t("la modale de navigation passe devant l'assistant",
+          int(n.js("parseInt(getComputedStyle($('navmodal')).zIndex) || 0")) >
+          int(n.js("parseInt(getComputedStyle($('onboard')).zIndex) || 0")))
+        # While the folder search runs, the wizard cannot be walked.
+        n.js("(() => { ONB.chercheDossiers = true; renderOnboard(); })()")
+        time.sleep(0.4)
+        t("pendant la recherche, Suivant et Precedent sont bloques",
+          n.js("(() => { const b = [...document.querySelectorAll("
+               "'#onboard .onbpied button')];"
+               " return b.filter(x => x.disabled).length >= 2; })()"))
+        n.js("(() => { ONB.chercheDossiers = false; renderOnboard(); })()")
+        time.sleep(0.4)
         # The same grid as the settings, from the same function.
         pf = n.js("(() => { PLATFORMS = [{key:'gba', name:'Game Boy Advance',"
                   " folder:'GBA', count:12, bytes:1024}];"
@@ -391,6 +414,31 @@ def main():
           n.js("(() => { const p = document.getElementById('pairwrap');"
                " return !!p && !p.closest('#onboard')"
                " && p.style.display === 'none'; })()"))
+
+        # The connect dialog: the same pairing panel, third home.
+        print("   -- la modale de connexion --")
+        n.js("app.closeOnboard()")
+        time.sleep(0.6)
+        n.js("app.ouvrirConnexion()")
+        time.sleep(0.6)
+        t("la modale de connexion s'ouvre sur le choix",
+          n.js("$('connectmodal').classList.contains('open')")
+          and n.js("document.querySelectorAll('#connect-corps .onbcarte').length") == 2)
+        n.js("app.connectLien('wifi')")
+        time.sleep(0.6)
+        t("la voie sans fil emprunte le panneau d'appairage",
+          n.js("!!document.querySelector('#connect-pair-slot #pairwrap')"))
+        n.js("app.connectFermer()")
+        time.sleep(0.6)
+        t("fermer rend le panneau aux reglages",
+          n.js("(() => { const p = $('pairwrap');"
+               " return !!p && !p.closest('#connectmodal'); })()"))
+        t("et se rouvre proprement",
+          (n.js("(() => { app.ouvrirConnexion();"
+                " return $('connectmodal').classList.contains('open'); })()"))
+          is True)
+        n.js("app.connectFermer()")
+        time.sleep(0.4)
 
         print("   -- rien n'a echoue en chemin --")
         erreurs = n.js("window.__erreurs") or []

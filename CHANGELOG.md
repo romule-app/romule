@@ -12,6 +12,46 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Fixed
 
+- **The folder navigator worked once and never again.** Closing an overlay
+  emptied its markup — right for dialogs built at open time, fatal for a modal
+  whose content is static: the second opening added `open` to a hollow shell.
+  Closing no longer guts static modals.
+
+- **The navigator opened BEHIND the wizard.** Modals sat at z-index 50, the
+  onboarding at 60: called from the wizard, the navigator appeared behind its
+  own caller. It sits above now.
+
+- **« Ne plus me le rappeler » hid nothing.** The pill's class sets
+  `display:inline-flex`, which beats the UA's `[hidden]{display:none}` — the
+  attribute was being set and overridden in the same breath.
+
+### Changed
+
+- **« Ajouter une console » now connects one.** It created a named entry and
+  left the screen unchanged. It opens a connect dialog — the same USB/Wi-Fi
+  choice and the same pairing panel as the wizard, third home of one shared
+  panel.
+
+- **The wizard cannot be walked while the folder search runs.** Précédent and
+  Suivant are disabled until it lands.
+
+- **Storage volumes are information, not buttons.** Clicking one opened the
+  navigator with no target chosen.
+
+- **« Détecter » and « Recompter les jeux » become one « Analyser la
+  console ».** They were halves of one intention under names nobody could tell
+  apart: the button finds the folder when none is set, then counts. The ROMs
+  path field grew to fit its content and gained « Parcourir… ».
+
+- **A hand-declared platform picks its silhouette and colour.** Four shapes,
+  a colour well, and the card shows exactly what was picked. A silhouette
+  rather than an uploaded image: an image would need storing and serving, and
+  a recognisable shape in the right colour is what the card's logo is for.
+
+- **An « À propos » settings tab.** The installed version and whether a newer
+  one exists, its release notes, the source repository and releases — the AGPL
+  wants the source reachable — and which tools the server found.
+
 - **Picking an emulator opened the onboarding.** `checkHealth(force)` rendered
   the wizard whenever it was forced — and forcing is what a settings change
   does. `force` now refreshes the wizard only when it is already on screen.

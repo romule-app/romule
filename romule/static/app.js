@@ -571,11 +571,15 @@ function messageLisible(chemin, err) {
 // itself before your eyes while it is still receding.
 const FERMETURE_MS = 160;
 
-function closeOverlay(el) {
+// `vider=false` for overlays whose content is STATIC markup — the folder
+// navigator, the connect dialog. Emptying those on close destroyed the modal
+// itself: the second opening added `open` to a hollow shell, which is why the
+// navigator worked once and never again.
+function closeOverlay(el, vider = true) {
   if (!el || !el.classList.contains('open')) return;
   if (document.documentElement.dataset.mvt === 'aucun') {
     el.classList.remove('open', 'sansentree');
-    el.innerHTML = '';
+    if (vider) el.innerHTML = '';
     return;
   }
   el.classList.add('closing');
@@ -585,7 +589,7 @@ function closeOverlay(el) {
     // without this check we would empty the new dialog.
     if (!el.classList.contains('closing')) return;
     el.classList.remove('open', 'closing', 'sansentree');
-    el.innerHTML = '';
+    if (vider) el.innerHTML = '';
   }, FERMETURE_MS);
 }
 
@@ -1408,6 +1412,7 @@ async function loadUpdate() {
   if (!r || r.error) return;
   MAJ = r;
   majPuce();
+  renderApropos();
 }
 
 // Shown while there is a newer version AND it has not been acknowledged. The
@@ -2560,7 +2565,9 @@ function renderDeviceCard(info, volumes) {
   const vols = (volumes || []).map(v => {
     const used = (v.total && v.free != null) ? (v.total - v.free) / v.total : 0;
     const spc = v.free != null ? fmt(v.free) + ' libre / ' + fmt(v.total) : 'espace inconnu';
-    return '<div class="vol" data-act="setDpath" data-arg="' + esc(v.path) + '" title="Explorer ce volume">' +
+    // Information, not a button: exploring a volume from here opened the
+    // navigator with no target chosen, and the row's affordance said nothing.
+    return '<div class="vol">' +
       '<span class="tag t-' + (v.kind === 'SD' ? 'DLC' : 'BASE') + '">' + esc(v.kind) + '</span>' +
       '<span class="grow"><div>' + esc(v.label) + '</div><span class="mono">' + esc(v.path) + '</span></span>' +
       '<span class="meter' + (used > 0.9 ? ' tight' : '') + '"><i style="width:' + Math.round(used * 100) + '%"></i></span>' +
@@ -2791,7 +2798,12 @@ const PF_SILHOUETTE = {
 };
 
 function logoPlateforme(cle) {
-  const [famille, teinte] = PF_FAMILLE[cle] || ['ecran', 'var(--mute)'];
+  // A hand-declared platform chose its silhouette and its colour; the shipped
+  // table answers for the rest.
+  const perso = ((DATA.config || {}).systemes_perso || []).find(x => x.key === cle);
+  const [famille, teinte] = (perso && perso.icone)
+    ? [perso.icone, perso.couleur || 'var(--mute)']
+    : PF_FAMILLE[cle] || ['ecran', 'var(--mute)'];
   return '<span class="pflogo" style="--pf:' + esc(teinte) + '" aria-hidden="true">' +
     '<svg viewBox="0 0 24 24" fill="currentColor">' +
     (PF_SILHOUETTE[famille] || PF_SILHOUETTE.ecran) + '</svg></span>';
@@ -4499,6 +4511,29 @@ function emulatorName(cle) {
 // The footer carries the source offer the AGPL requires. The values come from
 // the server: a version hard-coded in the page always ends up lying after an
 // upgrade.
+// The About tab: the version and whether a newer one exists, the source —
+// the AGPL wants it reachable — and what the server found in its toolbox.
+// Everything here is already known to the page; this only lays it out.
+function renderApropos() {
+  const el = $('ap-version');
+  if (!el) return;
+  const h = HEALTH || {};
+  const etat = (MAJ && MAJ.disponible)
+    ? tpl('version %s disponible', MAJ.version || '?')
+    : t('à jour');
+  R.texte(el, (h.version ? 'Romule ' + h.version : '—') + ' — ' + etat);
+  const notes = $('ap-notes');
+  if (notes) notes.hidden = !(MAJ && MAJ.disponible);
+  const src = $('ap-source'), rel = $('ap-releases');
+  if (src && h.source) src.href = h.source;
+  if (rel && h.source) rel.href = h.source + '/releases';
+  const c = h.checks || {};
+  const outils = [['adb', c.adb], ['nsz', c.nsz], ['prod.keys', c.keys]]  // i18n:ok - file and tool names, not sentences
+    .map(x => x[0] + (x[1] ? ' ✓' : ' ✗')).join('   ');
+  R.texte($('ap-outils'), outils);
+}
+
+
 function renderPied() {
   if (!HEALTH) return;
   const v = $('pied-version');
@@ -5304,6 +5339,7 @@ const app = {
     const vu = !!(HEALTH.checks || {}).assistant_vu;
     renderChoixEmulateur();
     renderPied();
+    renderApropos();
     majLudotheque();
     // `force` refreshes the wizard when it is ALREADY on screen — it must
     // never summon it. Picking an emulator in the settings calls
@@ -5708,8 +5744,8 @@ const app = {
     this.browse(depart || BROWSE_PATH || (DATA.config || {}).roms_root
                 || (DATA.config || {}).device_dir);
   },
-  closeNav(e) { if (!e || e.target === $('navmodal')) closeOverlay($('navmodal')); },
-  navFermer() { closeOverlay($('navmodal')); },
+  closeNav(e) { if (!e || e.target === $('navmodal')) closeOverlay($('navmodal'), false); },
+  navFermer() { closeOverlay($('navmodal'), false); },
 
   async browse(path) {
     path = (path || BROWSE_PATH || (DATA.config && DATA.config.device_dir) || '/storage/emulated/0');
@@ -5735,12 +5771,11 @@ const app = {
       await this.saveField('system_dirs', dirs);
       toast(libelleSysteme(CIBLE_PARCOURS) + ' : ' + BROWSE_PATH, 'ok');
     }
-    closeOverlay($('navmodal'));
+    closeOverlay($('navmodal'), false);
     updatePlatformSettings();       // the path shown follows immediately
     await this.detectPlatforms(true);
     if ($('onboard').classList.contains('open')) renderOnboard();
   },
-  setDpath(p) { this.browseServer('roms', p); },
 
   // ---- where the games are, on the machine hosting the service
   libOpen(depart) {
@@ -6206,12 +6241,39 @@ const app = {
     renderLib();
   },
 
+  // The connect dialog: the same choice and the same pairing panel as the
+  // wizard's console step, in a modal the settings can open — which is what
+  // `Ajouter une console` was missing: it created an entry and left the
+  // reader in front of an unchanged screen.
+  ouvrirConnexion() {
+    CONNECT_LIEN = null;
+    $('connectmodal').classList.remove('closing');
+    $('connectmodal').classList.add('open');
+    renderConnect();
+  },
+  connectLien(quoi) {
+    CONNECT_LIEN = quoi === 'usb' ? 'usb' : 'wifi';
+    renderConnect();
+  },
+  connectRetour() { CONNECT_LIEN = null; pairRendre(); renderConnect(); },
+  closeConnect(e) { if (!e || e.target === $('connectmodal')) this.connectFermer(); },
+  connectFermer() {
+    // Guarded: Escape calls this blindly, and an unconditional `pairRendre`
+    // would snatch the pairing panel out of the wizard mid-pairing.
+    if (!$('connectmodal').classList.contains('open')) return;
+    pairRendre();
+    closeOverlay($('connectmodal'), false);
+  },
+
   async addConsole() {
     dialogue({
       titre: t('Ajouter une console'),
       champs: [{id: 'nom', libelle: t('Nom'), valeur: ''}],
       actions: [{libelle: t('Ajouter'), principal: true, faire: async (v) => {
         await this._consoles('ajouter', {nom: (v.nom || '').trim()});
+        // Straight to connecting it: an entry with no link is a name in a
+        // list, and the screen otherwise looked like nothing had happened.
+        this.ouvrirConnexion();
       }}],
     });
   },
@@ -6383,7 +6445,13 @@ const app = {
   },
   // A full analysis: it goes through the task system, so a progress bar and a
   // detailed log — you see WHAT was searched for, and where.
+  parcourirRoms() { this.browseServer('roms'); },
+
   async fullAnalysis() {
+    // One button does the whole intention: find the folder when none is set,
+    // then count what it holds. « Détecter » and « Recompter » were its two
+    // halves under names nobody could tell apart.
+    if (!((DATA.config || {}).roms_root)) await this.detectRoms(true);
     const r = await api('/api/console-analyse', {});
     if (r.error) return;
     toast('Analyse lancée.', 'ok');
@@ -6392,6 +6460,16 @@ const app = {
   },
 
   // Declare a platform missing from the shipped table.
+  // Marks the picked silhouette in the add-platform dialog. `data-act` is the
+  // only click channel the CSP leaves open, so even this small thing goes
+  // through the dispatcher.
+  apIcone(quoi) {
+    const z = $('ap-icone');
+    if (z) z.value = quoi;
+    document.querySelectorAll('#dialog .apopt').forEach(b =>
+      b.classList.toggle('on', b.dataset.arg === quoi));
+  },
+
   addPlatform() {
     dialogue({
       titre: 'Ajouter une plateforme',
@@ -6403,6 +6481,20 @@ const app = {
         {id: 'dossier', libelle: 'Dossier sur la console', exemple: 'NeoGeo'},
         {id: 'exts', libelle: 'Extensions, séparées par des virgules', exemple: 'zip, neo'},
       ],
+      // The silhouette and its tint, like the shipped platforms have. Chosen
+      // here rather than uploaded: an image would need storing and serving,
+      // and a recognisable shape in the right colour is what the card's logo
+      // is FOR. The buttons write into the hidden field — dialog fields only
+      // carry text.
+      html: '<div class="apchoix">' +
+        ['maison', 'portable', 'arcade', 'ecran'].map((f, i) =>
+          '<button type="button" class="apopt' + (i === 3 ? ' on' : '') +
+          '" data-act="apIcone" data-arg="' + esc(f) + '">' +
+          '<svg viewBox="0 0 24 24" fill="currentColor">' +
+          PF_SILHOUETTE[f] + '</svg></button>').join('') +
+        '<input type="hidden" id="ap-icone" value="ecran">' +
+        '<label class="apcouleur">' + esc(t('Couleur')) +
+        ' <input type="color" id="ap-couleur" value="#7a8794"></label></div>',
       fermer: 'Annuler',
       actions: [{libelle: 'Ajouter', principal: true, faire: async (v) => {
         const nom = (v.nom || '').trim();
@@ -6414,7 +6506,9 @@ const app = {
         const cle = nom.toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 20) || 'perso';
         const liste = ((DATA.config || {}).systemes_perso || []).slice();
         if (liste.some(x => x.key === cle)) return toast('Cette plateforme existe déjà.', 'warn');
-        liste.push({key: cle, name: nom, folder: dossier, exts});
+        liste.push({key: cle, name: nom, folder: dossier, exts,
+                    icone: ($('ap-icone') || {}).value || 'ecran',
+                    couleur: ($('ap-couleur') || {}).value || ''});
         await this.saveField('systemes_perso', liste);
         toast(tpl('%s ajoutée.', nom), 'ok');
         await this.loadSystems();
@@ -7427,6 +7521,46 @@ function pairOccupe(oui, quoi) {
 }
 
 
+// Which way the connect dialog is going: null (asking), 'usb' or 'wifi'.
+let CONNECT_LIEN = null;
+
+function renderConnect() {
+  const el = $('connect-corps');
+  if (!el) return;
+  const c = (HEALTH && HEALTH.checks) || {};
+  pairRendre();
+  if (!CONNECT_LIEN) {
+    const usb = c.usb || {};
+    el.innerHTML = '<p class="onbp">' +
+      esc(t('Comment la console est-elle reliée à cette machine ?')) + '</p>' +
+      '<div class="onbchoix">' +
+      '<button class="onbcarte" data-act="connectLien" data-arg="usb"' +
+        (c.adb ? '' : ' disabled') + '>' +
+        '<span class="onbcicone">🔌</span><b>Avec un câble</b>' +
+        '<span class="onbcdesc">USB. Deux à cinq fois plus rapide, et rien à ' +
+        'appairer.</span></button>' +
+      '<button class="onbcarte" data-act="connectLien" data-arg="wifi"' +
+        (c.adb ? '' : ' disabled') + '>' +
+        '<span class="onbcicone">📶</span><b>Sans câble</b>' +
+        '<span class="onbcdesc">Wi-Fi. Un appairage à faire une fois, ensuite ' +
+        'la console est reconnue toute seule.</span></button>' +
+      '</div>';
+  } else if (CONNECT_LIEN === 'usb') {
+    el.innerHTML = '<p class="onbp">' +
+      esc(t('Branche la console, active le « débogage USB » dans ses options '
+            + 'pour les développeurs, puis accepte la demande qui s\'affiche '
+            + 'sur son écran.')) + '</p>' +
+      '<div class="bar"><button class="ghost" data-act="connectRetour">Retour</button>' +
+      '<button class="go" data-act="detect">Chercher la console</button></div>';
+  } else {
+    el.innerHTML = '<div id="connect-pair-slot"></div>' +
+      '<div class="bar"><button class="ghost" data-act="connectRetour">Retour</button></div>';
+    pairPreter($('connect-pair-slot'));
+  }
+  translateDOM(el);
+}
+
+
 function pairPreter(slot) {
   const panneau = $('pairwrap');
   if (!panneau || !slot) return;
@@ -7488,7 +7622,7 @@ function renderOnboard() {
     (bloque ? '<p class="onbmanque">' + esc(e.manque || '') + '</p>' : '') +
     '<div class="onbpied">' +
       '<button class="ghost" data-act="onbPrev"' +
-        (ONB.i === 0 ? ' disabled' : '') + '>Précédent</button>' +
+        (ONB.i === 0 || ONB.chercheDossiers ? ' disabled' : '') + '>Précédent</button>' +
       '<div class="onbpoints">' + etapes.map((x, i) =>
         '<button class="onbpoint' + (i === ONB.i ? ' on' : '') +
           (i < ONB.i ? ' fait' : '') + '" title="' + esc(x.titre) +
@@ -7503,7 +7637,8 @@ function renderOnboard() {
         '</button>').join('') + '</div>' +
       (dernier
         ? '<button class="go" data-act="closeOnboard">Terminer</button>'
-        : '<button class="go" data-act="onbNext"' + (bloque ? ' disabled' : '') +
+        : '<button class="go" data-act="onbNext"' +
+          (bloque || ONB.chercheDossiers ? ' disabled' : '') +
           '>Suivant</button>') +
     '</div>' +
     (onbSansReponse()
@@ -7959,7 +8094,7 @@ $('log').addEventListener('scroll', () => {
   if (enBas !== JSUIVI) { JSUIVI = enBas; updateFollowButton(); }
 }, {passive: true});
 
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { app.closeGame(); app.closeDialog(); app.navFermer(); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { app.closeGame(); app.closeDialog(); app.navFermer(); app.connectFermer(); } });
 
 /* ---------------------------------------------------------------------------
    LA CROIX DIRECTIONNELLE
@@ -8069,7 +8204,9 @@ const ACTES = new Set([
   // runtime from `renderActions`'s `boutons` list.
   'applyMain', 'trashSelection', 'deleteFromConsole',
   'actionFab', 'enableGame', 'refreshAll', 'refreshEntries',
-  'addAccount', 'addPlatform', 'goToSystem', 'fullAnalysis',
+  'addAccount', 'addPlatform', 'apIcone', 'goToSystem', 'fullAnalysis',
+  'ouvrirConnexion', 'connectLien', 'connectRetour', 'closeConnect',
+  'connectFermer',
   'actualiserConsole',
   'runAudit', 'backupSaves', 'toggleFollow', 'toggleTasks', 'browse',
   'cancelJob', 'chooseEmulator', 'chooseFiles', 'assignImports',
@@ -8088,13 +8225,13 @@ const ACTES = new Set([
   'libConfirm', 'mkTree', 'onbGo', 'onbFindConsole',
   'onbChooseFolder', 'onbCreateAccount', 'onbOpenAccess', 'onbPrev',
   'onbScan', 'onbTestSgdb', 'onbTestIgdb', 'setLang', 'toggleNotification',
-  'onbLien', 'onbAutreLien', 'detectRoms', 'onbParcourir',
+  'onbLien', 'onbAutreLien', 'detectRoms', 'onbParcourir', 'parcourirRoms',
   'signOut',
   'onbScanConsole', 'onbNext', 'openGame',
   'openOnConsole', 'organize', 'forgetFolder', 'forgetTransfer',
   'openPlatform', 'page', 'browseServer', 'purgeTrash', 'reloadImport',
   'renderJournal', 'renderLib', 'reorganizeLocal', 'resumeTransfer',
-  'restoreBackup', 'restore', 'saveAllSettings', 'sendGame', 'setDpath',
+  'restoreBackup', 'restore', 'saveAllSettings', 'sendGame',
   'closeNav', 'navFermer',
   'setMotion', 'setPerPage', 'setOrder', 'setSystem', 'setSize',
   'setTheme', 'setSort', 'setSchedule', 'showOnboard', 'testAuth', 'testIgdb',

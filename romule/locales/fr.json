@@ -1710,5 +1710,14 @@
   "Choisir ce dossier": "Choisir ce dossier",
   "Déconnecter": "Déconnecter",
   "Choisir le dossier des jeux": "Choisir le dossier des jeux",
-  "Ferme la fenêtre du code : derrière elle, l'écran de débogage sans fil affiche « Adresse IP et port ». Recopie-la ici — son port n'est pas celui que tu viens de saisir.": "Ferme la fenêtre du code : derrière elle, l'écran de débogage sans fil affiche « Adresse IP et port ». Recopie-la ici — son port n'est pas celui que tu viens de saisir."
+  "Ferme la fenêtre du code : derrière elle, l'écran de débogage sans fil affiche « Adresse IP et port ». Recopie-la ici — son port n'est pas celui que tu viens de saisir.": "Ferme la fenêtre du code : derrière elle, l'écran de débogage sans fil affiche « Adresse IP et port ». Recopie-la ici — son port n'est pas celui que tu viens de saisir.",
+  "Comment la console est-elle reliée à cette machine ?": "Comment la console est-elle reliée à cette machine ?",
+  "À propos": "À propos",
+  "Notes de version": "Notes de version",
+  "Romule est publié sous licence AGPL-3.0 : le code de cette instance est public, corrections bienvenues.": "Romule est publié sous licence AGPL-3.0 : le code de cette instance est public, corrections bienvenues.",
+  "Outils sur le serveur": "Outils sur le serveur",
+  "Ce que Romule a trouvé pour convertir et piloter.": "Ce que Romule a trouvé pour convertir et piloter.",
+  "Publications": "Publications",
+  "version %s disponible": "version %s disponible",
+  "Couleur": "Couleur"
 }

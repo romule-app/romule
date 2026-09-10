@@ -1710,5 +1710,14 @@
   "Choisir ce dossier": "Choose this folder",
   "Déconnecter": "Disconnect",
   "Choisir le dossier des jeux": "Choose the games folder",
-  "Ferme la fenêtre du code : derrière elle, l'écran de débogage sans fil affiche « Adresse IP et port ». Recopie-la ici — son port n'est pas celui que tu viens de saisir.": "Close the code window: behind it, the wireless debugging screen shows “IP address and Port”. Copy it in here — its port is not the one you just typed."
+  "Ferme la fenêtre du code : derrière elle, l'écran de débogage sans fil affiche « Adresse IP et port ». Recopie-la ici — son port n'est pas celui que tu viens de saisir.": "Close the code window: behind it, the wireless debugging screen shows “IP address and Port”. Copy it in here — its port is not the one you just typed.",
+  "Comment la console est-elle reliée à cette machine ?": "How is the console connected to this machine?",
+  "À propos": "About",
+  "Notes de version": "Release notes",
+  "Romule est publié sous licence AGPL-3.0 : le code de cette instance est public, corrections bienvenues.": "Romule is published under the AGPL-3.0: this instance's code is public, fixes welcome.",
+  "Outils sur le serveur": "Tools on the server",
+  "Ce que Romule a trouvé pour convertir et piloter.": "What Romule found for converting and driving.",
+  "Publications": "Releases",
+  "version %s disponible": "version %s available",
+  "Couleur": "Colour"
 }

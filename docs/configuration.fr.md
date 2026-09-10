@@ -161,6 +161,13 @@ Tous se modifient depuis l'interface. Les noms sont les clés rangées dans
     groupe le déclasse à sa session suivante, pas au milieu de celle en cours.
     Voir [Rôles et accès](roles.md).
 
+### À propos
+
+Le dernier onglet des réglages : la version installée et si une plus récente
+existe, ses notes de version, le dépôt du code source et ses publications — la
+licence AGPL veut que le code d'une instance atteignable soit accessible — et
+les outils que le serveur a trouvés (`adb`, `nsz`, `prod.keys`).
+
 ### Ta console
 
 | Clé | Défaut | Signification |
