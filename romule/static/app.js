@@ -2534,13 +2534,15 @@ function renderConsoleBar(info) {
   const el = $('barreconsole');
   if (!el) return;
   const ok = info && info.connected;
+  // Two buttons, not four. `Relire les jeux` and `Re-détecter` were two
+  // halves of one intention — bring the picture up to date — and neither name
+  // said which half it did.
   el.innerHTML = ok
-    ? '<button class="ghost" data-act="refreshAll">Relire les jeux</button>' +
+    ? '<button class="ghost" data-act="actualiserConsole">Actualiser</button>' +
       '<span style="flex:1"></span>' +
-      '<button class="ghost" data-act="detect">Re-détecter</button>' +
       (CONN.kind === 'usb'
         ? '<button class="ghost" data-act="wifiSwitch">Passer en Wi-Fi</button>'
-        : '<button class="ghost" data-act="wifiForget">Oublier ce lien</button>')
+        : '<button class="ghost" data-act="wifiForget">Déconnecter</button>')
     : '<button class="go" data-act="detect">Détecter la console</button>' +
       '<button class="ghost" data-act="togglePairing">' +
         esc(t('Connecter sans câble')) + '</button>';
@@ -4424,6 +4426,10 @@ function syncSetDesc() {
   // source.
   const prov = $('s-coverprov').value;
   const marquer = (row, actif, quand) => {
+    // Hidden, not greyed. A greyed row still asks to be read, and the two it
+    // governs — the SteamGridDB key, the URL template — mean nothing until
+    // their provider is the one selected.
+    $(row).hidden = !actif;
     $(row).classList.toggle('inactive', !actif);
     // This text was rendered by `content: attr(data-note)` in CSS: it is then
     // NEVER a text node, so neither the observer nor any tool can see it — and
@@ -5125,12 +5131,6 @@ const app = {
         c.value = a.value.split(':')[0] + ':';
       }
       if (c) c.focus();
-      // And the search keeps going, quietly, while you read. It is the answer
-      // to "is there no way to skip this step" — there is, it just takes a few
-      // seconds longer than the pairing itself. Nothing is blocked: whoever can
-      // read the number off the console beats it, and whoever cannot does not
-      // have to.
-      this.chercherEnFond();
     }
   },
   // Validates as you go: the user sees what is missing before failing.
@@ -5190,12 +5190,8 @@ const app = {
       // contradiction the moment the console's own dialog has just closed: the
       // pairing DID work. It now names the one thing missing.
       toast(r.message || t('Associée. Il reste son port de connexion.'), 'ok');
-      // The step says whether the announcement could have reached us at all.
       const bloc = $('wstep4');
-      if (bloc) {
-        bloc.dataset.mdns = r.mdns ? '1' : '0';
-        bloc.dataset.appaire = '1';
-      }
+      if (bloc) bloc.dataset.appaire = '1';
       this.wizStep(4);
     } else toast(r.message || t('Association refusée.'), 'err');
   },
@@ -5233,46 +5229,6 @@ const app = {
     return /^\d{1,3}(\.\d{1,3}){3}:\d{1,5}$/.test(a) ? a : '';
   },
 
-  // The background search. `PAIR_FOND` is a generation counter, not a flag: a
-  // result that lands after the reader has already connected by hand belongs to
-  // a question nobody is asking any more.
-  async chercherEnFond() {
-    const hote = ($('pair-addr') || {}).value || '';
-    if (!hote.includes(':')) return;
-    const mien = ++PAIR_FOND;
-    const ligne = $('conn-cherche');
-    if (ligne) R.texte(ligne, t('Recherche du port sur la console…'));
-    let r = {};
-    try { r = await api('/api/wifi-retrouver', {hote}); } catch (e) { r = {}; }
-    if (mien !== PAIR_FOND) return;
-    if (ligne) R.texte(ligne, r.ok ? '' : t('Port non trouvé : recopie-le ci-dessous.'));
-    if (!r.ok) return;
-    toast(r.message, 'ok');
-    this.wizStep(5);
-    await this.detect();
-    await renderConnOk();
-  },
-
-  // The same search the server runs after a pairing, on demand. A search that
-  // failed once is worth one press — wireless debugging may have been switched
-  // on since — and the alternative is sending the reader back to the console
-  // for a third number, which is the step people give up on.
-  async wifiRetrouver() {
-    const hote = ($('pair-addr') || {}).value || ($('conn-addr') || {}).value || '';
-    say(t('Recherche du port…'));
-    // The one that really takes seconds: it asks the console which of its ports
-    // answer. Saying so beats a frozen panel with no explanation.
-    pairOccupe(true, t('Recherche du port sur la console… (jusqu\'à 10 s)'));
-    let r;
-    try { r = await api('/api/wifi-retrouver', {hote}); }
-    finally { pairOccupe(false); }
-    if (!r.ok) return toast(r.message || t('Port introuvable.'), 'warn');
-    toast(r.message, 'ok');
-    this.wizStep(5);
-    await this.detect();
-    await renderConnOk();
-  },
-
   async wifiConnectField() {
     const c = $('conn-addr');
     const addr = this.adresseSaisie((c && c.value) || '',
@@ -5286,7 +5242,6 @@ const app = {
   },
 
   async wifiConnect(addr) {
-    PAIR_FOND++;                 // retires any background search still running
     say('Connexion…');
     pairOccupe(true, t('Connexion à la console…'));
     let r;
@@ -5294,6 +5249,12 @@ const app = {
     finally { pairOccupe(false); }
     if (!r.ok) return toast(r.message || t('Connexion impossible.'), 'err');
     toast(t('Console connectée sans fil.'), 'ok');
+    // The folder search starts NOW, not when the reader reaches the console
+    // step: its spinner must already be turning by the time they see it.
+    if ($('onboard').classList.contains('open')
+        && !(DATA.config || {}).roms_root) {
+      ONB.chercheDossiers = true;
+    }
     // The panel does not vanish and it does not stay on its form either: it
     // shows the console. Hiding it left the reader with nothing to confirm the
     // success, and keeping the address field left them doubting it.
@@ -5344,7 +5305,12 @@ const app = {
     renderChoixEmulateur();
     renderPied();
     majLudotheque();
-    if (force || (HEALTH.first_run && !vu)) renderOnboard();
+    // `force` refreshes the wizard when it is ALREADY on screen — it must
+    // never summon it. Picking an emulator in the settings calls
+    // checkHealth(true), and that click was enough to open the onboarding
+    // over a fully configured installation.
+    if ((HEALTH.first_run && !vu)
+        || (force && $('onboard').classList.contains('open'))) renderOnboard();
     return HEALTH;
   },
   // From the wizard: take the user where an account is created, rather than
@@ -5533,10 +5499,9 @@ const app = {
     document.body.appendChild(fini);
     setTimeout(() => fini.remove(), 1100);
     el.classList.remove('open');
-    // Both borrowed panels go home, or the settings would find empty space
-    // where their own controls used to be.
+    // The pairing panel goes home, or the settings would find empty space
+    // where their own wizard used to be.
     pairRendre();
-    navRendre();
   },
   async showOnboard() { await this.checkHealth(true); },
 
@@ -5608,6 +5573,13 @@ const app = {
     else toast(r.message || 'Ouverture impossible.', 'warn');
   },
 
+  // One refresh: the link state AND the games the console holds. They were
+  // two buttons, and neither name said which half it did.
+  async actualiserConsole() {
+    await this.detect();
+    if (CONN.kind) await this.refreshAll();
+  },
+
   async detect() {
     say(t('Détection de la console...'));
     const d = await api('/api/device');
@@ -5643,11 +5615,13 @@ const app = {
         if (!(DATA.config || {}).roms_root) {
           ONB.chercheDossiers = true;
           if ($('onboard').classList.contains('open')) renderOnboard();
-          try { await this.detectRoms(true); }
-          finally {
-            ONB.chercheDossiers = false;
-            if ($('onboard').classList.contains('open')) renderOnboard();
-          }
+          try { await this.detectRoms(true); } catch (e) { /* dit plus bas */ }
+        }
+        // Down whatever happened: `wifiConnect` raises the flag the moment
+        // the connection lands, and a flag nobody lowers is a spinner forever.
+        if (ONB.chercheDossiers) {
+          ONB.chercheDossiers = false;
+          if ($('onboard').classList.contains('open')) renderOnboard();
         }
         await this.loadNand();         // the NAND state only means something once connected
       } finally {
@@ -5670,12 +5644,9 @@ const app = {
   // The OTHER platforms' root on the console. Run right after the Switch
   // folder, because the two answer the same question — where are the games —
   // and only one of them was ever asked.
-  // Browse the console from the wizard. The same browser the settings use,
-  // borrowed: someone whose folders Romule cannot recognise must still be able
-  // to point at them.
+  // Browse the console from the wizard: the same modal as everywhere else.
   onbParcourir(cible) {
-    ONB.parcours = (cible === 'switch' || cible === 'roms') ? cible : 'roms';
-    renderOnboard();
+    this.browseServer(cible === 'switch' ? 'switch' : 'roms');
   },
 
   async detectRoms(silencieux) {
@@ -5727,17 +5698,18 @@ const app = {
   // only the TARGET changes.
   browseServer(cible, depart) {
     CIBLE_PARCOURS = cible || 'roms';
-    const w = $('browserwrap');
-    w.style.display = '';
     R.texte($('browsecible'), {
-      roms: 'Choisir la racine des ROMs',
+      roms: 'Choisir le dossier des jeux',
       switch: 'Choisir le dossier des jeux Switch',
     }[CIBLE_PARCOURS] ||
       tpl('Choisir le dossier de %s', libelleSysteme(CIBLE_PARCOURS)));
+    $('navmodal').classList.remove('closing');
+    $('navmodal').classList.add('open');
     this.browse(depart || BROWSE_PATH || (DATA.config || {}).roms_root
                 || (DATA.config || {}).device_dir);
-    w.scrollIntoView({block: 'center', behavior: 'smooth'});
   },
+  closeNav(e) { if (!e || e.target === $('navmodal')) closeOverlay($('navmodal')); },
+  navFermer() { closeOverlay($('navmodal')); },
 
   async browse(path) {
     path = (path || BROWSE_PATH || (DATA.config && DATA.config.device_dir) || '/storage/emulated/0');
@@ -5763,22 +5735,12 @@ const app = {
       await this.saveField('system_dirs', dirs);
       toast(libelleSysteme(CIBLE_PARCOURS) + ' : ' + BROWSE_PATH, 'ok');
     }
-    $('browserwrap').style.display = 'none';
-    // Wherever it was lent — the wizard's slot, the storage list — it goes
-    // home, so the next opener finds it where its own markup expects it.
-    if (ONB.parcours) { ONB.parcours = null; renderOnboard(); }
-    else navRendre();
+    closeOverlay($('navmodal'));
     updatePlatformSettings();       // the path shown follows immediately
     await this.detectPlatforms(true);
+    if ($('onboard').classList.contains('open')) renderOnboard();
   },
-  setDpath(p) {
-    BROWSE_PATH = p;
-    this.tab('settings');
-    // Under the storage that was clicked, not two screens lower.
-    navPlacerApres($('device'));
-    $('browserwrap').style.display = '';
-    this.browse(p);
-  },
+  setDpath(p) { this.browseServer('roms', p); },
 
   // ---- where the games are, on the machine hosting the service
   libOpen(depart) {
@@ -6926,8 +6888,6 @@ let ONB = {i: 0, sens: 1, occupe: false, resultatScan: null,
            // button that finds nothing in a container, and four pairing steps
            // below it — so the reader had to work out which half was theirs.
            lien: null,
-           // Which folder the borrowed browser is picking, or null.
-           parcours: null,
            // One verdict per provider: a single line for both said nothing
            // about WHICH of the two had answered.
            sgdb: null, igdb: null};
@@ -6955,10 +6915,6 @@ function onbDossiers(c) {
     return '<div class="onbcherche">' +
       esc(t('Recherche des dossiers de jeux sur la console…')) + '</div>';
   }
-  // The borrowed browser lands UNDER the row whose button was pressed, not at
-  // the bottom of the step: it answers that row's question.
-  const slot = cible =>
-    ONB.parcours === cible ? '<div id="onb-browse-slot"></div>' : '';
   // ONE row. The Switch folder is a per-platform detail like `PS2/` or `GBA/`:
   // it was detected on connection, it is adjustable in the settings, and a
   // wizard step that asked about it was a Switch tool talking. What the reader
@@ -6972,7 +6928,7 @@ function onbDossiers(c) {
           esc(t('Pas encore trouvé — cherche, ou choisis-le à la main.')) + '</div>') +
       '<button class="lien" data-act="onbParcourir" data-arg="roms">' +
         esc(cfg.roms_root ? t('Changer') : t('Choisir')) + '</button>' +
-    '</div>' + slot('roms') +
+    '</div>' +
     '</div>' +
     (cfg.roms_root ? '' :
       '<div class="onbliebar">' +
@@ -7151,9 +7107,6 @@ function onbEtapes(h) {
               'ROMULE_LIBRARY) : pour en changer, modifie ton fichier compose.</p>'
             : '<button class="ghost" data-act="onbChooseFolder">' +
               'Choisir un autre dossier…</button>') +
-          '<p class="onbnote">Le dossier reste à toi : Romule n\'y écrit que ses ' +
-          'propres fichiers, tous préfixés d\'un tiret bas. Sa configuration et ' +
-          'tes comptes, eux, vivent ailleurs et ne suivent pas ce dossier.</p>' +
           '<button class="go" data-act="onbScan"' + (ONB.occupe ? ' disabled' : '') +
           '>' + (ONB.occupe ? 'Lecture…' : 'Analyser le dossier') + '</button>' +
           (r ? renderScanOnboard(r) : '');
@@ -7449,8 +7402,6 @@ async function renderConnOk() {
 // someone reads step 4 sent them back to step 1, with the address they were
 // halfway through copying still in the field but no longer on screen.
 let PAIR_ETAPE = 1;
-// Generation of the background port search — see `chercherEnFond`.
-let PAIR_FOND = 0;
 
 // The panel while something is in flight. Pairing and connecting each take a
 // few seconds, and until now nothing said so: the fields stayed live, the
@@ -7473,38 +7424,6 @@ function pairOccupe(oui, quoi) {
   });
   const m = $('pairoccupe');
   if (m) R.texte(m, oui ? (quoi || t('Un instant…')) : '');
-}
-
-
-// The folder browser is lent the same way the pairing panel is, and for the
-// same reason: the wizard needs it, the settings own it, and a second copy
-// would drift. `onbParcourir` opens it inside the step.
-let NAV_MAISON = null;
-
-function navPreter(slot) {
-  const w = $('browserwrap');
-  if (!w || !slot) return;
-  if (!NAV_MAISON) NAV_MAISON = {parent: w.parentNode, apres: w.nextSibling};
-  slot.appendChild(w);
-}
-
-// The settings-side variant: the browser lands right AFTER a given block —
-// the storage list, the ROMs row — instead of where the markup happens to put
-// it. Clicking a volume opened a browser two screens lower, which reads as a
-// click that did nothing.
-function navPlacerApres(noeud) {
-  const w = $('browserwrap');
-  if (!w || !noeud) return;
-  if (!NAV_MAISON) NAV_MAISON = {parent: w.parentNode, apres: w.nextSibling};
-  noeud.insertAdjacentElement('afterend', w);
-}
-
-function navRendre() {
-  const w = $('browserwrap');
-  if (!w || !NAV_MAISON) return;
-  NAV_MAISON.parent.insertBefore(w, NAV_MAISON.apres);
-  w.style.display = 'none';
-  NAV_MAISON = null;
 }
 
 
@@ -7543,9 +7462,8 @@ function renderOnboard() {
   if (!HEALTH) { el.classList.remove('open'); pairRendre(); return; }
   onbRetenir();
   // Before the innerHTML below, never after: it would take the settings'
-  // pairing panel — and the folder browser — down with it.
+  // pairing panel down with it.
   pairRendre();
-  navRendre();
   const etapes = onbEtapes(HEALTH);
   ONB.i = Math.max(0, Math.min(etapes.length - 1, ONB.i));
   const e = etapes[ONB.i];
@@ -7598,8 +7516,6 @@ function renderOnboard() {
     '</div>';
   const slot = $('onb-pair-slot');
   if (slot) pairPreter(slot);
-  const nav = $('onb-browse-slot');
-  if (nav && ONB.parcours) { navPreter(nav); app.browseServer(ONB.parcours); }
   translateDOM(el);
   el.classList.add('open');
 }
@@ -8043,7 +7959,7 @@ $('log').addEventListener('scroll', () => {
   if (enBas !== JSUIVI) { JSUIVI = enBas; updateFollowButton(); }
 }, {passive: true});
 
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { app.closeGame(); app.closeDialog(); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { app.closeGame(); app.closeDialog(); app.navFermer(); } });
 
 /* ---------------------------------------------------------------------------
    LA CROIX DIRECTIONNELLE
@@ -8154,6 +8070,7 @@ const ACTES = new Set([
   'applyMain', 'trashSelection', 'deleteFromConsole',
   'actionFab', 'enableGame', 'refreshAll', 'refreshEntries',
   'addAccount', 'addPlatform', 'goToSystem', 'fullAnalysis',
+  'actualiserConsole',
   'runAudit', 'backupSaves', 'toggleFollow', 'toggleTasks', 'browse',
   'cancelJob', 'chooseEmulator', 'chooseFiles', 'assignImports',
   'clearCovers', 'clearFav', 'closeOnboard', 'convertAll', 'convertGame',
@@ -8171,13 +8088,14 @@ const ACTES = new Set([
   'libConfirm', 'mkTree', 'onbGo', 'onbFindConsole',
   'onbChooseFolder', 'onbCreateAccount', 'onbOpenAccess', 'onbPrev',
   'onbScan', 'onbTestSgdb', 'onbTestIgdb', 'setLang', 'toggleNotification',
-  'onbLien', 'onbAutreLien', 'wifiRetrouver', 'detectRoms', 'onbParcourir',
+  'onbLien', 'onbAutreLien', 'detectRoms', 'onbParcourir',
   'signOut',
   'onbScanConsole', 'onbNext', 'openGame',
   'openOnConsole', 'organize', 'forgetFolder', 'forgetTransfer',
   'openPlatform', 'page', 'browseServer', 'purgeTrash', 'reloadImport',
   'renderJournal', 'renderLib', 'reorganizeLocal', 'resumeTransfer',
   'restoreBackup', 'restore', 'saveAllSettings', 'sendGame', 'setDpath',
+  'closeNav', 'navFermer',
   'setMotion', 'setPerPage', 'setOrder', 'setSystem', 'setSize',
   'setTheme', 'setSort', 'setSchedule', 'showOnboard', 'testAuth', 'testIgdb',
   'chooseConsole', 'addConsole', 'renameConsole', 'removeConsole',

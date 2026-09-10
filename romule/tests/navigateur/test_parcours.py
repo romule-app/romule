@@ -358,15 +358,21 @@ def main():
         t("pendant la recherche, l'etape le dit",
           "onbcherche" in (occ or "") and "onbdossvide" not in (occ or ""),
           (occ or "")[:80])
-        # The borrowed browser lands UNDER the row whose button was pressed.
-        sous = n.js("(() => { ONB.parcours = 'roms';"
-                    " const h = onbConsoleCorps({device:'wifi', adb:true,"
-                    "   device_dir:'/x', console:{}});"
-                    " ONB.parcours = null;"
-                    " return {slot: h.indexOf('onb-browse-slot'),"
-                    "         rang: h.indexOf('class=\"onbdoss\"')}; })()")
-        t("le navigateur se place sous la ligne demandee",
-          bool(sous) and sous["slot"] > sous["rang"] >= 0, sous)
+        # Folder navigation is a MODAL now, wherever it is asked for: three
+        # callers used to reposition one panel, and each move was a chance for
+        # the click to look dead.
+        n.js("app.onbParcourir('roms')")
+        time.sleep(0.6)
+        t("choisir un dossier ouvre la modale de navigation",
+          n.js("$('navmodal').classList.contains('open')"))
+        t("et elle dit ce qu'elle choisit",
+          "dossier des jeux" in (n.js("$('browsecible').textContent") or "").lower(),
+          n.js("$('browsecible').textContent"))
+        n.js("app.navFermer()")
+        time.sleep(0.5)
+        t("elle se ferme sans toucher a l'etape",
+          not n.js("$('navmodal').classList.contains('open')")
+          and n.js("$('onboard').classList.contains('open')"))
         # The same grid as the settings, from the same function.
         pf = n.js("(() => { PLATFORMS = [{key:'gba', name:'Game Boy Advance',"
                   " folder:'GBA', count:12, bytes:1024}];"

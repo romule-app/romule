@@ -1702,5 +1702,13 @@
   "L'icône officielle de chaque jeu, récupérée automatiquement.": "L'icône officielle de chaque jeu, récupérée automatiquement.",
   "Icône officielle du jeu — sans configuration": "Icône officielle du jeu — sans configuration",
   "Recherche des dossiers de jeux sur la console…": "Recherche des dossiers de jeux sur la console…",
-  "depuis": "depuis"
+  "depuis": "depuis",
+  "À faire une seule fois : ensuite la console est reconnue toute seule.": "À faire une seule fois : ensuite la console est reconnue toute seule.",
+  "Jeux sur la console": "Jeux sur la console",
+  "Le dossier parent de toutes tes plateformes (chacune y a son sous-dossier : GBA, SNES, PS2…). Romule le trouve tout seul ; ce champ n'est là que pour le corriger.": "Le dossier parent de toutes tes plateformes (chacune y a son sous-dossier : GBA, SNES, PS2…). Romule le trouve tout seul ; ce champ n'est là que pour le corriger.",
+  "Recompter les jeux": "Recompter les jeux",
+  "Choisir ce dossier": "Choisir ce dossier",
+  "Déconnecter": "Déconnecter",
+  "Choisir le dossier des jeux": "Choisir le dossier des jeux",
+  "Ferme la fenêtre du code : derrière elle, l'écran de débogage sans fil affiche « Adresse IP et port ». Recopie-la ici — son port n'est pas celui que tu viens de saisir.": "Ferme la fenêtre du code : derrière elle, l'écran de débogage sans fil affiche « Adresse IP et port ». Recopie-la ici — son port n'est pas celui que tu viens de saisir."
 }

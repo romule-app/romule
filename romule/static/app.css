@@ -3515,11 +3515,6 @@ body.compact .filters{margin-bottom:2px}
   background:color-mix(in srgb, var(--green) 22%, transparent);
   font-size:12px;font-weight:700;
   animation:coche .34s var(--ease) both}
-/* Only shown where the announcement genuinely cannot reach us. Elsewhere it
-   would explain a problem the reader does not have. */
-.wmdns{display:none;font-size:12px;line-height:1.55;color:var(--mute);
-  margin:8px 0 0}
-#wstep4[data-mdns="0"] .wmdns{display:block}
 @media (prefers-reduced-motion:reduce){.wok::before{animation:none}}
 
 /* The live state of the USB port, one line inside the card. A dot rather than a
@@ -3583,15 +3578,6 @@ body.compact .filters{margin-bottom:2px}
   .pairbox.occupe .pairoccupe{animation:none}
 }
 
-/* The background port search. Deliberately quiet: it must not read as something
-   to wait for, because typing the number off the console is always faster. */
-.wcherche{display:none;align-items:center;gap:8px;margin:10px 0 0;
-  font-size:12px;color:var(--mute)}
-.wcherche:not(:empty){display:flex}
-.wcherche::before{content:'';width:11px;height:11px;flex:none;border-radius:50%;
-  border:2px solid color-mix(in srgb, var(--mute) 35%, transparent);
-  border-top-color:var(--mute);animation:tourne .8s linear infinite}
-@media (prefers-reduced-motion:reduce){.wcherche::before{animation:none}}
 
 /* A field and the button that fills it. They belong on one line: the button
    answers the question the field asks, and a `flex` basis inside a column would
@@ -3643,3 +3629,11 @@ div.pfcard{border:1px solid var(--line);background:var(--surface-2);
   border-radius:50%;border:2px solid color-mix(in srgb, var(--amber) 35%, transparent);
   border-top-color:var(--amber);animation:tourne .8s linear infinite}
 @media (prefers-reduced-motion:reduce){.onbcherche::before{animation:none}}
+
+/* The folder-navigation modal. Narrow on purpose: it holds one column of
+   names, and a listing stretched across a wide sheet is harder to scan. */
+.navbox{max-width:520px;width:100%}
+.navtete{display:flex;align-items:center;justify-content:space-between;
+  gap:12px;margin-bottom:12px}
+.navtete b{font-size:15px;color:var(--text)}
+#navmodal #browser{max-height:52vh;overflow:auto;margin:10px 0}

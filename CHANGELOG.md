@@ -12,6 +12,46 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Fixed
 
+- **Picking an emulator opened the onboarding.** `checkHealth(force)` rendered
+  the wizard whenever it was forced — and forcing is what a settings change
+  does. `force` now refreshes the wizard only when it is already on screen.
+
+- **The folder search starts the moment the connection lands.** Its spinner was
+  raised by the console step itself, so there was a gap where the step showed
+  « pas encore trouvé » about a search that had not begun.
+
+### Changed
+
+- **The pairing step lost four paragraphs, a button and a feature.** Why
+  Android has two ports, why mDNS cannot cross a bridge, a live search line,
+  « Chercher le port » — all gone. The reader has one thing to do: read a line
+  off the console and type it; the why lives in the documentation. The
+  on-demand port search is removed outright (the automatic try after pairing
+  stays); the panel's intro is one sentence.
+
+- **Folder navigation is a modal.** Three callers used to reposition one panel
+  — the wizard borrowed it, the storage list moved it, the platform row found
+  it two screens away — and each move was a chance for the click to look dead.
+  A modal has no position to get wrong. « Rafraîchir » went with it: navigating
+  again is the refresh.
+
+- **The console bar keeps two buttons.** « Relire les jeux », « Re-détecter »
+  and « Oublier ce lien » become « Actualiser » — one refresh for the link and
+  the games — and « Déconnecter ».
+
+- **The games census has its own settings group.** « Dossier des ROMs »,
+  « Chercher » and « Analyser la console » were folded into « Mes consoles »,
+  where they read as more console plumbing. They answer a different question —
+  not how the console is reached, but what it holds — and are now « Jeux sur la
+  console », with « Détecter » and « Recompter les jeux ».
+
+- **Provider-specific settings hide instead of greying.** The SteamGridDB key
+  and the URL template mean nothing until their provider is selected; a greyed
+  row still asks to be read.
+
+- **Step 2 lost its ownership paragraph.** What Romule writes and where its
+  configuration lives is documentation, not onboarding.
+
 - **The wizard's console step stopped asking about the Switch at all.** Its
   folder is a per-platform detail like `PS2/` or `GBA/`: detected on
   connection, adjustable in the settings, and a wizard row asking about it was
