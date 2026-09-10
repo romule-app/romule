@@ -12,6 +12,24 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Fixed
 
+- **The wizard's console step was a Switch tool's step.** It showed the Switch
+  games folder and nothing else, so a console holding a hundred GBA and PSX
+  games looked empty at the very moment it was being set up. It now shows BOTH
+  folders — the Switch one and the ROMs root — each with a way to search for it
+  or pick it by hand, and the platforms found underneath with their game counts.
+
+- **The ROMs root is found by CONTENT as well as by name.** Recognising `gba` or
+  `PS1` works on a console that names its folders that way and finds nothing at
+  all on one filing games under `Nintendo - Game Boy Advance` or `psx-eur`. A
+  folder holding game files IS a platform folder, whatever it is called — and
+  finding the root does not require knowing WHICH platform, which is just as
+  well since `.cue` and `.iso` are claimed by every disc console at once.
+
+- **The last step read like a farewell from a Switch tool.** Two of its three
+  lines were about `.nsz` and Eden. What is true of every platform comes first
+  now; the Switch-only note is named as such, and only appears when there is
+  something to say.
+
 - **The library's selector stopped saying how many games each platform holds.**
   It shows a count only for platforms that were found, and only the Switch ever
   was: the ROMs root was GUESSED from the Switch folder — its parent — which is
@@ -174,6 +192,20 @@ change it. Breaking changes are always listed under **Changed** with the reason.
   scripted adb, and all three fail without the fix.
 
 ### Changed
+
+- **The platform grid is written once and shown twice.** The settings had it and
+  the wizard did not; two copies would have drifted the way the console card and
+  the panel's conclusion did, so there is one function and two callers.
+
+- **Platforms carry a logo.** A silhouette per family — a home pad, a handheld,
+  an arcade cabinet, a screen — tinted per maker. Not the real marks: shipping
+  those would mean shipping somebody's trademark, and a recognisable shape in
+  the right colour does what a logo is wanted for, which is telling one row from
+  another at a glance.
+
+- **The folder browser can be used from the wizard.** It is borrowed from the
+  settings, like the pairing panel, so someone whose folders Romule cannot
+  recognise can still point at them without leaving the step.
 
 - **Why there are two ports is now said, rather than worked around.** Android's
   wireless debugging exposes two services: `_adb-tls-pairing`, alive only while

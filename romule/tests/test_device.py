@@ -567,17 +567,25 @@ def test_relier_peut_se_passer_du_balayage():
 
 
 class _AdbArbre:
-    """A fake console with a directory tree."""
+    """A fake console with a directory tree, and optionally files in it.
 
-    def __init__(self, dossiers, volumes=("/storage/emulated/0",)):
+    `-type d` and `-type f` are answered separately, as `find` does: the
+    detection reads folder NAMES first and then FILES, and a fake that returned
+    the same thing to both would let a file-based test pass on the strength of
+    the name pass.
+    """
+
+    def __init__(self, dossiers, fichiers=(), volumes=("/storage/emulated/0",)):
         self.dossiers = list(dossiers)
+        self.fichiers = list(fichiers)
         self.volumes = list(volumes)
 
     def shell(self, cmd, timeout=60):
-        if cmd.startswith("find "):
-            racine = cmd.split()[1].strip("'")
-            return "\n".join(x for x in self.dossiers if x.startswith(racine))
-        return ""
+        if not cmd.startswith("find "):
+            return ""
+        racine = cmd.split()[1].strip("'")
+        source = self.fichiers if "-type f" in cmd else self.dossiers
+        return "\n".join(x for x in source if x.startswith(racine))
 
 
 def _avec_arbre(arbre, fn):
@@ -620,6 +628,45 @@ def test_la_racine_des_roms_reconnait_les_alias():
     ], volumes=("/sdcard",))
     vu = _avec_arbre(arbre, lambda: d.detect_roms_root({}))
     assert vu == "/sdcard/roms", vu
+
+
+def test_la_racine_est_trouvee_par_les_fichiers_quand_les_noms_ne_disent_rien():
+    """A console filing games under `Nintendo - Game Boy Advance` or `psx-eur`
+    says nothing by its folder names, and the name pass finds nothing at all.
+
+    What a `.gba` file proves is stronger than what a folder is called: its own
+    folder IS a platform folder, whatever its name, and that folder's parent is
+    the root.
+    """
+    arbre = _AdbArbre(
+        dossiers=["/storage/emulated/0", "/storage/emulated/0/Jeux",
+                  "/storage/emulated/0/Jeux/Nintendo - Game Boy Advance",
+                  "/storage/emulated/0/Jeux/psx-eur"],
+        fichiers=["/storage/emulated/0/Jeux/Nintendo - Game Boy Advance/Zelda.gba",
+                  "/storage/emulated/0/Jeux/psx-eur/Crash.cue"])
+    vu = _avec_arbre(arbre, lambda: d.detect_roms_root({}))
+    assert vu == "/storage/emulated/0/Jeux", vu
+
+
+def test_un_dossier_de_disques_compte_meme_sans_extension_parlante():
+    """`.cue`, `.iso`, `.chd` are claimed by every disc console at once, so they
+    name none of them. Finding the ROOT does not need the name: it only needs to
+    know that a child holds games."""
+    arbre = _AdbArbre(
+        dossiers=["/sdcard", "/sdcard/jeux", "/sdcard/jeux/aaa", "/sdcard/jeux/bbb"],
+        fichiers=["/sdcard/jeux/aaa/Crash.cue", "/sdcard/jeux/bbb/Sonic.chd"],
+        volumes=("/sdcard",))
+    assert _avec_arbre(arbre, lambda: d.detect_roms_root({})) == "/sdcard/jeux"
+
+
+def test_les_jeux_switch_ne_font_pas_une_racine_de_roms():
+    """Its folder is detected on its own; counting it would hand the whole of
+    internal storage the win on a console that keeps it apart."""
+    arbre = _AdbArbre(
+        dossiers=["/sdcard", "/sdcard/a", "/sdcard/b"],
+        fichiers=["/sdcard/a/Zelda.nsp", "/sdcard/b/Mario.xci"],
+        volumes=("/sdcard",))
+    assert _avec_arbre(arbre, lambda: d.detect_roms_root({})) is None
 
 
 def test_un_seul_dossier_ne_fait_pas_une_racine():

@@ -1685,5 +1685,15 @@
   "Aucune racine de ROMs trouvée : indique-la dans Réglages → Ta console.": "Aucune racine de ROMs trouvée : indique-la dans Réglages → Ta console.",
   "Chercher la racine des ROMs": "Chercher la racine des ROMs",
   "Le dossier parent de toutes tes plateformes sur la console (chacune y a son sous-dossier : GBA, SNES, PS2…). Romule le cherche tout seul en reconnaissant les noms de dossiers ; ce champ n'est là que pour le corriger.": "Le dossier parent de toutes tes plateformes sur la console (chacune y a son sous-dossier : GBA, SNES, PS2…). Romule le cherche tout seul en reconnaissant les noms de dossiers ; ce champ n'est là que pour le corriger.",
-  "Chercher": "Chercher"
+  "Chercher": "Chercher",
+  "Jeux Switch": "Jeux Switch",
+  "Aucun dossier repéré.": "Aucun dossier repéré.",
+  "Toutes les autres plateformes": "Toutes les autres plateformes",
+  "Pas encore trouvée — cherche, ou choisis-la à la main.": "Pas encore trouvée — cherche, ou choisis-la à la main.",
+  "%s {plateforme|plateformes}, %s {jeu|jeux}": "%s {plateforme|plateformes}, %s {jeu|jeux}",
+  "Choisir": "Choisir",
+  "Toutes tes plateformes": "Toutes tes plateformes",
+  "Chaque console a son dossier sur la tienne, et son propre réglage : Réglages → Console et émulateur. Une plateforme absente de la liste se déclare à la main.": "Chaque console a son dossier sur la tienne, et son propre réglage : Réglages → Console et émulateur. Une plateforme absente de la liste se déclare à la main.",
+  "Jeux Switch compressés": "Jeux Switch compressés",
+  "Les .nsz et .xcz demandent l'outil nsz et un fichier prod.keys, à fournir dans les réglages. Sans eux, les autres plateformes fonctionnent normalement.": "Les .nsz et .xcz demandent l'outil nsz et un fichier prod.keys, à fournir dans les réglages. Sans eux, les autres plateformes fonctionnent normalement."
 }

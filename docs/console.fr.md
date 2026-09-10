@@ -68,6 +68,20 @@ simple « connectée ».
     Deux à cinq fois plus lent que l'USB sur les gros transferts. Sans
     importance pour quelques jeux, très sensible pour une ludothèque entière.
 
+### Quand les noms de dossiers ne disent rien
+
+Reconnaître `gba` ou `PS1` marche sur une console qui les nomme ainsi, et ne
+trouve rien du tout sur une console qui range sous `Nintendo - Game Boy Advance`
+ou `psx-eur`. Romule regarde donc aussi le **contenu** : un dossier qui contient
+des fichiers de jeu EST un dossier de plateforme, quel que soit son nom.
+
+Trouver la racine ne demande pas de savoir *laquelle* — ce qui tombe bien,
+puisque `.cue` et `.iso` sont revendiqués par toutes les consoles à disque à la
+fois.
+
+Et si rien de tout cela n'aboutit, l'assistant comme les réglages laissent
+**naviguer sur la console** pour désigner le dossier à la main.
+
 ## USB
 
 Branche la console, débogage activé, et appuie sur **Détecter**. Sous Docker,
