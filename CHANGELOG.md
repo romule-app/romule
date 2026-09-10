@@ -12,6 +12,21 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Security
 
+- **The author's own subnet sat in three files, and the leak checker had
+  reported it — as a warning.** `192.0.2.x`, copied from a screenshot into a
+  CSS comment, a test and a changelog entry. `verifier-fuite.py` had seen all
+  three and printed them among thirty-odd other warnings, under a heading
+  reading « No personal data detected ». A warning nobody reads protects
+  nothing: an unlisted private address is a REFUSAL now, the five legitimate
+  documentation and test addresses are listed one by one with their reason, and
+  new examples go to RFC 5737 (192.0.2.0/24), which exists for this. The
+  self-test pins the exact shape that got through.
+
+- **The author's first name left the test fixtures.** Seventeen occurrences of
+  « Alex » and `alex@example.org` across eight files become « Alex » and
+  `alex@example.org` — a name belonging to nobody and a domain RFC 2606
+  reserves for the purpose.
+
 - **The connection-port sweep only accepts private addresses.** Its target
   comes from the client, and an unclaimed installation answers everybody by
   design: anybody who could reach the page could have the server sweep

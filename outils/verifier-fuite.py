@@ -61,9 +61,27 @@ SECRETS = [
 
 PRIVATE_IP = re.compile(r"\b(?:10\.\d{1,3}|192\.168|172\.(?:1[6-9]|2\d|3[01]))"
                        r"\.\d{1,3}\.\d{1,3}\b")
-# Addresses quoted as examples in the documentation and the tests: a Docker
-# network's default gateway and a few documentation addresses.
-ALLOWED_IPS = {"192.168.1.42", "192.168.1.50", "192.168.0.1", "172.18.0.1"}
+# The addresses this project is allowed to write down, each because it means
+# something and not merely because it is already there.
+#
+# Everything else private is a FAULT, not a warning. It used to be a warning,
+# and the author's own subnet sat in three files for a week among thirty-odd
+# other warnings while the tool printed "No personal data detected" — which is
+# the whole failure mode this file exists to prevent. A warning nobody reads
+# protects nothing.
+#
+# New documentation addresses go to RFC 5737 (192.0.2.0/24), which exists for
+# exactly this and is caught by nothing here.
+ALLOWED_IPS = {
+    # Documentation examples, from before RFC 5737 was adopted here.
+    "192.168.1.42", "192.168.1.50", "192.168.1.20", "192.168.0.1",
+    # Docker's default bridge: named in the docs because a container really
+    # does answer with it, and that surprise is what the passage explains.
+    "172.18.0.1", "172.18.0.2",
+    # The proxy tests: these ranges ARE the subject — a CIDR the tool must
+    # trust, and an address it must not.
+    "172.16.0.0", "10.0.0.0", "10.1.2.3",
+}
 
 BINARIES = re.compile(r"\.(png|jpg|jpeg|gif|webp|ico|woff2?|zip|gz)$", re.I)
 
@@ -130,8 +148,10 @@ def inspect_files(paths):
             line = text[:m.start()].count("\n") + 1
             if exempt(line):
                 continue
-            warnings.append(("%s:%d" % (rel, line),
-                            "private address %s" % m.group(0)))
+            faults.append(("%s:%d" % (rel, line),
+                          "private address %s — use 192.0.2.x (RFC 5737), or "
+                          "add it to ALLOWED_IPS with a reason"
+                          % m.group(0)))
     return faults, warnings
 
 
@@ -150,6 +170,11 @@ def autotest():
         ("d.js", b"const s = 'a' + '\x00' + 'b';", True),
         ("romule/__init__.py", b'__version__ = "0.1.0"', False),
         ("e.py", b'exemple = "192.168.1.42:5555"', False),
+        # The shape that got through for a week: a real subnet, copied from a
+        # screenshot into a comment. It was reported — as one warning among
+        # thirty, under a heading saying nothing was found.
+        ("i.css", b'/* coupe a 192.0.2.22 */', True),
+        ("j.py", b'assert scrutable("192.0.2.22")', False),
         ("f.py", b'# fuite:ok a documentation example\nk = "api_key: \'abcdef0123456789\'"', False),
     ]
     import tempfile
