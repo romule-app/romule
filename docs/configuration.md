@@ -136,7 +136,7 @@ All of these are edited from the interface. The names are the keys stored in
 | `maj_vue` | — | The version whose release note has been acknowledged from the “Update” pill. Server-side rather than in the browser: a reminder dismissed on the laptop that comes back on the phone is the same reminder. The pill returns on its own at the next version. |
 | `notif_destinations` | `[]` | Outgoing [notification](#notifications) destinations. Set from Settings → Access, not here: the address is checked and the count is capped. |
 | `auth_secret` | generated | Signing key for session cookies. Never leaves the server. |
-| `jeton_auto` | generated | The first-access token, kept so it survives restarts. Written only when the service is reachable and has no account, no `ROMULE_TOKEN` and no network access — see [Security](securite.md#the-first-access-token). |
+| `jeton_auto` | — | A token set by `romule token reset`, kept so it survives restarts. Nothing generates one any more: an unclaimed installation opens on its assistant instead — see [A token, if you want one](securite.md#a-token-if-you-want-one). |
 | `oidc_issuer` | — | Provider URL |
 | `oidc_client_id` / `oidc_client_secret` | — | Client credentials |
 | `oidc_redirect` | — | Redirect URI registered with the provider |

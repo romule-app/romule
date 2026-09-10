@@ -290,6 +290,11 @@ def coherence_doc():
     titre("coherence de la documentation")
     ok = True
     for outil in ("verifier-reglages-doc.py", "verifier-chiffres.py",
+                  # Anchors between documentation pages. MkDocs refuses a dead
+                  # one, but only in CI and only on pushes touching `docs/**`:
+                  # two links broke in a commit that changed CODE and stayed
+                  # broken for weeks. This needs no MkDocs to say so.
+                  "verifier-liens-doc.py",
                   "verifier-traduction.py", "verifier-anglais.py",
                   "verifier-imports.py", "verifier-classes.py",
                   "verifier-routes.py", "verifier-journal.py",

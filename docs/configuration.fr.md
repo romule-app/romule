@@ -144,7 +144,7 @@ Tous se modifient depuis l'interface. Les noms sont les clés rangées dans
 | `maj_vue` | — | La version dont la note a été acquittée depuis la pastille « Mise à jour ». Côté serveur et non dans le navigateur : un rappel écarté sur le portable qui revient sur le téléphone est le même rappel. La pastille revient d'elle-même à la version suivante. |
 | `notif_destinations` | `[]` | Destinations de [notification](#notifications) sortante. Se posent depuis Réglages → Accès, pas ici : l'adresse y est vérifiée et le nombre borné. |
 | `auth_secret` | engendrée | Clé de signature des cookies de session. Ne quitte jamais le serveur. |
-| `jeton_auto` | engendré | Le jeton de premier accès, conservé pour survivre aux redémarrages. Écrit seulement si le service est joignable et n'a ni compte, ni `ROMULE_TOKEN`, ni accès réseau — voir [Sécurité](securite.md#le-jeton-de-premier-acces). |
+| `jeton_auto` | — | Un jeton posé par `romule token reset`, conservé pour survivre aux redémarrages. Plus rien n'en engendre : une installation non revendiquée ouvre sur son assistant — voir [Un jeton, si tu en veux un](securite.md#un-jeton-si-tu-en-veux-un). |
 | `oidc_issuer` | — | Adresse du fournisseur |
 | `oidc_client_id` / `oidc_client_secret` | — | Identifiants du client |
 | `oidc_redirect` | — | URI de redirection déclarée chez le fournisseur |
