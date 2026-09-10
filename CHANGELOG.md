@@ -12,6 +12,15 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Fixed
 
+- **Two documentation links pointed at an anchor that left with the token
+  model.** MkDocs refuses a dead link — but only in CI, and only on pushes that
+  touch `docs/**`: they broke in a commit that changed CODE and stayed broken
+  for weeks, until a screenshot happened to touch the documentation.
+  `outils/verifier-liens-doc.py` now checks every `page.md#anchor` in the
+  suite, recomputing the slug the way Python-Markdown does so it needs no
+  MkDocs to run. It resolves `securite.md` from a `.fr.md` page to
+  `securite.fr.md`, as the i18n plugin does.
+
 - **« Voir l'état de l'installation » had stopped opening anything.**
   `showOnboard` was a bare `checkHealth(true)`, and the day `force` stopped
   summoning the wizard — rightly, since a settings change forces a refresh —
