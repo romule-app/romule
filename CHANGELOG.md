@@ -12,6 +12,18 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Security
 
+- **The published screenshots showed the author's real library again.** Thirty-
+  eight owned titles, their file sizes, and their publishers' cover art — two
+  problems in one picture: it says what somebody owns, and it redistributes
+  artwork that is not ours. It had been fixed once by hand and came back the
+  next time the pictures were refreshed, because "remember to use a fake
+  library" is not a mechanism.
+
+  `outils/captures.py` now generates all three from an invented library:
+  thirty made-up titles across nine platforms, covers drawn here as gradients,
+  sparse files so a 17 GiB game costs nothing to fabricate. Run it instead of
+  reaching for a screenshot tool.
+
 - **The author's own subnet sat in three files, and the leak checker had
   reported it — as a warning.** `192.0.2.x`, copied from a screenshot into a
   CSS comment, a test and a changelog entry. `verifier-fuite.py` had seen all
