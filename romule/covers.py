@@ -20,6 +20,7 @@ import urllib.request
 
 from . import config, net
 from . import matching
+from . import langue
 from . import messages
 
 NLIB = "https://api.nlib.cc/nx/{tid}/icon/256/256"
@@ -126,6 +127,7 @@ def fetch(tid, name=None, cfg=None):
             return None
         config.COVERS.mkdir(exist_ok=True)
         path_for(key).write_bytes(data)
+        _note(source=_source_de(url))
         return path_for(key)
 
     for url in urls:
@@ -156,10 +158,76 @@ def fetch(tid, name=None, cfg=None):
             if p:
                 return p
     _fail(key)
+    if JOURNAL:
+        JOURNAL(langue.phrase(messages.JQ_INTROUVABLE, name or tid), "warn")
+    _note(echec=True)
     return None
 
 
+# -------------------------------------------------- what becomes visible
+#
+# Fetching a cover is a NETWORK call, it can take seconds, and it can fail —
+# and none of it appeared anywhere. The journal showed the tasks somebody
+# started and nothing of what the interface does on its own, which is most of
+# what happens while a library is being read for the first time.
+#
+# One line per cover would be three hundred lines. So we count, and say it in
+# one sentence every few seconds: what was looked for, what was found, and
+# where it came from. The failures are named individually — a cover that never
+# arrives is a question, and « 12 found » does not answer it.
+JOURNAL = None
+_RESUME_INTERVALLE = 6.0
+_ACTIVITE = {"trouvees": 0, "echouees": 0, "sources": set(), "depuis": 0.0}
+
+
+def set_journal(fn):
+    """Where the lazy paths write. Injected: `covers` knows nothing of the
+    server, and the server holds the one journal."""
+    global JOURNAL
+    JOURNAL = fn
+
+
+def _note(source=None, echec=None):
+    with _LOCK:
+        if not _ACTIVITE["depuis"]:
+            _ACTIVITE["depuis"] = time.time()
+        if source:
+            _ACTIVITE["trouvees"] += 1
+            _ACTIVITE["sources"].add(source)
+        if echec:
+            _ACTIVITE["echouees"] += 1
+        assez = time.time() - _ACTIVITE["depuis"] >= _RESUME_INTERVALLE
+        if not assez:
+            return None
+        bilan = (_ACTIVITE["trouvees"], _ACTIVITE["echouees"],
+                 ", ".join(sorted(_ACTIVITE["sources"])))
+        _ACTIVITE.update({"trouvees": 0, "echouees": 0, "sources": set(),
+                          "depuis": 0.0})
+    if JOURNAL and (bilan[0] or bilan[1]):
+        JOURNAL(langue.phrase(messages.JQ_RESUME, bilan[0],
+                              bilan[2] or messages.JQ_AUCUNE_SOURCE, bilan[1]))
+    return bilan
+
+
+def resume_jaquettes():
+    """Flush what has been counted, whatever the interval. Called when a page
+    stops asking for covers: the last few must not wait for a thirteenth."""
+    with _LOCK:
+        _ACTIVITE["depuis"] = 1.0          # any date in the past
+    return _note()
+
+
 FAILURE_TTL = 600          # retry after 10 min rather than never
+
+
+def _source_de(url):
+    """The host, in the words the reader knows it by."""
+    u = str(url or "").lower()
+    for bout, nom in (("steamgriddb", "SteamGridDB"), ("igdb", "IGDB"),
+                      ("nlib", "nlib"), ("twitch", "IGDB")):
+        if bout in u:
+            return nom
+    return str(url or "").split("/")[2] if "//" in str(url or "") else "?"
 
 
 def _fail(tid):
@@ -247,13 +315,13 @@ def test_key(cfg):
            + urllib.parse.quote("zelda"))
     try:
         _download(url, {"Authorization": "Bearer " + key, "User-Agent": "romule"})
-        return (True, "Cle acceptee.")
+        return (True, messages.SGDB_CLE_ACCEPTEE)
     except urllib.error.HTTPError as exc:
         if exc.code in (401, 403):
             return (False, messages.SGDB_CLE_REFUSEE)
-        return (False, "SteamGridDB repond %d." % exc.code)
+        return (False, langue.phrase(messages.SGDB_REPOND, exc.code))
     except Exception as exc:
-        return (False, "Contact impossible : %s" % exc)
+        return (False, langue.phrase(messages.SGDB_CONTACT_KO, exc))
 
 
 def _sgdb_url(name, key):

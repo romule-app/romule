@@ -119,9 +119,12 @@ def used():
         # for classes would list `BASE` and `DLC` among the unstyled ones.
         if not head.rstrip().endswith("-"):
             out.update(_branches_de_classe(brut[len(head):]))
-    # `el.className = 'toast agir' + …` is the same shape without an attribute.
-    for m in re.finditer(r"className\s*=\s*'([^']*)'", js):
+    # `el.className = 'toast agir' + …` is the same shape without an attribute,
+    # and its ternary branches are just as nameable: `'essai ' + (ok ? 'reussi'
+    # : 'rate')` was two live classes reported as dead style.
+    for m in re.finditer(r"className\s*=\s*'([^']*)'([^\n]*)", js):
         out.update(m.group(1).split())
+        out.update(_branches_de_classe("'" + m.group(2)))
     for m in re.finditer(r"classList\.(?:add|remove|toggle|contains)\(([^)]*)\)", js):
         out.update(re.findall(r"'([\w-]+)'", m.group(1)))
     for m in re.finditer(r"R\.classe\([^,]+,\s*'([\w-]+)'", js):
@@ -146,12 +149,15 @@ def report():
     return dead, unstyled
 
 
-AUTOTEST_CSS = ".a{color:red}\n.b{color:blue}\n.d{color:green}\n.f{color:pink}\n"
+AUTOTEST_CSS = (".a{color:red}\n.b{color:blue}\n.d{color:green}\n"
+                ".f{color:pink}\n.g{color:teal}\n")
 AUTOTEST_HTML = '<div class="a"></div>'
 AUTOTEST_JS = ("el.classList.add('c');\n"
                # `f` is named ONLY in a ternary branch, inside a `class`
                # attribute: the blind spot the rule closes.
-               "el.innerHTML = '<i class=\"a ' + (x ? 'f' : '') + '\"></i>';")
+               "el.innerHTML = '<i class=\"a ' + (x ? 'f' : '') + '\"></i>';\n"
+               # `g` is named only in a ternary branch of a `className =`.
+               "el.className = 'a ' + (x ? 'g' : '');")
 # `d` is styled and written only by the server: it must NOT be called dead.
 # `e` is written by the server and styled nowhere: it must be reported. That
 # pair is the blind spot the login page fell into.
@@ -175,6 +181,7 @@ def autotest():
         cases = [("a styled and used class is quiet", "a" not in dead + unstyled),
                  ("a styled but unused class is reported", dead == ["b"]),
                  ("a class named only in a ternary branch is seen", "f" not in dead),
+                 ("…in a className assignment too", "g" not in dead),
                  # `in`, not `==`: the fixtures now carry a second unstyled
                  # class on purpose, and an exact list would make the case
                  # about the fixture rather than about the detector.

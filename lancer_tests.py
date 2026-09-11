@@ -91,6 +91,7 @@ def unitaires():
                 "romule.tests.test_console",
                 "romule.tests.test_cli_depannage",
                 "romule.tests.test_coffre",
+                "romule.tests.test_disques",
                 "romule.tests.test_cles_persistees"):
         r = subprocess.run([sys.executable, "-m", mod], cwd=str(RACINE))
         print("   %-34s %s" % (mod, "OK" if r.returncode == 0 else "ECHEC"), flush=True)

@@ -1722,6 +1722,26 @@ body.loadingstate main,body.loadingstate header,.spinner{transition:opacity .3s 
 .games.taille-compact .ov.ovsys{font-size:8.5px;padding:1px 5px}
 .setlab span.avert{color:var(--amber)}
 
+/* --- testing a connection: one look for all of them.
+   A key or a client secret is worth nothing until something has USED it, and
+   the answer has to be readable at a glance: turning = in the air, green =
+   accepted, red = refused with the reason beside it. */
+.essai{display:none;align-items:flex-start;gap:8px;margin-top:8px;
+  font-size:12.5px;line-height:1.5}
+.essai.encours,.essai.reussi,.essai.rate{display:flex}
+.essai .essaimarque{flex:none;width:18px;height:18px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;line-height:1}
+.essai.encours{color:var(--text-2)}
+.essai.reussi{color:var(--success,var(--green))}
+.essai.reussi .essaimarque{background:var(--success-doux);color:var(--green)}
+.essai.rate{color:var(--danger)}
+.essai.rate .essaimarque{background:var(--danger-doux);color:var(--danger)}
+.essaipoint{flex:none;width:14px;height:14px;margin-top:2px;border-radius:50%;
+  border:2px solid color-mix(in srgb, var(--amber) 30%, transparent);
+  border-top-color:var(--amber);animation:tourne .8s linear infinite}
+@media (prefers-reduced-motion:reduce){.essaipoint{animation:none}}
+
 /* the "on the console" button: icon only, it must not weigh on the header */
 .onconsole{padding:5px 8px;min-width:0}
 .onconsole .hicon{font-size:15px;line-height:1}

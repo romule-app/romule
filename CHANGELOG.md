@@ -51,6 +51,30 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Fixed
 
+- **One CD game counted twenty-five times.** `Rayman (Europe) (Track 01).bin`
+  through `(Track 25)` is one PlayStation title in twenty-five pieces, and
+  every piece was a line in the list. An index file — `.cue`, `.gdi`, `.ccd`,
+  `.toc` — is now the game and the tracks carrying its name are its innards;
+  with no index, the tracks are grouped under the name they share and the set
+  weighs the whole disc. The TRANSFER is not fooled by the tidier list: sending
+  the game sends every piece, and says how many went along. A cue sheet whose
+  tracks stayed behind is a game that does not start, and nothing would have
+  said so.
+
+- **Nothing said a cover was being fetched.** The journal showed the tasks
+  somebody started and nothing of what the interface does on its own — yet
+  fetching a cover is a network call that takes seconds and can fail. One line
+  per cover would be three hundred; so they are counted and said in one
+  sentence every few seconds — what was found, from which source, and how many
+  came back empty — with each failure named, because a cover that never arrives
+  is a question "12 found" does not answer.
+
+- **The « + » button and the running task followed the library tab.** Both are
+  `position:fixed` and both lived inside the games panel, so they vanished the
+  moment you opened the settings — where starting a conversion or a transfer is
+  exactly what you have just done. They sit outside the panels now, like the
+  log.
+
 - **Three ways out of one dialog.** « Connecter la console » borrows the
   pairing panel from the settings, and the panel brought its own heading and
   its own « Fermer » with it — under the dialog's title and the dialog's
@@ -113,6 +137,17 @@ change it. Breaking changes are always listed under **Changed** with the reason.
   all. Found by teaching `verifier-classes.py` to read the branches of a
   ternary inside a `class` attribute — it used to stop at the first quote, so
   six live classes passed for dead style and this one for nothing at all.
+
+### Added
+
+- **Both credential fields can be tested from the settings.** SteamGridDB had
+  no test at all outside the first-run wizard, and IGDB's answered in a bare
+  line of text. One component now serves both: a spinner while the call is in
+  the air, then green or red with what the service actually said, and the
+  button refuses a second press while the first is unanswered. The key is saved
+  before being tested — the route reads the configuration, so testing what is
+  on screen means writing it first, and without that a key just pasted was
+  tested in its predecessor's place.
 
 ### Changed
 

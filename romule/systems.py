@@ -360,6 +360,115 @@ def system_for_file(filename):
     return None  # shared extension (.iso, .chd, .bin...): we do not guess
 
 
+# ------------------------------------------------------ images de disque
+#
+# A CD game is not one file. « Rayman (Europe) (Track 01).bin » … « (Track 25) »
+# is ONE game in twenty-five pieces, and listing each piece as a title put
+# twenty-five Raymans in the PlayStation list. The same holds for a plain
+# `Game.cue` + `Game.bin` pair.
+#
+# Two rules, in this order:
+#
+#   1. an INDEX file — .cue, .gdi, .ccd, .toc — is the game, and the tracks
+#      that carry its name are its innards. The emulator opens the index;
+#      opening a track means nothing;
+#   2. with no index, the tracks are grouped under the name they share, and the
+#      set counts once. That is the case above: twenty-five .bin and no .cue.
+#
+# Nothing is hidden from the TRANSFER: `compagnons()` puts the pieces back, so
+# sending the game sends the whole disc. A .cue whose tracks stayed behind is a
+# game that does not start.
+INDEX_DISQUE = {".cue", ".gdi", ".ccd", ".toc"}
+PISTES_DISQUE = {".bin", ".img", ".raw", ".wav", ".ogg", ".mp3", ".sub", ".cdi"}
+_PISTE = re.compile(r"^(?P<base>.+?)[\s_.-]*\((?:track|piste)\s*\d+\)$", re.I)
+
+
+def _base_disque(nom):
+    """(base name, is it a track). « Rayman (Track 03).bin » -> (« Rayman », True)."""
+    tige, _, ext = str(nom).rpartition(".")
+    if not tige:
+        return str(nom), False
+    m = _PISTE.match(tige)
+    if m and ("." + ext.lower()) in PISTES_DISQUE:
+        return m.group("base").strip(), True
+    return tige, False
+
+
+def fusionner_disques(items, nom="name", chemin="path", taille="size"):
+    """One entry per GAME, tracks folded in. Order is preserved.
+
+    Works on any list of records carrying a name, a path and a size — the local
+    inventory and the console listing alike, which is the point: the two lists
+    have different field names but the same defect.
+    """
+    def dossier(it):
+        return str(it.get(chemin) or "").rsplit("/", 1)[0]
+
+    # Which names an index file claims, per folder.
+    indexes = set()
+    for it in items:
+        n = str(it.get(nom) or "")
+        tige, _, ext = n.rpartition(".")
+        if tige and ("." + ext.lower()) in INDEX_DISQUE:
+            indexes.add((dossier(it), tige.strip().lower()))
+
+    out, vus = [], {}
+    for it in items:
+        n = str(it.get(nom) or "")
+        base, piste = _base_disque(n)
+        tige, _, ext = n.rpartition(".")
+        ext = "." + ext.lower()
+        cle = (dossier(it), base.strip().lower())
+        # An index names this file: it is a piece, not a game.
+        if ext in PISTES_DISQUE and cle in indexes:
+            continue
+        if not piste:
+            out.append(it)
+            continue
+        # A track with no index: the first one stands for the set, under the
+        # name they share, and it weighs what they weigh together.
+        garde = vus.get(cle)
+        if garde is None:
+            copie = dict(it)
+            copie[nom] = base + ext
+            copie["pistes"] = 1
+            vus[cle] = copie
+            out.append(copie)
+        else:
+            garde[taille] = (garde.get(taille) or 0) + (it.get(taille) or 0)
+            garde["pistes"] += 1
+    return out
+
+
+def compagnons(chemin):
+    """The other files that make up this disc image — index included.
+
+    A transfer that sends a `.cue` and leaves its tracks behind produces a game
+    that does not start, and says nothing about it.
+    """
+    p = Path(chemin)
+    try:
+        if not p.is_file():
+            return []
+        voisins = sorted(q for q in p.parent.iterdir() if q.is_file())
+    except OSError:
+        return []
+    base, _ = _base_disque(p.name)
+    base = base.strip().lower()
+    tige = p.stem.strip().lower()
+    out = []
+    for q in voisins:
+        if q == p:
+            continue
+        ext = q.suffix.lower()
+        if ext not in PISTES_DISQUE and ext not in INDEX_DISQUE:
+            continue
+        qbase, _ = _base_disque(q.name)
+        if qbase.strip().lower() in (base, tige):
+            out.append(str(q))
+    return out
+
+
 def scan_local(sys_key, cfg=None):
     """Generic inventory of a system: one file is one game."""
     s = get_cfg(sys_key, cfg)
@@ -386,7 +495,7 @@ def scan_local(sys_key, cfg=None):
             "size": p.stat().st_size,
             "system": s["key"],
         })
-    return out
+    return fusionner_disques(out)
 
 
 def detect_on_device(cfg):
@@ -416,8 +525,11 @@ def detect_on_device(cfg):
                  and any(f["path"].lower().endswith(e) for e in s["exts"])]
         if not owned and not _folder_exists(files, prefix):
             continue                      # neither folder nor file: we invent nothing
+        # Games, not files: a CD image in twenty-five tracks is one game, and
+        # counting its pieces announced twenty-five.
+        jeux = fusionner_disques(owned)
         out.append({"key": s["key"], "name": s["name"], "folder": s["folder"],
-                    "dir": folder, "count": len(owned),
+                    "dir": folder, "count": len(jeux),
                     "bytes": sum(f["size"] for f in owned)})
     return {"racine": root, "connectee": True, "plateformes": out}
 
@@ -451,6 +563,8 @@ def all_platforms(cfg):
                      if f["path"].startswith(prefix)
                      and any(f["path"].lower().endswith(e) for e in s["exts"])
                      and not any(f["path"].lower().endswith(a) for a in config.ARCHIVES)]
+            owned = fusionner_disques(owned, nom="nom", chemin="chemin",
+                                      taille="taille")
         local_games = scan_local(s["key"], cfg)
         if not local_games and not owned:
             continue                       # platform absent on both sides

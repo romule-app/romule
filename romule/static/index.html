@@ -189,79 +189,6 @@
       <button class="ghost" data-act="deployPick" data-val="0">Tout décocher</button>
     </div>
 
-    <!-- Adding games: always within reach, never in the way. The button also
-         serves as the activity indicator — a progress ring all around it, and
-         it stretches to say what is running and for how long. -->
-    <button class="fab" id="fab" data-act="actionFab"
-            title="Ajouter des jeux" aria-label="Ajouter des jeux">
-      <svg class="fabring" id="fabring" aria-hidden="true" focusable="false">
-        <rect class="fabpiste" id="fabpiste" pathLength="100"></rect>
-        <rect class="fabjauge" id="fabjauge" pathLength="100"></rect>
-      </svg>
-      <span class="fabmark">+</span>
-      <!-- The time left, in the centre of the button. -->
-      <span class="fabeta" id="fabeta" aria-hidden="true"></span>
-      <!-- The full label does not fit in 54 px, but it must still be
-           announced: this area is not displayed and serves as the spoken
-           report. It also carries the detail the tests read. -->
-      <span class="fabinfo" id="fabinfo" role="status" aria-live="polite">
-        <b id="fabtitre"></b>
-        <span class="fabreste" id="fabreste"></span>
-      </span>
-    </button>
-    <!-- What is running, attached to the "+" button. A separate floating
-         bubble said the same thing as the button, somewhere else on the screen.
-         The log keeps its role: the history of what HAS happened. -->
-    <div class="taskwrap" id="tachewrap" role="status" aria-live="polite">
-      <div class="drophead"><b>En cours</b>
-        <button class="ghost" data-act="toggleTasks" data-val="false">Fermer</button></div>
-      <div class="task" id="tache">
-        <div class="task-head">
-          <span class="task-name" id="tachelbl">Tâche en cours</span>
-        </div>
-        <div class="task-bar"><i id="bar"></i></div>
-        <div class="task-foot">
-          <span id="tacheavance">—</span>
-          <span style="flex:1"></span>
-          <span id="tachereste"></span>
-        </div>
-        <div class="task-detail" id="tachedetail"></div>
-        <div class="bar" style="margin-top:12px">
-          <button class="ghost" id="pausebtn" data-act="togglePause">Pause</button>
-          <button class="ghost" id="cancelbtn" data-act="cancelJob">Arrêter</button>
-          <span style="flex:1"></span>
-          <button class="ghost" data-act="toggleJournal">Voir le journal</button>
-        </div>
-      </div>
-      <div class="task-empty" id="tachevide">
-        <p class="lead" style="margin:0">Rien en cours.</p>
-      </div>
-      <div class="bar" style="margin-top:12px">
-        <button class="go" data-act="tasks-to-drop">Ajouter des jeux</button>
-      </div>
-    </div>
-
-    <div class="dropwrap" id="dropwrap">
-      <div class="drophead"><b>Dépôt</b>
-        <button class="ghost" data-act="toggleDrop" data-val="false">Fermer</button></div>
-      <!-- The dotted rectangle was a duplicate: the whole window already
-           accepts files. All that remains is what it really brought — a button
-           for those who prefer to choose in the file chooser. -->
-      <!-- No markup inside: a <b> emphasis cuts the sentence into three text
-           nodes, and the translation can no longer recognise it. -->
-      <p class="lead" style="margin:0 0 10px">Dépose tes fichiers n'importe où sur la page, ou choisis-les :</p>
-      <div class="bar" style="margin-bottom:10px">
-        <button class="ghost" data-act="chooseFiles">Choisir des fichiers…</button>
-        <button class="ghost" id="btnclasser" hidden data-act="assignImports">À classer</button>
-      </div>
-      <div class="drop" id="drop"></div>
-      <div class="bar" style="margin-top:12px">
-        <button class="go" id="importbtn" data-act="doImport">Importer</button>
-        <span class="mono" id="importinfo"></span>
-        <span style="flex:1"></span>
-        <button class="ghost" data-act="reloadImport">Relire le dépôt</button>
-      </div>
-    </div>
   </div>
 
   <!-- ============================================ REGLAGES -->
@@ -715,10 +642,18 @@
           </select></div>
         </div>
 
+        <!-- Only shown when SteamGridDB is the chosen source: a key that
+             governs nothing is a field you have to work out. And a key is
+             worth nothing until something has USED it — hence the test, which
+             asks SteamGridDB for one cover and says what came back. -->
         <div class="setrow" id="row-sgkey">
           <div class="setlab"><b>Clé API SteamGridDB</b>
             <span>steamgriddb.com → profil → preferences → api</span></div>
-          <div class="setctl"><input type="text" id="s-sgkey" placeholder="colle ta clé ici"></div>
+          <div class="setctl pile">
+            <input type="text" id="s-sgkey" placeholder="colle ta clé ici">
+            <button class="ghost" data-act="testSgdb">Tester la clé</button>
+            <div class="essai" id="sgdbtest"></div>
+          </div>
         </div>
 
         <div class="setrow" id="row-coverurl">
@@ -766,7 +701,7 @@
           <input type="password" id="s-igdbsecret" placeholder="Client Secret"
                  autocomplete="new-password">
           <button class="ghost" data-act="testIgdb">Tester les identifiants</button>
-          <div id="igdbtest"></div>
+          <div class="essai" id="igdbtest"></div>
         </div>
       </div>
       </div>
@@ -1159,6 +1094,85 @@
 
     </div>
   </div>
+
+  <!-- OUT of the panels, and deliberately so. The « + » button, what is
+       running, and the drop panel followed the library tab: they vanished the
+       moment you opened the settings — where a conversion or a transfer is
+       exactly what you have just started. All three are `position:fixed`;
+       being inside a panel only decided WHEN they existed. -->
+    <!-- Adding games: always within reach, never in the way. The button also
+         serves as the activity indicator — a progress ring all around it, and
+         it stretches to say what is running and for how long. -->
+    <button class="fab" id="fab" data-act="actionFab"
+            title="Ajouter des jeux" aria-label="Ajouter des jeux">
+      <svg class="fabring" id="fabring" aria-hidden="true" focusable="false">
+        <rect class="fabpiste" id="fabpiste" pathLength="100"></rect>
+        <rect class="fabjauge" id="fabjauge" pathLength="100"></rect>
+      </svg>
+      <span class="fabmark">+</span>
+      <!-- The time left, in the centre of the button. -->
+      <span class="fabeta" id="fabeta" aria-hidden="true"></span>
+      <!-- The full label does not fit in 54 px, but it must still be
+           announced: this area is not displayed and serves as the spoken
+           report. It also carries the detail the tests read. -->
+      <span class="fabinfo" id="fabinfo" role="status" aria-live="polite">
+        <b id="fabtitre"></b>
+        <span class="fabreste" id="fabreste"></span>
+      </span>
+    </button>
+    <!-- What is running, attached to the "+" button. A separate floating
+         bubble said the same thing as the button, somewhere else on the screen.
+         The log keeps its role: the history of what HAS happened. -->
+    <div class="taskwrap" id="tachewrap" role="status" aria-live="polite">
+      <div class="drophead"><b>En cours</b>
+        <button class="ghost" data-act="toggleTasks" data-val="false">Fermer</button></div>
+      <div class="task" id="tache">
+        <div class="task-head">
+          <span class="task-name" id="tachelbl">Tâche en cours</span>
+        </div>
+        <div class="task-bar"><i id="bar"></i></div>
+        <div class="task-foot">
+          <span id="tacheavance">—</span>
+          <span style="flex:1"></span>
+          <span id="tachereste"></span>
+        </div>
+        <div class="task-detail" id="tachedetail"></div>
+        <div class="bar" style="margin-top:12px">
+          <button class="ghost" id="pausebtn" data-act="togglePause">Pause</button>
+          <button class="ghost" id="cancelbtn" data-act="cancelJob">Arrêter</button>
+          <span style="flex:1"></span>
+          <button class="ghost" data-act="toggleJournal">Voir le journal</button>
+        </div>
+      </div>
+      <div class="task-empty" id="tachevide">
+        <p class="lead" style="margin:0">Rien en cours.</p>
+      </div>
+      <div class="bar" style="margin-top:12px">
+        <button class="go" data-act="tasks-to-drop">Ajouter des jeux</button>
+      </div>
+    </div>
+
+    <div class="dropwrap" id="dropwrap">
+      <div class="drophead"><b>Dépôt</b>
+        <button class="ghost" data-act="toggleDrop" data-val="false">Fermer</button></div>
+      <!-- The dotted rectangle was a duplicate: the whole window already
+           accepts files. All that remains is what it really brought — a button
+           for those who prefer to choose in the file chooser. -->
+      <!-- No markup inside: a <b> emphasis cuts the sentence into three text
+           nodes, and the translation can no longer recognise it. -->
+      <p class="lead" style="margin:0 0 10px">Dépose tes fichiers n'importe où sur la page, ou choisis-les :</p>
+      <div class="bar" style="margin-bottom:10px">
+        <button class="ghost" data-act="chooseFiles">Choisir des fichiers…</button>
+        <button class="ghost" id="btnclasser" hidden data-act="assignImports">À classer</button>
+      </div>
+      <div class="drop" id="drop"></div>
+      <div class="bar" style="margin-top:12px">
+        <button class="go" id="importbtn" data-act="doImport">Importer</button>
+        <span class="mono" id="importinfo"></span>
+        <span style="flex:1"></span>
+        <button class="ghost" data-act="reloadImport">Relire le dépôt</button>
+      </div>
+    </div>
 </main>
 
 <!-- The AGPL requires that a user who reaches the service OVER THE NETWORK be

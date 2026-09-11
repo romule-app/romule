@@ -394,9 +394,23 @@ def organize_device(lib, cfg, job):
 # --------------------------------------------------------------- multi-systemes
 
 def push_system(lib, cfg, job, sys_key, paths):
-    """Send a non-Switch system's ROMs to its folder on the console."""
+    """Send a non-Switch system's ROMs to its folder on the console.
+
+    A disc image travels WHOLE. The list shows one game where there are a `.cue`
+    and twenty-five tracks — which is right to read, and wrong to send: a cue
+    sheet whose tracks stayed on the server is a game that does not start, and
+    nothing would have said so.
+    """
     target = systems.device_dir(sys_key, cfg)
-    device.push_generic(paths, target, job,
+    complet, vus = [], set()
+    for chemin in paths:
+        for c in [chemin] + systems.compagnons(chemin):
+            if c not in vus:
+                vus.add(c)
+                complet.append(c)
+    if len(complet) > len(paths):
+        job.log(langue.phrase(messages.A_PISTES_JOINTES, len(complet) - len(paths)))
+    device.push_generic(complet, target, job,
                         cfg.get("verify_mode", "size") != "none",
                         cfg.get("incremental", True))
 

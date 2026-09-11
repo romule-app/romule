@@ -4765,6 +4765,36 @@ function choosePhoto() {
   f.click();
 }
 
+// Testing a connection, said the same way everywhere: a spinner while it is in
+// the air, then green or red with what came back. The button is disabled for
+// the duration — pressing it twice sent a second request into the middle of the
+// first, and the slower answer won.
+async function essaiConnexion(cible, faire) {
+  const b = $(cible);
+  if (!b || b.dataset.encours === '1') return;
+  const bouton = b.parentElement
+    && b.parentElement.querySelector('button[data-act^="test"]');
+  b.dataset.encours = '1';
+  if (bouton) bouton.disabled = true;
+  b.className = 'essai encours';
+  b.innerHTML = '<i class="essaipoint" aria-hidden="true"></i><span>'
+    + esc(t('Vérification…')) + '</span>';
+  let r;
+  try {
+    r = await faire();
+  } catch (e) {
+    r = {ok: false, message: String((e && e.message) || e)};
+  } finally {
+    b.dataset.encours = '';
+    if (bouton) bouton.disabled = false;
+  }
+  b.className = 'essai ' + (r && r.ok ? 'reussi' : 'rate');
+  b.innerHTML = '<i class="essaimarque" aria-hidden="true">'
+    + (r && r.ok ? '✓' : '!') + '</i><span>' + esc((r && r.message) || '')
+    + '</span>';
+  return r;
+}
+
 function syncSetDesc() {
   const paires = [['s-layout', 'd-layout'], ['s-local', 'd-local'],
                   ['s-verify', 'd-verify'], ['s-coverprov', 'd-cover']];
@@ -7058,18 +7088,36 @@ const app = {
   // of the authentication logic.
   // IGDB: we check BEFORE starting an entry fetch, otherwise the failure only
   // shows up in the middle of a long task.
-  async testIgdb() {
-    const b = $('igdbtest');
-    R.texte(b, 'Vérification…');
-    const r = await api('/api/igdb-test', {}, true);
-    if (!r || !r.ok) {
-      R.texte(b, (r && (r.message || r.error)) || 'Vérification impossible.');
-      R.classe(b, 'avert', true);
-      return;
-    }
-    R.classe(b, 'avert', false);
-    R.texte(b, tpl('Identifiants valides — exemple retrouvé : %s',
-                      r.infos.exemple));
+  // Credentials are worth nothing until something has USED them. Both tests
+  // go through `essaiConnexion`: same spinner, same green, same red, and the
+  // button refuses to be pressed twice while the first call is in the air.
+  testIgdb() {
+    return essaiConnexion('igdbtest', async () => {
+      await this.saveConfig({
+        igdb_client_id: ($('s-igdbid').value || '').trim(),
+        igdb_client_secret: ($('s-igdbsecret').value || '').trim(),
+      });
+      const r = await api('/api/igdb-test', {}, true);
+      return (r && r.ok)
+        ? {ok: true, message: tpl('Identifiants valides — exemple retrouvé : %s',
+                                  r.infos.exemple)}
+        : {ok: false, message: (r && (r.message || r.error))
+                               || t('Vérification impossible.')};
+    });
+  },
+
+  testSgdb() {
+    return essaiConnexion('sgdbtest', async () => {
+      const cle = ($('s-sgkey').value || '').trim();
+      if (!cle) return {ok: false, message: t('Renseigne la clé d\'abord.')};
+      // Saved before being tested: the route reads the CONFIGURATION, so
+      // testing what is on screen means writing it first. Without this, a key
+      // just pasted was tested in its predecessor's place.
+      await this.saveField('steamgriddb_key', cle);
+      const r = await api('/api/sgdb-test', {}, true);
+      return {ok: !!(r && r.ok),
+              message: (r && r.message) || t('Vérification impossible.')};
+    });
   },
 
   // Maintenance: each panel answers ONE question, and never acts on its own.
@@ -8732,7 +8780,7 @@ const ACTES = new Set([
   'libCancelOnb', 'libClose', 'libNewFolder', 'libOpen',
   'libConfirm', 'mkTree', 'onbGo', 'onbFindConsole',
   'onbChooseFolder', 'onbCreateAccount', 'onbOpenAccess', 'onbPrev',
-  'onbScan', 'onbTestSgdb', 'onbTestIgdb', 'setLang', 'toggleNotification',
+  'onbScan', 'onbTestSgdb', 'onbTestIgdb', 'testSgdb', 'setLang', 'toggleNotification',
   'onbLien', 'onbAutreLien', 'detectRoms', 'onbParcourir', 'parcourirRoms',
   'signOut',
   'onbScanConsole', 'onbNext', 'openGame',
