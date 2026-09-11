@@ -5,6 +5,7 @@
 let DATA = {files: [], stats: {}, config: {}};
 let GAMES = [];                 // jeux regroupes (vue bibliotheque)
 let DGAMES = [];                // files listed on the console
+let DGAMES_JEUX = 0;            // …grouped into games, for the platform selector
 let CONSET = new Set();          // fingerprints (tid|version) of the games on the console
 let BROWSE_PATH = "";            // current folder of the console browser
 let CIBLE_PARCOURS = 'roms';     // what the browser will save: 'roms', 'switch' or a platform
@@ -1300,12 +1301,19 @@ function renderSysSelect() {
   // The local count alone lied: most platforms only exist on the console. So we
   // keep the larger of the two (local, detected console).
   const compte = s => {
-    // `GAMES` follows the VIEW: on another platform it holds that platform's
-    // games, and the Switch entry then showed the wrong count or none. The
-    // scan's own figure does not move with the view.
-    if (s.count === null) return (DATA.stats && DATA.stats.base) || GAMES.length;
     const d = PLATFORMS.find(x => x.key === s.key);
-    return Math.max(s.count || 0, d ? d.count : 0);
+    const console_ = d ? d.count : 0;
+    // `count: null` means the Switch: its figure comes from the library rather
+    // than from a folder count. Two things were missing. `GAMES` follows the
+    // VIEW, so the number was wrong or absent as soon as another platform was
+    // open — and the CONSOLE was never consulted at all, while every other
+    // platform takes the larger of the two. A Switch library that lives only
+    // on the console therefore showed no count, next to platforms that did.
+    if (s.count === null) {
+      return Math.max((DATA.stats && DATA.stats.base) || 0, console_, DGAMES_JEUX,
+                      SYS === s.key ? GAMES.length : 0);
+    }
+    return Math.max(s.count || 0, console_);
   };
   const signature = SYSTEMS.map(s => s.key + ':' + compte(s)).join();
   if (!SYSTEMS.length || el.dataset.sig === signature) { el.value = SYS; return; }
@@ -2707,6 +2715,10 @@ function buildConset() {
     if (g.tid) CONSET.add(g.tid + '|' + g.version);
     if (g.name) CONSET.add('n|' + g.name.toLowerCase());
   });
+  // How many GAMES the console holds, files grouped. Computed here because
+  // this is the one place `DGAMES` changes, and the platform selector needs a
+  // figure that does not depend on which view is open.
+  DGAMES_JEUX = groupDeviceGames(DGAMES).length;
 }
 
 // Is a library file already on the console? The library's title ID comes from
@@ -2869,8 +2881,17 @@ let PF_SETTINGS = localStorage.getItem('pf-reglages') || 'switch';
 
 // "generic" and "switch" are words from the code: on screen they say nothing.
 // We name what the user recognises.
+// A platform's engine, said in words. The Switch entry used to be the literal
+// string « Eden » — written before the profiles existed, and wrong ever since:
+// with Ryujinx chosen, the row still announced Eden. It names the profile in
+// force instead.
 function moteurLisible(engine) {
-  return {switch: 'Eden', generic: 'lecteur de ROMs (RetroArch, autonome…)'}[engine]
+  if (engine === 'switch') {
+    const actif = (HEALTH && (HEALTH.checks || {}).emulateur) || '';
+    const profil = ((HEALTH && HEALTH.profils) || []).find(x => x.cle === actif);
+    return profil ? t(profil.nom) : 'Eden';        // i18n:ok - nom de profil
+  }
+  return {generic: 'lecteur de ROMs (RetroArch, autonome…)'}[engine]
     || engine || '—';
 }
 
@@ -2952,7 +2973,7 @@ function renderPfCommun(sys) {
     '</div>' +
     (sys.engine === 'switch'
       ? '<p class="erdit small">La Switch est la seule plateforme à séparer jeux, mises à '
-        + 'jour et DLC : Eden en a besoin. Les autres rangent tout à plat.</p>' : '');
+        + 'jour et DLC : son émulateur en a besoin. Les autres rangent tout à plat.</p>' : '');
 }
 
 function renderTreeDans(id) {
@@ -3021,6 +3042,14 @@ function ecSync() {
   // Hidden with its platform: nothing to say, and nothing to ask the console.
   const groupe = bloc.closest('.platform-group');
   if (groupe && groupe.hidden) return;
+  // Not every emulator keeps its settings in a format we can read: Ryujinx
+  // uses JSON with another layout, and the generic profile declares none at
+  // all. The route answers « not steerable from Romule » for those — which
+  // means the block had nothing to offer and said so only after a click.
+  const actif = (HEALTH && (HEALTH.checks || {}).emulateur) || '';
+  const profil = ((HEALTH && HEALTH.profils) || []).find(x => x.cle === actif);
+  bloc.hidden = !!profil && !profil.reglages;
+  if (bloc.hidden) { EC_CHARGE = false; return; }
   const relie = !!CONN.kind;
   const etat = $('ec-etat');
   bloc.querySelectorAll('select,input,button').forEach(c => { c.disabled = !relie; });
@@ -5806,6 +5835,9 @@ const app = {
     // which one is actually installed, rather than guess.
     try { await api('/api/emulateur-detecter', {}); } catch (e) { /* no console */ }
     await this.checkHealth(true);
+    // The advanced block belongs to the profile just chosen: it appears,
+    // disappears or reloads with it.
+    ecSync();
   },
 
   // ---- assistant de premier demarrage ------------------------------------
@@ -8038,6 +8070,8 @@ function pairPreter(slot) {
   }
   slot.appendChild(panneau);
   panneau.style.display = '';
+  // Borrowed: the host owns the title and the way out.
+  panneau.classList.add('emprunte');
   app.wizStep(PAIR_ETAPE);
   // What was typed belongs to the wizard's state, not to the node that happens
   // to be showing it — the same rule `onbValeur` follows for every other field.
@@ -8053,6 +8087,7 @@ function pairRendre() {
   const panneau = $('pairwrap');
   if (!panneau || !PAIR_MAISON) return;
   PAIR_MAISON.parent.insertBefore(panneau, PAIR_MAISON.apres);
+  panneau.classList.remove('emprunte');
   panneau.style.display = 'none';
   PAIR_MAISON = null;
 }

@@ -1792,5 +1792,13 @@
   "taille lue sur la console": "taille lue sur la console",
   "Au-delà, la plus ancienne est supprimée — une interrompue avant une complète.": "Au-delà, la plus ancienne est supprimée — une interrompue avant une complète.",
   "Dossier de données du service": "Dossier de données du service",
-  "Donne un chemin absolu : un chemin relatif se lit depuis le dossier où tourne le service, que personne ne voit.": "Donne un chemin absolu : un chemin relatif se lit depuis le dossier où tourne le service, que personne ne voit."
+  "Donne un chemin absolu : un chemin relatif se lit depuis le dossier où tourne le service, que personne ne voit.": "Donne un chemin absolu : un chemin relatif se lit depuis le dossier où tourne le service, que personne ne voit.",
+  "Ce qui tourne sans toi, ce qui attend dans la corbeille, et l'état de ta ludothèque.": "Ce qui tourne sans toi, ce qui attend dans la corbeille, et l'état de ta ludothèque.",
+  "Tâches planifiées": "Tâches planifiées",
+  "Choisis ce qui se relance sans toi, et à quel rythme. Une tâche déjà en cours à son échéance la saute : rien ne s'empile.": "Choisis ce qui se relance sans toi, et à quel rythme. Une tâche déjà en cours à son échéance la saute : rien ne s'empile.",
+  "Tout ce que Romule retire passe par ici, et reste restaurable.": "Tout ce que Romule retire passe par ici, et reste restaurable.",
+  "Doublons, fichiers abîmés, transferts interrompus, connexions récentes.": "Doublons, fichiers abîmés, transferts interrompus, connexions récentes.",
+  "Passé à chaque démarrage ; ce qui cloche part dans le journal. À relancer après avoir changé un réglage d'accès.": "Passé à chaque démarrage ; ce qui cloche part dans le journal. À relancer après avoir changé un réglage d'accès.",
+  "Inspections": "Inspections",
+  "La Switch est la seule plateforme à séparer jeux, mises à jour et DLC : son émulateur en a besoin. Les autres rangent tout à plat.": "La Switch est la seule plateforme à séparer jeux, mises à jour et DLC : son émulateur en a besoin. Les autres rangent tout à plat."
 }

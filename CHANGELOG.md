@@ -51,6 +51,35 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Fixed
 
+- **Three ways out of one dialog.** « Connecter la console » borrows the
+  pairing panel from the settings, and the panel brought its own heading and
+  its own « Fermer » with it — under the dialog's title and the dialog's
+  « Fermer », with a third at the bottom of the success step. The panel now
+  drops its heading when it is lent, and the success step has no close of its
+  own: the host owns the title and the way out.
+
+- **The Switch had no game count in the platform menu**, next to platforms that
+  did. Its figure comes from the library rather than from a folder count, and
+  two things were missing: it followed the open VIEW, so it was wrong or absent
+  as soon as another platform was showing, and the CONSOLE was never consulted
+  — while every other platform takes the larger of local and console. A Switch
+  library that lives only on the console therefore counted zero.
+
+- **An emulator with no settings still offered « Réglages avancés ».** Ryujinx
+  keeps its configuration in JSON with another layout, and the generic profile
+  declares none: the route answers "not steerable from Romule" for both. The
+  block now disappears with the profile instead of announcing itself and
+  failing on click. In the same pass: the engine row said « Eden » whatever
+  profile was in force — it was written before the profiles existed — and now
+  names the one actually chosen.
+
+- **Six paragraphs sat flush against their block's frame** while the rows below
+  them were inset 18 px. A `style="margin:0 0 10px"` written on the element
+  resets every side it does not name, and the inset came from a `margin` in the
+  stylesheet. Paragraphs take it as `padding` now, which an inline shorthand
+  cannot erase — and the responsive audit measures the text's left edge against
+  the rows', in every block, on every device profile.
+
 - **The emulator's advanced settings opened empty, and lied when the console
   was gone.** Two defects behind one missing flag. The table was loaded once,
   at startup, and only if a console answered then — so it stayed blank until
@@ -86,6 +115,12 @@ change it. Breaking changes are always listed under **Changed** with the reason.
   six live classes passed for dead style and this one for nothing at all.
 
 ### Changed
+
+- **« Entretien » says less.** The section explained its own design — what the
+  scheduler does when a task is already running, that nothing is ever deleted —
+  in paragraphs nobody reads twice. « Tout seul » is now « Tâches planifiées »,
+  « Entretien de la ludothèque » is « Inspections » (it repeated the section's
+  own title), and each block keeps one sentence.
 
 - **The header, with no console connected.** It offered « Détecter » and « sans
   câble », the second opening — inside the header — a panel that lives in the

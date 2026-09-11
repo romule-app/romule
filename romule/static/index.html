@@ -292,7 +292,7 @@
         <!-- The shorthand margin ERASED the group's 18px inset — a shorthand
              resets every side it does not name — so the sentence sat flush
              against the frame. -->
-        <p class="lead" style="margin:12px 18px; max-width:62ch">Chaque console
+        <p class="lead" style="margin:12px 0; max-width:62ch">Chaque console
           garde ses propres réglages : sa connexion et ses dossiers. Tout ce qui
           suit appartient à celle choisie ici.</p>
         <div id="consoles"></div>
@@ -307,6 +307,10 @@
                `adb connect` into the middle of the first — which adb answers by
                refusing both. -->
           <div class="pairoccupe" id="pairoccupe" aria-live="polite"></div>
+          <!-- The panel's own heading. It is HIDDEN when the panel is lent to
+               a host that already has one — the connect dialog, the wizard —
+               because otherwise the same title and the same « Fermer » appear
+               twice, one inside the other. See `.pairbox.emprunte`. -->
           <div class="wizhead">
             <h3>Connecter la console sans câble</h3>
             <button class="ghost" data-act="togglePairing">Fermer</button>
@@ -441,11 +445,11 @@
           <div class="wstep" id="wstep5">
             <div class="wnum wnum-ok">✓</div>
             <div class="wbody">
-              <div class="wtitle">Console connectée</div>
+                <div class="wtitle">Console connectée</div>
+              <!-- No « Fermer » here. The panel already carries one in its
+                   heading, and the dialog that borrows it carries a third:
+                   three ways out of one screen, stacked. -->
               <div id="conn-ok"></div>
-              <div class="bar">
-                <button class="ghost" data-act="togglePairing">Fermer</button>
-              </div>
             </div>
           </div>
         </div>
@@ -482,7 +486,7 @@
 
       <div class="setgroup" id="groupe-console">
         <div class="setgt">Console et émulateur</div>
-        <p class="lead" style="margin:12px 18px">Choisis une plateforme&nbsp;: seuls
+        <p class="lead" style="margin:12px 0">Choisis une plateforme&nbsp;: seuls
           ses réglages s'affichent en dessous.</p>
 
         <div class="setrow">
@@ -579,7 +583,7 @@
            group is scoped to it, and the advanced table folds inside. -->
       <div class="setgroup platform-group" data-plateforme="switch">
         <div class="setgt">Émulateur</div>
-        <p class="lead" style="margin:12px 18px 10px">Il détermine où l'outil dépose les
+        <p class="lead" style="margin:12px 0 10px">Il détermine où l'outil dépose les
           jeux et où il lit les sauvegardes. Seul Eden est vérifié sur matériel
           réel ; les autres profils sont fournis tels quels.</p>
         <div id="choixemulateur" class="bar"></div>
@@ -781,7 +785,7 @@
 
         <div class="setgroup">
           <div class="setgt">Le coffre</div>
-          <p class="lead" style="margin:12px 18px 10px">Une progression de 200 h ne
+          <p class="lead" style="margin:12px 0 10px">Une progression de 200 h ne
             se retélécharge pas, et une copie posée sur le disque qui lâche n'est
             pas une copie. Choisis quoi, où, et à quel rythme.</p>
           <div id="coffre-resume"></div>
@@ -799,25 +803,24 @@
 
       <section class="setsection" id="sec-entretien">
         <h3 class="sectitre">Entretien</h3>
-        <p class="sectxt">Ce qu'on regarde de temps en temps.</p>
+        <p class="sectxt">Ce qui tourne sans toi, ce qui attend dans la corbeille, et l'état de ta ludothèque.</p>
 
       <!-- What runs on its own. Five presets and no cron field: a syntax where
            a misplaced star means "every minute" has no place in a settings
            screen. Only reversible tasks appear here — emptying the trash is
            deliberately absent. -->
       <div class="setgroup">
-        <div class="setgt">Tout seul</div>
-        <p class="lead" style="margin:0 0 10px">Romule ne fait rien sans qu'on
-          le lui demande. Ces réglages changent cela, tâche par tâche. Si une
-          tâche tourne déjà à l'échéance, l'échéance est sautée : Romule fait
-          une chose à la fois.</p>
+        <div class="setgt">Tâches planifiées</div>
+        <p class="lead" style="margin:0 0 10px">Choisis ce qui se relance sans toi,
+          et à quel rythme. Une tâche déjà en cours à son échéance la saute :
+          rien ne s'empile.</p>
         <div id="sched"></div>
       </div>
 
       <div class="setgroup">
         <div class="setgt">Corbeille</div>
-        <p class="lead" style="margin:0 0 10px">Rien n'est jamais supprimé par l'outil :
-          tout passe ici et reste restaurable.</p>
+        <p class="lead" style="margin:0 0 10px">Tout ce que Romule retire passe
+          par ici, et reste restaurable.</p>
         <div class="trashsum" id="trashsum"></div>
 
         <div class="setrow">
@@ -840,10 +843,9 @@
       </div>
 
       <div class="setgroup">
-        <div class="setgt">Entretien de la ludothèque</div>
-        <p class="lead" style="margin:0 0 12px">Ce qu'on regarde de temps en
-          temps&nbsp;: ce qui fait doublon, ce qui pourrait s'être abîmé, et
-          qui s'est connecté.</p>
+        <div class="setgt">Inspections</div>
+        <p class="lead" style="margin:0 0 12px">Doublons, fichiers abîmés,
+          transferts interrompus, connexions récentes.</p>
 
         <div class="upkeep">
           <button class="ghost" data-act="showMaintenance" data-arg="sante">État de la ludothèque</button>
@@ -858,9 +860,9 @@
 
       <div class="setgroup">
         <div class="setgt">Audit de sécurité</div>
-        <p class="lead" style="margin:0 0 10px">Passé automatiquement à chaque
-          démarrage&nbsp;: ce qui cloche part dans le journal. Relance-le ici
-          après avoir changé un réglage.</p>
+        <p class="lead" style="margin:0 0 10px">Passé à chaque démarrage&nbsp;;
+          ce qui cloche part dans le journal. À relancer après avoir changé un
+          réglage d'accès.</p>
         <div class="bar">
           <button class="go" data-act="runAudit">Lancer l'audit</button>
           <button class="ghost" data-act="runAudit" data-val="true">Sans réseau</button>

@@ -1792,5 +1792,13 @@
   "taille lue sur la console": "size read from the console",
   "Au-delà, la plus ancienne est supprimée — une interrompue avant une complète.": "Past that, the oldest is deleted — an interrupted one before a complete one.",
   "Dossier de données du service": "The service's data folder",
-  "Donne un chemin absolu : un chemin relatif se lit depuis le dossier où tourne le service, que personne ne voit.": "Give an absolute path: a relative one is read from the folder the service runs in, which nobody can see."
+  "Donne un chemin absolu : un chemin relatif se lit depuis le dossier où tourne le service, que personne ne voit.": "Give an absolute path: a relative one is read from the folder the service runs in, which nobody can see.",
+  "Ce qui tourne sans toi, ce qui attend dans la corbeille, et l'état de ta ludothèque.": "What runs without you, what waits in the trash, and the state of your library.",
+  "Tâches planifiées": "Scheduled tasks",
+  "Choisis ce qui se relance sans toi, et à quel rythme. Une tâche déjà en cours à son échéance la saute : rien ne s'empile.": "Pick what runs again without you, and how often. A task already running when its time comes skips that turn: nothing stacks up.",
+  "Tout ce que Romule retire passe par ici, et reste restaurable.": "Everything Romule removes passes through here, and can be put back.",
+  "Doublons, fichiers abîmés, transferts interrompus, connexions récentes.": "Duplicates, damaged files, interrupted transfers, recent sign-ins.",
+  "Passé à chaque démarrage ; ce qui cloche part dans le journal. À relancer après avoir changé un réglage d'accès.": "Run at every start; anything amiss goes to the log. Worth running again after changing an access setting.",
+  "Inspections": "Inspections",
+  "La Switch est la seule plateforme à séparer jeux, mises à jour et DLC : son émulateur en a besoin. Les autres rangent tout à plat.": "The Switch is the only platform that separates games, updates and DLC: its emulator needs that. The others keep everything flat."
 }

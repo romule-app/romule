@@ -543,10 +543,17 @@ img.empty{visibility:hidden}
    the rows above them were inset.
    Margin rather than padding: several of these are containers whose own
    children are rows, and padding would indent those twice. */
-.setgroup > p,.setgroup > .bar,.setgroup > .empty,.setgroup > .pairbox,
+.setgroup > .bar,.setgroup > .empty,.setgroup > .pairbox,
 .setgroup > .ecbloc,.setgroup > .upkeep,
 #consoles > .bar,#device,#barreconsole,#choixemulateur{
   margin-left:18px;margin-right:18px}
+/* A PARAGRAPH takes its inset as padding, not as margin. Same 18 px, one
+   difference that matters: a shorthand `style="margin:0 0 10px"` written on the
+   element resets every side it does not name, so the inset vanished and the
+   sentence sat flush against the frame while the rows below it were inset. That
+   happened twice, in six places. Padding cannot be erased that way — and unlike
+   the containers above, a paragraph has no rows of its own to indent twice. */
+.setgroup > p{padding-left:18px;padding-right:18px}
 
 .setrow{display:flex;align-items:center;gap:24px;padding:15px 18px;
   border-top:1px solid var(--rule);transition:background .15s}
@@ -1019,6 +1026,10 @@ header,.libbar{padding-left:env(safe-area-inset-left,0);
 
 /* ================================================================ assistant wifi */
 .wizhead{display:flex;align-items:center;justify-content:space-between;gap:12px}
+/* Lent to a dialog or to the wizard, the panel drops its own heading: the host
+   already shows a title and a way out, and stacking them gave one screen three
+   « Fermer », one inside the other. */
+.pairbox.emprunte > .wizhead{display:none}
 .wizhead h3{margin:0}
 .wizprog{height:3px;border-radius:3px;background:var(--rule);overflow:hidden;margin:12px 0 18px}
 .wizprog i{display:block;height:100%;width:33%;background:var(--amber);

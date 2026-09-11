@@ -217,6 +217,29 @@ SONDE = r"""
       }
     }
   }
+
+  // Le texte d'un bloc commence ou commence ses rangees. Un paragraphe pose
+  // dans un `.setgroup` prend son retrait de la feuille de style ; un
+  // `style="margin:0 0 10px"` ecrit sur l'element efface les cotes qu'il ne
+  // nomme pas, et la phrase se colle au cadre pendant que les rangees dessous
+  // restent en retrait. C'est arrive deux fois, dans six blocs, et aucune
+  // relecture ne le montre : la regle et l'attribut sont dans deux fichiers.
+  for (const bloc of document.querySelectorAll('.setgroup')) {
+    if (!bloc.getBoundingClientRect().width) continue;
+    const ancre = bloc.querySelector(':scope > .setrow > .setlab, :scope > .setgt');
+    if (!ancre) continue;
+    const xa = Math.round(ancre.getBoundingClientRect().left);
+    for (const par of bloc.querySelectorAll(':scope > p')) {
+      const r = par.getBoundingClientRect();
+      if (!r.width || !r.height) continue;
+      const x = Math.round(r.left);
+      if (Math.abs(x - xa) > 2) {
+        res.desalignes.push((bloc.id ? '#' + bloc.id : '.setgroup')
+          + ' — texte a ' + x + ' px, rangees a ' + xa + ' px : «\u00a0'
+          + (par.textContent || '').trim().slice(0, 28) + '\u00a0»');
+      }
+    }
+  }
   return res;
 })()
 """
@@ -261,6 +284,14 @@ EPREUVE = r"""
   + '<div id="e-cadre" style="width:80px;overflow-x:auto;white-space:nowrap">'
   +   '<button style="width:60px;height:44px">a</button>'
   +   '<button id="e-rogne" style="width:300px;height:44px">hors cadre</button>'
+  + '</div>'
+  // Un bloc de reglages dont le paragraphe a perdu son retrait, exactement
+  // comme un `style="margin:0 0 10px"` le fait : le texte commence au cadre,
+  // les rangees 18 px plus loin.
+  + '<div class="setgroup" id="e-bloc" style="width:240px">'
+  +   '<p style="margin:0;padding:0">texte colle</p>'
+  +   '<div class="setrow" style="padding:0 18px">'
+  +     '<div class="setlab">rangee</div></div>'
   + '</div>';
   document.body.appendChild(z);
 })()
@@ -268,13 +299,14 @@ EPREUVE = r"""
 
 
 def eprouver(n):
-    """Rend (couvert_signale, rogne_signale)."""
+    """Rend (couvert_signale, rogne_signale, texte_decale_signale)."""
     n.js(EPREUVE)
     time.sleep(0.4)
-    vus = (n.js(SONDE) or {}).get("bloques") or []
-    texte = " | ".join(vus)
+    r = n.js(SONDE) or {}
+    texte = " | ".join(r.get("bloques") or [])
+    decales = " | ".join(r.get("desalignes") or [])
     n.js("document.getElementById('zone-epreuve').remove()")
-    return "#e-couvert" in texte, "#e-rogne" in texte
+    return "#e-couvert" in texte, "#e-rogne" in texte, "#e-bloc" in decales
 
 
 def main():
@@ -292,13 +324,15 @@ def main():
                 time.sleep(1.5)
             time.sleep(1)
             if i == 0:                       # once only: the probe is the same
-                couvert, rogne_ = eprouver(n)
+                couvert, rogne_, decale = eprouver(n)
                 print("   sonde : recouvrement reel %s | rognage ignore %s"
+                      " | texte sans retrait %s"
                       % ("vu" if couvert else "MANQUE",
-                         "oui" if not rogne_ else "NON"))
-                if not couvert or rogne_:
-                    print("   ::error:: la sonde ne distingue plus recouvert "
-                          "et rogne — les resultats qui suivent ne valent rien")
+                         "oui" if not rogne_ else "NON",
+                         "vu" if decale else "MANQUE"))
+                if not couvert or rogne_ or not decale:
+                    print("   ::error:: la sonde ne voit plus ce qu'elle "
+                          "annonce — les resultats qui suivent ne valent rien")
                     total_pb += 1
             # Every settings SECTION, not just the one that happens to be
             # open. They are exclusive: measuring « Réglages » alone measured
