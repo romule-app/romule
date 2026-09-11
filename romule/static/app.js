@@ -1122,6 +1122,7 @@ const TASK_NAMES = {
   apply_eden_config:   'Réglages Eden',
   apply_eden_profile:  'Profil Eden',
   backup_saves:        'Sauvegardes',
+  backup_vault:        'Sauvegarde vers la destination',
   convert_files:       'Conversion',
   deploy_games:        'Envoi vers la console',
   emuready_apply:      'Réglages EmuReady',
@@ -2226,7 +2227,7 @@ function openGameHtml(g) {
     '<div><h3>' + esc(gameName(g)) + '</h3>' +
     // The medium, spelled out and drawn: the piece of information most missing
     // from a library that mixes twenty-three consoles.
-    '<div class="mediumrow">' + silhouetteHtml(g, 'support gros') +
+    '<div class="mediumrow">' + silhouetteHtml(g, 'support gros') +  // i18n:ok - classes CSS
       '<span>' + esc(platformName(g)) + '</span>' +
       // Here there is room: we name the languages instead of reducing them to
       // "MULTI" as on the cover.
@@ -2494,14 +2495,10 @@ function renderConn(d) {
   renderLib();
   const el = $('conn');
   const i = CONN_INFO || {};
-  // How fresh the versions database is. It used to sit in the header among the
-  // console's own facts, where it answers a question nobody asked while looking
-  // at a console, and it repeated the word already there beside it. It moves
-  // into the tooltip.
-  const h = DATA.stats ? DATA.stats.versions_h : null;
-  const vers = h == null ? ''
-    : h < 1 ? t('base des versions à l\'instant')
-            : t('base des versions il y a %d h').replace('%d', h);
+  // How fresh the versions database is used to be shown here. It answered a
+  // question nobody asks while looking at a console — and read in a header,
+  // "version database just now" does not even say what it is about. The
+  // maintenance screen carries it, where it means something.
 
   if (c.kind) {
     // No age in the strip: `à l'instant` next to the battery answered a
@@ -2517,7 +2514,7 @@ function renderConn(d) {
     el.title = [t('Connectée') + ' ' +
                 (c.kind === 'usb' ? t('par câble USB') : t('en Wi-Fi')),
                 c.depuis != null ? t('depuis') + ' ' + duree(c.depuis) : '',
-                c.serial, vers].filter(Boolean).join(' — ');
+                c.serial].filter(Boolean).join(' — ');
   } else {
     el.className = 'conn off';
     el.innerHTML = '<span class="cdot off"></span>' +
@@ -2529,11 +2526,13 @@ function renderConn(d) {
       '<span class="cvide">Aucune console</span>' +
       '<span class="cfaits">' +
         '<button class="lien" data-act="detect">Détecter</button><i>·</i>' +
-        '<button class="lien" data-act="togglePairing">sans câble</button>' +
-        (vers ? '<i>·</i>' + esc(vers) : '') +
+        '<button class="lien" data-act="goToConsoles">Mes consoles</button>' +
       '</span>';
     el.title = t('Branche le câble USB, ou connecte la console sans fil.');
   }
+  // The advanced emulator settings are read ON the console: plugging one in,
+  // or losing it, is exactly when that block has to change its mind.
+  ecSync();
 }
 
 // The offered actions depend on the state: inviting you to "Detect" a console
@@ -2914,6 +2913,9 @@ function updatePlatformSettings() {
                  sys.name));
   }
   renderPfCommun(sys);
+  // The advanced block belongs to one of those groups: it must follow them
+  // in and out, and load when it comes into view.
+  ecSync();
 }
 
 // The folder on the console: the one setting EVERY platform has. It used to be
@@ -3004,6 +3006,44 @@ const EC_KEYS = [
   ['Audio', 'volume', 'Volume'],
 ];
 let ECVALS = {}, ECTID = '';
+// Whether the table on screen was read from a CONNECTED console. Two defects
+// hid behind one missing flag: the block opened empty — `ecLoad()` ran once at
+// startup, and only if a console answered then — and, console unplugged, it
+// drew the same table with every field blank, which reads as "every setting is
+// at zero" rather than "nothing was read".
+let EC_CHARGE = false;
+
+// The state of the advanced block, in one place. Called whenever anything it
+// depends on moves: the chosen platform, the connection, the block opening.
+function ecSync() {
+  const bloc = $('edengroup');
+  if (!bloc) return;
+  // Hidden with its platform: nothing to say, and nothing to ask the console.
+  const groupe = bloc.closest('.platform-group');
+  if (groupe && groupe.hidden) return;
+  const relie = !!CONN.kind;
+  const etat = $('ec-etat');
+  bloc.querySelectorAll('select,input,button').forEach(c => { c.disabled = !relie; });
+  if (etat) {
+    etat.hidden = relie;
+    if (!relie) {
+      etat.innerHTML = esc(t('Ces réglages vivent sur la console : connecte-la pour '
+                             + 'les lire et les modifier.')) +
+        ' <button class="lien" data-act="goToConsoles">' +
+        esc(t('Mes consoles')) + '</button>';
+    }
+  }
+  if (!relie) {
+    // What is on screen was read from a console that is no longer there. We
+    // clear it rather than leave a table nobody can trust the age of.
+    EC_CHARGE = false;
+    ECVALS = {};
+    $('ec-table').innerHTML = '';
+    $('ec-info').textContent = '';
+    return;
+  }
+  if (!EC_CHARGE) { EC_CHARGE = true; app.ecLoad(); }
+}
 
 function renderEcTable(valeurs, existe) {
   ECVALS = valeurs || {};
@@ -3965,6 +4005,9 @@ const SCHED_TASKS = [
   ['convert', 'Convertir en NSZ'],
   ['push', 'Envoyer vers la console'],
   ['meta', 'Rafraîchir les fiches'],
+  // It is also set from the vault dialog, which is where you think of it. Both
+  // write the same key: one setting, not two.
+  ['sauvegarde', 'Sauvegarder ailleurs'],
 ];
 
 const SCHED_PRESETS = [
@@ -3998,6 +4041,270 @@ function renderSchedule() {
       + ' data-hour="1"' + (nuit ? '' : ' hidden') + '>' + heures + '</select>'
       + '</div></div>';
   }).join('');
+}
+
+// ---------------------------------------------------------------- the vault
+//
+// Backing up is not a setting, it is a task: it has sources, a destination, a
+// progress bar, a journal and a rotation. It used to live as a sub-part of the
+// Switch emulator settings, as one button copying game saves into `_saves/` —
+// that is, onto the disk whose failure a backup exists for.
+let COFFRE = null;        // the last answer from /api/coffre
+let COFFRE_SEL = null;    // what the dialog is in the middle of changing
+let COFFRE_DOSS = null;   // the folder open in its browser, when one is
+
+// What the current selection weighs, from the preview already received. Game
+// saves cannot be measured from here: they live on the console, and their size
+// would mean walking it. We say so rather than announce a total we know to be
+// wrong.
+function coffrePoids(choix) {
+  const ap = (COFFRE && COFFRE.apercu) || {detail: []};
+  let octets = 0, incertain = false;
+  for (const d of ap.detail || []) {
+    if (!choix.includes(d.cle)) continue;
+    if (d.octets == null) incertain = true;
+    else octets += d.octets;
+  }
+  return {octets, incertain};
+}
+
+// The weight, said in words. Zero plus an unknown is not "0 B + the console":
+// the figure means nothing on its own there, and the `+` makes it read as a
+// total.
+function coffrePoidsTexte(poids) {
+  if (poids.incertain && !poids.octets) return t('taille lue sur la console');
+  return fmt(poids.octets) + (poids.incertain ? ' + ' + t('la console') : '');
+}
+
+function coffreDestCourante() {
+  const c = (COFFRE_SEL && COFFRE_SEL.dest) || '';
+  return ((COFFRE && COFFRE.destinations) || []).find(d => d.chemin === c) || null;
+}
+
+// A destination's kind, spelled out. "Same machine" is not a presentation
+// detail: it is the one destination that does not survive the failure you are
+// backing up against, and the reader has to know that before choosing it, not
+// after.
+const COFFRE_GENRES = {
+  externe: 'Disque branché',
+  nuage: 'Dossier synchronisé',
+  local: 'Même machine',
+};
+
+function renderCoffreResume() {
+  const el = $('coffre-resume');
+  if (!el) return;
+  if (!COFFRE) { el.innerHTML = ''; return; }
+  const choix = COFFRE.choix || [];
+  const noms = (COFFRE.sources || []).filter(s => choix.includes(s.cle))
+    .map(s => t(s.libelle));
+  const poids = coffrePoids(choix);
+  const dest = coffreDestCourante();
+  const plan = ((DATA.config || {}).schedule || {}).sauvegarde || 'never';
+  const dernier = (COFFRE.lots || [])[0];
+  const lignes = [
+    ['Ce qui est copié', noms.length
+      ? esc(noms.join(', ')) + '<br><span class="mono">'
+        + esc(coffrePoidsTexte(poids)) + '</span>'
+      : '<span class="cvide">' + esc(t('Rien de choisi')) + '</span>'],
+    ['Où', COFFRE.dest
+      ? '<span class="mono" data-i18n-skip>' + esc(COFFRE.dest) + '</span>'
+        + (dest ? '<br><span class="mono">' + esc(t(COFFRE_GENRES[dest.genre] || ''))
+                  + ' · ' + esc(fmt(dest.libre)) + ' ' + esc(t('libres')) + '</span>' : '')
+        + (COFFRE.dest_erreur ? '<br><span class="cvide">' + esc(COFFRE.dest_erreur)
+                                + '</span>' : '')
+      : '<span class="cvide">' + esc(t('Aucune destination')) + '</span>'],
+    ['Rythme', esc(t((SCHED_PRESETS.find(x => x[0] === String(plan).split(':')[0])
+                      || SCHED_PRESETS[0])[1]))],
+    ['Dernière', dernier
+      ? '<span class="mono">' + esc(dernier.date) + '</span>'
+        + (dernier.complet ? '' : ' <span class="cvide">' + esc(t('(interrompue)')) + '</span>')
+      : '<span class="cvide">' + esc(t('Jamais')) + '</span>'],
+  ];
+  el.innerHTML = lignes.map(([k, v]) =>
+    '<div class="setrow"><div class="setlab"><b>' + esc(t(k)) + '</b></div>'
+    + '<div class="setctl coffreval">' + v + '</div></div>').join('');
+}
+
+function renderCoffreLots() {
+  const el = $('coffre-lots');
+  if (!el) return;
+  const lots = (COFFRE && COFFRE.lots) || [];
+  if (!lots.length) {
+    el.innerHTML = '<div class="empty">'
+      + esc(t('Aucune sauvegarde à cette destination pour l\'instant.')) + '</div>';
+    return;
+  }
+  el.innerHTML = '<p class="lead" style="margin:12px 18px">'
+    + esc(tpl('On en garde %d ; au-delà, la plus ancienne part.', COFFRE.garder))
+    + '</p><div class="card">'
+    + lots.map(l => '<div class="row"><span class="grow">'
+        + '<div class="fname" data-i18n-skip>' + esc(l.nom) + '</div>'
+        + '<span class="mono">' + esc(l.date) + ' · '
+        + esc((l.sources || []).map(c => t(((COFFRE.sources || [])
+              .find(s => s.cle === c) || {}).libelle || c)).join(', ')) + '</span></span>'
+        + (l.complet ? '' : '<span class="tag t-DLC">' + esc(t('interrompue')) + '</span>')
+        + '<span class="mono">' + countPhrase(l.fichiers, '{fichier|fichiers}') + '</span>'
+        + '<span class="size">' + fmt(l.octets) + '</span></div>').join('')
+    + '</div>';
+}
+
+// ---- la fenêtre
+
+function coffreBlocSources() {
+  const ap = (COFFRE.apercu || {}).detail || [];
+  return '<div class="coffrebloc"><h4>' + esc(t('Que sauvegarder')) + '</h4>'
+    + (COFFRE.sources || []).map(src => {
+        const info = ap.find(d => d.cle === src.cle) || {};
+        const coche = COFFRE_SEL.sources.includes(src.cle);
+        const detail = info.octets == null
+          ? t('sur la console — taille connue au moment de la copie')
+          : info.fichiers
+            ? countPhrase(info.fichiers, '{fichier|fichiers}') + ' · ' + fmt(info.octets)
+            : t('rien à copier');
+        return '<label class="' + (info.fichiers === 0 ? 'coffreopt vide' : 'coffreopt') + '">'
+          + '<input type="checkbox" data-act-change="coffreSource" data-arg="'
+          + esc(src.cle) + '"' + (coche ? ' checked' : '') + '>'
+          + '<span class="grow"><b>' + esc(t(src.libelle)) + '</b>'
+          + '<span class="mono">' + esc(detail) + '</span></span></label>';
+      }).join('')
+    + '</div>';
+}
+
+function coffreBlocConsole() {
+  // The question only arises if something living on the console is being
+  // copied: showing a choice with no effect is worse than showing none.
+  if (!COFFRE_SEL.sources.includes('sauvegardes')) return '';
+  const liste = (CONSOLES.devices || []);
+  const relie = !!CONN.kind;
+  return '<div class="coffrebloc"><h4>' + esc(t('Depuis quelle console')) + '</h4>'
+    + (liste.length
+        ? '<select data-act-change="coffreConsole">'
+          + liste.map(d => '<option value="' + esc(d.id) + '"'
+              + (d.id === CONSOLES.active_device ? ' selected' : '') + '>'
+              + esc(d.nom) + '</option>').join('') + '</select>'
+        : '<p class="lead">' + esc(t('Aucune console déclarée.')) + '</p>')
+    + '<p class="lead" style="margin:8px 0 0">'
+    + esc(relie ? t('Connectée : ses sauvegardes de jeu seront lues.')
+                : t('Non connectée : ses sauvegardes de jeu seront laissées de côté.'))
+    + '</p></div>';
+}
+
+function coffreBlocDest() {
+  const dests = (COFFRE.destinations || []);
+  const choisie = COFFRE_SEL.dest;
+  const connue = dests.some(d => d.chemin === choisie);
+  const cartes = dests.map(d =>
+    '<button class="' + (d.chemin === choisie ? 'coffredest on' : 'coffredest') + '"'
+    + ' data-act="coffreDest" data-arg="' + esc(d.chemin) + '">'
+    // A disk's name is DATA and must not be translated; the one destination we
+    // name ourselves is the service's own folder, so it goes through `t()`
+    // here rather than through the sweep.
+    + '<b data-i18n-skip>' + esc(d.genre === 'local' ? t(d.nom) : d.nom) + '</b>'
+    + '<span class="mono" data-i18n-skip>' + esc(d.chemin) + '</span>'
+    + '<span class="coffremeta">' + esc(t(COFFRE_GENRES[d.genre] || ''))
+    + ' · ' + esc(fmt(d.libre)) + ' ' + esc(t('libres'))
+    + (d.lots ? ' · ' + countPhrase(d.lots, '{sauvegarde|sauvegardes}') : '')
+    + '</span></button>').join('');
+  return '<div class="coffrebloc"><h4>' + esc(t('Où les poser')) + '</h4>'
+    + '<p class="lead">' + esc(t('Un disque qu\'on débranche, ou un dossier que '
+        + 'Dropbox, Drive ou Nextcloud synchronisent déjà : Romule y écrit des '
+        + 'fichiers, c\'est leur client qui les emporte. Aucun compte à donner ici.'))
+    + '</p>'
+    + (cartes || '<p class="lead">' + esc(t('Aucun support détecté.')) + '</p>')
+    + (choisie && !connue
+        ? '<div class="coffredest on"><b>' + esc(t('Dossier choisi')) + '</b>'
+          + '<span class="mono" data-i18n-skip>' + esc(choisie) + '</span></div>'
+        : '')
+    + '<div class="bar" style="margin-top:10px">'
+    + '<button class="ghost" data-act="coffreParcourir">'
+    + esc(t('Choisir un autre dossier…')) + '</button></div>'
+    + coffreNavigateur()
+    + '</div>';
+}
+
+// The folder browser, inside the dialog. It is here rather than in the general
+// navigation dialog because folders get CREATED here, which the other one does
+// not do — and because leaving and coming back would lose the answers already
+// given.
+function coffreNavigateur() {
+  if (!COFFRE_DOSS) return '';
+  const d = COFFRE_DOSS;
+  if (d.error) {
+    return '<div class="onbnote">' + esc(d.error) + '</div>';
+  }
+  const sous = (d.dossiers || []).filter(x => !x.cache).slice(0, 400);
+  return '<div class="coffrenav">'
+    + '<div class="crumb"><span class="mono" data-i18n-skip>' + esc(d.chemin) + '</span></div>'
+    + '<div class="bar">'
+    + (d.parent ? '<button class="ghost" data-act="coffreParcourir" data-arg="'
+        + esc(d.parent) + '">' + esc(t('Dossier parent')) + '</button>' : '')
+    + '<button class="ghost" data-act="coffreNouveauDossier">'
+    + esc(t('Nouveau dossier…')) + '</button>'
+    + '<span style="flex:1"></span>'
+    + '<button class="go" data-act="coffreDest" data-arg="' + esc(d.chemin) + '">'
+    + esc(t('Utiliser ce dossier')) + '</button></div>'
+    + (sous.length
+        ? '<div class="coffreliste">' + sous.map(x =>
+            '<button class="brow dir" data-act="coffreParcourir" data-arg="'
+            + esc(x.chemin) + '" data-i18n-skip>' + esc(x.nom) + '</button>').join('')
+          + '</div>'
+        : '<div class="empty">' + esc(t('Aucun sous-dossier.')) + '</div>')
+    + '</div>';
+}
+
+function coffreBlocRythme() {
+  const plan = String(((DATA.config || {}).schedule || {}).sauvegarde || 'never');
+  const nuit = plan.startsWith('nightly');
+  const heure = nuit ? parseInt(plan.split(':')[1] || '3', 10) : 3;
+  return '<div class="coffrebloc"><h4>' + esc(t('À quel rythme')) + '</h4>'
+    + '<div class="bar">'
+    + '<select data-act-change="setSchedule" data-arg="sauvegarde">'
+    + SCHED_PRESETS.map(([p, l]) => '<option value="' + p + '"'
+        + (p === (nuit ? 'nightly' : plan) ? ' selected' : '') + '>'
+        + esc(t(l)) + '</option>').join('') + '</select>'
+    + '<select data-act-change="setSchedule" data-arg="sauvegarde" data-hour="1"'
+    + (nuit ? '' : ' hidden') + '>'
+    + Array.from({length: 24}, (_, h) => '<option value="' + h + '"'
+        + (h === heure ? ' selected' : '') + '>' + String(h).padStart(2, '0')
+        + ':00</option>').join('') + '</select>'
+    + '</div>'
+    + '<label class="coffrenb">' + esc(t('Sauvegardes conservées'))
+    + '<input type="number" min="1" max="99" value="' + esc(COFFRE_SEL.garder)
+    + '" data-act-change="coffreGarder"></label>'
+    + '<p class="lead" style="margin:8px 0 0">'
+    + esc(t('Au-delà, la plus ancienne est supprimée — une interrompue avant '
+            + 'une complète.')) + '</p></div>';
+}
+
+function coffrePied() {
+  const poids = coffrePoids(COFFRE_SEL.sources);
+  const dest = coffreDestCourante();
+  const libre = dest ? dest.libre : null;
+  // A refusal, not a warning. Finding out there is no room at 94 % of a copy
+  // is finding out too late, and it leaves a half-written batch that looks like
+  // a whole one.
+  const court = libre != null && poids.octets > libre;
+  const pret = !!COFFRE_SEL.sources.length && !!COFFRE_SEL.dest && !court;
+  return '<div class="coffrepied">'
+    + '<div class="' + (court ? 'coffresomme court' : 'coffresomme') + '">'
+    + esc(tpl('À copier : %s', coffrePoidsTexte(poids)))
+    + (libre != null ? ' · ' + esc(tpl('%s libres à destination', fmt(libre))) : '')
+    + (court ? '<br>' + esc(t('Il n\'y a pas la place : choisis une autre '
+                              + 'destination, ou décoche des sources.')) : '')
+    + '</div>'
+    + '<div class="bar">'
+    + '<button class="go" data-act="coffreLancer"' + (pret ? '' : ' disabled') + '>'
+    + esc(t('Sauvegarder maintenant')) + '</button>'
+    + '<button class="ghost" data-act="coffreEnregistrer">'
+    + esc(t('Enregistrer sans lancer')) + '</button></div></div>';
+}
+
+function renderCoffre() {
+  const el = $('coffre-corps');
+  if (!el || !COFFRE || !COFFRE_SEL) return;
+  el.innerHTML = coffreBlocSources() + coffreBlocConsole() + coffreBlocDest()
+    + coffreBlocRythme() + coffrePied();
 }
 
 // Where each service's own instructions live. Romule cannot explain six
@@ -4601,8 +4908,11 @@ const app = {
     // `detect()` already chains into reading the files and the NAND: doing it
     // again here doubled every call, and every notification.
     await this.detect();
-    if (!CONN.kind) return;                 // nothing to read: we stay offline
-    this.ecLoad();
+    // `ecLoad()` used to be called here, and here ONLY: a console connected
+    // after startup — or settings opened later — left the table empty until
+    // someone pressed « Relire ». `ecSync()` is called from every place the
+    // answer can change, and loads when the block is actually on screen.
+    ecSync();
   },
   setFilter(f) {
     FILTER = f; PAGE = 0;   // changing filter always returns to the first page
@@ -4859,6 +5169,120 @@ const app = {
       : '<div class="empty">Aucune sauvegarde enregistrée pour l\'instant.</div>');
   },
 
+  // ---- the vault
+  async coffreEtat(discret) {
+    const r = await api('/api/coffre', {}, discret);
+    if (r.error) return null;
+    COFFRE = r;
+    renderCoffreResume();
+    renderCoffreLots();
+    return r;
+  },
+  async coffreOuvrir() {
+    const r = await this.coffreEtat();
+    if (!r) return;
+    // The dialog works on a copy: closing without saving must really change
+    // nothing.
+    COFFRE_SEL = {sources: (r.choix || []).slice(), dest: r.dest || '',
+                  garder: r.garder || 5};
+    COFFRE_DOSS = null;
+    renderCoffre();
+    $('coffremodal').classList.remove('closing');
+    $('coffremodal').classList.add('open');
+  },
+  closeCoffre(e) { if (!e || e.target === $('coffremodal')) this.coffreFermer(); },
+  coffreFermer() {
+    closeOverlay($('coffremodal'), false);
+    COFFRE_SEL = null; COFFRE_DOSS = null;
+  },
+  coffreSource(cle) {
+    if (!COFFRE_SEL) return;
+    const i = COFFRE_SEL.sources.indexOf(cle);
+    if (i < 0) COFFRE_SEL.sources.push(cle); else COFFRE_SEL.sources.splice(i, 1);
+    renderCoffre();
+  },
+  coffreDest(chemin) {
+    if (!COFFRE_SEL) return;
+    COFFRE_SEL.dest = chemin || '';
+    COFFRE_DOSS = null;
+    renderCoffre();
+  },
+  coffreGarder() {
+    const champ = $('coffre-corps').querySelector('[data-act-change="coffreGarder"]');
+    if (!champ || !COFFRE_SEL) return;
+    COFFRE_SEL.garder = Math.max(1, Math.min(99, parseInt(champ.value, 10) || 5));
+    renderCoffre();
+  },
+  async coffreConsole() {
+    const sel = $('coffre-corps').querySelector('[data-act-change="coffreConsole"]');
+    if (!sel) return;
+    await this._consoles('choisir', {id: sel.value});
+    await this.detect();
+    renderCoffre();
+  },
+  // The browser stays INSIDE the dialog: folders are created here, which the
+  // general navigation dialog does not do, and leaving would lose the answers
+  // already given.
+  async coffreParcourir(chemin) {
+    const r = await api('/api/parcourir', {chemin: chemin || ''}, true);
+    COFFRE_DOSS = r;
+    renderCoffre();
+  },
+  async coffreNouveauDossier() {
+    if (!COFFRE_DOSS || !COFFRE_DOSS.chemin) return;
+    const nom = prompt(t('Nom du nouveau dossier :'), 'Romule');
+    if (!nom) return;
+    const r = await api('/api/dossier-creer',
+                        {chemin: COFFRE_DOSS.chemin, nom: String(nom)});
+    if (r.error) return;
+    await this.coffreParcourir(r.chemin);
+  },
+  async _coffreSauver() {
+    if (!COFFRE_SEL) return false;
+    await this.saveField('backup_sources', COFFRE_SEL.sources);
+    await this.saveField('backup_keep', COFFRE_SEL.garder);
+    await this.saveField('backup_dest', COFFRE_SEL.dest);
+    // The server refuses an unreadable destination and keeps the old one, so
+    // we read it back rather than display what we thought we had written.
+    const dest = (DATA.config || {}).backup_dest || '';
+    if (COFFRE_SEL.dest && dest !== COFFRE_SEL.dest) {
+      toast(t('Destination refusée : elle est restée inchangée.'), 'warn');
+      COFFRE_SEL.dest = dest;
+      return false;
+    }
+    return true;
+  },
+  async coffreEnregistrer() {
+    if (!await this._coffreSauver()) return renderCoffre();
+    await this.coffreEtat(true);
+    this.coffreFermer();
+    toast(t('Sauvegarde configurée.'), 'ok');
+  },
+  // From the dialog as from the section: the same gesture, and it saves first.
+  // Starting a backup with a destination just changed but not yet written means
+  // writing into the old one.
+  async coffreLancer() {
+    if (COFFRE_SEL) {
+      if (!await this._coffreSauver()) return renderCoffre();
+    } else if (!COFFRE) {
+      await this.coffreEtat(true);
+    }
+    const cfg = DATA.config || {};
+    if (!(cfg.backup_dest || '')) {
+      toast(t('Choisis d\'abord une destination.'), 'warn');
+      return this.coffreOuvrir();
+    }
+    if (!((cfg.backup_sources || []).length)) {
+      toast(t('Choisis d\'abord ce qu\'il faut sauvegarder.'), 'warn');
+      return this.coffreOuvrir();
+    }
+    const r = await api('/api/coffre-lancer', {});
+    if (r.error) return;
+    if (COFFRE_SEL) this.coffreFermer();
+    toast(t('Sauvegarde lancée.'), 'ok');
+    this.poll();
+  },
+
   // ---- controle de la tache
   async togglePause() {
     const j = await api('/api/job-control', {action: this._paused ? 'resume' : 'pause'});
@@ -5058,9 +5482,14 @@ const app = {
     sel.value = avant || '';
   },
   async ecLoad() {
+    // Read from the console, so: no console, no reading. Without this the
+    // route answered an empty configuration and the table drew every setting
+    // blank — indistinguishable from settings genuinely left at their default.
+    if (!CONN.kind) { EC_CHARGE = false; return ecSync(); }
     ECTID = $('ec-scope').value || '';
     const r = await api('/api/eden-config', {tid: ECTID});
-    if (r.error) return;
+    if (r.error) { EC_CHARGE = false; return; }
+    EC_CHARGE = true;
     this.ecFillScope(r.jeux);
     $('ec-scope').value = ECTID;
     renderEcTable(r.valeurs, r.existe);
@@ -5345,6 +5774,27 @@ const app = {
     this.closeOnboard();
     this.tab('settings');
     showSettingsSection('sec-acces');
+  },
+
+  // From the header, when no console answers. The header says WHAT is missing;
+  // the link says where it is fixed. It used to offer to pair on the spot,
+  // which opened — inside the header — a panel that lives in the settings:
+  // the same destination, minus the screen that explains it.
+  goToConsoles() {
+    this.closeOnboard();
+    this.tab('settings');
+    showSettingsSection('sec-console');
+    const cible = $('groupe-mesconsoles');
+    if (cible) cible.scrollIntoView({block: 'start', behavior: 'smooth'});
+  },
+
+  // The product's name is the way home. On every interface that has one, the
+  // logo goes back to the main screen — here the library — and this one did
+  // nothing at all.
+  goLibrary() {
+    this.closeOnboard();
+    this.tab('jeux');
+    scrollTo({top: 0, behavior: 'smooth'});
   },
 
   // The emulator profile dictates every path on the console: changing it from
@@ -6940,6 +7390,9 @@ const app = {
       } else toast('Terminé.', 'ok');
       this.scan();
       if (NANDST.length) this.loadNand();
+      // A batch may just have appeared at the destination: the summary and the
+      // list say so at once rather than at the next visit.
+      if (COFFRE) this.coffreEtat(true);
       if (!isSwitch()) this.setSystem(SYS);
     }
   },
@@ -7996,6 +8449,9 @@ function showSettingsSection(id, memoriser) {
   if (memoriser !== false) {
     try { localStorage.setItem('reglages-section', SECTION_ACTIVE); } catch (e) {}
   }
+  // The vault inspects the mounted volumes: we read it when its section opens,
+  // and not at startup, where nobody asked for it.
+  if (SECTION_ACTIVE === 'sec-sauvegarde') app.coffreEtat(true);
   mesurerBarres();
 }
 
@@ -8221,6 +8677,7 @@ const ACTES = new Set([
   'applyMain', 'trashSelection', 'deleteFromConsole',
   'actionFab', 'enableGame', 'refreshAll', 'refreshEntries',
   'addAccount', 'addPlatform', 'apIcone', 'goToSystem', 'fullAnalysis',
+  'goLibrary', 'goToConsoles',
   'ouvrirConnexion', 'connectLien', 'connectRetour', 'closeConnect',
   'connectFermer',
   'actualiserConsole',
@@ -8249,6 +8706,9 @@ const ACTES = new Set([
   'renderJournal', 'renderLib', 'reorganizeLocal', 'resumeTransfer',
   'restoreBackup', 'restore', 'saveAllSettings', 'sendGame',
   'closeNav', 'navFermer',
+  'coffreOuvrir', 'coffreFermer', 'coffreSource', 'coffreDest', 'coffreGarder',
+  'coffreConsole', 'coffreParcourir', 'coffreNouveauDossier',
+  'coffreEnregistrer', 'coffreLancer',
   'setMotion', 'setPerPage', 'setOrder', 'setSystem', 'setSize',
   'setTheme', 'setSort', 'setSchedule', 'showOnboard', 'testAuth', 'testIgdb',
   'chooseConsole', 'addConsole', 'renameConsole', 'removeConsole',
@@ -8267,6 +8727,7 @@ const ACTES = new Set([
 const ACTES_SPECIAUX = {
   'closeDialog': (el, ev) => app.closeDialog(ev),
   'closeGame': (el, ev) => app.closeGame(ev),
+  'closeCoffre': (el, ev) => app.closeCoffre(ev),
   'toggleFavPop': (el, ev) => app.toggleFavPop(ev),
   'toggleTrashList': (el, ev) => app.toggleTrashList(ev),
   // Two arguments: `data-val` carries only one, and making it carry a list

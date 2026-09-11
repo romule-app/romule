@@ -58,6 +58,7 @@ portable et un téléphone](images/apercu.jpg)
 - **[Configuration](configuration.md)** — chaque réglage et chaque variable
 - **[API HTTP](api.md)** — interroger ta ludothèque depuis un script ou un tableau de bord
 - **[Rôles et accès](roles.md)** — qui a le droit de quoi, et les groupes SSO
+- **[Sauvegardes](sauvegardes.md)** — quoi copier, où, et à quel rythme
 
 </div>
 

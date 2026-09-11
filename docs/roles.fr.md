@@ -63,7 +63,7 @@ est dit ici plutôt que supposé.
 
 ## Ce qu'un non-administrateur ne peut pas faire
 
-Trente-quatre routes lui sont réservées côté serveur. Elles se rangent en sept
+Trente-sept routes lui sont réservées côté serveur. Elles se rangent en sept
 familles :
 
 - **effacer ou remettre en place des données** — restaurer une sauvegarde
@@ -74,10 +74,13 @@ familles :
   d'émulateur, NAND ;
 - **changer la liaison à la console** — appairage Wi-Fi, oubli d'un appareil ;
 - **désigner où le service lit et écrit sur la machine hôte** — le sélecteur
-  de dossiers, l'emplacement de la ludothèque et la liste des consoles.
-  Parcourir le système de fichiers de l'hôte est une primitive de divulgation,
-  et elle est traitée comme telle ; déclarer une console change huit réglages
-  d'un coup, ce qui est la même chose par un autre chemin ;
+  de dossiers, l'emplacement de la ludothèque, la liste des consoles et le
+  [coffre](sauvegardes.fr.md). Parcourir le système de fichiers de l'hôte est
+  une primitive de divulgation, et elle est traitée comme telle ; déclarer une
+  console change huit réglages d'un coup, ce qui est la même chose par un autre
+  chemin ; et une sauvegarde lit toute la ludothèque puis écrit des gigaoctets
+  à un chemin que l'appelant désigne — les deux moitiés sont affaire
+  d'administrateur ;
 - **émettre vers l'extérieur au nom du service** — les destinations de
   [notification](configuration.md#notifications). Un webhook Discord est un
   secret porteur : qui l'a peut écrire dans le salon. Tester une adresse
@@ -89,7 +92,7 @@ familles :
 L'interface masque ce que le rôle ne peut pas utiliser : un non-administrateur
 ne voit pas l'onglet Réglages. C'est une politesse, **pas** la frontière de
 sécurité. Le serveur refuse quoi qu'affiche l'interface, et la suite de tests
-vérifie les trente-quatre routes face à un compte ordinaire — pour les comptes
+vérifie les trente-sept routes face à un compte ordinaire — pour les comptes
 internes comme pour les sessions SSO.
 
 ## Les clés d'API sont une troisième chose

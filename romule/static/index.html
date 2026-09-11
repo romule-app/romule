@@ -20,7 +20,9 @@
          The "ROM | ULE" split is not arbitrary: the first three letters are the
          tool's subject, and the existing CSS already colours the second
          half. -->
-    <div class="brand" data-i18n-skip>Rom<span>ule</span></div>
+    <button class="brand" data-i18n-skip data-act="goLibrary" type="button"
+            title="Revenir à la bibliothèque"
+            aria-label="Revenir à la bibliothèque">Rom<span>ule</span></button>
     <nav class="tabs" id="tabs">
       <button data-tab="jeux" class="active" data-i18n="tab.jeux">Jeux</button>
       <button data-tab="settings" data-i18n="tab.settings">Réglages</button>
@@ -271,7 +273,7 @@
       <!-- The page is over 4 000 px long: without a table of contents, you
            hunt. The five entries answer "what am I setting right now?", not the
            code's internal structure. -->
-      <nav class="setnav" id="setnav" aria-label="Sections des réglages"><a href="#sec-console">Ta console</a><a href="#sec-biblio">Ta bibliothèque</a><a href="#sec-entretien">Entretien</a><a href="#sec-acces">Accès</a><a href="#sec-interface">Interface</a><a href="#sec-apropos">À propos</a><span class="setnav-state" id="savehint" role="status" aria-live="polite"></span></nav>
+      <nav class="setnav" id="setnav" aria-label="Sections des réglages"><a href="#sec-console">Ta console</a><a href="#sec-biblio">Ta bibliothèque</a><a href="#sec-sauvegarde">Sauvegardes</a><a href="#sec-entretien">Entretien</a><a href="#sec-acces">Accès</a><a href="#sec-interface">Interface</a><a href="#sec-apropos">À propos</a><span class="setnav-state" id="savehint" role="status" aria-live="polite"></span></nav>
 
       <section class="setsection" id="sec-console">
         <h3 class="sectitre">Ta console</h3>
@@ -282,7 +284,7 @@
            them: the folder, the pairing, the emulator. A selector further down
            would let someone change a setting for the console they were not
            looking at. -->
-      <div class="setgroup">
+      <div class="setgroup" id="groupe-mesconsoles">
         <div class="setgt">Mes consoles</div>
         <!-- One sentence. The previous three explained the DESIGN — why two
              consoles are not one overwritten setting — which is this file's
@@ -560,17 +562,11 @@
           <div class="setctl"><button data-act="erSync">Actualiser</button></div>
         </div>
       </div>
-      <div class="setgroup platform-group" data-plateforme="switch">
-        <div class="setgt">Sauvegardes de jeu</div>
-        <p class="lead" style="margin:12px 18px 10px">Tes progressions sont irremplaçables :
-          un jeu se réinstalle, pas 200 h de partie. Chaque sauvegarde est datée,
-          rien n'est jamais écrasé.</p>
-        <div class="bar">
-          <button class="go" data-act="backupSaves">Sauvegarder maintenant</button>
-          <button class="ghost" data-act="loadSaves">Voir les sauvegardes</button>
-        </div>
-        <div id="saves"></div>
-      </div>
+      <!-- "Game saves" used to live here, as a sub-part of the Switch
+           emulator. It belonged there on neither count: what gets backed up
+           does not depend on the emulator, and backing up is not a console
+           setting — it is a task, with a destination, a progress bar and a
+           rotation. See the "Backups" section. -->
       <!-- The emulator profile, next to the settings it governs.
            It used to open the section, on the grounds that it decides every
            path on the console. True, and beside the point: you choose a
@@ -597,6 +593,11 @@
              inside it: floating at the block's level they read as three more
              settings of the section rather than as what does something to the
              list above. -->
+        <!-- What the tool KNOWS, before what it offers. The table is read ON
+             the console: with no console it drew itself empty, and empty
+             fields read as settings at zero. This line says which of the two
+             cases you are looking at, and the controls follow it. -->
+        <div id="ec-etat" class="onbnote" hidden></div>
         <div class="ecbloc">
           <div class="bar">
             <select id="ec-scope" data-act-change="ecLoad"></select>
@@ -632,7 +633,7 @@
             <span id="d-ludo">Le dossier que Romule analyse. La configuration, les
               comptes et les jaquettes restent dans le dossier de données du
               service, et ne bougent pas avec lui.</span></div>
-          <div class="setctl setctl-duo">
+          <div class="setctl setctl-duo setctl-large">
             <div class="onbchemin mono" id="s-ludo">—</div>
             <button class="ghost" id="b-ludo" data-act="libOpen">Changer…</button>
           </div>
@@ -766,6 +767,34 @@
       </div>
       </div>
 
+      </section>
+
+      <!-- Its own section, not a sub-part of the emulator. What gets backed
+           up depends on no emulator; and backing up is not a setting but a
+           task: it has a destination, a progress bar, a journal and a
+           rotation. The detail is chosen in a dialog — four questions asked in
+           a row beat fifteen fields stacked in a page you came to for
+           something else. -->
+      <section class="setsection" id="sec-sauvegarde">
+        <h3 class="sectitre">Sauvegardes</h3>
+        <p class="sectxt">Ce qui ne se retélécharge pas, copié ailleurs que là où il vit.</p>
+
+        <div class="setgroup">
+          <div class="setgt">Le coffre</div>
+          <p class="lead" style="margin:12px 18px 10px">Une progression de 200 h ne
+            se retélécharge pas, et une copie posée sur le disque qui lâche n'est
+            pas une copie. Choisis quoi, où, et à quel rythme.</p>
+          <div id="coffre-resume"></div>
+          <div class="bar" style="margin:14px 18px 16px">
+            <button class="go" data-act="coffreLancer">Sauvegarder maintenant</button>
+            <button class="ghost" data-act="coffreOuvrir">Configurer…</button>
+          </div>
+        </div>
+
+        <div class="setgroup">
+          <div class="setgt">Ce qui est déjà à l'abri</div>
+          <div id="coffre-lots"></div>
+        </div>
       </section>
 
       <section class="setsection" id="sec-entretien">
@@ -1208,6 +1237,17 @@
     <div class="navtete"><b>Connecter la console</b>
       <button class="ghost" data-act="connectFermer">Fermer</button></div>
     <div id="connect-corps"></div>
+  </div>
+</div>
+<!-- The vault. One dialog, four questions in the order you ask them: what,
+     from which console, where, and how often. The body is drawn by
+     `renderCoffre()`: what it holds depends on what the machine found — mounted
+     volumes, synced folders — and that cannot be written out in advance. -->
+<div class="modal" id="coffremodal" data-act="closeCoffre">
+  <div class="obox navbox coffrebox">
+    <div class="navtete"><b>Sauvegarder</b>
+      <button class="ghost" data-act="coffreFermer">Fermer</button></div>
+    <div id="coffre-corps"></div>
   </div>
 </div>
 <div class="modal" id="navmodal" data-act="closeNav">

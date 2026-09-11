@@ -66,6 +66,16 @@
 - 🔌 **Scriptable.** A small, versioned
   [HTTP API](https://romule-app.github.io/romule/api/) with named, revocable
   keys — for a dashboard, a cron job, or a shell script.
+- 💾 **Backups that land somewhere else.** 200 hours of progress cannot be
+  downloaded again, and a copy on the disk that fails is not a copy. Pick what
+  (game saves, games, updates, DLC, covers, configuration — each shows what it
+  weighs), from which console, and where: Romule offers the disks you have
+  plugged in and the folders Dropbox, Drive or Nextcloud already sync — it
+  writes files, their client carries them away, and there is no account to hand
+  over. The room is checked **before** the copy, not at 94 %; progress carries
+  an ETA; each batch holds a manifest and restores by being copied back; and
+  rotation keeps the last few, an interrupted batch going before a complete
+  one. [Read more](https://romule-app.github.io/romule/sauvegardes/).
 - ↩️ **Reversible.** Sending a file to the trash does not ask you to confirm:
   it happens, and the toast offers *Undo*. Only what cannot be undone asks
   first.
@@ -284,7 +294,7 @@ must be known before it starts.
 `ROMULE_BIND` defaults to `127.0.0.1`, except in a container or when network
 access has been enabled — otherwise a published port would reach nothing.
 
-All 46 settings in the configuration file are edited from the interface and
+All 49 settings in the configuration file are edited from the interface and
 documented on the
 [documentation site](https://romule-app.github.io/romule/).
 

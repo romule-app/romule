@@ -110,6 +110,7 @@ nav:
       - Emulator profiles: profils.md
       - Roles and access: roles.md
       - Security and exposure: securite.md
+      - Backups: sauvegardes.md
       - Storage and performance: stockage.md
   - Help:
       - Troubleshooting: depannage.md

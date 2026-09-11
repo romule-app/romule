@@ -61,7 +61,7 @@ than assumed.
 
 ## What a non-administrator cannot do
 
-Thirty-four routes are reserved server-side. They fall into seven groups:
+Thirty-seven routes are reserved server-side. They fall into seven groups:
 
 - **erase or restore data** — restoring a backup puts the accounts file back,
   which would hand administration back to whoever lost it;
@@ -69,10 +69,12 @@ Thirty-four routes are reserved server-side. They fall into seven groups:
 - **write into another program's files** — emulator configuration, NAND;
 - **change the link to the console** — Wi‑Fi pairing, forgetting a device;
 - **choose where the service reads and writes on the host** — the folder
-  picker, the library location, and the list of consoles. Browsing the host's
-  filesystem is a disclosure primitive, so it is treated as one; declaring a
-  console changes eight settings at once, which is the same thing by another
-  route;
+  picker, the library location, the list of consoles, and the
+  [vault](sauvegardes.md). Browsing the host's filesystem is a disclosure
+  primitive, so it is treated as one; declaring a console changes eight
+  settings at once, which is the same thing by another route; and a backup
+  reads the whole library and writes gigabytes to a path the caller names —
+  both halves are administrator business;
 - **send outward in the service's name** — [notification](configuration.md#notifications)
   destinations. A Discord webhook is a bearer secret: whoever holds it can post
   in the channel. Testing an arbitrary address is also a port scanner by proxy,
@@ -82,7 +84,7 @@ Thirty-four routes are reserved server-side. They fall into seven groups:
 The interface hides what the role cannot use: a non-administrator does not see
 the Settings tab. That is a courtesy, **not** the security boundary. The server
 refuses regardless of what the interface shows, and the test suite checks all
-thirty-four routes against an ordinary account — for internal accounts and for
+thirty-seven routes against an ordinary account — for internal accounts and for
 SSO sessions alike.
 
 ## API keys are a third thing

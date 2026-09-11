@@ -364,6 +364,13 @@ DEFAULTS = {
     "notif_destinations": [],                     # Discord, Slack, Telegram, ntfy, Gotify, webhook
     "roms_root": "",                              # ROMs root on the console (multi-system)
     "saves_dir": "",                              # save folder on the console
+    # --- the vault (vault.py): what gets copied, where, and how many batches
+    # are kept. Empty = nothing is copied anywhere else, and that stays the
+    # default: a tool that starts writing to a disk nobody pointed it at is a
+    # tool people uninstall.
+    "backup_sources": ["sauvegardes"],
+    "backup_dest": "",
+    "backup_keep": 5,
     "wifi_addr": "",                              # the console's last Wi-Fi address
     "emuready": False,                            # reglages communautaires (beta)
     "emuready_device": "",                        # identifiant de MA variante de console

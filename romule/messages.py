@@ -283,6 +283,28 @@ C_ECHEC = 'ÉCHEC %s : %s'
 C_EXCLU = 'EXCLU %s : exige master_key_%d, tu as %d'
 C_MASTER_KEYS = 'Contrôle des master keys (%d fichier(s))…'
 C_OK_MO = 'OK  %s (%.1f Mo)'
+
+# --------------------------------------------------- the vault (vault.py)
+# A backup that says nothing is a backup nobody checks: every step goes through
+# the journal, the ones that go well included.
+CF_ABANDON_PLACE = "Abandon : la destination n'a pas la place, même après rotation."
+CF_CONSOLE_ABSENTE = 'Console non connectée : ses sauvegardes de jeu sont laissées de côté.'
+CF_DEBUT = 'Sauvegarde « %s » vers %s…'
+CF_DEST_ABSENTE = "Aucune destination choisie pour les sauvegardes."
+CF_DEST_ILLISIBLE = 'Destination inutilisable : %s'
+CF_DEST_INEXISTANTE = "Cette destination n'existe pas."
+CF_DEST_LECTURE_SEULE = 'Destination en lecture seule.'
+CF_FICHIER_ECHEC = '  Échec sur %s : %s'
+CF_NOM_VIDE = 'Donne un nom au dossier.'
+CF_INTERROMPUE = 'Sauvegarde interrompue : %d fichier(s), %s copiés.'
+CF_PLACE_INSUFFISANTE = 'Place insuffisante : %s à écrire, %s disponibles.'
+CF_PREVISION = 'À copier : %s. Disponible à destination : %s.'
+CF_RIEN_A_COPIER = "Rien à copier : aucune des sources choisies n'a de fichier."
+CF_RIEN_CHOISI = 'Aucune source choisie : rien à sauvegarder.'
+CF_ROTATION = 'Rotation : « %s » supprimé (on en garde %d).'
+CF_ROTATION_ECHEC = 'Rotation : « %s » non supprimé (%s).'
+CF_ROTATION_PLACE = 'Rotation anticipée pour faire de la place.'
+CF_TERMINEE = 'Sauvegarde terminée : %d fichier(s), %s, dans « %s ».'
 D_AUCUN_APPAREIL = 'Aucun appareil adb prêt (état : %s).'
 D_DECONNECTEE = 'Console déconnectée — transfert arrêté (%d/%d envoyés).'
 D_DEJA_CONSOLE = '%d fichier(s) déjà sur la console, ignoré(s).'

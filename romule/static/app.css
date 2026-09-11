@@ -12,6 +12,12 @@
   --largeur-page:1600px;
   --largeur-texte:1180px;
   --gouttiere:12px;
+  /* The drop-down arrow. The native one hugs the right edge and is drawn
+     differently by every engine: two neighbouring menus had neither the same
+     chevron nor the same margin. We draw it ourselves, at a distance written
+     here, and `--select-pr` reserves exactly the room it takes. */
+  --fleche-x:13px;
+  --select-pr:34px;
   --mono:"SF Mono",SFMono-Regular,Menlo,monospace;
   --disp:"Avenir Next Condensed","Helvetica Neue",sans-serif;
   --body:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
@@ -28,8 +34,14 @@ header{position:sticky;top:0;z-index:20;background:var(--verre);
   backdrop-filter:blur(10px);border-bottom:1px solid var(--rule)}
 .head-in{max-width:var(--largeur-page);margin:0 auto;padding:12px 22px;
   display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+/* The product's name is the way home: it is a button, and must therefore shed
+   everything the component layer gives buttons — fill, border, padding —
+   without which the title would appear inside a frame. */
 .brand{font-family:var(--disp);font-weight:600;text-transform:uppercase;
-  letter-spacing:.16em;font-size:15px;white-space:nowrap}
+  letter-spacing:.16em;font-size:15px;white-space:nowrap;
+  background:none;border:0;padding:0;color:var(--ink);cursor:pointer;
+  transition:opacity .15s var(--ease)}
+.brand:hover:not(:disabled){background:none;border-color:transparent;opacity:.72}
 .brand span{color:var(--amber)}
 nav.tabs{display:flex;gap:4px;background:var(--panel);border:1px solid var(--rule);
   border-radius:9px;padding:3px}
@@ -143,9 +155,19 @@ input[type=radio]{accent-color:var(--amber);cursor:pointer}
   font-size:12px;transition:color .2s,background .2s}
 .seg button.on{background:var(--panel2);color:var(--amber);box-shadow:inset 0 0 0 1px var(--rule)}
 .seg button:hover:not(.on){color:var(--ink);transform:none}
-select{cursor:pointer}
+/* One arrow for every drop-down: same drawing, same gap from the edge.
+   `appearance:none` removes the engine's own — without it the two overlap. Any
+   rule that gives a `select` its `padding` back must keep `--select-pr` on the
+   right, or the text runs under the chevron. */
+select{cursor:pointer;
+  -webkit-appearance:none;-moz-appearance:none;appearance:none;
+  background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7' viewBox='0 0 11 7'%3E%3Cpath d='M1 1l4.5 4.5L10 1' fill='none' stroke='%238a8a96' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right var(--fleche-x) center;
+  padding-right:var(--select-pr)}
+select::-ms-expand{display:none}
 #sysel{font-family:var(--disp);text-transform:uppercase;letter-spacing:.1em;font-size:12px;
-  font-weight:600;color:var(--amber);padding:8px 12px;min-width:170px}
+  font-weight:600;color:var(--amber);padding:8px var(--select-pr) 8px 12px;min-width:170px}
 
 /* ---------------------------------------------------------------- bibliotheque v2 */
 .libbar{position:sticky;top:60px;z-index:10;display:flex;gap:10px;flex-wrap:wrap;align-items:center;
@@ -473,6 +495,12 @@ img.empty{visibility:hidden}
 .brow .ic{width:18px;text-align:center;color:var(--amber)}
 .brow .fn{flex:1;font-family:var(--mono);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .brow.file .fn{color:var(--mute)}
+/* A folder the service is not allowed to read. The class had always been set
+   and had no style at all: a forbidden folder looked exactly like the others,
+   and did not answer the click. It now says what it knows. */
+.brow.muet{opacity:.45;cursor:not-allowed}
+.brow.muet:hover{background:none}
+.brow.muet .ic{color:var(--mute)}
 .brow.game .ic{color:var(--green)}
 
 /* the pill legend */
@@ -834,6 +862,7 @@ header,.libbar{padding-left:env(safe-area-inset-left,0);
   .chip b{font-size:13px}
   input[type=text],input[type=password],input[type=email],input[type=search],
   input[type=url],input[type=number],select,textarea{padding:6px 9px;font-size:12px}
+  select{padding-right:var(--select-pr)}
   input[type=checkbox]{width:16px;height:16px}
   .sw{width:38px;height:22px}
   .sw span::before{width:16px;height:16px}
@@ -883,8 +912,8 @@ header,.libbar{padding-left:env(safe-area-inset-left,0);
   height:var(--h-controle);box-sizing:border-box}
 .toolbar .szbtn{display:inline-flex;align-items:center;justify-content:center}
 .tlbl{display:inline-flex;align-items:center;gap:8px;color:var(--mute);font-size:12.5px}
-.tlbl select{background:var(--panel2);color:var(--ink);border:1px solid var(--rule);
-  border-radius:8px;padding:6px 9px;font-size:12.5px}
+.tlbl select{background-color:var(--panel2);color:var(--ink);border:1px solid var(--rule);
+  border-radius:8px;padding:6px var(--select-pr) 6px 9px;font-size:12.5px}
 .sizes{display:inline-flex;border:1px solid var(--rule);border-radius:9px;overflow:hidden}
 .szbtn{border:0;background:var(--panel);color:var(--mute);padding:6px 11px;font-size:11px;
   letter-spacing:1px;cursor:pointer;transition:background .15s,color .15s}
@@ -961,7 +990,10 @@ header,.libbar{padding-left:env(safe-area-inset-left,0);
 @media (prefers-reduced-motion:reduce){.cdot.on,.dot.on{animation:none}}
 
 /* ================================================================ filtres avances */
-.favwrap{position:relative}
+.favwrap{position:relative;display:inline-flex;align-items:stretch}
+/* The row's height is carried by the wrapper: it has to reach down to the
+   button, otherwise the button floats, shorter than its neighbours. */
+.favwrap > button{height:100%;border-radius:8px}
 .favpop{position:absolute;left:0;top:calc(100% + 8px);z-index:26;width:262px;padding:12px;
   border-radius:12px;background:var(--panel);border:1px solid var(--rule);
   box-shadow:0 18px 40px -18px var(--ombre);opacity:0;transform:translateY(-6px);
@@ -3577,6 +3609,18 @@ body.compact .filters{margin-bottom:2px}
    carries its own vertical margin elsewhere; here the row aligns, not it. */
 .setctl-duo .onbchemin{flex:1 1 auto;margin:0;min-width:0}
 .setctl-duo button{flex:0 0 auto}
+/* This margin is made for a column (the wizard), where the button follows the
+   path. On a centred row it separates nothing: it offsets. */
+.setctl-duo .onbchemin + button{margin-top:0}
+/* A path and its button do not wrap — ON A WIDE SCREEN. The path already
+   shortens itself from the left, that is what `.onbchemin` is for, so wrapping
+   there buys nothing and drops the button onto a line of its own under a field
+   it belongs beside. On a phone the row is a column and the button takes the
+   full width: forbidding the wrap unconditionally pushed it 29 px past the
+   block's edge, which the responsive audit reported at once. */
+@media (min-width:700px){
+  .setctl-duo:has(.onbchemin){flex-wrap:nowrap}
+}
 
 /* The platform logo. A silhouette per family — a home pad, a handheld, an
    arcade cabinet, a screen — tinted per maker. Not the real marks: shipping
@@ -3631,6 +3675,70 @@ div.pfcard{border:1px solid var(--line);background:var(--surface-2);
    modal opened behind its caller reads as a click that did nothing. */
 #navmodal{z-index:70}
 #connectmodal{z-index:62}
+#coffremodal{z-index:64}
+
+/* -------------------------------------------------------------- the vault
+   Four questions asked in a row — what, from which console, where, how often —
+   and not fifteen stacked fields. The dialog is wider than the folder one: it
+   carries two-column rows, not a single column of names. */
+.coffrebox{max-width:680px}
+#coffre-corps{max-height:70vh;overflow:auto;margin:-4px -4px 0;padding:4px}
+.coffrebloc{border-top:1px solid var(--rule);padding:16px 0 4px}
+.coffrebloc:first-child{border-top:0;padding-top:4px}
+.coffrebloc h4{font-family:var(--disp);text-transform:uppercase;letter-spacing:.12em;
+  font-size:12px;color:var(--amber);margin:0 0 10px}
+.coffrebloc .lead{margin-bottom:10px}
+
+/* A source: the box, the name, and what it weighs. The weight is there
+   because that is the question you ask while ticking, not three screens on. */
+.coffreopt{display:flex;align-items:flex-start;gap:11px;padding:9px 11px;
+  border:1px solid var(--rule);border-radius:9px;margin-bottom:7px;cursor:pointer;
+  transition:border-color .15s var(--ease),background .15s var(--ease)}
+.coffreopt:hover{border-color:var(--info);background:var(--surface-2)}
+.coffreopt input{margin-top:2px;flex:0 0 auto}
+.coffreopt .grow{display:flex;flex-direction:column;gap:2px;min-width:0}
+.coffreopt b{font-size:13px;color:var(--text)}
+.coffreopt .mono{font-size:11.5px;color:var(--mute)}
+/* Nothing to copy: still readable, but not presented as a useful choice. */
+.coffreopt.vide{opacity:.55}
+
+/* A destination. A button and not a list row: you choose it, and the choice
+   shows without having to read the list again. */
+.coffredest{display:flex;flex-direction:column;align-items:flex-start;gap:3px;
+  width:100%;text-align:left;padding:11px 13px;margin-bottom:7px;border-radius:9px}
+.coffredest.on{--btn-trait:var(--primary);--btn-fond:var(--primary-doux);
+  --btn-trait-survol:var(--primary)}
+.coffredest b{font-size:13px}
+.coffredest .mono{font-size:11.5px;color:var(--mute);max-width:100%;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.coffremeta{font-size:11.5px;color:var(--mute)}
+
+.coffrenav{border:1px solid var(--rule);border-radius:10px;padding:11px 13px;
+  margin-top:10px;background:var(--puits)}
+.coffrenav .crumb{margin-bottom:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.coffreliste{max-height:230px;overflow:auto;border:1px solid var(--rule);
+  border-radius:8px;background:var(--panel)}
+.coffreliste .brow{width:100%;text-align:left;background:none;border-radius:0;
+  border-left:0;border-right:0;border-bottom:0;font-family:var(--mono);font-size:12.5px}
+
+.coffrenb{display:flex;align-items:center;gap:10px;margin-top:12px;
+  font-size:12.5px;color:var(--text-2)}
+.coffrenb input{width:88px;text-align:center;flex:0 0 auto}
+
+/* The total and the two buttons stay in view. The body scrolls — six sources,
+   a browser and a schedule do not fit in 70vh — and a footer that scrolls away
+   puts "Back up now" below a fold nobody knows is there. */
+.coffrepied{border-top:1px solid var(--rule);margin-top:16px;padding:14px 0 2px;
+  position:sticky;bottom:-4px;background:var(--panel);z-index:1}
+/* The total BEFORE the buttons: it is what says whether either makes sense. */
+.coffresomme{font-size:12.5px;color:var(--text-2);margin-bottom:12px;line-height:1.55}
+.coffresomme.court{color:var(--danger)}
+/* The section's summary: a value, not a control — so it does not take the
+   width reserved for fields. */
+.setctl.coffreval{font-size:12.5px;color:var(--text-2);line-height:1.6;
+  align-items:flex-start;flex-direction:column;gap:2px}
+.setctl.coffreval .mono{font-size:11.5px;color:var(--mute);word-break:break-all}
+@media (max-width:640px){.coffrebox{max-width:100%}}
 /* The class beat the attribute: `display:inline-flex` overrides the UA's
    `[hidden]{display:none}`, so the dismiss button hid nothing. */
 .majpuce[hidden]{display:none}
