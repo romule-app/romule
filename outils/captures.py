@@ -184,6 +184,60 @@ def _fiche(chemin, titre):
 # `setSort('nom')` on every library shot: the default sorts by state, which
 # puts everything still to transfer first — that is the right order to WORK in,
 # and the wrong one to photograph, since it buries every cover at the bottom.
+# What must never reach a published image, when `--url` points at a REAL
+# installation. `verifier-fuite.py` reads text files; it cannot read a PNG. So
+# the masking happens in the DOM, a moment before the shutter, and the shot is
+# REFUSED if something it does not know how to mask is still on screen.
+#
+# The address of the console is the case that already cost a history rewrite:
+# it sits in plain sight on the console settings screen. RFC 5737 reserves
+# 192.0.2.0/24 for documentation, and RFC 2606 reserves example.org — a masked
+# value must still look like what it replaces, or the picture stops explaining
+# anything.
+MASQUE = r"""
+(function () {
+  const IPV4 = /\b(?:\d{1,3}\.){3}\d{1,3}\b/g;
+  const MAIL = /\b[\w.+-]+@[\w-]+\.[\w.-]+\b/g;
+  const SERIE = /\b[0-9A-Fa-f]{12,20}\b/g;
+  const MAISON = /\/(?:Users|home)\/[^/\s"']+/g;
+  const remplace = t => t
+    .replace(MAIL, 'moi@exemple.org')
+    .replace(IPV4, '192.0.2.10')
+    .replace(MAISON, '/home/joueuse')
+    .replace(SERIE, 'S0FAKE0SERIAL');
+  const marche = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  let n, touches = 0;
+  while ((n = marche.nextNode())) {
+    const avant = n.nodeValue;
+    const apres = remplace(avant);
+    if (apres !== avant) { n.nodeValue = apres; touches++; }
+  }
+  // The attributes too: a tooltip carries the address as readily as a line of
+  // text, and a screenshot taken with the pointer on it would show it.
+  for (const el of document.querySelectorAll('[title],[aria-label],[value]')) {
+    for (const a of ['title', 'aria-label', 'value']) {
+      const v = el.getAttribute(a);
+      if (v) el.setAttribute(a, remplace(v));
+    }
+  }
+  // What is LEFT is the point of this function. Anything still matching is
+  // something the masking does not know about, and the shot must not be taken.
+  const reste = [];
+  const texte = document.body.innerText || '';
+  for (const [nom, re] of [['adresse', IPV4], ['courriel', MAIL],
+                           ['chemin personnel', MAISON]]) {
+    const m = texte.match(re) || [];
+    for (const x of m) {
+      if (x !== '192.0.2.10' && x !== 'moi@exemple.org' && x !== '/home/joueuse') {
+        reste.push(nom + ' : ' + x);
+      }
+    }
+  }
+  return {touches: touches, reste: reste.slice(0, 6)};
+})()
+"""
+
+
 PRISES = [
     ("bibliotheque", 1600, 1100, 2, "app.tab('jeux'); app.setSort('nom')", True),
     ("fiche", 1500, 1000, 2,
@@ -280,18 +334,38 @@ def _en_jpeg(png, qualite="80", cote_max=2000):
     return cible
 
 
-def main():
+def main(argv=()):
+    """Take the shots. With no argument, from an invented library.
+
+    `--url http://localhost:8787` photographs a RUNNING instance instead —
+    yours, with your games in it. That is a deliberate choice and not the
+    default: a shot taken from a real installation says what its owner owns,
+    and carries somebody else's cover art into a public repository. It has
+    happened twice here. The invented library exists so that the ordinary
+    answer costs nothing.
+    """
     from cdp import Navigateur
-    racine = tempfile.mkdtemp(prefix="romule-captures-")
-    semer(racine)
-    adb = RACINE / "outils" / "adb-vitrine.py"
-    proc = subprocess.Popen(
-        [sys.executable, "-m", "romule", "serve"], cwd=str(RACINE),
-        env=dict(os.environ, ROMULE_ROOT=racine, ROMULE_WEB_PORT=str(PORT),
-                 ROMULE_NO_BROWSER="1", ROMULE_LANG="en",
-                 ROMULE_ADB=str(adb.resolve())),
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    url = "http://127.0.0.1:%d" % PORT
+    externe = ""
+    for i, a in enumerate(argv):
+        if a == "--url" and i + 1 < len(argv):
+            externe = argv[i + 1].rstrip("/")
+        elif a.startswith("--url="):
+            externe = a.split("=", 1)[1].rstrip("/")
+    proc = None
+    if externe:
+        url = externe
+        print("  depuis %s (installation existante)" % url)
+    else:
+        racine = tempfile.mkdtemp(prefix="romule-captures-")
+        semer(racine)
+        adb = RACINE / "outils" / "adb-vitrine.py"
+        proc = subprocess.Popen(
+            [sys.executable, "-m", "romule", "serve"], cwd=str(RACINE),
+            env=dict(os.environ, ROMULE_ROOT=racine, ROMULE_WEB_PORT=str(PORT),
+                     ROMULE_NO_BROWSER="1", ROMULE_LANG="en",
+                     ROMULE_ADB=str(adb.resolve())),
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        url = "http://127.0.0.1:%d" % PORT
     faites = {}
     try:
         import urllib.request
@@ -315,10 +389,21 @@ def main():
                 time.sleep(0.8)
                 n.js(geste)
                 time.sleep(2.2)
+                if externe:
+                    # A real installation: mask, then REFUSE if something the
+                    # masking does not know is still readable. A warning here
+                    # would be read after the image is published.
+                    m = n.js(MASQUE) or {}
+                    if m.get("reste"):
+                        raise SystemExit(
+                            "  %s : capture refusee, il reste %s"
+                            % (nom, " ; ".join(m["reste"])))
+                    time.sleep(0.3)
                 png = SORTIE / (nom + ".png")
                 n.capture(str(png), pleine=pleine)
                 faites[nom] = _en_jpeg(png, "78", 1800)
-                print("  %-12s %d ko" % (nom, faites[nom].stat().st_size // 1024))
+                print("  %-12s %d ko%s" % (nom, faites[nom].stat().st_size // 1024,
+                                           "" if not externe else "  (masque)"))
         finally:
             n.fermer()
 
@@ -353,10 +438,11 @@ def main():
         for vieux in ("apercu-bureau.jpg", "apercu-portables.jpg"):
             (SORTIE / vieux).unlink(missing_ok=True)
     finally:
-        proc.terminate()
-        shutil.rmtree(racine, ignore_errors=True)
+        if proc is not None:
+            proc.terminate()
+            shutil.rmtree(racine, ignore_errors=True)
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv[1:]))

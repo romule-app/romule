@@ -140,6 +140,16 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Added
 
+- **`outils/captures.py --url http://localhost:8787` photographs a running
+  installation** instead of the invented library. Not the default, and it
+  cannot be: a shot taken from a real installation says what its owner owns.
+  So it masks first — addresses to RFC 5737's `192.0.2.10`, e-mails to
+  RFC 2606's `example.org`, serials and home paths — and **refuses the shot**
+  if anything it does not know how to mask is still readable. `verifier-fuite.py`
+  reads text files; it cannot read a PNG, and the console's address sits in
+  plain sight on the console settings screen. That is the one that cost a
+  history rewrite.
+
 - **Both credential fields can be tested from the settings.** SteamGridDB had
   no test at all outside the first-run wizard, and IGDB's answered in a bare
   line of text. One component now serves both: a spinner while the call is in
