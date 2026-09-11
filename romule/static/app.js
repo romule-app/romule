@@ -2061,7 +2061,7 @@ function renderPager(total, pages, parPage) {
   const de = PAGE * parPage + 1, a = Math.min(total, (PAGE + 1) * parPage);
   el.innerHTML =
     '<button class="ghost" ' + (PAGE ? '' : 'disabled') + ' data-act="page" data-val="-1">‹ Précédent</button>' +
-    '<span class="mono">' + de + '–' + a + ' sur ' + total + '</span>' +
+    '<span class="mono">' + esc(tpl('%s–%s sur %s', de, a, total)) + '</span>' +
     '<button class="ghost" ' + (PAGE < pages - 1 ? '' : 'disabled') + ' data-act="page" data-val="1">Suivant ›</button>';
 }
 
@@ -2574,7 +2574,10 @@ function renderDeviceCard(info, volumes) {
   }
   const vols = (volumes || []).map(v => {
     const used = (v.total && v.free != null) ? (v.total - v.free) / v.total : 0;
-    const spc = v.free != null ? fmt(v.free) + ' libre / ' + fmt(v.total) : 'espace inconnu';
+    // Assembled by hand, so never translated: « libre » stayed French in an
+    // English interface, on the one screen a screenshot always shows.
+    const spc = v.free != null ? tpl('%s libres sur %s', fmt(v.free), fmt(v.total))
+                               : t('espace inconnu');
     // Information, not a button: exploring a volume from here opened the
     // navigator with no target chosen, and the row's affordance said nothing.
     return '<div class="vol">' +
@@ -2582,7 +2585,8 @@ function renderDeviceCard(info, volumes) {
       '<span class="grow"><div>' + esc(v.label) + '</div><span class="mono">' + esc(v.path) + '</span></span>' +
       '<span class="meter' + (used > 0.9 ? ' tight' : '') + '"><i style="width:' + Math.round(used * 100) + '%"></i></span>' +
       '<span class="size" style="width:auto">' + spc + '</span></div>';
-  }).join('') || '<div class="vol"><span class="mono">aucun volume detecte</span></div>';
+  }).join('') || '<div class="vol"><span class="mono">'
+                 + esc(t('Aucun volume détecté.')) + '</span></div>';
   el.innerHTML = '<div class="card"><div class="ghead"><span class="gname">' + esc(info.name) +
     '</span><span class="mono">Android ' + esc(info.android || '?') + ' &middot; ' + esc(info.serial || '') +
     '</span></div>' + vols + '</div>';
@@ -7502,7 +7506,9 @@ function renderManifest(r) {
     (r.broken ? ' <span class="bad">'
       + tpl('— %d {fichier|fichiers} {incomplet|incomplets} {bloqué|bloqués}', r.broken) + '</span>' : '') + '</span>' +
     '<span class="' + (tight ? 'bad' : '') + '">' +
-    (r.free != null ? 'libre : ' + fmt(r.free) + (tight ? ' — insuffisant !' : '') : 'espace inconnu') +
+    (r.free != null ? tpl('%s libres', fmt(r.free))
+                      + (tight ? ' — ' + t('insuffisant !') : '')
+                    : t('espace inconnu')) +
     '</span></div>' + body + '</div>';
 }
 

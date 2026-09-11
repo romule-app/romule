@@ -334,6 +334,30 @@ def _en_jpeg(png, qualite="80", cote_max=2000):
     return cible
 
 
+def _appel(url, chemin, corps=None):
+    import json as _j
+    import urllib.request as _u
+    donnees = _j.dumps(corps or {}).encode() if corps is not None else None
+    req = _u.Request(url + chemin, data=donnees,
+                     headers={"Content-Type": "application/json"})
+    with _u.urlopen(req, timeout=60) as r:
+        return _j.loads(r.read())
+
+
+def _reglage(url, cle):
+    try:
+        return (_appel(url, "/api/config", {}).get("config") or {}).get(cle)
+    except Exception:
+        return None
+
+
+def _poser(url, valeurs):
+    try:
+        _appel(url, "/api/config", valeurs)
+    except Exception:
+        pass
+
+
 def main(argv=()):
     """Take the shots. With no argument, from an invented library.
 
@@ -352,9 +376,19 @@ def main(argv=()):
         elif a.startswith("--url="):
             externe = a.split("=", 1)[1].rstrip("/")
     proc = None
+    langue_avant = None
     if externe:
         url = externe
         print("  depuis %s (installation existante)" % url)
+        # The published pages are in English, and the interface speaks whatever
+        # `ui_lang` says — which on a real installation is its owner's
+        # language. We borrow the setting and give it back, whatever happens
+        # below: leaving somebody's interface in another language because a
+        # screenshot failed is not an acceptable trace to leave.
+        langue_avant = _reglage(url, "ui_lang")
+        if langue_avant and langue_avant != "en":
+            _poser(url, {"ui_lang": "en"})
+            print("  langue : %s -> en (rendue a la fin)" % langue_avant)
     else:
         racine = tempfile.mkdtemp(prefix="romule-captures-")
         semer(racine)
@@ -438,6 +472,9 @@ def main(argv=()):
         for vieux in ("apercu-bureau.jpg", "apercu-portables.jpg"):
             (SORTIE / vieux).unlink(missing_ok=True)
     finally:
+        if langue_avant and langue_avant != "en":
+            _poser(externe, {"ui_lang": langue_avant})
+            print("  langue rendue : %s" % langue_avant)
         if proc is not None:
             proc.terminate()
             shutil.rmtree(racine, ignore_errors=True)
