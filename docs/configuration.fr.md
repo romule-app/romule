@@ -189,7 +189,7 @@ Voir [Sauvegardes](sauvegardes.fr.md).
 | Clé | Défaut | Signification |
 |---|---|---|
 | `backup_sources` | `["sauvegardes"]` | Ce qui est copié : `sauvegardes`, `jeux`, `maj`, `dlc`, `jaquettes`, `config` |
-| `backup_dest` | — | Où les lots se posent. Vide : rien n'est sauvegardé nulle part. Refusée si elle sort de `ROMULE_BASES`. |
+| `backup_dest` | — | Où les lots se posent. Vide : rien n'est sauvegardé nulle part. Doit être ABSOLU, et est refusé s'il sort de `ROMULE_BASES`. |
 | `backup_keep` | `5` | Combien de lots on garde. Au-delà, le plus ancien part — un interrompu avant un complet. |
 
 ### Ludothèque

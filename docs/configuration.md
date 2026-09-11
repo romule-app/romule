@@ -181,7 +181,7 @@ Set from **Settings → Backups**, through the dialog. See
 | Key | Default | Meaning |
 |---|---|---|
 | `backup_sources` | `["sauvegardes"]` | What gets copied: `sauvegardes`, `jeux`, `maj`, `dlc`, `jaquettes`, `config` |
-| `backup_dest` | — | Where the batches land. Empty means nothing is backed up anywhere. Refused if it falls outside `ROMULE_BASES`. |
+| `backup_dest` | — | Where the batches land. Empty means nothing is backed up anywhere. Must be ABSOLUTE, and is refused if it falls outside `ROMULE_BASES`. |
 | `backup_keep` | `5` | How many batches are kept. Past that, the oldest goes — an interrupted one before a complete one. |
 
 ### Library
