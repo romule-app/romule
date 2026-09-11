@@ -1791,5 +1791,6 @@
   "Sauvegarder": "Back up",
   "taille lue sur la console": "size read from the console",
   "Au-delà, la plus ancienne est supprimée — une interrompue avant une complète.": "Past that, the oldest is deleted — an interrupted one before a complete one.",
-  "Dossier de données du service": "The service's data folder"
+  "Dossier de données du service": "The service's data folder",
+  "Donne un chemin absolu : un chemin relatif se lit depuis le dossier où tourne le service, que personne ne voit.": "Give an absolute path: a relative one is read from the folder the service runs in, which nobody can see."
 }

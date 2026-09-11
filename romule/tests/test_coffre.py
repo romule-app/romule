@@ -110,6 +110,12 @@ def _run():
         t("et elle n'a pas ete creee au passage", not (base / "ailleurs").exists())
         config.BASES[:] = bases_avant
 
+        # --- a relative path names a different folder on every machine
+        for relatif in ("../../..", "coffre", "./sauvegardes", ""):
+            _, erreur = vault.verifier_dest(relatif, creer=True)
+            t("chemin relatif refuse : %r" % relatif, bool(erreur))
+        t("un chemin absolu passe", vault.verifier_dest(str(dest))[1] is None)
+
         # --- the room is checked before, not during
         job = FauxJob()
         vraie_taille = vault._espace

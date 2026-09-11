@@ -56,11 +56,14 @@ Romule propose ce qu'il trouve plutôt qu'un champ à remplir :
 Tout le reste passe par **Choisir un autre dossier…**, qui parcourt l'hôte et
 sait y créer des dossiers.
 
-!!! warning "Bornée par `ROMULE_BASES`"
-    Une destination hors des dossiers déclarés est refusée, et n'est pas créée.
-    Le raisonnement est celui du sélecteur de dossiers : dans un conteneur, les
-    montages sont la liste blanche, et c'est le noyau qui l'applique. Voir
-    [Rôles et accès](roles.fr.md).
+!!! warning "Absolue, et bornée par `ROMULE_BASES`"
+    Un chemin relatif est refusé : il se lirait depuis le dossier où tourne le
+    service — différent dans un conteneur, une unité systemd et un terminal —
+    et `../sauvegardes` désignerait donc un endroit différent sur chaque
+    machine. Une destination hors des dossiers déclarés est refusée elle aussi,
+    et n'est pas créée. Le raisonnement est celui du sélecteur de dossiers :
+    dans un conteneur, les montages sont la liste blanche, et c'est le noyau
+    qui l'applique. Voir [Rôles et accès](roles.fr.md).
 
 ### À quel rythme
 

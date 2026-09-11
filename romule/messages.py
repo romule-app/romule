@@ -294,6 +294,8 @@ CF_DEST_ABSENTE = "Aucune destination choisie pour les sauvegardes."
 CF_DEST_ILLISIBLE = 'Destination inutilisable : %s'
 CF_DEST_INEXISTANTE = "Cette destination n'existe pas."
 CF_DEST_LECTURE_SEULE = 'Destination en lecture seule.'
+CF_DEST_RELATIVE = (
+    "Donne un chemin absolu : un chemin relatif se lit depuis le dossier où tourne le service, que personne ne voit.")
 CF_FICHIER_ECHEC = '  Échec sur %s : %s'
 CF_NOM_VIDE = 'Donne un nom au dossier.'
 CF_INTERROMPUE = 'Sauvegarde interrompue : %d fichier(s), %s copiés.'

@@ -212,6 +212,13 @@ def verifier_dest(chemin, creer=False):
     if not brut:
         return None, messages.CF_DEST_ABSENTE
     p = Path(brut).expanduser()
+    # An absolute path, and nothing else. A relative one is resolved against the
+    # SERVER's working directory — which the person typing it cannot see, and
+    # which differs between a container, a service and a terminal. `../../..`
+    # then names three different folders on three machines, and this setting
+    # says where gigabytes get written.
+    if not p.is_absolute():
+        return None, messages.CF_DEST_RELATIVE
     try:
         p = p.resolve()
     except OSError as exc:

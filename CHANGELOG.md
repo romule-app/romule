@@ -44,7 +44,10 @@ change it. Breaking changes are always listed under **Changed** with the reason.
   [Backups](docs/sauvegardes.md). Three settings: `backup_sources`,
   `backup_dest`, `backup_keep`. `backup_dest` is sanitised on write and an
   unusable value never reaches the file — whoever reads that field next is the
-  scheduler, at three in the morning, with nobody watching.
+  scheduler, at three in the morning, with nobody watching. It must be
+  absolute: a relative path is read from the folder the service runs in, which
+  differs between a container, a unit and a terminal, so it would name a
+  different place on every machine.
 
 ### Fixed
 

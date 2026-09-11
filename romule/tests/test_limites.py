@@ -150,7 +150,11 @@ try:
     pose = reglage({"backup_dest": BON}).get("backup_dest", "")
     t("une destination lisible est acceptee",
       pose and Path(pose) == Path(BON).resolve(), pose)
-    for mauvais in ("/nexistepas/vraiment", "../../..", "/etc/passwd"):
+    # `../../..` is refused for BEING RELATIVE, not for where it lands: on a CI
+    # runner it resolves to a perfectly writable home folder, which is exactly
+    # why a relative destination cannot be stored — it names a different place
+    # on every machine.
+    for mauvais in ("/nexistepas/vraiment", "../../..", "coffre", "/etc/passwd"):
         apres = reglage({"backup_dest": mauvais}).get("backup_dest", "")
         t("destination refusee, l'ancienne reste : %r" % mauvais,
           apres == pose, apres)

@@ -1791,5 +1791,6 @@
   "Sauvegarder": "Sauvegarder",
   "taille lue sur la console": "taille lue sur la console",
   "Au-delà, la plus ancienne est supprimée — une interrompue avant une complète.": "Au-delà, la plus ancienne est supprimée — une interrompue avant une complète.",
-  "Dossier de données du service": "Dossier de données du service"
+  "Dossier de données du service": "Dossier de données du service",
+  "Donne un chemin absolu : un chemin relatif se lit depuis le dossier où tourne le service, que personne ne voit.": "Donne un chemin absolu : un chemin relatif se lit depuis le dossier où tourne le service, que personne ne voit."
 }

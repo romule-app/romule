@@ -54,11 +54,13 @@ Romule offers what it finds rather than a field to type into:
 Anything else is reachable through **Choose another folder…**, which browses
 the host and can create folders as it goes.
 
-!!! warning "Bounded by `ROMULE_BASES`"
-    A destination outside the declared folders is refused, and not created.
-    The reasoning is the same as for the folder picker: in a container the
-    mounts are the allow-list and the kernel enforces it. See
-    [Roles and access](roles.md).
+!!! warning "Absolute, and bounded by `ROMULE_BASES`"
+    A relative path is refused: it would be read from the folder the service
+    runs in — different in a container, a systemd unit and a terminal — so
+    `../backups` would name a different place on every machine. A destination
+    outside the declared folders is refused too, and not created. The reasoning
+    is the same as for the folder picker: in a container the mounts are the
+    allow-list and the kernel enforces it. See [Roles and access](roles.md).
 
 ### How often
 
