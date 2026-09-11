@@ -173,6 +173,17 @@ reachable instance's code accessible — and the tools the server found (`adb`,
 | `saves_dir` | — | Where game saves are backed up |
 | `auto_nand` | `false` | Install into the emulator's NAND automatically |
 
+### Backups
+
+Set from **Settings → Backups**, through the dialog. See
+[Backups](sauvegardes.md).
+
+| Key | Default | Meaning |
+|---|---|---|
+| `backup_sources` | `["sauvegardes"]` | What gets copied: `sauvegardes`, `jeux`, `maj`, `dlc`, `jaquettes`, `config` |
+| `backup_dest` | — | Where the batches land. Empty means nothing is backed up anywhere. Refused if it falls outside `ROMULE_BASES`. |
+| `backup_keep` | `5` | How many batches are kept. Past that, the oldest goes — an interrupted one before a complete one. |
+
 ### Library
 
 | Key | Default | Meaning |

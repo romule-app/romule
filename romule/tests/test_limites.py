@@ -108,6 +108,76 @@ try:
     t("sous le plafond, accepte", c == 200, c)
 finally:
     srv.terminate()
+
+# --------------------------------------------- where the service writes GBs
+#
+# `backup_dest` is the setting that says WHERE gigabytes are written, and it
+# comes in over the network like any other. A value that cannot be used must
+# never reach the file: whoever reads the field next — the scheduler, at three
+# in the morning, with nobody watching — will obey it.
+print("   -- la destination des sauvegardes --")
+RACINE2 = tempfile.mkdtemp(prefix="ludo-coffre-")
+BON = tempfile.mkdtemp(prefix="ludo-coffre-dest-")
+PORT2 = libre()
+BASE2 = "http://127.0.0.1:" + PORT2
+srv2 = subprocess.Popen(
+    [sys.executable, "-m", "romule", "serve"], cwd=RACINE_PROJET,
+    env=dict(os.environ, ROMULE_ROOT=RACINE2, ROMULE_WEB_PORT=PORT2,
+             ROMULE_NO_BROWSER="1"),
+    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def reglage(corps):
+    """POST /api/config, and the configuration as the server hands it back."""
+    import json as _json
+    req = urllib.request.Request(
+        BASE2 + "/api/config", data=_json.dumps(corps).encode(),
+        headers={"Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=25) as r:
+            return _json.loads(r.read())["config"]
+    except urllib.error.HTTPError as x:
+        return {"_code": x.code}
+
+
+try:
+    for _ in range(60):
+        try:
+            urllib.request.urlopen(BASE2 + "/api/health", timeout=5).read()
+            break
+        except Exception:
+            time.sleep(0.5)
+    pose = reglage({"backup_dest": BON}).get("backup_dest", "")
+    t("une destination lisible est acceptee",
+      pose and Path(pose) == Path(BON).resolve(), pose)
+    for mauvais in ("/nexistepas/vraiment", "../../..", "/etc/passwd"):
+        apres = reglage({"backup_dest": mauvais}).get("backup_dest", "")
+        t("destination refusee, l'ancienne reste : %r" % mauvais,
+          apres == pose, apres)
+    t("on peut vider la destination",
+      reglage({"backup_dest": ""}).get("backup_dest", "x") == "")
+    reglage({"backup_dest": BON})
+    t("le nombre de lots garde est borne",
+      reglage({"backup_keep": 500}).get("backup_keep") == 99)
+    t("un nombre illisible retombe sur le defaut",
+      reglage({"backup_keep": "beaucoup"}).get("backup_keep") == 5)
+    t("une source inconnue est jetee",
+      reglage({"backup_sources": ["jeux", "n_importe_quoi"]})
+      .get("backup_sources") == ["jeux"])
+    # And the route itself refuses rather than starting a task that will log a
+    # failure nobody reads.
+    import json as _json
+    req = urllib.request.Request(
+        BASE2 + "/api/coffre-lancer", data=_json.dumps({"dest": "/nexistepas"}).encode(),
+        headers={"Content-Type": "application/json"})
+    try:
+        urllib.request.urlopen(req, timeout=25).read()
+        t("lancer vers une destination impossible est refuse", False, "accepte")
+    except urllib.error.HTTPError as x:
+        t("lancer vers une destination impossible est refuse", x.code == 400, x.code)
+finally:
+    srv2.terminate()
+
 print("   ------------------------------------------------")
 print("   %d controles OK, %d echec(s)" % (ok, fail))
 sys.exit(1 if fail else 0)

@@ -48,6 +48,11 @@ TASKS = {
     "convert": "Convert to NSZ",
     "push": "Send to the console",
     "meta": "Refresh the game entries",
+    # Reversible like the others: it WRITES a new batch and deletes only the
+    # oldest ones past the number asked for. Nothing it does cannot be looked
+    # at in the morning — and a backup is the task that most wants to happen
+    # while nobody is watching.
+    "sauvegarde": "Back up to the chosen destination",
 }
 
 # The presets. `nightly` carries its hour, because an hour without its preset is

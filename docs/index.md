@@ -56,6 +56,7 @@ phone](images/apercu.jpg)
 - **[Configuration](configuration.md)** — every setting and environment variable
 - **[HTTP API](api.md)** — query your library from a dashboard or a script
 - **[Roles and access](roles.md)** — who may do what, and how SSO groups map
+- **[Backups](sauvegardes.md)** — what to copy, where, and how often
 
 </div>
 

@@ -10,7 +10,91 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ## [Unreleased]
 
+### Added
+
+- **Backups are their own thing now.** They used to be a sub-part of the Switch
+  emulator settings — one button that copied game saves into `_saves/`, beside
+  the library, on the disk whose failure a backup exists for. **Settings →
+  Backups** is a section of its own, with a dialog that asks the four questions
+  in order: what (game saves, games, updates, DLC, covers, configuration —
+  each showing what it weighs), from which console, where, and how often.
+
+  Destinations are DISCOVERED rather than typed: a disk mounted under
+  `/Volumes`, `/media`, `/run/media` or `/mnt`, or a folder Dropbox, Drive,
+  OneDrive, Nextcloud, pCloud or Syncthing already sync — Romule writes files
+  there and their own client carries them away, so there is no account to hand
+  over, no token to store, and nothing to repair when a provider changes its
+  API. Anything else is reachable through a browser that can create folders as
+  it goes. The service's own data folder is offered last, labelled *Same
+  machine*, because a copy beats no copy and it is still the one that goes down
+  with the disk.
+
+  A run checks the room **before** copying rather than at 94 %, rotating old
+  batches early if that makes the difference and giving up out loud if it does
+  not; copies with progress and a rate-based ETA; writes `manifeste.json` into
+  the batch so it can be read and restored without Romule; then rotates,
+  oldest first and an interrupted batch before a complete one. Every step goes
+  into the journal. Rotation only ever looks at folders carrying both our
+  prefix and our manifest — it deletes, so it must be incapable of mistaking a
+  neighbouring folder for one of ours. Two backups in the same second get a
+  suffix: an existing batch is a backup, and Romule does not write over a
+  backup.
+
+  Schedulable like any other task, and documented in
+  [Backups](docs/sauvegardes.md). Three settings: `backup_sources`,
+  `backup_dest`, `backup_keep`. `backup_dest` is sanitised on write and an
+  unusable value never reaches the file — whoever reads that field next is the
+  scheduler, at three in the morning, with nobody watching.
+
 ### Fixed
+
+- **The emulator's advanced settings opened empty, and lied when the console
+  was gone.** Two defects behind one missing flag. The table was loaded once,
+  at startup, and only if a console answered then — so it stayed blank until
+  someone pressed « Relire ». And with no console the same table drew every
+  field empty, which reads as "every setting is at zero" rather than "nothing
+  was read". The block now follows the connection: it loads when it comes into
+  view, and when no console answers it clears itself, disables its controls
+  and says where to fix that.
+
+- **« Plus de filtres » was shorter than the row it sits in.** The toolbar
+  gives its height to `.favwrap`; the button inside is not a direct child and
+  kept its own. It measured 37 px beside 44 px controls — and every browser
+  test measured 44, because they all run with touch emulation on and
+  `@media (pointer:coarse)` levels every control. `cdp.py` can now put a MOUSE
+  down, and `test_bibliotheque.py` measures the row twice: a row measured only
+  through the rule that levels it is a row nobody measured. Same family as the
+  `@media (hover:hover)` trap.
+
+- **Every drop-down's arrow, one drawing and one gap.** The native arrow hugs
+  the right edge and is drawn differently by every engine, and the toolbar's
+  `background` shorthand erased the image anyway — so no two menus looked
+  alike. One chevron, one reserved gap, declared once.
+
+- **« Changer… » sat 7 px below the path it belongs beside.** A margin meant
+  for the wizard's COLUMN was being applied inside a centred ROW, where it
+  separates nothing and only offsets. The row also stopped wrapping the button
+  onto a line of its own — above 700 px, since on a phone the column is right.
+
+- **A folder the service may not read looked exactly like one it may.** The
+  `muet` class had been set on those rows since forever and had no style at
+  all. Found by teaching `verifier-classes.py` to read the branches of a
+  ternary inside a `class` attribute — it used to stop at the first quote, so
+  six live classes passed for dead style and this one for nothing at all.
+
+### Changed
+
+- **The header, with no console connected.** It offered « Détecter » and « sans
+  câble », the second opening — inside the header — a panel that lives in the
+  settings: the same destination, minus the screen that explains it. It now
+  offers what ACTS on the spot and what LEADS to the settings, and the
+  version-database age is gone from the strip; read in a header, "version
+  database just now" does not say what it is about.
+
+- **The product's name is the way home.** Clicking ROMULE anywhere in the
+  header returns to the library, as the logo does on every interface that has
+  one. It did nothing at all.
+
 
 - **Two documentation links pointed at an anchor that left with the token
   model.** MkDocs refuses a dead link — but only in CI, and only on pushes that

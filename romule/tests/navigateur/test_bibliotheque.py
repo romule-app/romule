@@ -293,26 +293,26 @@ def annuler(n):
       (avant, cartes(n)))
 
 
-def alignement(n):
-    print("   -- the bar's rows are aligned --")
+def alignement(n, pointeur="doigt"):
+    print("   -- the bar's rows are aligned (%s) --" % pointeur)
     # Measured before the fix: three vertical axes within the SAME row (245,
     # 249, 250 px) and gutters of 14 then 10 px. Two causes, neither of them
     # readable: an inherited `margin-bottom` that offsets the centred box, and a
     # border that makes one group 2 px taller than its neighbours.
     geo = n.js(GEOMETRIE) or {}
     ctrl = geo.get("ctrl") or []
-    t("the row's controls are measurable", len(ctrl) >= 4, len(ctrl))
+    t("%s : the row's controls are measurable" % pointeur, len(ctrl) >= 4, len(ctrl))
     if ctrl:
         hauts = sorted({c["h"] for c in ctrl})
         hauteurs = sorted({c["b"] - c["h"] for c in ctrl})
-        t("they share the same axis to within 1 px",
+        t("%s : they share the same axis to within 1 px" % pointeur,
           max(hauts) - min(hauts) <= 1, hauts)
-        t("they have the same height to within 1 px",
+        t("%s : they have the same height to within 1 px" % pointeur,
           max(hauteurs) - min(hauteurs) <= 1, hauteurs)
     if geo.get("libbar") and geo.get("filtres") and geo.get("barre"):
         g1 = geo["filtres"]["h"] - geo["libbar"]["b"]
         g2 = geo["barre"]["h"] - geo["filtres"]["b"]
-        t("the gutters between rows are equal",
+        t("%s : the gutters between rows are equal" % pointeur,
           abs(g1 - g2) <= 1, "%d puis %d" % (g1, g2))
 
 
@@ -440,6 +440,15 @@ def main():
         n.js("app.tab('jeux')")
         time.sleep(1.5)
         alignement(n)
+        # And again with a MOUSE. Touch emulation is on for the whole suite,
+        # and `@media (pointer:coarse)` raises every control to 44 px — which
+        # hid a button that was 37 px on an ordinary desktop. A row measured
+        # only through the rule that levels it is a row nobody measured.
+        n.pointeur(fin=True)
+        time.sleep(1.2)
+        alignement(n, "souris")
+        n.pointeur(fin=False)
+        time.sleep(1.0)
         pluriels(n)
         mobile(n)
         croix(n)

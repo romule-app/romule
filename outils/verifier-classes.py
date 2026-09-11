@@ -51,7 +51,12 @@ TOLERATED = {
 
 
 def _strip_css_comments(text):
-    return re.sub(r"/\*.*?\*/", "", text, flags=re.S)
+    text = re.sub(r"/\*.*?\*/", "", text, flags=re.S)
+    # And the URLs. `url("data:image/svg+xml,…xmlns='http://www.w3.org/…'")`
+    # gives `.w3` and `.org` to a reader that only looks for a dot followed by a
+    # letter: two invented classes, reported as dead style at every pass. A URL
+    # is not a selector.
+    return re.sub(r"url\(.*?\)", "url()", text, flags=re.S)
 
 
 def styled():
@@ -60,6 +65,34 @@ def styled():
     # Only selectors: a `.` inside a value (`0.5`, `url(a.png)`) never starts a
     # class token that begins with a letter.
     return {m.group(1) for m in re.finditer(r"\.([a-zA-Z][\w-]*)", text)}
+
+
+def _branches_de_classe(reste):
+    """A ternary's literals, inside a `class` attribute.
+
+    `'<i class="tem ' + (x ? 'p-oui' : 'p-non') + '"'`: the rest of this
+    function stops at the first quote and sees `tem` only. Yet `p-oui` and
+    `p-non` are spelled out in full — a static reader CAN name them, and not
+    doing so made them pass for dead style.
+
+    Counting the quotes is not a detail: `reste` begins with the one that
+    CLOSES the opening literal. The literals are therefore the pairs after it,
+    every other one, and getting the parity wrong returns ` + (x ? ` as a class
+    name.
+    """
+    positions = [i for i, c in enumerate(reste) if c == "'"]
+    out = set()
+    for i in range(1, len(positions) - 1, 2):
+        avant = reste[:positions[i]].rstrip()
+        # `i.type === 'AMBIGU' ? ...`: that literal is a comparison operand,
+        # not a class. Testing it by what comes before costs one line and avoids
+        # inventing five classes that exist nowhere.
+        if avant.endswith("=") or avant.endswith("!"):
+            continue
+        lit = reste[positions[i] + 1:positions[i + 1]].strip()
+        if lit and re.fullmatch(r"[\w-][\w\s-]*", lit):
+            out.update(lit.split())
+    return out
 
 
 def used():
@@ -78,8 +111,14 @@ def used():
     # We take the words that ARE literal and stop at the first interruption —
     # everything after it is an expression, and no static reader can name it.
     for m in re.finditer(r'class="([^"\n]*)', js):
-        head = re.split(r"['\"`]|\$\{", m.group(1))[0]
+        brut = m.group(1)
+        head = re.split(r"['\"`]|\$\{", brut)[0]
         out.update(head.split())
+        # A head ending in a dash (`tag t-`) is waiting for a SUFFIX: the
+        # branches that follow complete a name, they are not one. Taking them
+        # for classes would list `BASE` and `DLC` among the unstyled ones.
+        if not head.rstrip().endswith("-"):
+            out.update(_branches_de_classe(brut[len(head):]))
     # `el.className = 'toast agir' + …` is the same shape without an attribute.
     for m in re.finditer(r"className\s*=\s*'([^']*)'", js):
         out.update(m.group(1).split())
@@ -107,9 +146,12 @@ def report():
     return dead, unstyled
 
 
-AUTOTEST_CSS = ".a{color:red}\n.b{color:blue}\n.d{color:green}\n"
+AUTOTEST_CSS = ".a{color:red}\n.b{color:blue}\n.d{color:green}\n.f{color:pink}\n"
 AUTOTEST_HTML = '<div class="a"></div>'
-AUTOTEST_JS = "el.classList.add('c');"
+AUTOTEST_JS = ("el.classList.add('c');\n"
+               # `f` is named ONLY in a ternary branch, inside a `class`
+               # attribute: the blind spot the rule closes.
+               "el.innerHTML = '<i class=\"a ' + (x ? 'f' : '') + '\"></i>';")
 # `d` is styled and written only by the server: it must NOT be called dead.
 # `e` is written by the server and styled nowhere: it must be reported. That
 # pair is the blind spot the login page fell into.
@@ -132,6 +174,7 @@ def autotest():
         dead, unstyled = report()
         cases = [("a styled and used class is quiet", "a" not in dead + unstyled),
                  ("a styled but unused class is reported", dead == ["b"]),
+                 ("a class named only in a ternary branch is seen", "f" not in dead),
                  # `in`, not `==`: the fixtures now carry a second unstyled
                  # class on purpose, and an exact list would make the case
                  # about the fixture rather than about the detector.

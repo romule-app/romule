@@ -6,7 +6,7 @@ import zipfile
 from pathlib import Path
 
 from . import (config, convert, device, edenconf, emuready, integrity, langue,
-               nand, saves, systems, titleid, trash)
+               nand, saves, systems, titleid, trash, vault)
 from . import messages
 
 
@@ -447,6 +447,20 @@ def verify_library(lib, cfg, job, deep=False, sys_key=None, budget_gb=None):
 
 def backup_saves(lib, cfg, job):
     saves.backup(job, cfg)
+
+
+def backup_vault(lib, cfg, job, sources=None, dest=None, garder=None):
+    """The full backup: chosen sources, chosen destination, rotation.
+
+    The library is re-read first when server files are in the batch. Copying
+    the list held in memory would back up the inventory as it stood at the last
+    scan, which is exactly the file someone added this morning missing from the
+    copy they will need tomorrow.
+    """
+    voulus = sources if sources is not None else (cfg or {}).get("backup_sources")
+    if set(voulus or []) - {"sauvegardes"}:
+        lib.scan(log=job.log)
+    vault.run(job, lib, cfg, sources=sources, dest=dest, garder=garder)
 
 
 def sync_meta(lib, cfg, job):

@@ -170,6 +170,8 @@ class Navigateur:
             "mobile": True})
         self.cmd("Emulation.setTouchEmulationEnabled", {"enabled": True,
                                                         "maxTouchPoints": 5})
+        self._metriques = {"width": largeur, "height": hauteur,
+                           "deviceScaleFactor": dpr, "mobile": True}
         # The profile is reused from one run to the next: a file cached with a
         # long lifetime would survive a setting change on the server, and the
         # test would judge a stale version.
@@ -205,6 +207,30 @@ class Navigateur:
                 poste('/api/assistant-vu', {vu: true});
               })();
             """})
+
+    def pointeur(self, fin=True, largeur=None, hauteur=None):
+        """Switch the emulated pointer between a finger and a mouse.
+
+        Every browser suite runs with touch emulation on, which makes
+        `@media (pointer:coarse)` true — and that block raises every control to
+        44 px. A layout defect that only shows with a MOUSE is therefore
+        invisible to a suite that never puts one down: the short "More filters"
+        button measured 44 px in every test and 37 px on the screen that
+        reported it. Same trap as `@media (hover:hover)`, which touch emulation
+        makes false and which once made the hover effects look dead.
+
+        `mobile:false` in the metrics is NOT enough: Chrome derives
+        `pointer:coarse` from touch emulation, not from that flag.
+        """
+        m = dict(self._metriques)
+        if largeur:
+            m["width"] = largeur
+        if hauteur:
+            m["height"] = hauteur
+        m["mobile"] = not fin
+        self.cmd("Emulation.setDeviceMetricsOverride", m)
+        self.cmd("Emulation.setTouchEmulationEnabled",
+                 {"enabled": not fin, "maxTouchPoints": 5})
 
     def cmd(self, methode, params=None, timeout=30):
         self.n += 1

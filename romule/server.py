@@ -31,7 +31,7 @@ from . import (access_log, accounts, actions, apikeys, apiv1, audit, auth,
                edenconf, emuready, igdb, integrity, langue, meta, nand, net,
                notify,
                nsztool, profiles, qr, saves, scan, systems, titleid, transfers,
-               consoles, report, scheduler, trash, updates, versions,
+               consoles, report, scheduler, trash, updates, vault, versions,
                views)
 from . import cli
 from . import LICENCE, SOURCE_URL, __version__
@@ -1264,6 +1264,12 @@ class Handler(BaseHTTPRequestHandler):
         # --- choose where the service reads and writes on the host
         "/api/parcourir",             # reveals the host's directory tree
         "/api/ludotheque",
+        # The backup: it READS the whole library and WRITES gigabytes to a path
+        # the caller names. Both halves are administrator business, and
+        # `/api/coffre` alone already reveals the machine's mounted volumes.
+        "/api/coffre",
+        "/api/coffre-lancer",
+        "/api/dossier-creer",
         # Declaring or dropping a console changes eight settings at once — the
         # folder written to, the pairing, the emulator. It belongs where the
         # rest of the configuration belongs.
@@ -2160,6 +2166,43 @@ class Handler(BaseHTTPRequestHandler):
         elif p == "/api/saves-backup":
             self._job(actions.backup_saves, LIB, CFG, JOB)
 
+        # ---- the vault: what gets copied, where, and what is already there
+        elif p == "/api/coffre":
+            self._json(vault.etat(LIB, CFG))
+
+        elif p == "/api/coffre-apercu":
+            self._json(vault.apercu(LIB, CFG, d.get("sources")))
+
+        elif p == "/api/coffre-lancer":
+            dest = (d.get("dest") or "").strip() or None
+            # Checked HERE and not only inside the job: a refusal the caller
+            # reads is worth ten lines in a log they have to go and open.
+            if dest:
+                _, erreur = vault.verifier_dest(dest, creer=True)
+                if erreur:
+                    return self._json({"error": str(erreur)}, 400)
+            self._job(actions.backup_vault, LIB, CFG, JOB,
+                      d.get("sources"), dest, d.get("garder"))
+
+        elif p == "/api/dossier-creer":
+            # Creating a folder while choosing where the backup goes. A NAME,
+            # never a path: the separators are stripped before anything else,
+            # so the field cannot be used to climb out of the folder on screen.
+            nom = str(d.get("nom") or "").strip().replace("/", "").replace("\\", "")
+            nom = nom.strip(". ")
+            parent, erreur = vault.verifier_dest(d.get("chemin"), creer=False)
+            if erreur:
+                return self._json({"error": str(erreur)}, 400)
+            if not nom:
+                return self._json({"error": str(messages.CF_NOM_VIDE)}, 400)
+            cible = parent / nom
+            try:
+                cible.mkdir(exist_ok=True)
+            except OSError as exc:
+                return self._json({"error": str(langue.phrase(
+                    messages.CF_DEST_ILLISIBLE, exc))}, 400)
+            self._json({"chemin": str(cible)})
+
         elif p == "/api/saves-list":
             self._json({"items": saves.listing(), "dirs": saves.find_dirs(CFG)})
 
@@ -2198,6 +2241,7 @@ class Handler(BaseHTTPRequestHandler):
             # and `emulateur` were in that state — choosing an emulator profile
             # did not save it. `test_reglages.py` now compares this list against
             # `DEFAULTS` in both directions.
+            avant_dest = CFG.get("backup_dest", "")
             for k in ("device_dir", "jobs", "push_layout", "verify_mode",
                       "incremental", "cover_provider", "cover_url",
                       "steamgriddb_key", "igdb_client_id", "igdb_client_secret",
@@ -2205,7 +2249,8 @@ class Handler(BaseHTTPRequestHandler):
                       "versions_urls", "lan_access", "notify", "roms_root",
                       "saves_dir", "emuready", "emuready_device",
                       "emuready_device_nom", "ui_lang", "auto_nand",
-                      "trash_days", "system_dirs", "systemes_perso", "auth_mode",
+                      "trash_days", "system_dirs", "systemes_perso",
+                      "backup_sources", "backup_dest", "backup_keep", "auth_mode",
                       "oidc_issuer", "oidc_client_id", "oidc_client_secret",
                       "oidc_scopes", "oidc_redirect", "oidc_emails",
                       "oidc_groupes", "oidc_admin_groupes", "emulateur",
@@ -2239,6 +2284,26 @@ class Handler(BaseHTTPRequestHandler):
             # that field directly.
             if "systemes_perso" in d:
                 CFG["systemes_perso"] = systems.clean_custom(CFG["systemes_perso"])
+            # The backup settings are sanitised ON WRITE too, and for a sharper
+            # reason: `backup_dest` is the one setting that says WHERE the
+            # service writes gigabytes. An unreadable value must never reach
+            # the file — a destination stored as `../..` would be obeyed by
+            # whoever reads the field next, scheduler included.
+            if "backup_sources" in d:
+                CFG["backup_sources"] = [c for c in (CFG["backup_sources"] or [])
+                                         if c in vault.CLES]
+            if "backup_keep" in d:
+                try:
+                    CFG["backup_keep"] = max(1, min(99, int(CFG["backup_keep"])))
+                except (TypeError, ValueError):
+                    CFG["backup_keep"] = vault.GARDER_DEFAUT
+            if "backup_dest" in d:
+                chemin, erreur = vault.verifier_dest(CFG["backup_dest"])
+                if erreur and str(CFG["backup_dest"] or "").strip():
+                    CFG["backup_dest"] = avant_dest
+                    JOB.log(erreur, "warn")
+                else:
+                    CFG["backup_dest"] = str(chemin) if chemin else ""
             config.save_config(CFG)
             backup.auto("reglages")
             JOB.notify_end = bool(CFG.get("notify", True))
@@ -2353,6 +2418,8 @@ def _scheduled_task(name):
         return JOB.start("push_files", actions.push_files, LIB, CFG, JOB, [])
     if name == "meta":
         return JOB.start("sync_meta", actions.sync_meta, LIB, CFG, JOB)
+    if name == "sauvegarde":
+        return JOB.start("backup_vault", actions.backup_vault, LIB, CFG, JOB)
     return False
 
 
