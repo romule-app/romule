@@ -1808,5 +1808,11 @@
   "aucune source": "aucune source",
   "Aucune jaquette trouvée pour %s.": "Aucune jaquette trouvée pour %s.",
   "Jaquettes : %d récupérée(s) (%s), %d sans résultat.": "Jaquettes : %d récupérée(s) (%s), %d sans résultat.",
-  "%d jaquette(s) effacée(s).": "%d jaquette(s) effacée(s)."
+  "%d jaquette(s) effacée(s).": "%d jaquette(s) effacée(s).",
+  "%s libres sur %s": "%s libres sur %s",
+  "%s libres": "%s libres",
+  "espace inconnu": "espace inconnu",
+  "Aucun volume détecté.": "Aucun volume détecté.",
+  "%s–%s sur %s": "%s–%s sur %s",
+  "insuffisant !": "insuffisant !"
 }

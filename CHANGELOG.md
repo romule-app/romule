@@ -51,6 +51,13 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Fixed
 
+- **The floating « + » covered a control on a tablet.** Taking it out of the
+  library panel gave it every screen — including the settings, where a row's
+  control can pass under it. A floating button covering what scrolls beneath is
+  not a defect, any more than the sticky header is; being covered with NO WAY
+  to scroll clear is. The responsive audit now makes that distinction, and the
+  settings keep 120 px at the bottom so the last row is always reachable.
+
 - **One CD game counted twenty-five times.** `Rayman (Europe) (Track 01).bin`
   through `(Track 25)` is one PlayStation title in twenty-five pieces, and
   every piece was a line in the list. An index file — `.cue`, `.gdi`, `.ccd`,
@@ -149,6 +156,12 @@ change it. Breaking changes are always listed under **Changed** with the reason.
   reads text files; it cannot read a PNG, and the console's address sits in
   plain sight on the console settings screen. That is the one that cost a
   history rewrite.
+
+- **Four sentences assembled by hand stayed French in an English interface.**
+  « 84.0 GiB libre / 218.7 GiB », « 1–48 sur 85 », « espace inconnu », « aucun
+  volume detecte » — built by concatenation, so the catalogue never saw them
+  and neither did `verifier-traduction.py`. They were on the two screens a
+  screenshot always shows, which is how they were found.
 
 - **Both credential fields can be tested from the settings.** SteamGridDB had
   no test at all outside the first-run wizard, and IGDB's answered in a bare

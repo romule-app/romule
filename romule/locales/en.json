@@ -1808,5 +1808,11 @@
   "aucune source": "no source",
   "Aucune jaquette trouvée pour %s.": "No cover found for %s.",
   "Jaquettes : %d récupérée(s) (%s), %d sans résultat.": "Covers: %d fetched (%s), %d with no result.",
-  "%d jaquette(s) effacée(s).": "%d cover(s) cleared."
+  "%d jaquette(s) effacée(s).": "%d cover(s) cleared.",
+  "%s libres sur %s": "%s free of %s",
+  "%s libres": "%s free",
+  "espace inconnu": "space unknown",
+  "Aucun volume détecté.": "No volume detected.",
+  "%s–%s sur %s": "%s–%s of %s",
+  "insuffisant !": "not enough!"
 }

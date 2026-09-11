@@ -65,6 +65,11 @@ main{max-width:var(--largeur-page);margin:0 auto;padding:22px}
 /* Prose and forms keep a readable column. */
 #panel-settings,#panel-jeux .empty{max-width:var(--largeur-texte);margin:0 auto}
 .panel{display:none}
+/* The « + » button floats over every screen now, not just the library. Content
+   scrolls past it, which is what a floating button is — but the LAST row must
+   still be reachable, and nothing comes after it to push it up. 120 px is the
+   button's footprint (54 px tall, 62 px off the bottom) plus a gutter. */
+#panel-settings{padding-bottom:120px}
 .panel.active{display:block;animation:enter .35s var(--ease)}
 @keyframes enter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 section{margin-bottom:30px}

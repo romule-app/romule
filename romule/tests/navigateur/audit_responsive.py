@@ -139,8 +139,17 @@ SONDE = r"""
     if (y < basTete) continue;
     const d = document.elementFromPoint(x, y);
     if (!(d && (d === el || el.contains(d) || d.contains(el)))) {
-      res.bloques.push(nom + ' « ' + etiq + ' » recouvert par ' +
-        (d ? (d.id ? '#' + d.id : '.' + String(d.className).split(' ')[0]) : 'rien'));
+      // Un bouton flottant recouvre ce qui defile dessous, exactement comme
+      // l'en-tete colle au-dessus. Ce n'est un defaut que si RIEN ne peut l'en
+      // degager : sur une page qui ne defile pas, le controle est inatteignable
+      // et la, il faut le dire.
+      const flottant = d.closest && d.closest('#fab,.taskwrap,.dropwrap');
+      const defilable =
+        document.documentElement.scrollHeight - innerHeight > 40;
+      if (!(flottant && defilable)) {
+        res.bloques.push(nom + ' « ' + etiq + ' » recouvert par ' +
+          (d ? (d.id ? '#' + d.id : '.' + String(d.className).split(' ')[0]) : 'rien'));
+      }
     }
     if (r.height < MIN - 6) {
       res.petits.push(nom + ' « ' + etiq + ' » ' +
