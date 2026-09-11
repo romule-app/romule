@@ -110,6 +110,25 @@ SECRETS = ("oidc_client_secret", "igdb_client_secret")
 PRIVES = ("auth_secret", "jeton_auto")
 
 
+_RESUME_TIMER = [None]
+
+
+def _resume_jaquettes_plus_tard(delai=3.0):
+    """Flush the cover tally once the page has stopped asking.
+
+    A single timer, pushed back on every cover: a grid of two hundred cards
+    fires two hundred requests, and two hundred timers would each write the
+    same sentence.
+    """
+    t = _RESUME_TIMER[0]
+    if t is not None:
+        t.cancel()
+    t = threading.Timer(delai, covers.resume_jaquettes)
+    t.daemon = True
+    _RESUME_TIMER[0] = t
+    t.start()
+
+
 def _config_publique():
     """Copie de la configuration destinee au navigateur, expurgee."""
     pub = {k: v for k, v in CFG.items() if k not in PRIVES}
@@ -1015,6 +1034,9 @@ class Handler(BaseHTTPRequestHandler):
             vals = parse_qs(query).get("name")
             name = vals[0] if vals else None
         path = covers.fetch(tid, name, CFG)
+        # The tail of a page: the last few covers must not wait for a batch
+        # that will never come.
+        _resume_jaquettes_plus_tard()
         if not path:
             self.send_response(404)
             self.end_headers()
@@ -2016,7 +2038,8 @@ class Handler(BaseHTTPRequestHandler):
             })
 
         elif p == "/api/covers-clear":
-            self._json({"message": "%d jaquette(s) effacee(s)." % covers.clear()})
+            self._json({"message": str(langue.phrase(messages.JQ_EFFACEES,
+                                                     covers.clear()))})
 
         # ---- multi-systemes
         elif p == "/api/systems":
@@ -2034,6 +2057,10 @@ class Handler(BaseHTTPRequestHandler):
                     {"nom": g["name"], "chemin": g["path"], "taille": g["size"],
                      **systems._light_entry(meta.entry_for_name(g["name"], CFG, network=False))}
                     for g in device.find_games(dossier, systems.get_cfg(key, CFG)["exts"])]
+                # One entry per GAME: a CD image in twenty-five tracks was
+                # twenty-five lines called « Rayman ».
+                distants = systems.fusionner_disques(
+                    distants, nom="nom", chemin="chemin", taille="taille")
             self._json({"system": key, "games": systems.scan_local(key, CFG),
                         "console": distants, "device_dir": dossier})
 
@@ -2852,6 +2879,11 @@ def serve(open_browser=True):
     # an existing installation would find itself with no administrator after
     # the upgrade.
     accounts.refresh_roles()
+    # The lazy paths get a way into the journal. Fetching a cover is a network
+    # call that can take seconds and can fail, and none of it appeared
+    # anywhere: the journal showed the tasks somebody started, and nothing of
+    # what the interface does on its own.
+    covers.set_journal(lambda m, n="info": JOB.log(m, n))
     JOB.notify_end = bool(CFG.get("notify", True))
     auto_token = _first_run_token()
     # The terminal speaks ENGLISH, whatever the interface speaks. Following

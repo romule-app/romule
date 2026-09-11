@@ -101,6 +101,25 @@ of the distinctive words of the title. A file named `Some Game (Europe) (En,Fr)
 [!].nds` is searched under `Some Game` — the region and dump tags are stripped
 first. A cover belonging to another game would be worse than none.
 
+## The same game appears twenty-five times
+
+A CD game is not one file. `Rayman (Europe) (Track 01).bin` through
+`(Track 25).bin` is **one** PlayStation title cut into tracks, and listing each
+piece put twenty-five Raymans in the list.
+
+Romule folds them back together: an index file — `.cue`, `.gdi`, `.ccd`,
+`.toc` — is the game and the tracks that carry its name are its innards; with
+no index, the tracks are grouped under the name they share and the set counts
+once, weighing the whole disc.
+
+The transfer is not fooled by the tidier list: sending the game sends every
+piece, and the log says how many track files went along. A cue sheet whose
+tracks stayed on the server is a game that does not start.
+
+If a set still appears twice, the tracks are probably in **two different
+folders** — Romule never merges across folders, because two folders are the one
+reliable sign of two copies.
+
 ## `.nsz` / `.xcz` files will not convert
 
 They need the `nsz` tool **and** `prod.keys`:

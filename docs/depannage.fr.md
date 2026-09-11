@@ -107,6 +107,26 @@ deux tiers des mots distinctifs du titre. Un fichier nommé `Un Jeu (Europe)
 sont retirées d'abord. Une jaquette appartenant à un autre jeu serait pire que
 pas de jaquette du tout.
 
+## Le même jeu apparaît vingt-cinq fois
+
+Un jeu sur CD n'est pas un fichier. `Rayman (Europe) (Track 01).bin` jusqu'à
+`(Track 25).bin`, c'est **un** titre PlayStation découpé en pistes, et lister
+chaque morceau mettait vingt-cinq Rayman dans la liste.
+
+Romule les recolle : un fichier d'index — `.cue`, `.gdi`, `.ccd`, `.toc` — est
+le jeu, et les pistes qui portent son nom en sont les entrailles ; sans index,
+les pistes sont regroupées sous le nom qu'elles partagent et l'ensemble compte
+une fois, du poids du disque entier.
+
+Le transfert ne se laisse pas prendre à cette liste plus propre : envoyer le
+jeu envoie tous les morceaux, et le journal dit combien de fichiers de piste
+ont suivi. Une feuille cue dont les pistes sont restées sur le serveur est un
+jeu qui ne démarre pas.
+
+Si un ensemble apparaît encore deux fois, c'est que les pistes sont dans **deux
+dossiers différents** — Romule ne fusionne jamais d'un dossier à l'autre, parce
+que deux dossiers sont le seul signe fiable de deux copies.
+
 ## Les `.nsz` / `.xcz` ne se convertissent pas
 
 Ils demandent l'outil `nsz` **et** `prod.keys` :

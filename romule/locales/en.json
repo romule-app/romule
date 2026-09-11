@@ -1800,5 +1800,13 @@
   "Doublons, fichiers abîmés, transferts interrompus, connexions récentes.": "Duplicates, damaged files, interrupted transfers, recent sign-ins.",
   "Passé à chaque démarrage ; ce qui cloche part dans le journal. À relancer après avoir changé un réglage d'accès.": "Run at every start; anything amiss goes to the log. Worth running again after changing an access setting.",
   "Inspections": "Inspections",
-  "La Switch est la seule plateforme à séparer jeux, mises à jour et DLC : son émulateur en a besoin. Les autres rangent tout à plat.": "The Switch is the only platform that separates games, updates and DLC: its emulator needs that. The others keep everything flat."
+  "La Switch est la seule plateforme à séparer jeux, mises à jour et DLC : son émulateur en a besoin. Les autres rangent tout à plat.": "The Switch is the only platform that separates games, updates and DLC: its emulator needs that. The others keep everything flat.",
+  "%d fichier(s) de piste joints aux images de disque.": "%d track file(s) sent along with the disc images.",
+  "Tester la clé": "Test the key",
+  "Contact impossible : %s": "Could not reach it: %s",
+  "SteamGridDB répond %d.": "SteamGridDB answers %d.",
+  "aucune source": "no source",
+  "Aucune jaquette trouvée pour %s.": "No cover found for %s.",
+  "Jaquettes : %d récupérée(s) (%s), %d sans résultat.": "Covers: %d fetched (%s), %d with no result.",
+  "%d jaquette(s) effacée(s).": "%d cover(s) cleared."
 }
