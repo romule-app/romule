@@ -247,8 +247,15 @@ PRISES = [
      "app.closeGame(); app.tab('settings');"
      "document.querySelector(\"#setnav a[href='#sec-console']\").click();"
      "app.detectPlatforms(true)", False),
-    ("sante", 1400, 950, 2,
-     "app.tab('jeux'); app.showMaintenance('sante')", False),
+    # The report is drawn into `#entretien`, which lives in the SETTINGS. The
+    # gesture used to switch to the games tab first, so every « health report »
+    # published so far was in fact a picture of the grid — caption and image
+    # saying two different things, for months.
+    ("sante", 1400, 1050, 2,
+     "app.closeGame(); app.tab('settings');"
+     "showSettingsSection('sec-entretien'); app.showMaintenance('sante');"
+     "setTimeout(function(){var e=document.getElementById('entretien');"
+     "if(e) e.scrollIntoView({block:'center'});}, 900)", False),
     ("assistant", 1300, 1000, 2,
      "app.closeDialog(); app.showOnboard()", False),
     ("bureau", 1440, 900, 2,

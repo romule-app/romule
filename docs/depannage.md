@@ -232,6 +232,23 @@ left the network or changed address: the connection port changes every time
 wireless debugging restarts, and step 4 has to be done again — not the pairing,
 which stays.
 
+## The console will not reconnect since the update
+
+Up to 0.4.x, adb's identity — the key the console TRUSTS once paired — lived in
+the container's home folder, which belongs to the image. Rebuilding for an
+update handed adb a brand-new key, the console stopped recognising it, and you
+were asked to pair again for no reason you could see.
+
+The key now lives in the data folder, beside the rest of the state, so it
+survives every rebuild. An installation that already had one keeps it: it is
+moved across on the first start.
+
+Coming **from** an older version, one last pairing is needed — the previous key
+went with the image it was in. After that, updates leave the pairing alone.
+
+`ANDROID_USER_HOME` overrides the location if you have a reason to put it
+elsewhere; Romule then leaves it exactly where you point it.
+
 ## Transfers over Wi-Fi are slow
 
 Two to five times slower than USB, by nature. For a first bulk transfer, cable

@@ -4001,7 +4001,7 @@ function renderConsoles() {
   const detail = liste.map(d => {
     const h = tenu[d.id];
     if (!h || !h.lu) return '';
-    return esc(d.nom) + ' — '
+    return '<span data-i18n-skip>' + esc(d.nom) + '</span> — '
       + countPhrase(h.fichiers, '{fichier|fichiers}')
       + (h.vieux ? ' ' + esc(t('(lecture ancienne)')) : '');
   }).filter(Boolean).join(' · ');
@@ -4021,8 +4021,10 @@ function renderConsoles() {
         ? '<button class="ghost" data-act="removeConsole">' + esc(t('Retirer')) + '</button>'
         : '')
     + '</div>'
-    + (detail ? '<p class="lead" style="margin:6px 0 0" data-i18n-skip>'
-                + detail + '</p>' : '');
+    // The skip wraps the NAME and nothing else. Carried by the whole
+    // paragraph, it also hid the sentence around it — from the observer, and
+    // from the test that looks for French left on screen.
+    + (detail ? '<p class="lead" style="margin:6px 0 0">' + detail + '</p>' : '');
 }
 
 // The schedule: one row per task, one select per row. The presets are phrases
@@ -9666,7 +9668,13 @@ updateAppearance();
   document.body.classList.add('loadingstate');
   renderHost();
   renderA2HS();
-  app.langLoad();
+  // AWAITED. It used to run alongside the scan, and on a fast scan the first
+  // render happened before the catalogue had landed — so every sentence built
+  // by interpolation at that instant froze in French, with no observer able to
+  // fix it afterwards. « AYN Thor — 294 fichiers » sat in an English interface
+  // for that reason, and a screenshot is how it was found. One local round
+  // trip, behind the loading veil, buys the whole page one language.
+  await app.langLoad();
   try {
     await app.scan();              // the server's files: the basis of everything
     // The library shows as soon as the server has answered. Also waiting for

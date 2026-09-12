@@ -50,6 +50,47 @@ def adb_available():
     return _adb_binary() is not None
 
 
+# adb keeps its identity — the key the console TRUSTS after pairing — in
+# `$ANDROID_USER_HOME`, or in `$HOME/.android` when that is unset. In a
+# container, `$HOME` belongs to the image: rebuilding for an update generates a
+# brand-new key, the console no longer recognises it, and the user is asked to
+# pair again for no reason they can see. It looks, from the outside, exactly
+# like "the console will not reconnect since the update".
+#
+# So the key lives beside the rest of the persisted state, in the data folder.
+# An installation that already had one keeps it: we move it across on the first
+# start rather than make this fix cost one last re-pairing.
+_CLES_POSEES = [False]
+
+
+def _cles_adb():
+    # Not conditioned on which adb BINARY is in use: where the key lives has
+    # nothing to do with that, and making it depend on `ROMULE_ADB` would have
+    # left the relocation silent for anyone naming their own adb.
+    if _CLES_POSEES[0]:
+        return
+    _CLES_POSEES[0] = True
+    if os.environ.get("ANDROID_USER_HOME"):
+        return                       # deliberately set: we do not override it
+    cible = config.ROOT / ".android"
+    try:
+        cible.mkdir(parents=True, exist_ok=True)
+        os.chmod(cible, 0o700)
+    except OSError:
+        return
+    os.environ["ANDROID_USER_HOME"] = str(cible)
+    if (cible / "adbkey").exists():
+        return
+    ancien = Path(os.path.expanduser("~")) / ".android"
+    for nom in ("adbkey", "adbkey.pub"):
+        src = ancien / nom
+        try:
+            if src.is_file():
+                shutil.copy2(str(src), str(cible / nom))
+        except OSError:
+            pass
+
+
 # Serial of the targeted device. Useful when USB and Wi-Fi are connected at the
 # same time: without it adb refuses to act ("more than one device").
 _SERIAL = None
@@ -65,6 +106,7 @@ def _run(args, timeout=60, targeted=True):
     binaire = _adb_binary()
     if not binaire:
         return 1, "", "adb introuvable"
+    _cles_adb()
     cmd = [binaire]
     if targeted:
         # Pick the target ON DEMAND. Without this, a process's first command
