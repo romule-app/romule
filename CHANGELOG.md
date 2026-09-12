@@ -58,7 +58,16 @@ change it. Breaking changes are always listed under **Changed** with the reason.
   console will not reconnect since the update", and nothing said otherwise. The
   key now lives in the data folder with the rest of the state, and an existing
   one is moved across on the first start rather than making the fix cost one
-  last pairing. `ANDROID_USER_HOME` still wins if you set it.
+  last pairing — key AND trust store, because wireless debugging trusts the
+  pair. The adoption is retried until there is something to adopt: the adb
+  server can be started by something other than Romule, and it then writes its
+  key after we first looked. Giving up on that first empty look is how the key
+  stayed in the image. `ANDROID_USER_HOME` still wins if you set it.
+
+- **`0 %%` on the library report.** `%%` is printf's escape; JavaScript has
+  none, and `tpl()` replaces `%s` and `%d` and leaves the rest alone — so a
+  doubled per-cent written out of Python habit reached the screen as it stood.
+  `verifier-traduction.py` refuses one in a catalogue now.
 
 - **Every published « health report » was a picture of the grid.** The report
   is drawn into the settings' Upkeep section; the capture switched to the games

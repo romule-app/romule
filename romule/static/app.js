@@ -3963,7 +3963,7 @@ function renderHealth(r) {
         ? esc(countPhrase(r.total, '{point|points}')) + ' '
           + esc(t('à regarder.'))
         : esc(t('Rien à signaler.')))
-    + ' ' + esc(tpl('Empreintes connues pour %d %% de la ludothèque.', part))
+    + ' ' + esc(tpl('Empreintes connues pour %d % de la ludothèque.', part))
     + '</p>';
   if (!familles.length) return entete;
   return entete + familles.map(f =>

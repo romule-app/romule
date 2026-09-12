@@ -1160,7 +1160,6 @@
   "(lecture ancienne)": "(lecture ancienne)",
   "{point|points}": "{point|points}",
   "à regarder.": "à regarder.",
-  "Empreintes connues pour %d %% de la ludothèque.": "Empreintes connues pour %d %% de la ludothèque.",
   "État de la ludothèque": "État de la ludothèque",
   "Traiter": "Traiter",
   "Fichiers incomplets": "Fichiers incomplets",
@@ -1814,5 +1813,6 @@
   "espace inconnu": "espace inconnu",
   "Aucun volume détecté.": "Aucun volume détecté.",
   "%s–%s sur %s": "%s–%s sur %s",
-  "insuffisant !": "insuffisant !"
+  "insuffisant !": "insuffisant !",
+  "Empreintes connues pour %d % de la ludothèque.": "Empreintes connues pour %d % de la ludothèque."
 }

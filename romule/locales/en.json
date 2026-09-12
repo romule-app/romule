@@ -1160,7 +1160,6 @@
   "(lecture ancienne)": "(read a while ago)",
   "{point|points}": "{point|points}",
   "à regarder.": "to look at.",
-  "Empreintes connues pour %d %% de la ludothèque.": "Fingerprints known for %d %% of the library.",
   "État de la ludothèque": "Library health",
   "Traiter": "Handle it",
   "Fichiers incomplets": "Incomplete files",
@@ -1814,5 +1813,6 @@
   "espace inconnu": "space unknown",
   "Aucun volume détecté.": "No volume detected.",
   "%s–%s sur %s": "%s–%s of %s",
-  "insuffisant !": "not enough!"
+  "insuffisant !": "not enough!",
+  "Empreintes connues pour %d % de la ludothèque.": "Fingerprints known for %d % of the library."
 }

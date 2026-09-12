@@ -29,10 +29,21 @@ COPY LICENSE README.md ./
 # /library : ce qui appartient a l'UTILISATEUR — ses jeux. Le dossier exact se
 #            choisit dans l'interface ; `ROMULE_BASES` dit seulement ou l'on a
 #            le droit d'aller le chercher.
+# ANDROID_USER_HOME : ou adb garde son identite — la cle que la console
+#            approuve une fois appairee, et le magasin des consoles qui l'ont
+#            approuvee. Par defaut elle vit dans le dossier personnel, qui
+#            appartient a l'IMAGE : reconstruire pour une mise a jour en
+#            fabriquait une neuve et la console cessait de la reconnaitre.
+#            Pose ici, et pas seulement dans le code, pour que TOUT le
+#            conteneur s'accorde — y compris un `docker exec adb devices`, qui
+#            demarre le serveur adb avec son propre environnement et lui impose
+#            alors le mauvais dossier.
+#            Si tu deplaces ROMULE_ROOT, deplace celui-ci avec.
 ENV ROMULE_ROOT=/data \
     ROMULE_BASES=/library \
     ROMULE_WEB_PORT=8787 \
     ROMULE_KEYS=/keys/prod.keys \
+    ANDROID_USER_HOME=/data/.android \
     PYTHONUNBUFFERED=1
 
 # Un service expose au reseau n'a aucune raison d'etre root. L'identifiant 1000

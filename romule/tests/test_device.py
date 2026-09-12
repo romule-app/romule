@@ -728,6 +728,7 @@ def test_les_cles_adb_survivent_a_une_mise_a_jour():
     (maison / ".android").mkdir()
     (maison / ".android" / "adbkey").write_text("LA CLE QUE LA CONSOLE CONNAIT")
     (maison / ".android" / "adbkey.pub").write_text("PUB")
+    (maison / ".android" / "adb_known_hosts.pb").write_bytes(b"\x0a\x01")
     avant_root, avant_home = d.config.ROOT, os.environ.get("HOME")
     avant_aud = os.environ.pop("ANDROID_USER_HOME", None)
     avant_pose = d._CLES_POSEES[0]
@@ -743,6 +744,11 @@ def test_les_cles_adb_survivent_a_une_mise_a_jour():
             "la cle existante n'a pas ete reprise"
         assert oct(cible.stat().st_mode & 0o777) == "0o700", "droits trop larges"
 
+        # The trust store travels with the key: wireless debugging trusts the
+        # PAIR, and losing either one ends the pairing.
+        assert (cible / "adb_known_hosts.pb").is_file(), \
+            "le magasin de consoles approuvees n'a pas suivi"
+
         # Called again — a second start — it must not overwrite the key with
         # whatever the image happens to carry.
         (cible / "adbkey").write_text("CLE EN PLACE")
@@ -752,6 +758,25 @@ def test_les_cles_adb_survivent_a_une_mise_a_jour():
         d._cles_adb()
         assert (cible / "adbkey").read_text() == "CLE EN PLACE", \
             "la cle persistee a ete ecrasee au demarrage suivant"
+
+        # And the case that let the key stay in the image: nothing to adopt on
+        # the first look, because adb had not created it yet. Looking once and
+        # giving up is exactly what happened in the container.
+        vide = _P(tempfile.mkdtemp(prefix="vide-"))
+        tard = _P(tempfile.mkdtemp(prefix="tard-"))
+        (tard / ".android").mkdir()
+        d.config.ROOT = vide
+        os.environ["HOME"] = str(tard)
+        d._CLES_POSEES[0] = False
+        os.environ.pop("ANDROID_USER_HOME", None)
+        d._cles_adb()                       # nothing to adopt: we do not latch
+        assert not (vide / ".android" / "adbkey").exists()
+        (tard / ".android" / "adbkey").write_text("CLE CREEE APRES COUP")
+        d._cles_adb()                       # adb created it in the meantime
+        assert (vide / ".android" / "adbkey").read_text() == "CLE CREEE APRES COUP", \
+            "une cle apparue apres le premier regard n'est jamais reprise"
+        _sh.rmtree(vide, ignore_errors=True)
+        _sh.rmtree(tard, ignore_errors=True)
     finally:
         d.config.ROOT = avant_root
         d._CLES_POSEES[0] = avant_pose
