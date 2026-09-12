@@ -62,15 +62,20 @@ def adb_available():
 # start rather than make this fix cost one last re-pairing.
 _CLES_POSEES = [False]
 
+# What has to survive: the key adb signs with, and the store of consoles that
+# have accepted it. Wireless debugging trusts the PAIR — losing either one ends
+# the pairing.
+_FICHIERS_ADB = ("adbkey", "adbkey.pub", "adb_known_hosts.pb")
+
 
 def _cles_adb():
-    # Not conditioned on which adb BINARY is in use: where the key lives has
-    # nothing to do with that, and making it depend on `ROMULE_ADB` would have
-    # left the relocation silent for anyone naming their own adb.
-    if _CLES_POSEES[0]:
-        return
-    _CLES_POSEES[0] = True
-    if os.environ.get("ANDROID_USER_HOME"):
+    """Point adb at the persisted folder, and adopt whatever key already exists.
+
+    Not conditioned on which adb BINARY is in use: where the key lives has
+    nothing to do with that, and making it depend on `ROMULE_ADB` would have
+    left the relocation silent for anyone naming their own adb.
+    """
+    if os.environ.get("ANDROID_USER_HOME") and _CLES_POSEES[0]:
         return                       # deliberately set: we do not override it
     cible = config.ROOT / ".android"
     try:
@@ -78,17 +83,28 @@ def _cles_adb():
         os.chmod(cible, 0o700)
     except OSError:
         return
-    os.environ["ANDROID_USER_HOME"] = str(cible)
+    if not os.environ.get("ANDROID_USER_HOME"):
+        os.environ["ANDROID_USER_HOME"] = str(cible)
     if (cible / "adbkey").exists():
+        _CLES_POSEES[0] = True
         return
+    # Not latched until there IS something to keep. The adb server can be
+    # started by something other than us — a `docker exec adb devices`, another
+    # tool — and it then creates its key in the home folder AFTER we looked.
+    # Giving up on the first empty look is how the key stayed in the image, in
+    # the one place a rebuild throws away.
     ancien = Path(os.path.expanduser("~")) / ".android"
-    for nom in ("adbkey", "adbkey.pub"):
+    copies = 0
+    for nom in _FICHIERS_ADB:
         src = ancien / nom
         try:
             if src.is_file():
                 shutil.copy2(str(src), str(cible / nom))
+                copies += 1
         except OSError:
             pass
+    if copies:
+        _CLES_POSEES[0] = True
 
 
 # Serial of the targeted device. Useful when USB and Wi-Fi are connected at the

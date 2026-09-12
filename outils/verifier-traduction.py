@@ -756,6 +756,26 @@ def entetes():
     return soucis
 
 
+def pourcents_doubles(catalogues):
+    """`%%` is printf's escape. JavaScript has none.
+
+    `tpl()` replaces `%s` and `%d` and leaves everything else alone, so a
+    doubled per-cent written out of Python habit reaches the screen as it
+    stands: « Fingerprints known for 0 %% of the library ». Found on a
+    published screenshot, which is a late place to find it.
+    """
+    soucis = []
+    for nom, catalogue in catalogues.items():
+        for cle, valeur in catalogue.items():
+            if cle == "_meta":
+                continue
+            for quoi, texte in (("cle", cle), ("valeur", valeur)):
+                if isinstance(texte, str) and "%%" in texte:
+                    soucis.append("%s : %%%% n'est pas un echappement en "
+                                  "JavaScript (%s %r)" % (nom, quoi, texte))
+    return soucis
+
+
 def main(argv):
     if "--autotest" in argv:
         print("-- autotest du detecteur --")
@@ -768,6 +788,9 @@ def main(argv):
     soucis = entetes()
     catalogue = json.loads((RACINE / "romule" / "locales" / "fr.json")
                            .read_text(encoding="utf-8"))
+    tous = {f.name: json.loads(f.read_text(encoding="utf-8"))
+            for f in sorted((RACINE / "romule" / "locales").glob("*.json"))}
+    soucis += pourcents_doubles(tous)
     js = (RACINE / "romule" / "static" / "app.js").read_text(encoding="utf-8")
     for texte in sorted(appels_t(js)):
         if texte not in catalogue:
