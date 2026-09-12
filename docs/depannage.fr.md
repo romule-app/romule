@@ -241,6 +241,25 @@ sans doute quitté le réseau ou changé d'adresse : le port de connexion change
 chaque redémarrage du débogage sans fil, et il faut refaire l'étape 4 (pas
 l'appairage, qui reste acquis).
 
+## La console ne se reconnecte plus depuis la mise à jour
+
+Jusqu'aux 0.4.x, l'identité d'adb — la clé à laquelle la console fait confiance
+une fois appairée — vivait dans le dossier personnel du conteneur, qui
+appartient à l'image. Reconstruire pour une mise à jour donnait à adb une clé
+toute neuve, la console cessait de la reconnaître, et on te redemandait
+d'appairer sans que rien ne l'explique.
+
+La clé vit désormais dans le dossier de données, avec le reste de l'état : elle
+survit à toutes les reconstructions. Une installation qui en avait déjà une la
+garde — elle est déplacée au premier démarrage.
+
+En **venant** d'une version antérieure, un dernier appairage est nécessaire :
+l'ancienne clé est partie avec l'image qui la contenait. Ensuite, les mises à
+jour ne touchent plus à l'appairage.
+
+`ANDROID_USER_HOME` impose l'emplacement si tu as une raison de le mettre
+ailleurs ; Romule le laisse alors exactement où tu le désignes.
+
 ## Les transferts Wi-Fi sont lents
 
 Deux à cinq fois plus lents que l'USB, par nature. Pour un premier transfert en

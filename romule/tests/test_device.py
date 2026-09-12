@@ -710,6 +710,61 @@ def test_sans_console_la_detection_ne_devine_rien():
         d.state = vrai
 
 
+def test_les_cles_adb_survivent_a_une_mise_a_jour():
+    """adb's identity lives with the state, not with the image.
+
+    The key the console TRUSTS after pairing sat in `$HOME/.android`. In a
+    container that folder belongs to the image, so rebuilding for an update
+    handed adb a brand-new key, the console stopped recognising it, and the
+    user was asked to pair again for no reason they could see.
+    """
+    import os
+    import shutil as _sh
+    import tempfile
+    from pathlib import Path as _P
+
+    racine = _P(tempfile.mkdtemp(prefix="cles-adb-"))
+    maison = _P(tempfile.mkdtemp(prefix="maison-"))
+    (maison / ".android").mkdir()
+    (maison / ".android" / "adbkey").write_text("LA CLE QUE LA CONSOLE CONNAIT")
+    (maison / ".android" / "adbkey.pub").write_text("PUB")
+    avant_root, avant_home = d.config.ROOT, os.environ.get("HOME")
+    avant_aud = os.environ.pop("ANDROID_USER_HOME", None)
+    avant_pose = d._CLES_POSEES[0]
+    try:
+        d.config.ROOT = racine
+        os.environ["HOME"] = str(maison)
+        d._CLES_POSEES[0] = False
+        d._cles_adb()
+        cible = racine / ".android"
+        assert _P(os.environ["ANDROID_USER_HOME"]).resolve() == cible.resolve(), \
+            os.environ.get("ANDROID_USER_HOME")
+        assert (cible / "adbkey").read_text() == "LA CLE QUE LA CONSOLE CONNAIT", \
+            "la cle existante n'a pas ete reprise"
+        assert oct(cible.stat().st_mode & 0o777) == "0o700", "droits trop larges"
+
+        # Called again — a second start — it must not overwrite the key with
+        # whatever the image happens to carry.
+        (cible / "adbkey").write_text("CLE EN PLACE")
+        (maison / ".android" / "adbkey").write_text("CLE NEUVE DE L'IMAGE")
+        d._CLES_POSEES[0] = False
+        os.environ.pop("ANDROID_USER_HOME", None)
+        d._cles_adb()
+        assert (cible / "adbkey").read_text() == "CLE EN PLACE", \
+            "la cle persistee a ete ecrasee au demarrage suivant"
+    finally:
+        d.config.ROOT = avant_root
+        d._CLES_POSEES[0] = avant_pose
+        if avant_home is not None:
+            os.environ["HOME"] = avant_home
+        if avant_aud is not None:
+            os.environ["ANDROID_USER_HOME"] = avant_aud
+        else:
+            os.environ.pop("ANDROID_USER_HOME", None)
+        _sh.rmtree(racine, ignore_errors=True)
+        _sh.rmtree(maison, ignore_errors=True)
+
+
 def _run():
     fns = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     failed = 0

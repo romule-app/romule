@@ -51,6 +51,29 @@ change it. Breaking changes are always listed under **Changed** with the reason.
 
 ### Fixed
 
+- **Every update asked for the console to be paired again.** adb's identity —
+  the key the console trusts once paired — lived in the container's home
+  folder, which belongs to the image: rebuilding handed adb a brand-new key and
+  the console stopped recognising it. From the outside that reads as "the
+  console will not reconnect since the update", and nothing said otherwise. The
+  key now lives in the data folder with the rest of the state, and an existing
+  one is moved across on the first start rather than making the fix cost one
+  last pairing. `ANDROID_USER_HOME` still wins if you set it.
+
+- **Every published « health report » was a picture of the grid.** The report
+  is drawn into the settings' Upkeep section; the capture switched to the games
+  tab first, so the caption and the image had been saying two different things
+  for months.
+
+- **A sentence built before the catalogue arrived froze in French.**
+  `langLoad()` was fired and not awaited, so on a fast scan the first render
+  beat it — and anything interpolated at that instant, inside a
+  `data-i18n-skip`, could never be fixed afterwards: neither the observer nor
+  the test that hunts for French on screen looks inside a skip. « AYN Thor —
+  294 fichiers » sat in an English interface for that reason. The catalogue is
+  awaited now, and the skip wraps the console's NAME instead of the whole
+  paragraph.
+
 - **The floating « + » covered a control on a tablet.** Taking it out of the
   library panel gave it every screen — including the settings, where a row's
   control can pass under it. A floating button covering what scrolls beneath is
