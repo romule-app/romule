@@ -459,6 +459,21 @@ def main(argv=()):
             n.aller(url, attente=6.0)
             n.js("app.detect()")
             time.sleep(3.0)
+            # An EMPTY library photographs perfectly well, and the images say
+            # nothing. That has now happened three times — a console asleep, a
+            # data folder just recreated — and each time the empty shots
+            # quietly replaced good ones, because the tool reported success and
+            # the files were only looked at afterwards.
+            #
+            # A refusal, not a warning: the published images are the one thing
+            # here that nobody re-reads before they ship.
+            cartes = n.js("document.querySelectorAll('#lib .gcard').length") or 0
+            if not cartes:
+                raise SystemExit(
+                    "  la bibliotheque est vide : rien a photographier.\n"
+                    "  (console endormie ? dossier de donnees neuf ? "
+                    "regarde %s avant de relancer)" % url)
+            print("  %d jeux dans la grille" % cartes)
             for nom, L, H, dpr, geste, pleine in PRISES:
                 n.cmd("Emulation.setDeviceMetricsOverride",
                       {"width": L, "height": H, "deviceScaleFactor": dpr,

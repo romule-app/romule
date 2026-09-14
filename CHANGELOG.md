@@ -195,6 +195,14 @@ change it. Breaking changes are always listed under **Changed** with the reason.
   and neither did `verifier-traduction.py`. They were on the two screens a
   screenshot always shows, which is how they were found.
 
+- **A capture of an empty library is refused.** An empty library photographs
+  perfectly well and the images say nothing — it happened three times, a
+  console asleep or a data folder just recreated, and each time the empty shots
+  quietly replaced good ones because the tool reported success and the files
+  were only looked at afterwards. It counts the cards before the first shutter
+  and stops if there are none. The published images are the one thing here that
+  nobody re-reads before they ship.
+
 - **`outils/captures.py --racine <dossier>` starts a server from the working
   tree** on a data folder of your choosing, takes the shots, and stops it. The
   point is what it removes: photographing a container means rebuilding the
