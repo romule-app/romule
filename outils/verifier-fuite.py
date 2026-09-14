@@ -155,6 +155,84 @@ def inspect_files(paths):
     return faults, warnings
 
 
+def inspect_messages(limite=400):
+    """The same rule, applied to what `git log` will publish.
+
+    A commit message is as public as a file, and it is not covered by anything
+    that reads the working tree. Two of them carried the owner's console
+    address for six days after a history rewrite had purged it from every file:
+    the rewrite touched the contents, the audit read the contents, and nobody
+    read the sentences around them.
+
+    Returns the same (faults, warnings) shape, so `main` treats both the same
+    way — a leak in a message is not a lesser leak.
+    """
+    import subprocess
+    faults = []
+    try:
+        brut = subprocess.run(
+            ["git", "log", "--all", "--format=%H%x09%B%x00", "-n", str(limite)],
+            capture_output=True, text=True, timeout=120).stdout
+    except (OSError, subprocess.SubprocessError):
+        return [], [("git", "history unreadable: messages not checked")]
+    for bloc in brut.split("\0"):
+        if not bloc.strip():
+            continue
+        sha, _, corps = bloc.partition("\t")
+        sha = sha.strip()[:8]
+        # The marker works here too: a message that QUOTES an address on
+        # purpose says so, on its own line.
+        lignes = corps.split("\n")
+        for i, ligne in enumerate(lignes):
+            if MARKER in ligne or (i and MARKER in lignes[i - 1]):
+                continue
+            for m in PRIVATE_IP.finditer(ligne):
+                if m.group(0) in ALLOWED_IPS:
+                    continue
+                faults.append(("commit %s" % sha,
+                               "private address %s in the MESSAGE — it is as "
+                               "public as a file" % m.group(0)))
+            for pattern, what in SECRETS:
+                if pattern.search(ligne):
+                    faults.append(("commit %s" % sha, "%s in the MESSAGE" % what))
+    return faults, []
+
+
+def autotest_messages():
+    """Does the message reader see what it claims to see?
+
+    Built from a fabricated log rather than from the repository's own: a
+    self-test that depends on today's history proves nothing tomorrow.
+    """
+    faux = ("aaaaaaaa\tUn titre\n\nCorrige l'adresse 192.168.77.13 du panneau.\n\0"
+            "bbbbbbbb\tUn autre\n\nRien de sensible ici.\n\0"
+            "cccccccc\tMarque\n\nfuite:ok - exemple cite volontairement\n"
+            "L'adresse 192.168.77.14 est un exemple.\n\0")
+    vus = []
+    for bloc in faux.split("\0"):
+        if not bloc.strip():
+            continue
+        sha, _, corps = bloc.partition("\t")
+        lignes = corps.split("\n")
+        for i, ligne in enumerate(lignes):
+            if MARKER in ligne or (i and MARKER in lignes[i - 1]):
+                continue
+            for m in PRIVATE_IP.finditer(ligne):
+                if m.group(0) not in ALLOWED_IPS:
+                    vus.append((sha[:8], m.group(0)))
+    cas = [("une adresse dans un message est vue",
+            ("aaaaaaaa", "192.168.77.13") in vus),
+           ("un message sans rien ne dit rien",
+            not any(x == "bbbbbbbb" for x, _ in vus)),
+           ("le marqueur fuite:ok couvre la ligne suivante",
+            not any(x == "cccccccc" for x, _ in vus))]
+    bon = True
+    for nom, cond in cas:
+        print(("  OK    " if cond else "  FAIL  ") + nom)
+        bon = bon and cond
+    return bon
+
+
 def autotest():
     """A check that never bites protects against nothing."""
     cases = [
@@ -198,6 +276,8 @@ def autotest():
                       % (name, should_bite, bites))
             else:
                 print("  OK    %-34s %s" % (name, "detected" if bites else "let through"))
+    print("  -- les messages de commit --")
+    ok = autotest_messages() and ok
     return 0 if ok else 1
 
 
@@ -206,6 +286,10 @@ def main(argv):
         print("-- self-test of the detector --")
         return autotest()
     faults, warnings = inspect_files(tracked_files("--tout" in argv))
+    # And the commit messages, which no reading of the working tree covers.
+    fm, wm = inspect_messages()
+    faults += fm
+    warnings += wm
     for where, what in warnings:
         print("  warning %-52s %s" % (where, what))
     for where, what in faults:
@@ -213,8 +297,8 @@ def main(argv):
     if faults:
         print("\n%d file(s) must not enter the repository." % len(faults))
         return 1
-    print("No personal data detected (%d warning(s) to check by eye)."
-          % len(warnings))
+    print("No personal data detected in the files or the commit messages "
+          "(%d warning(s) to check by eye)." % len(warnings))
     return 0
 
 

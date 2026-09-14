@@ -19,6 +19,11 @@ _*
 # fichier existe.
 !**/__*.py
 
+# --- identite d'adb : la cle privee que la console approuve. Elle vit dans
+#     ROMULE_ROOT, donc hors du depot — sauf si quelqu'un pointe ROMULE_ROOT
+#     ICI, ce qu'on fait volontiers pour developper.
+.android/
+
 # --- cles de console : ne doivent JAMAIS approcher un depot
 *.keys
 prod.keys
