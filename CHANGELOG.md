@@ -195,6 +195,13 @@ change it. Breaking changes are always listed under **Changed** with the reason.
   and neither did `verifier-traduction.py`. They were on the two screens a
   screenshot always shows, which is how they were found.
 
+- **`outils/captures.py --racine <dossier>` starts a server from the working
+  tree** on a data folder of your choosing, takes the shots, and stops it. The
+  point is what it removes: photographing a container means rebuilding the
+  image for every fix, and a rebuild restarts the adb server, which drops the
+  console — the pairing the shots need. From the source tree there is no
+  rebuild at all.
+
 - **Both credential fields can be tested from the settings.** SteamGridDB had
   no test at all outside the first-run wizard, and IGDB's answered in a bare
   line of text. One component now serves both: a spinner while the call is in

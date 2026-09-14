@@ -63,6 +63,38 @@ Elle apparaît toute seule dans le sélecteur.
     *0 fichier* au singulier, l'anglais écrit *0 files* au pluriel. Une règle
     unique remplacerait une faute par une autre.
 
+## Refaire les captures d'écran
+
+```sh
+python3 outils/captures.py
+```
+
+Depuis une bibliothèque **inventée** — trente titres, neuf plateformes, des
+jaquettes dessinées à la volée, une console de figuration. C'est le défaut, et
+c'est la réponse pour presque toute modification : une capture prise sur une
+vraie installation dit ce que son propriétaire possède, et emporte les jaquettes
+d'éditeurs dans un dépôt public.
+
+Deux façons d'en photographier une vraie, quand c'est elle le sujet :
+
+```sh
+python3 outils/captures.py --racine ~/mes-donnees      # depuis les sources
+python3 outils/captures.py --url http://localhost:8787 # une instance déjà là
+```
+
+`--racine` démarre un serveur depuis l'arbre de travail sur ce dossier de
+données, prend les vues, puis l'arrête. À préférer pendant le développement.
+`--url` sur un conteneur suppose de reconstruire l'image à chaque correctif — et
+une reconstruction redémarre le serveur adb, ce qui fait tomber la console,
+c'est-à-dire l'appairage dont les captures ont besoin. Depuis les sources, il
+n'y a aucune reconstruction : le code est celui qui est sur le disque.
+
+Dans les deux cas l'outil masque adresses, courriels, numéros de série et
+chemins personnels avant de déclencher, et **refuse la capture** s'il reste à
+l'écran quelque chose qu'il ne sait pas masquer. `outils/verifier-fuite.py` lit
+des fichiers texte ; il ne sait pas lire un PNG, et l'adresse de la console est
+en clair sur l'un de ces écrans.
+
 ## Ajouter un profil d'émulateur
 
 Dépose un fichier JSON dans `romule/profils/`, sur le modèle d'`eden.json`.

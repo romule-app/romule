@@ -365,26 +365,56 @@ def _poser(url, valeurs):
         pass
 
 
+def _argument(argv, nom):
+    for i, a in enumerate(argv):
+        if a == nom and i + 1 < len(argv):
+            return argv[i + 1]
+        if a.startswith(nom + "="):
+            return a.split("=", 1)[1]
+    return ""
+
+
 def main(argv=()):
     """Take the shots. With no argument, from an invented library.
 
-    `--url http://localhost:8787` photographs a RUNNING instance instead —
-    yours, with your games in it. That is a deliberate choice and not the
-    default: a shot taken from a real installation says what its owner owns,
-    and carries somebody else's cover art into a public repository. It has
-    happened twice here. The invented library exists so that the ordinary
-    answer costs nothing.
+    Two ways to photograph a REAL library instead — yours, with your games in
+    it. That is a deliberate choice and not the default: such a shot says what
+    its owner owns, and carries somebody else's cover art into a public
+    repository. It has happened twice here. The invented library exists so that
+    the ordinary answer costs nothing.
+
+        --url http://localhost:8787     attach to an instance already running
+        --racine ~/mes-donnees          START one from the working tree, on
+                                        that data folder, and stop it after
+
+    `--racine` is the one to reach for while DEVELOPING. Attaching to a
+    container means rebuilding the image for every fix — and a rebuild restarts
+    the adb server, which drops the console, which is the pairing the shots
+    need. Running from the source tree has no rebuild at all: the code is
+    whatever is on disk, and the console stays where it is.
     """
     from cdp import Navigateur
-    externe = ""
-    for i, a in enumerate(argv):
-        if a == "--url" and i + 1 < len(argv):
-            externe = argv[i + 1].rstrip("/")
-        elif a.startswith("--url="):
-            externe = a.split("=", 1)[1].rstrip("/")
+    externe = _argument(argv, "--url").rstrip("/")
+    racine_choisie = _argument(argv, "--racine")
     proc = None
     langue_avant = None
-    if externe:
+    racine = None
+    if externe and racine_choisie:
+        raise SystemExit("  --url et --racine designent deux installations : "
+                         "choisis-en une")
+    if racine_choisie:
+        racine = str(Path(racine_choisie).expanduser())
+        if not Path(racine).is_dir():
+            raise SystemExit("  %s n'existe pas" % racine)
+        print("  depuis les sources, sur %s" % racine)
+        proc = subprocess.Popen(
+            [sys.executable, "-m", "romule", "serve"], cwd=str(RACINE),
+            env=dict(os.environ, ROMULE_ROOT=racine, ROMULE_WEB_PORT=str(PORT),
+                     ROMULE_NO_BROWSER="1", ROMULE_LANG="en"),
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        url = "http://127.0.0.1:%d" % PORT
+        externe = url          # real data: mask, and borrow the language
+    elif externe:
         url = externe
         print("  depuis %s (installation existante)" % url)
         # The published pages are in English, and the interface speaks whatever
@@ -392,10 +422,6 @@ def main(argv=()):
         # language. We borrow the setting and give it back, whatever happens
         # below: leaving somebody's interface in another language because a
         # screenshot failed is not an acceptable trace to leave.
-        langue_avant = _reglage(url, "ui_lang")
-        if langue_avant and langue_avant != "en":
-            _poser(url, {"ui_lang": "en"})
-            print("  langue : %s -> en (rendue a la fin)" % langue_avant)
     else:
         racine = tempfile.mkdtemp(prefix="romule-captures-")
         semer(racine)
@@ -416,6 +442,16 @@ def main(argv=()):
                 break
             except Exception:
                 time.sleep(0.5)
+        if externe:
+            # The published pages are in English, and the interface speaks
+            # whatever `ui_lang` says — which on a real installation is its
+            # owner's language. We borrow the setting and give it back, whatever
+            # happens below: leaving somebody's interface in another language
+            # because a screenshot failed is not an acceptable trace to leave.
+            langue_avant = _reglage(url, "ui_lang")
+            if langue_avant and langue_avant != "en":
+                _poser(url, {"ui_lang": "en"})
+                print("  langue : %s -> en (rendue a la fin)" % langue_avant)
         SORTIE.mkdir(parents=True, exist_ok=True)
         n = Navigateur(port=9488, largeur=1600, hauteur=1100, dpr=2,
                        assistant=True)
@@ -480,10 +516,12 @@ def main(argv=()):
             (SORTIE / vieux).unlink(missing_ok=True)
     finally:
         if langue_avant and langue_avant != "en":
-            _poser(externe, {"ui_lang": langue_avant})
+            _poser(url, {"ui_lang": langue_avant})
             print("  langue rendue : %s" % langue_avant)
         if proc is not None:
             proc.terminate()
+        # Only what WE made. A data folder someone named is theirs.
+        if proc is not None and not racine_choisie and racine:
             shutil.rmtree(racine, ignore_errors=True)
     return 0
 

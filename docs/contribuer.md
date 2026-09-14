@@ -60,6 +60,36 @@ selector on its own.
     singular, English writes *0 files* in the plural. A single rule for both
     would trade one mistake for another.
 
+## Retaking the screenshots
+
+```sh
+python3 outils/captures.py
+```
+
+From an **invented** library — thirty titles, nine platforms, covers drawn on
+the spot, and a stand-in console. That is the default, and it is the answer for
+almost every change: a shot taken from a real installation says what its owner
+owns, and carries somebody else's cover art into a public repository.
+
+Two ways to photograph a real one, when the point IS the real one:
+
+```sh
+python3 outils/captures.py --racine ~/mes-donnees      # from the source tree
+python3 outils/captures.py --url http://localhost:8787 # an instance already up
+```
+
+`--racine` starts a server from the working tree on that data folder, takes the
+shots, and stops it. Prefer it while developing. `--url` against a container
+means rebuilding the image for every fix — and a rebuild restarts the adb
+server, which drops the console, which is the pairing the shots need. From the
+source tree there is no rebuild: the code is whatever is on disk.
+
+Either way the tool masks addresses, e-mail addresses, serial numbers and home
+paths before the shutter, and **refuses the shot** if anything it does not know
+how to mask is still readable. `outils/verifier-fuite.py` reads text files; it
+cannot read a PNG, and the console's address sits in plain sight on one of
+these screens.
+
 ## Adding an emulator profile
 
 Drop a JSON file in `romule/profils/`, modelled on `eden.json`. Set
